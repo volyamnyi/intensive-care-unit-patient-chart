@@ -49,7 +49,7 @@ class PrescriptionServiceTest {
         req.setDose("200 mg");
         req.setRoute("IV");
         req.setFrequency("q4h");
-        req.setStartHour(0);
+        req.setStartHour(23);
         req.setEndHour(23);
 
         Prescription result = prescriptionService.createPrescription(1L, req, 5L, "doctor1");

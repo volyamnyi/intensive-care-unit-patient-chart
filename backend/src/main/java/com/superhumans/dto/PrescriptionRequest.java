@@ -10,4 +10,5 @@ public class PrescriptionRequest {
     private String frequency;
     private Integer startHour;
     private Integer endHour;
+    private String type;
 }

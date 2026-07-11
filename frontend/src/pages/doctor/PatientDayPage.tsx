@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { icuCardApi, icuDayApi, prescriptionApi } from '../../api/endpoints';
-import type { IcuCard, IcuDay, HourlyVital, Prescription, ScaleAssessment } from '../../types';
+import type { IcuCard, IcuDay, HourlyVital, Prescription, ScaleAssessment, ClinicalNote } from '../../types';
 
 interface TabPanelProps { children: React.ReactNode; value: number; index: number; }
 function TabPanel({ children, value, index }: TabPanelProps) {
@@ -22,10 +22,12 @@ export default function PatientDayPage() {
   const [vitals, setVitals] = useState<HourlyVital[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [scales, setScales] = useState<ScaleAssessment[]>([]);
+  const [notes, setNotes] = useState<ClinicalNote[]>([]);
   const [tab, setTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [signDialogOpen, setSignDialogOpen] = useState(false);
-  const [newPrescription, setNewPrescription] = useState({ medication: '', dose: '', route: '', frequency: '', startHour: 8, endHour: 20 });
+  const [newPrescription, setNewPrescription] = useState({ medication: '', dose: '', route: '', frequency: '', startHour: 8, endHour: 20, type: 'THERAPY' });
+  const [newNote, setNewNote] = useState('');
 
   useEffect(() => {
     if (!cardId) return;
@@ -33,11 +35,13 @@ export default function PatientDayPage() {
       icuCardApi.getById(Number(cardId)),
       dayId ? icuDayApi.getVitals(Number(dayId)) : Promise.resolve({ data: [] }),
       dayId ? icuDayApi.getScales(Number(dayId)) : Promise.resolve({ data: [] }),
+      dayId ? icuDayApi.getNotes(Number(dayId)) : Promise.resolve({ data: [] }),
       prescriptionApi.getByCard(Number(cardId)),
-    ]).then(([cardRes, vitalsRes, scalesRes, prescRes]) => {
+    ]).then(([cardRes, vitalsRes, scalesRes, notesRes, prescRes]) => {
       setCard(cardRes.data);
       setVitals(vitalsRes.data);
       setScales(scalesRes.data);
+      setNotes(notesRes.data);
       setPrescriptions(prescRes.data);
       const foundDay = cardRes.data.icuDays?.find((d) => d.id === Number(dayId));
       setDay(foundDay || null);
@@ -49,7 +53,15 @@ export default function PatientDayPage() {
     await prescriptionApi.create(Number(cardId), newPrescription);
     const res = await prescriptionApi.getByCard(Number(cardId));
     setPrescriptions(res.data);
-    setNewPrescription({ medication: '', dose: '', route: '', frequency: '', startHour: 8, endHour: 20 });
+    setNewPrescription({ medication: '', dose: '', route: '', frequency: '', startHour: 8, endHour: 20, type: 'THERAPY' });
+  };
+
+  const handleAddNote = async () => {
+    if (!dayId || !newNote.trim()) return;
+    await icuDayApi.addNote(Number(dayId), { content: newNote, noteType: 'DOCTOR_NOTE' });
+    const res = await icuDayApi.getNotes(Number(dayId));
+    setNotes(res.data);
+    setNewNote('');
   };
 
   const handleSignOff = async () => {
@@ -108,6 +120,7 @@ export default function PatientDayPage() {
         <Tab label="Вітальні показники" />
         <Tab label="Призначення" />
         <Tab label="Шкали" />
+        <Tab label="Нотатки" />
       </Tabs>
 
       <TabPanel value={tab} index={0}>
@@ -152,14 +165,21 @@ export default function PatientDayPage() {
         <Box sx={{ mb: 2 }}>
           <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1 }}>Нове призначення</Typography>
           <Grid container spacing={1} alignItems="center">
-            <Grid item xs={3}><TextField fullWidth size="small" label="Препарат" value={newPrescription.medication} onChange={(e) => setNewPrescription({ ...newPrescription, medication: e.target.value })} /></Grid>
+            <Grid item xs={2}>
+              <TextField fullWidth size="small" select label="Тип" value={newPrescription.type} onChange={(e) => setNewPrescription({ ...newPrescription, type: e.target.value })} SelectProps={{ native: true }}>
+                <option value="THERAPY">Терапія</option>
+                <option value="LAB">Лаб. дослідження</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={3}><TextField fullWidth size="small" label="Препарат / дослідження" value={newPrescription.medication} onChange={(e) => setNewPrescription({ ...newPrescription, medication: e.target.value })} /></Grid>
             <Grid item xs={2}><TextField fullWidth size="small" label="Доза" value={newPrescription.dose} onChange={(e) => setNewPrescription({ ...newPrescription, dose: e.target.value })} /></Grid>
             <Grid item xs={2}><TextField fullWidth size="small" label="Шлях" value={newPrescription.route} onChange={(e) => setNewPrescription({ ...newPrescription, route: e.target.value })} /></Grid>
             <Grid item xs={2}><TextField fullWidth size="small" label="Год. від" type="number" value={newPrescription.startHour} onChange={(e) => setNewPrescription({ ...newPrescription, startHour: Number(e.target.value) })} /></Grid>
-            <Grid item xs={2}><TextField fullWidth size="small" label="Год. до" type="number" value={newPrescription.endHour} onChange={(e) => setNewPrescription({ ...newPrescription, endHour: Number(e.target.value) })} /></Grid>
             <Grid item xs={1}><Button variant="contained" size="small" onClick={handleCreatePrescription} sx={{ minWidth: 40 }}>+</Button></Grid>
           </Grid>
         </Box>
+
+        <Typography variant="subtitle2" sx={{ mb: 1, fontFamily: '"Rubik", sans-serif' }}>Терапія</Typography>
 
         <TableContainer component={Paper} sx={{ border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <Table size="small">
@@ -171,7 +191,7 @@ export default function PatientDayPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {prescriptions.map((p) => (
+              {prescriptions.filter(p => p.type === 'THERAPY').map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>{p.medication}</TableCell>
                   <TableCell>{p.dose}</TableCell>
@@ -186,6 +206,50 @@ export default function PatientDayPage() {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, fontFamily: '"Rubik", sans-serif' }}>Лабораторні дослідження</Typography>
+        <TableContainer component={Paper} sx={{ border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Дослідження</TableCell><TableCell>Години</TableCell>
+                <TableCell>Статус</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {prescriptions.filter(p => p.type === 'LAB').map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>{p.medication}</TableCell>
+                  <TableCell>{p.startHour}:00-{p.endHour}:00</TableCell>
+                  <TableCell>
+                    <Chip label={p.status === 'ACTIVE' ? 'Активне' : p.status === 'STOPPED' ? 'Зупинено' : 'Закінчено'}
+                      size="small" color={p.status === 'ACTIVE' ? 'success' : 'default'} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={tab} index={3}>
+        <Box sx={{ mb: 2 }}>
+          <TextField fullWidth multiline minRows={3} label="Нова нотатка" value={newNote}
+            onChange={(e) => setNewNote(e.target.value)} />
+          <Button variant="contained" sx={{ mt: 1 }} onClick={handleAddNote}>Додати нотатку</Button>
+        </Box>
+        {notes.length === 0 ? (
+          <Typography color="text.secondary">Немає нотаток</Typography>
+        ) : (
+          notes.map((n) => (
+            <Paper key={n.id} sx={{ p: 2, mb: 1, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+              <Typography variant="body2" color="text.secondary">
+                {n.createdBy} · {new Date(n.createdAt).toLocaleString('uk-UA')}
+              </Typography>
+              <Typography sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{n.content}</Typography>
+            </Paper>
+          ))
+        )}
       </TabPanel>
 
       <TabPanel value={tab} index={2}>

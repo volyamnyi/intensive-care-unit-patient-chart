@@ -29,6 +29,7 @@ public class FluidBalanceService {
 
         int totalOutput = outputs.stream()
                 .filter(o -> o.getVolume() != null)
+                .filter(o -> o.getType() != OutputType.STOOL)
                 .mapToInt(FluidOutput::getVolume)
                 .sum();
 

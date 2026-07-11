@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -26,8 +27,20 @@ public class PrescriptionService {
         IcuCard card = icuCardRepository.findById(icuCardId)
                 .orElseThrow(() -> new RuntimeException("Card not found"));
 
+        if (req.getStartHour() != null) {
+            int currentHour = LocalTime.now().getHour();
+            if (req.getStartHour() < currentHour) {
+                throw new BadRequestException("Не можна створити призначення на минулу годину");
+            }
+        }
+
+        PrescriptionType type = req.getType() != null
+                ? PrescriptionType.valueOf(req.getType())
+                : PrescriptionType.THERAPY;
+
         Prescription prescription = Prescription.builder()
                 .icuCard(card)
+                .type(type)
                 .medication(req.getMedication())
                 .dose(req.getDose())
                 .route(req.getRoute())

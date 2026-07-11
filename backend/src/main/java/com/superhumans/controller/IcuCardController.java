@@ -20,6 +20,9 @@ public class IcuCardController {
     @PostMapping
     public ResponseEntity<IcuCard> createCard(@RequestBody IcuCardCreateRequest req,
                                               Authentication auth) {
+        java.time.LocalDate birthDate = req.getPatientBirthDate() != null
+                ? java.time.LocalDate.parse(req.getPatientBirthDate())
+                : null;
         IcuCard card = icuCardService.createCard(
                 req.getPatientId(),
                 req.getPatientName(),
@@ -27,7 +30,13 @@ public class IcuCardController {
                 req.getDiagnosis(),
                 req.getApacheIi(),
                 req.getSofa(),
-                auth.getName());
+                auth.getName(),
+                req.getPatientHeight(),
+                req.getPatientWeight(),
+                req.getBloodGroup(),
+                req.getRhFactor(),
+                req.getPatientSexCode(),
+                birthDate);
         return ResponseEntity.ok(card);
     }
 

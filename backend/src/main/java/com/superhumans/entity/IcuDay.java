@@ -45,6 +45,12 @@ public class IcuDay {
     @Column(name = "escalation_sent")
     private Boolean escalationSent;
 
+    @Column(name = "apache_ii")
+    private Integer apacheIi;
+
+    @Column(name = "sofa")
+    private Integer sofa;
+
     @OneToMany(mappedBy = "icuDay", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @JsonIgnoreProperties("icuDay")

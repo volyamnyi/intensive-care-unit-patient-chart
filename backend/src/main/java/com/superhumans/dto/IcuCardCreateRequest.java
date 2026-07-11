@@ -10,4 +10,10 @@ public class IcuCardCreateRequest {
     private String diagnosis;
     private Integer apacheIi;
     private Integer sofa;
+    private Integer patientHeight;
+    private Integer patientWeight;
+    private String bloodGroup;
+    private String rhFactor;
+    private String patientSexCode;
+    private String patientBirthDate;
 }

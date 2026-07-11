@@ -19,7 +19,11 @@ public class IcuCardService {
 
     @Transactional
     public IcuCard createCard(Long patientId, String patientName, String medicalCardNumber,
-                              String diagnosis, Integer apacheIi, Integer sofa, String createdBy) {
+                              String diagnosis, Integer apacheIi, Integer sofa, String createdBy,
+                              Integer patientHeight, Integer patientWeight, String bloodGroup,
+                              String rhFactor, String patientSexCode, java.time.LocalDate patientBirthDate) {
+        Integer idealBodyWeight = calculateIdealBodyWeight(patientHeight, patientSexCode);
+
         IcuCard card = IcuCard.builder()
                 .patientId(patientId)
                 .patientName(patientName)
@@ -28,6 +32,13 @@ public class IcuCardService {
                 .diagnosis(diagnosis)
                 .apacheIi(apacheIi)
                 .sofa(sofa)
+                .patientHeight(patientHeight)
+                .patientWeight(patientWeight)
+                .idealBodyWeight(idealBodyWeight)
+                .bloodGroup(bloodGroup)
+                .rhFactor(rhFactor)
+                .patientSexCode(patientSexCode)
+                .patientBirthDate(patientBirthDate)
                 .status(CardStatus.ACTIVE)
                 .createdBy(createdBy)
                 .createdAt(LocalDateTime.now())
@@ -40,6 +51,8 @@ public class IcuCardService {
                 .dayNumber(1)
                 .date(LocalDate.now())
                 .status(DayStatus.ACTIVE)
+                .apacheIi(apacheIi)
+                .sofa(sofa)
                 .build();
         saved.getIcuDays().add(firstDay);
 
@@ -58,5 +71,16 @@ public class IcuCardService {
 
     public List<IcuCard> getActiveCards() {
         return icuCardRepository.findByStatusOrderByCreatedAtDesc(CardStatus.ACTIVE);
+    }
+
+    public static Integer calculateIdealBodyWeight(Integer heightCm, String sexCode) {
+        if (heightCm == null || heightCm <= 0) return null;
+        double heightInInches = heightCm / 2.54;
+        if (heightInInches <= 60) heightInInches = 60;
+        if ("F".equalsIgnoreCase(sexCode) || "W".equalsIgnoreCase(sexCode)) {
+            return (int) Math.round(45.5 + 2.3 * (heightInInches - 60));
+        } else {
+            return (int) Math.round(50.0 + 2.3 * (heightInInches - 60));
+        }
     }
 }

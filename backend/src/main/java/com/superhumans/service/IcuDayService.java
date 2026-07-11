@@ -49,11 +49,18 @@ public class IcuDayService {
         currentDay.setStatus(DayStatus.ARCHIVED);
         icuDayRepository.save(currentDay);
 
+        Integer prevApache = currentDay.getApacheIi() != null
+                ? currentDay.getApacheIi() : card.getApacheIi();
+        Integer prevSofa = currentDay.getSofa() != null
+                ? currentDay.getSofa() : card.getSofa();
+
         IcuDay nextDay = IcuDay.builder()
                 .icuCard(card)
                 .dayNumber(currentDay.getDayNumber() + 1)
                 .date(currentDay.getDate().plusDays(1))
                 .status(DayStatus.ACTIVE)
+                .apacheIi(prevApache)
+                .sofa(prevSofa)
                 .build();
         icuDayRepository.save(nextDay);
 

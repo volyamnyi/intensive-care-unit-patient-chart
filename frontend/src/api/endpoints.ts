@@ -2,6 +2,7 @@ import client from './client';
 import type {
   Patient, IcuCard, IcuDay, HourlyVital, Prescription,
   FluidIntake, FluidOutput, FluidBalance, ScaleAssessment,
+  ClinicalNote, CareMeasure,
   LoginRequest, LoginResponse,
 } from '../types';
 
@@ -31,6 +32,8 @@ export const icuCardApi = {
 export const icuDayApi = {
   getByCard: (cardId: number) =>
     client.get<IcuDay[]>(`/icu-days/by-card/${cardId}`),
+  updateApacheSofa: (dayId: number, data: { apacheIi?: number; sofa?: number }) =>
+    client.put(`/icu-days/${dayId}/apache-sofa`, data),
   getById: (id: number) =>
     client.get<IcuDay>(`/icu-days/${id}`),
   saveVitals: (dayId: number, hour: number, data: Partial<HourlyVital>) =>
@@ -47,6 +50,14 @@ export const icuDayApi = {
     client.post<ScaleAssessment>(`/icu-days/${dayId}/scales`, data),
   getScales: (dayId: number) =>
     client.get<ScaleAssessment[]>(`/icu-days/${dayId}/scales`),
+  getNotes: (dayId: number) =>
+    client.get<ClinicalNote[]>(`/icu-days/${dayId}/notes`),
+  addNote: (dayId: number, data: { content: string; noteType: string }) =>
+    client.post<ClinicalNote>(`/icu-days/${dayId}/notes`, data),
+  getCareMeasures: (dayId: number) =>
+    client.get<CareMeasure[]>(`/icu-days/${dayId}/care-measures`),
+  addCareMeasure: (dayId: number, data: { hour: number; procedure: string; performed: boolean }) =>
+    client.post<CareMeasure>(`/icu-days/${dayId}/care-measures`, data),
   signOff: (dayId: number) =>
     client.post<IcuDay>(`/icu-days/${dayId}/sign-off`),
   getPdf: (dayId: number) =>

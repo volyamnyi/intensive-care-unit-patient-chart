@@ -21,6 +21,11 @@ public class Prescription {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "icuCard"})
     private IcuCard icuCard;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private PrescriptionType type = PrescriptionType.THERAPY;
+
     @Column(nullable = false, length = 200)
     private String medication;
 

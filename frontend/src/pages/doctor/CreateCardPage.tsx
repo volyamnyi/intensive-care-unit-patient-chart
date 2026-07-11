@@ -73,6 +73,12 @@ export default function CreateCardPage() {
         diagnosis,
         apacheIi: apacheII ? parseInt(apacheII) : undefined,
         sofa: sofa ? parseInt(sofa) : undefined,
+        patientHeight: selectedPatient.patientHeight,
+        patientWeight: selectedPatient.patientWeight,
+        bloodGroup: selectedPatient.bloodGroup,
+        rhFactor: selectedPatient.rhFactor,
+        patientSexCode: selectedPatient.patientSexCode,
+        patientBirthDate: selectedPatient.patientBirthDate,
       });
       navigate(`/doctor/card/${res.data.id}/day/${res.data.icuDays?.[0]?.id}`);
     } catch {

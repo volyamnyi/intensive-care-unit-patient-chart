@@ -61,6 +61,21 @@ class IcuDayControllerTest {
     private UserRepository userRepository;
 
     @MockBean
+    private com.superhumans.repository.FluidIntakeRepository fluidIntakeRepository;
+
+    @MockBean
+    private com.superhumans.repository.FluidOutputRepository fluidOutputRepository;
+
+    @MockBean
+    private com.superhumans.repository.IcuDayRepository icuDayRepository;
+
+    @MockBean
+    private ClinicalNoteService clinicalNoteService;
+
+    @MockBean
+    private CareMeasureService careMeasureService;
+
+    @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
     @Test

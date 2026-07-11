@@ -39,6 +39,13 @@ export interface IcuCard {
   createdAt: string;
   icuDays: IcuDay[];
   prescriptions: Prescription[];
+  patientHeight: number | null;
+  patientWeight: number | null;
+  idealBodyWeight: number | null;
+  bloodGroup: string | null;
+  rhFactor: string | null;
+  patientSexCode: string | null;
+  patientBirthDate: string | null;
 }
 
 export interface IcuDay {
@@ -50,6 +57,8 @@ export interface IcuDay {
   signedAt: string | null;
   pdfUrl: string | null;
   escalationSent: boolean;
+  apacheIi: number | null;
+  sofa: number | null;
 }
 
 export interface HourlyVital {
@@ -72,6 +81,7 @@ export interface HourlyVital {
 
 export interface Prescription {
   id: number;
+  type: 'THERAPY' | 'LAB';
   medication: string;
   dose: string;
   route: string;
@@ -119,6 +129,23 @@ export interface ScaleAssessment {
   assessedAt: string;
   assessedBy: string;
   hour: number;
+}
+
+export interface ClinicalNote {
+  id: number;
+  content: string;
+  noteType: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface CareMeasure {
+  id: number;
+  hour: number;
+  procedure: string;
+  performed: boolean;
+  performedBy: string;
+  createdAt: string;
 }
 
 export interface LoginRequest {

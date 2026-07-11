@@ -38,6 +38,27 @@ public class IcuCard {
     @Column(name = "sofa")
     private Integer sofa;
 
+    @Column(name = "patient_height")
+    private Integer patientHeight;
+
+    @Column(name = "patient_weight")
+    private Integer patientWeight;
+
+    @Column(name = "ideal_body_weight")
+    private Integer idealBodyWeight;
+
+    @Column(name = "blood_group", length = 10)
+    private String bloodGroup;
+
+    @Column(name = "rh_factor", length = 10)
+    private String rhFactor;
+
+    @Column(name = "patient_sex_code", length = 1)
+    private String patientSexCode;
+
+    @Column(name = "patient_birth_date")
+    private java.time.LocalDate patientBirthDate;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CardStatus status;

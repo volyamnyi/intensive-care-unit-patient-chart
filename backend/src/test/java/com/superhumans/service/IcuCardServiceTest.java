@@ -46,7 +46,7 @@ class IcuCardServiceTest {
         });
 
         IcuCard result = icuCardService.createCard(100L, "Test Patient", "MC-001",
-                "Test Diagnosis", 15, 8, "doctor1");
+                "Test Diagnosis", 15, 8, "doctor1", 175, 80, "A(II)", "Rh+", "M", LocalDate.of(1990, 1, 1));
 
         assertNotNull(result);
         assertEquals("Test Patient", result.getPatientName());

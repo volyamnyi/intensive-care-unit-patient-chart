@@ -51,7 +51,7 @@ class IcuCardControllerTest {
                 .status(CardStatus.ACTIVE)
                 .build();
 
-        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(), any(), any(), anyString()))
+        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(), any(), any(), anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(card);
 
         IcuCardCreateRequest req = new IcuCardCreateRequest();
@@ -80,7 +80,7 @@ class IcuCardControllerTest {
                 .status(CardStatus.ACTIVE)
                 .build();
 
-        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(), isNull(), isNull(), anyString()))
+        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(), isNull(), isNull(), anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(card);
 
         IcuCardCreateRequest req = new IcuCardCreateRequest();
