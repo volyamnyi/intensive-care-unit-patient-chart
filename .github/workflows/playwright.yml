@@ -42,6 +42,14 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: npx vitest run
+
+      - name: Run backend unit tests
+        working-directory: backend
+        run: mvn -B test
+
       - name: Build backend JAR
         working-directory: backend
         run: mvn -B -DskipTests package
