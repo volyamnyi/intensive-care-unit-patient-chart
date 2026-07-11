@@ -1,0 +1,11 @@
+node_modules/
+backend/target/
+backend/*.log
+frontend/dist/
+*.log
+test-results/
+playwright-report/
+.mcp.json
+.idea/
+*.iml
+.DS_Store

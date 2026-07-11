@@ -1,0 +1,55 @@
+server:
+  port: 8085
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/my_fullstack_db
+    username: postgres
+    password: admin
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-init-sql: SET client_encoding = 'UTF8'
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+  mail:
+    host: localhost
+    port: 1025
+    username: dev
+    password: dev
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    date-format: yyyy-MM-dd'T'HH:mm:ss
+
+app:
+  jwt:
+    secret: cGF0aWVudC1jaGFydC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi0yMDI2
+    expiration-ms: 86400000
+  mis:
+    mock-enabled: true
+  scheduling:
+    day-close-hour: 7
+    escalation-hour: 9
+
+logging:
+  level:
+    com.superhumans: DEBUG
+    org.springframework.security: INFO
