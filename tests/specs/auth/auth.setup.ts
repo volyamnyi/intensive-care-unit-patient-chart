@@ -16,7 +16,7 @@ for (const user of USERS) {
     await page.getByRole('textbox', { name: /Логін/ }).fill(user.login);
     await page.getByLabel(/Пароль/).fill(user.password);
     await page.getByRole('button', { name: 'Увійти' }).click();
-    await page.waitForURL(/^\/(doctor|nurse|admin)/);
+    await page.waitForURL(/\/(doctor|nurse|admin)/);
     await page.context().storageState({ path: `${AUTH_BASE}/${user.file}` });
   });
 }
