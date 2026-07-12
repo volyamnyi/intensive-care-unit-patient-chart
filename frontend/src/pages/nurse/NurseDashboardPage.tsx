@@ -145,17 +145,17 @@ export default function NurseDashboardPage() {
           </Paper>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} md={7}>
+            <Grid size={{ xs: 12, md: 7 }}>
               <Paper sx={{ p: 2.5, mb: 2, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>Показники — {currentHour}:00</Typography>
                 <Grid container spacing={1}>
-                  <Grid item xs={4}><TextField fullWidth size="small" label="АТ сист (мм.рт.ст)" value={vitalForm.systolicBp} onChange={(e) => setVitalForm({ ...vitalForm, systolicBp: e.target.value })} /></Grid>
-                  <Grid item xs={4}><TextField fullWidth size="small" label="АТ діас (мм.рт.ст)" value={vitalForm.diastolicBp} onChange={(e) => setVitalForm({ ...vitalForm, diastolicBp: e.target.value })} /></Grid>
-                  <Grid item xs={4}><TextField fullWidth size="small" label="ЧСС (в 1 хв)" value={vitalForm.heartRate} onChange={(e) => setVitalForm({ ...vitalForm, heartRate: e.target.value })} /></Grid>
-                  <Grid item xs={3}><TextField fullWidth size="small" label="SpO2 (%)" value={vitalForm.spo2} onChange={(e) => setVitalForm({ ...vitalForm, spo2: e.target.value })} /></Grid>
-                  <Grid item xs={3}><TextField fullWidth size="small" label="Темп. тіла (°С)" value={vitalForm.temperature} onChange={(e) => setVitalForm({ ...vitalForm, temperature: e.target.value })} /></Grid>
-                  <Grid item xs={3}><TextField fullWidth size="small" label="ЦВТ (мм.вод.ст)" value={vitalForm.cvp} onChange={(e) => setVitalForm({ ...vitalForm, cvp: e.target.value })} /></Grid>
-                  <Grid item xs={3}><TextField fullWidth size="small" label="ЧД (в 1 хв)" value={vitalForm.respiratoryRate} onChange={(e) => setVitalForm({ ...vitalForm, respiratoryRate: e.target.value })} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" label="АТ сист (мм.рт.ст)" value={vitalForm.systolicBp} onChange={(e) => setVitalForm({ ...vitalForm, systolicBp: e.target.value })} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" label="АТ діас (мм.рт.ст)" value={vitalForm.diastolicBp} onChange={(e) => setVitalForm({ ...vitalForm, diastolicBp: e.target.value })} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" label="ЧСС (в 1 хв)" value={vitalForm.heartRate} onChange={(e) => setVitalForm({ ...vitalForm, heartRate: e.target.value })} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" label="SpO2 (%)" value={vitalForm.spo2} onChange={(e) => setVitalForm({ ...vitalForm, spo2: e.target.value })} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" label="Темп. тіла (°С)" value={vitalForm.temperature} onChange={(e) => setVitalForm({ ...vitalForm, temperature: e.target.value })} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" label="ЦВТ (мм.вод.ст)" value={vitalForm.cvp} onChange={(e) => setVitalForm({ ...vitalForm, cvp: e.target.value })} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" label="ЧД (в 1 хв)" value={vitalForm.respiratoryRate} onChange={(e) => setVitalForm({ ...vitalForm, respiratoryRate: e.target.value })} /></Grid>
                 </Grid>
                 <Button variant="contained" sx={{ mt: 2 }} onClick={handleSaveVitals}>Зберегти показники</Button>
               </Paper>
@@ -163,10 +163,10 @@ export default function NurseDashboardPage() {
               <Paper sx={{ p: 2.5, mb: 2, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>Втрати рідини — {currentHour}:00</Typography>
                 <Grid container spacing={1}>
-                  <Grid item xs={4}><TextField fullWidth size="small" label="Сеча (мл)" value={outputForm.urine} onChange={(e) => setOutputForm({ ...outputForm, urine: e.target.value })} /></Grid>
-                  <Grid item xs={4}><TextField fullWidth size="small" label="Зонд (мл)" value={outputForm.tube} onChange={(e) => setOutputForm({ ...outputForm, tube: e.target.value })} /></Grid>
-                  <Grid item xs={4}><TextField fullWidth size="small" label="Дренаж (мл)" value={outputForm.drainage} onChange={(e) => setOutputForm({ ...outputForm, drainage: e.target.value })} /></Grid>
-                  <Grid item xs={12}>
+                  <Grid size={4}><TextField fullWidth size="small" label="Сеча (мл)" value={outputForm.urine} onChange={(e) => setOutputForm({ ...outputForm, urine: e.target.value })} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" label="Зонд (мл)" value={outputForm.tube} onChange={(e) => setOutputForm({ ...outputForm, tube: e.target.value })} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" label="Дренаж (мл)" value={outputForm.drainage} onChange={(e) => setOutputForm({ ...outputForm, drainage: e.target.value })} /></Grid>
+                  <Grid size={12}>
                     <FormControl size="small">
                       <InputLabel>Випорожнення</InputLabel>
                       <Select value={outputForm.stool ? 'yes' : 'no'} label="Випорожнення"
@@ -207,26 +207,26 @@ export default function NurseDashboardPage() {
               </Paper>
             </Grid>
 
-            <Grid item xs={12} md={5}>
+            <Grid size={{ xs: 12, md: 5 }}>
               <Paper sx={{ p: 2.5, mb: 2, bgcolor: '#F5FBF8', border: '1px solid #D4E8DE', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>Баланс рідини</Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                   <Typography color="text.secondary">Надійшло:</Typography>
-                  <Typography fontWeight={700}>{balance?.totalIntake || 0} мл</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{balance?.totalIntake || 0} мл</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                   <Typography color="text.secondary">Виділено:</Typography>
-                  <Typography fontWeight={700}>{balance?.totalOutput || 0} мл</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{balance?.totalOutput || 0} мл</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                   <Typography color="text.secondary">Добовий баланс:</Typography>
-                  <Typography fontWeight={700} color={balance?.dailyBalance && balance.dailyBalance < 0 ? '#C42E1A' : '#1F6B4C'}>
+                  <Typography sx={{ fontWeight: 700 }} color={balance?.dailyBalance && balance.dailyBalance < 0 ? '#C42E1A' : '#1F6B4C'}>
                     {balance?.dailyBalance || 0} мл
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography color="text.secondary">Кумулятивний баланс:</Typography>
-                  <Typography fontWeight={700} color={balance?.cumulativeBalance && balance.cumulativeBalance < 0 ? '#C42E1A' : '#1F6B4C'}>
+                  <Typography sx={{ fontWeight: 700 }} color={balance?.cumulativeBalance && balance.cumulativeBalance < 0 ? '#C42E1A' : '#1F6B4C'}>
                     {balance?.cumulativeBalance || 0} мл
                   </Typography>
                 </Box>

@@ -26,7 +26,7 @@ export default function PatientDayPage() {
   const [tab, setTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [signDialogOpen, setSignDialogOpen] = useState(false);
-  const [newPrescription, setNewPrescription] = useState({ medication: '', dose: '', route: '', frequency: '', startHour: 8, endHour: 20, type: 'THERAPY' });
+  const [newPrescription, setNewPrescription] = useState<{ medication: string; dose: string; route: string; frequency: string; startHour: number; endHour: number; type: 'THERAPY' | 'LAB' }>({ medication: '', dose: '', route: '', frequency: '', startHour: 8, endHour: 20, type: 'THERAPY' });
   const [newNote, setNewNote] = useState('');
 
   useEffect(() => {
@@ -110,9 +110,9 @@ export default function PatientDayPage() {
 
       <Paper sx={{ p: 2, mb: 2, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
         <Grid container spacing={2}>
-          <Grid item xs={6}><Typography variant="body2"><strong>Діагноз:</strong> {card.diagnosis}</Typography></Grid>
-          <Grid item xs={3}><Typography variant="body2"><strong>Надійшов:</strong> {new Date(card.admissionDate).toLocaleDateString('uk-UA')}</Typography></Grid>
-          <Grid item xs={3}><Typography variant="body2"><strong>Тривалість:</strong> {card.icuDays?.length || 0} днів</Typography></Grid>
+          <Grid size={6}><Typography variant="body2"><strong>Діагноз:</strong> {card.diagnosis}</Typography></Grid>
+          <Grid size={3}><Typography variant="body2"><strong>Надійшов:</strong> {new Date(card.admissionDate).toLocaleDateString('uk-UA')}</Typography></Grid>
+          <Grid size={3}><Typography variant="body2"><strong>Тривалість:</strong> {card.icuDays?.length || 0} днів</Typography></Grid>
         </Grid>
       </Paper>
 
@@ -164,18 +164,18 @@ export default function PatientDayPage() {
       <TabPanel value={tab} index={1}>
         <Box sx={{ mb: 2 }}>
           <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1 }}>Нове призначення</Typography>
-          <Grid container spacing={1} alignItems="center">
-            <Grid item xs={2}>
-              <TextField fullWidth size="small" select label="Тип" value={newPrescription.type} onChange={(e) => setNewPrescription({ ...newPrescription, type: e.target.value })} SelectProps={{ native: true }}>
+          <Grid container spacing={1} sx={{ alignItems: 'center' }}>
+            <Grid size={2}>
+              <TextField fullWidth size="small" select label="Тип" value={newPrescription.type} onChange={(e) => setNewPrescription({ ...newPrescription, type: e.target.value as 'THERAPY' | 'LAB' })} slotProps={{ select: { native: true } }}>
                 <option value="THERAPY">Терапія</option>
                 <option value="LAB">Лаб. дослідження</option>
               </TextField>
             </Grid>
-            <Grid item xs={3}><TextField fullWidth size="small" label="Препарат / дослідження" value={newPrescription.medication} onChange={(e) => setNewPrescription({ ...newPrescription, medication: e.target.value })} /></Grid>
-            <Grid item xs={2}><TextField fullWidth size="small" label="Доза" value={newPrescription.dose} onChange={(e) => setNewPrescription({ ...newPrescription, dose: e.target.value })} /></Grid>
-            <Grid item xs={2}><TextField fullWidth size="small" label="Шлях" value={newPrescription.route} onChange={(e) => setNewPrescription({ ...newPrescription, route: e.target.value })} /></Grid>
-            <Grid item xs={2}><TextField fullWidth size="small" label="Год. від" type="number" value={newPrescription.startHour} onChange={(e) => setNewPrescription({ ...newPrescription, startHour: Number(e.target.value) })} /></Grid>
-            <Grid item xs={1}><Button variant="contained" size="small" onClick={handleCreatePrescription} sx={{ minWidth: 40 }}>+</Button></Grid>
+            <Grid size={3}><TextField fullWidth size="small" label="Препарат / дослідження" value={newPrescription.medication} onChange={(e) => setNewPrescription({ ...newPrescription, medication: e.target.value })} /></Grid>
+            <Grid size={2}><TextField fullWidth size="small" label="Доза" value={newPrescription.dose} onChange={(e) => setNewPrescription({ ...newPrescription, dose: e.target.value })} /></Grid>
+            <Grid size={2}><TextField fullWidth size="small" label="Шлях" value={newPrescription.route} onChange={(e) => setNewPrescription({ ...newPrescription, route: e.target.value })} /></Grid>
+            <Grid size={2}><TextField fullWidth size="small" label="Год. від" type="number" value={newPrescription.startHour} onChange={(e) => setNewPrescription({ ...newPrescription, startHour: Number(e.target.value) })} /></Grid>
+            <Grid size={1}><Button variant="contained" size="small" onClick={handleCreatePrescription} sx={{ minWidth: 40 }}>+</Button></Grid>
           </Grid>
         </Box>
 
@@ -263,7 +263,7 @@ export default function PatientDayPage() {
               BRADEN: 'Шкала Брейдена',
             };
             return (
-              <Grid item xs={12} md={6} key={type}>
+              <Grid size={{ xs: 12, md: 6 }} key={type}>
                 <Paper sx={{ p: 2, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                   <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 600 }}>{names[type]}</Typography>
                   {scale ? (

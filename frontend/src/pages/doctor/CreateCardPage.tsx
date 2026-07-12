@@ -17,8 +17,8 @@ export default function CreateCardPage() {
   const [sofa, setSofa] = useState('');
   const [error, setError] = useState('');
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const abortRef = useRef<AbortController>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const abortRef = useRef<AbortController>(undefined);
 
   useEffect(() => {
     return () => {
@@ -148,14 +148,14 @@ export default function CreateCardPage() {
         <Paper sx={{ p: 3, mb: 3, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>Дані пацієнта (з МІС)</Typography>
           <Grid container spacing={2}>
-            <Grid item xs={6}><TextField fullWidth label="ПІП" value={selectedPatient.patientName} InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={3}><TextField fullWidth label="Вік" value={selectedPatient.patientBirthDate} InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={3}><TextField fullWidth label="Стать" value={selectedPatient.patientSexCode === 'M' ? 'Чол' : 'Жін'} InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={3}><TextField fullWidth label="Зріст (см)" value={selectedPatient.patientHeight} InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={3}><TextField fullWidth label="Маса (кг)" value={selectedPatient.patientWeight} InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={3}><TextField fullWidth label="Група крові" value={selectedPatient.bloodGroup} InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={3}><TextField fullWidth label="Rezus" value={selectedPatient.rhFactor} InputProps={{ readOnly: true }} /></Grid>
-            <Grid item xs={6}><TextField fullWidth label="№ медкарти" value={selectedPatient.patientExternalID1} InputProps={{ readOnly: true }} /></Grid>
+            <Grid size={6}><TextField fullWidth label="ПІП" value={selectedPatient.patientName} slotProps={{ input: { readOnly: true } }} /></Grid>
+            <Grid size={3}><TextField fullWidth label="Вік" value={selectedPatient.patientBirthDate} slotProps={{ input: { readOnly: true } }} /></Grid>
+            <Grid size={3}><TextField fullWidth label="Стать" value={selectedPatient.patientSexCode === 'M' ? 'Чол' : 'Жін'} slotProps={{ input: { readOnly: true } }} /></Grid>
+            <Grid size={3}><TextField fullWidth label="Зріст (см)" value={selectedPatient.patientHeight} slotProps={{ input: { readOnly: true } }} /></Grid>
+            <Grid size={3}><TextField fullWidth label="Маса (кг)" value={selectedPatient.patientWeight} slotProps={{ input: { readOnly: true } }} /></Grid>
+            <Grid size={3}><TextField fullWidth label="Група крові" value={selectedPatient.bloodGroup} slotProps={{ input: { readOnly: true } }} /></Grid>
+            <Grid size={3}><TextField fullWidth label="Rezus" value={selectedPatient.rhFactor} slotProps={{ input: { readOnly: true } }} /></Grid>
+            <Grid size={6}><TextField fullWidth label="№ медкарти" value={selectedPatient.patientExternalID1} slotProps={{ input: { readOnly: true } }} /></Grid>
           </Grid>
         </Paper>
       )}
@@ -164,13 +164,13 @@ export default function CreateCardPage() {
         <Paper sx={{ p: 3, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>Дані поступлення</Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField fullWidth label="Діагноз" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} multiline rows={2} />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField fullWidth label="APACHE II" type="number" value={apacheII} onChange={(e) => setApacheII(e.target.value)} />
             </Grid>
-            <Grid item xs={6}>
+            <Grid size={6}>
               <TextField fullWidth label="SOFA" type="number" value={sofa} onChange={(e) => setSofa(e.target.value)} />
             </Grid>
           </Grid>
