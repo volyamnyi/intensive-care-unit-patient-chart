@@ -1,6 +1,8 @@
-import { test as setup, expect } from '@playwright/test';
+import { test as setup } from '@playwright/test';
+import { mkdirSync, existsSync } from 'fs';
 
 const AUTH_BASE = '.auth';
+if (!existsSync(AUTH_BASE)) mkdirSync(AUTH_BASE, { recursive: true });
 const USERS = [
   { login: 'doctor1', password: 'doctor123', file: 'doctor.json' },
   { login: 'nurse1', password: 'nurse123', file: 'nurse.json' },

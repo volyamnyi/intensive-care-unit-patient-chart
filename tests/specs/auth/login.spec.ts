@@ -27,11 +27,11 @@ test.describe('Login', () => {
     await expect(page.getByText('Невірний логін або пароль')).toBeVisible();
   });
 
-  test('empty password shows validation', async ({ page }) => {
+  test('empty password stays on login page', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('textbox', { name: /Логін/ }).fill('doctor1');
     await page.getByRole('button', { name: 'Увійти' }).click();
-    await expect(page.getByText(/Логін/)).toBeVisible();
+    await expect(page).toHaveURL('/login');
   });
 
   test('redirects to /login when unauthenticated', async ({ page }) => {
