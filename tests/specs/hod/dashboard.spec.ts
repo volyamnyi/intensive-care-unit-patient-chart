@@ -8,22 +8,25 @@ test.describe('HOD Dashboard', () => {
     await expect(page.getByText('Сидоренко Василь Петрович')).toBeVisible();
   });
 
-  test('can open any patient day page', async ({ page }) => {
+  test('can open seed patient day page', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
+    const row = page.getByRole('row').filter({ hasText: 'Петренко' });
+    await row.getByRole('button', { name: /Відкрити/ }).click();
     await expect(page).toHaveURL(/\/doctor\/card\/\d+\/day\/\d+/);
   });
 
-  test('can view prescriptions tab', async ({ page }) => {
+  test('can view prescriptions tab on seed card', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
+    const row = page.getByRole('row').filter({ hasText: 'Петренко' });
+    await row.getByRole('button', { name: /Відкрити/ }).click();
     await page.getByRole('tab', { name: 'Призначення' }).click();
     await expect(page.getByText('Нове призначення')).toBeVisible();
   });
 
-  test('can view scales tab', async ({ page }) => {
+  test('can view scales tab on seed card', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
+    const row = page.getByRole('row').filter({ hasText: 'Петренко' });
+    await row.getByRole('button', { name: /Відкрити/ }).click();
     await page.getByRole('tab', { name: 'Шкали' }).click();
     await expect(page.getByText('APACHE II').first()).toBeVisible();
     await expect(page.getByText('SOFA').first()).toBeVisible();
@@ -48,7 +51,8 @@ test.describe('HOD Dashboard', () => {
 
   test('can sign off a patient day', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
+    const row = page.getByRole('row').filter({ hasText: 'Коваленко' });
+    await row.getByRole('button', { name: /Відкрити/ }).click();
     await page.getByRole('button', { name: 'Підписати добу' }).click();
     await expect(page.getByText('Після підписання доба стане read-only')).toBeVisible();
   });

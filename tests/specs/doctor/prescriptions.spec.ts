@@ -9,7 +9,7 @@ test.describe('Doctor Prescriptions', () => {
     await page.getByLabel('Препарат / дослідження').fill('Dopamine');
     await page.getByLabel('Доза').fill('200 mg');
     await page.getByLabel('Шлях').fill('IV');
-    await page.getByLabel('Год. від').fill('8');
+    await page.getByLabel('Год. від').fill('23');
 
     await page.getByRole('button', { name: '+' }).click();
 
@@ -24,7 +24,7 @@ test.describe('Doctor Prescriptions', () => {
 
     await page.getByLabel('Тип').selectOption('LAB');
     await page.getByLabel('Препарат / дослідження').fill('Загальний аналіз крові');
-    await page.getByLabel('Год. від').fill('10');
+    await page.getByLabel('Год. від').fill('23');
 
     await page.getByRole('button', { name: '+' }).click();
 
@@ -39,7 +39,7 @@ test.describe('Doctor Prescriptions', () => {
     await page.getByLabel('Препарат / дослідження').fill('Norepinephrine');
     await page.getByLabel('Доза').fill('4 mg');
     await page.getByLabel('Шлях').fill('IV');
-    await page.getByLabel('Год. від').fill('8');
+    await page.getByLabel('Год. від').fill('23');
 
     await page.getByRole('button', { name: '+' }).click();
 
