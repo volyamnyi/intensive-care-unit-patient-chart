@@ -44,7 +44,6 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             frontend/package-lock.json
-            tests/package-lock.json
 
       - name: Build backend
         run: mvn clean package -DskipTests
@@ -76,7 +75,7 @@ jobs:
 
       - name: Install Playwright
         run: |
-          npm ci
+          npm install
           npx playwright install --with-deps chromium
         working-directory: tests
 
