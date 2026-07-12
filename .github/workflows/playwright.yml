@@ -15,9 +15,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: icu_patient_chart
-          POSTGRES_USER: icu_user
-          POSTGRES_PASSWORD: icu_pass
+          POSTGRES_DB: my_fullstack_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin
         ports:
           - 5432:5432
         options: >-
