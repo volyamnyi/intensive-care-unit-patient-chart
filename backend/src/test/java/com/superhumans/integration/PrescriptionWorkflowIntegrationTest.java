@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class PrescriptionWorkflowIntegrationTest {
 
     @Autowired private IcuCardRepository icuCardRepository;
+    @Autowired private IcuDayRepository icuDayRepository;
     @Autowired private PrescriptionRepository prescriptionRepository;
     @Autowired private PrescriptionService prescriptionService;
     @Autowired private FluidIntakeRepository fluidIntakeRepository;
@@ -37,9 +39,19 @@ class PrescriptionWorkflowIntegrationTest {
         return icuCardRepository.save(card);
     }
 
+    private IcuDay createDay(IcuCard card) {
+        IcuDay day = IcuDay.builder()
+                .icuCard(card)
+                .dayNumber(1).date(LocalDate.now())
+                .status(DayStatus.ACTIVE).doctorId(1L)
+                .build();
+        return icuDayRepository.save(day);
+    }
+
     @Test
     void prescriptionLifecycle_createStopExecute() {
         IcuCard card = createCard();
+        IcuDay day = createDay(card);
         var userOpt = userRepository.findByLogin("doctor1");
         assertTrue(userOpt.isPresent());
         Long doctorId = userOpt.get().getId();
@@ -50,8 +62,6 @@ class PrescriptionWorkflowIntegrationTest {
         req.setRoute("IV");
         req.setFrequency("q4h");
         req.setType("THERAPY");
-        req.setStartHour(8);
-        req.setEndHour(20);
 
         Prescription created = prescriptionService.createPrescription(card.getId(), req, doctorId, "doctor1");
         assertNotNull(created.getId());
@@ -61,7 +71,7 @@ class PrescriptionWorkflowIntegrationTest {
         assertEquals(1, list.size());
 
         FluidIntake executed = prescriptionService.executePrescription(
-                created.getId(), card.getId(), 10, 200, "nurse1");
+                created.getId(), day.getId(), 10, 200, "nurse1");
         assertNotNull(executed.getId());
         assertEquals(200, executed.getVolumeActual());
         assertEquals(ExecutionStatus.DONE, executed.getStatus());
@@ -74,6 +84,7 @@ class PrescriptionWorkflowIntegrationTest {
     @Test
     void executeStoppedPrescription_shouldThrow() {
         IcuCard card = createCard();
+        IcuDay day = createDay(card);
         var userOpt = userRepository.findByLogin("doctor1");
         assertTrue(userOpt.isPresent());
         Long doctorId = userOpt.get().getId();
@@ -88,7 +99,7 @@ class PrescriptionWorkflowIntegrationTest {
         prescriptionService.stopPrescription(p.getId(), "doctor1");
 
         assertThrows(BadRequestException.class, () ->
-                prescriptionService.executePrescription(p.getId(), card.getId(), 10, 100, "nurse1"));
+                prescriptionService.executePrescription(p.getId(), day.getId(), 10, 100, "nurse1"));
     }
 
     @Test
