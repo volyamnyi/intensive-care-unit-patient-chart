@@ -16,3 +16,18 @@ ON CONFLICT (login) DO UPDATE SET
   speciality_code = EXCLUDED.speciality_code,
   speciality_name = EXCLUDED.speciality_name,
   phone = EXCLUDED.phone;
+
+-- Seed ICU cards (only if table is empty; patient_id matches Mock MIS)
+INSERT INTO icu_cards (patient_id, patient_name, medical_card_number, admission_date, diagnosis, apache_ii, sofa, status, created_by, created_at)
+SELECT * FROM (VALUES
+  (1001, 'Петренко Іван Сергійович', 'MC-001', NOW() - INTERVAL '2 days', 'Пневмонія, дихальна недостатність', 18, 6, 'ACTIVE', 'doctor1', NOW() - INTERVAL '2 days'),
+  (1002, 'Коваленко Олена Вікторівна', 'MC-002', NOW() - INTERVAL '1 day', 'Гострий панкреатит', 14, 4, 'ACTIVE', 'doctor1', NOW() - INTERVAL '1 day'),
+  (1003, 'Сидоренко Василь Петрович', 'MC-003', NOW() - INTERVAL '3 days', 'Інфаркт міокарда', 22, 8, 'ACTIVE', 'doctor2', NOW() - INTERVAL '3 days')
+) AS v
+WHERE NOT EXISTS (SELECT 1 FROM icu_cards LIMIT 1);
+
+-- Seed ICU days (only if icu_days is empty; one active day per card)
+INSERT INTO icu_days (icu_card_id, day_number, date, status, doctor_id)
+SELECT icu_cards.id, 1, CURRENT_DATE, 'ACTIVE', 1
+FROM icu_cards
+WHERE NOT EXISTS (SELECT 1 FROM icu_days LIMIT 1);

@@ -22,13 +22,11 @@ export default defineConfig({
       testMatch: '**/*.setup.ts',
     },
     {
-      name: 'auth-chromium',
-      dependencies: ['setup'],
+      name: 'login-chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: '.auth/doctor.json',
       },
-      testMatch: '**/auth/*.spec.ts',
+      testMatch: '**/auth/login.spec.ts',
     },
     {
       name: 'doctor-chromium',

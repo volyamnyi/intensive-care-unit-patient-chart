@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 30
+    timeout-minutes: 40
     runs-on: ubuntu-latest
 
     services:
@@ -45,8 +45,8 @@ jobs:
             package-lock.json
             frontend/package-lock.json
 
-      - name: Build backend
-        run: mvn clean package -DskipTests
+      - name: Build and test backend
+        run: mvn clean package
         working-directory: backend
 
       - name: Start backend

@@ -22,13 +22,13 @@ test.describe('Nurse Dashboard', () => {
     await page.goto('/nurse');
     await page.getByLabel('Пацієнт').click();
     await page.getByRole('option', { name: /Петренко/ }).click();
-    await expect(page.getByText('Систолічний тиск')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('АТ сист')).toBeVisible({ timeout: 10000 });
   });
 
   test('fluid output form is visible', async ({ page }) => {
     await page.goto('/nurse');
     await page.getByLabel('Пацієнт').click();
     await page.getByRole('option', { name: /Петренко/ }).click();
-    await expect(page.getByText('Діурез')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Сеча')).toBeVisible({ timeout: 10000 });
   });
 });

@@ -4,7 +4,7 @@ test.describe('Admin Page', () => {
   test('displays doctors and nurses tables', async ({ page }) => {
     await page.goto('/admin');
     await expect(page.getByText('Лікарі')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Медичні сестри')).toBeVisible();
+    await expect(page.getByText('Медсестри')).toBeVisible();
   });
 
   test('doctor table shows user details', async ({ page }) => {
