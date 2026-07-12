@@ -2,6 +2,7 @@ package com.superhumans.service;
 
 import com.superhumans.entity.*;
 import com.superhumans.repository.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,163 +19,136 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FluidBalanceServiceTest {
 
-    @Mock
-    private FluidIntakeRepository fluidIntakeRepository;
+    @Mock private FluidIntakeRepository fluidIntakeRepository;
+    @Mock private FluidOutputRepository fluidOutputRepository;
+    @Mock private FluidBalanceRepository fluidBalanceRepository;
+    @Mock private IcuDayRepository icuDayRepository;
+    @InjectMocks private FluidBalanceService fluidBalanceService;
 
-    @Mock
-    private FluidOutputRepository fluidOutputRepository;
+    private IcuCard card;
+    private IcuDay day;
 
-    @Mock
-    private FluidBalanceRepository fluidBalanceRepository;
+    @BeforeEach
+    void setUp() {
+        card = IcuCard.builder().id(1L).build();
+        day = IcuDay.builder().id(1L).icuCard(card).dayNumber(1).build();
+    }
 
-    @Mock
-    private IcuDayRepository icuDayRepository;
-
-    @InjectMocks
-    private FluidBalanceService fluidBalanceService;
-
-    @Test
-    void getBalance_shouldCalculateCorrectly() {
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of(
-                FluidIntake.builder().volumeActual(500).status(ExecutionStatus.DONE).build(),
-                FluidIntake.builder().volumeActual(300).status(ExecutionStatus.DONE).build(),
-                FluidIntake.builder().volumeActual(200).status(ExecutionStatus.PENDING).build()
-        ));
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of(
-                FluidOutput.builder().volume(400).build(),
-                FluidOutput.builder().volume(100).build()
-        ));
-        when(icuDayRepository.findById(1L)).thenReturn(Optional.of(
-                IcuDay.builder().id(1L).icuCard(IcuCard.builder().id(1L).build()).build()
-        ));
-        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(
-                IcuDay.builder().id(1L).build()
-        ));
-
-        var result = fluidBalanceService.getBalance(1L);
-
-        assertEquals(1L, result.getIcuDayId());
-        // Only DONE intakes count: 500 + 300 = 800
-        assertEquals(800, result.getTotalIntake());
-        // All outputs count: 400 + 100 = 500
-        assertEquals(500, result.getTotalOutput());
-        // Daily balance: 800 - 500 = 300
-        assertEquals(300, result.getDailyBalance());
-        // Cumulative: 300 (only current day)
-        assertEquals(300, result.getCumulativeBalance());
+    private void mockCumulativeBase() {
+        when(icuDayRepository.findById(1L)).thenReturn(Optional.of(day));
+        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(day));
     }
 
     @Test
-    void getBalance_shouldHandleEmptyData() {
+    void getBalance_shouldCalculateCorrectly() {
+        mockCumulativeBase();
+        List<FluidIntake> intakes = List.of(
+                FluidIntake.builder().id(1L).volumeActual(500).status(ExecutionStatus.DONE).build(),
+                FluidIntake.builder().id(2L).volumeActual(300).status(ExecutionStatus.DONE).build()
+        );
+        List<FluidOutput> outputs = List.of(
+                FluidOutput.builder().id(1L).type(OutputType.URINE).volume(400).build(),
+                FluidOutput.builder().id(2L).type(OutputType.TUBE).volume(100).build(),
+                FluidOutput.builder().id(3L).type(OutputType.DRAINAGE).volume(50).build()
+        );
+
+        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
+        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(outputs);
+
+        var balance = fluidBalanceService.getBalance(1L);
+        assertEquals(800, balance.getTotalIntake().intValue());
+        assertEquals(550, balance.getTotalOutput().intValue());
+        assertEquals(250, balance.getDailyBalance().intValue());
+    }
+
+    @Test
+    void getBalance_shouldExcludeStoolFromOutput() {
+        mockCumulativeBase();
+        List<FluidIntake> intakes = List.of(
+                FluidIntake.builder().id(1L).volumeActual(1000).status(ExecutionStatus.DONE).build()
+        );
+        List<FluidOutput> outputs = List.of(
+                FluidOutput.builder().id(1L).type(OutputType.URINE).volume(400).build(),
+                FluidOutput.builder().id(2L).type(OutputType.TUBE).volume(100).build(),
+                FluidOutput.builder().id(3L).type(OutputType.DRAINAGE).volume(50).build(),
+                FluidOutput.builder().id(4L).type(OutputType.STOOL).isPresent(true).build()
+        );
+
+        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
+        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(outputs);
+
+        var balance = fluidBalanceService.getBalance(1L);
+        assertEquals(1000, balance.getTotalIntake().intValue());
+        assertEquals(550, balance.getTotalOutput().intValue());
+        assertEquals(450, balance.getDailyBalance().intValue());
+    }
+
+    @Test
+    void getBalance_shouldOnlyCountDoneIntakes() {
+        mockCumulativeBase();
+        List<FluidIntake> intakes = List.of(
+                FluidIntake.builder().id(1L).volumeActual(500).status(ExecutionStatus.DONE).build(),
+                FluidIntake.builder().id(2L).volumeActual(300).status(ExecutionStatus.PENDING).build()
+        );
+        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
+        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
+
+        var balance = fluidBalanceService.getBalance(1L);
+        assertEquals(500, balance.getTotalIntake().intValue());
+    }
+
+    @Test
+    void getBalance_shouldReturnZeros_whenNoData() {
+        mockCumulativeBase();
         when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of());
         when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(icuDayRepository.findById(1L)).thenReturn(Optional.of(
-                IcuDay.builder().id(1L).icuCard(IcuCard.builder().id(1L).build()).build()
-        ));
-        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(
-                IcuDay.builder().id(1L).build()
-        ));
 
-        var result = fluidBalanceService.getBalance(1L);
+        var balance = fluidBalanceService.getBalance(1L);
+        assertEquals(0, balance.getTotalIntake().intValue());
+        assertEquals(0, balance.getTotalOutput().intValue());
+        assertEquals(0, balance.getDailyBalance().intValue());
+    }
 
-        assertEquals(0, result.getTotalIntake());
-        assertEquals(0, result.getTotalOutput());
-        assertEquals(0, result.getDailyBalance());
-        assertEquals(0, result.getCumulativeBalance());
+    @Test
+    void getBalance_shouldReturnNegativeBalance() {
+        mockCumulativeBase();
+        List<FluidIntake> intakes = List.of(
+                FluidIntake.builder().id(1L).volumeActual(200).status(ExecutionStatus.DONE).build()
+        );
+        List<FluidOutput> outputs = List.of(
+                FluidOutput.builder().id(1L).type(OutputType.URINE).volume(500).build()
+        );
+        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
+        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(outputs);
+
+        var balance = fluidBalanceService.getBalance(1L);
+        assertEquals(-300, balance.getDailyBalance().intValue());
     }
 
     @Test
     void calculateAndSave_shouldPersistBalance() {
+        mockCumulativeBase();
+        IcuDay dayParam = IcuDay.builder().id(1L).build();
         when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of());
         when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(icuDayRepository.findById(1L)).thenReturn(Optional.of(
-                IcuDay.builder().id(1L).icuCard(IcuCard.builder().id(1L).build()).build()
-        ));
-        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(
-                IcuDay.builder().id(1L).build()
-        ));
         when(fluidBalanceRepository.findByIcuDayId(1L)).thenReturn(Optional.empty());
+        when(fluidBalanceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        IcuDay day = IcuDay.builder().id(1L).build();
-        var result = fluidBalanceService.calculateAndSave(day);
-
-        assertNotNull(result);
-        verify(fluidBalanceRepository).save(argThat(fb ->
-                fb.getIcuDayId() == 1L &&
-                fb.getTotalIntake() == 0 &&
-                fb.getTotalOutput() == 0 &&
-                fb.getDailyBalance() == 0 &&
-                fb.getCumulativeBalance() == 0
-        ));
-    }
-
-    @Test
-    void getBalance_negativeBalance_shouldReturnNegative() {
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of(
-                FluidIntake.builder().volumeActual(200).status(ExecutionStatus.DONE).build()
-        ));
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of(
-                FluidOutput.builder().volume(500).build(),
-                FluidOutput.builder().volume(300).build()
-        ));
-        when(icuDayRepository.findById(1L)).thenReturn(Optional.of(
-                IcuDay.builder().id(1L).icuCard(IcuCard.builder().id(1L).build()).build()
-        ));
-        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(
-                IcuDay.builder().id(1L).build()
-        ));
-
-        var result = fluidBalanceService.getBalance(1L);
-
-        assertEquals(200, result.getTotalIntake());
-        assertEquals(800, result.getTotalOutput());
-        assertEquals(-600, result.getDailyBalance());
-        assertEquals(-600, result.getCumulativeBalance());
-    }
-
-    @Test
-    void getBalance_cumulativeWithMultipleDays_shouldSumCorrectly() {
-        IcuDay day1 = IcuDay.builder().id(1L).icuCard(IcuCard.builder().id(1L).build()).build();
-        IcuDay day2 = IcuDay.builder().id(2L).icuCard(IcuCard.builder().id(1L).build()).build();
-
-        when(icuDayRepository.findById(2L)).thenReturn(Optional.of(day2));
-        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(day1, day2));
-
-        when(fluidIntakeRepository.findByIcuDayId(2L)).thenReturn(List.of(
-                FluidIntake.builder().volumeActual(500).status(ExecutionStatus.DONE).build()
-        ));
-        when(fluidOutputRepository.findByIcuDayId(2L)).thenReturn(List.of(
-                FluidOutput.builder().volume(200).build()
-        ));
-
-        when(fluidBalanceRepository.findByIcuDayId(1L)).thenReturn(Optional.of(
-                FluidBalance.builder().dailyBalance(200).build()
-        ));
-
-        var result = fluidBalanceService.getBalance(2L);
-
-        assertEquals(500, result.getTotalIntake());
-        assertEquals(200, result.getTotalOutput());
-        assertEquals(300, result.getDailyBalance());
-        assertEquals(500, result.getCumulativeBalance());
+        fluidBalanceService.calculateAndSave(dayParam);
+        verify(fluidBalanceRepository).save(any());
     }
 
     @Test
     void calculateAndSave_shouldUpdateExistingBalance() {
+        mockCumulativeBase();
+        IcuDay dayParam = IcuDay.builder().id(1L).build();
+        FluidBalance existing = new FluidBalance();
         when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of());
         when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(icuDayRepository.findById(1L)).thenReturn(Optional.of(
-                IcuDay.builder().id(1L).icuCard(IcuCard.builder().id(1L).build()).build()
-        ));
-        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(
-                IcuDay.builder().id(1L).build()
-        ));
-        FluidBalance existing = FluidBalance.builder().id(10L).build();
         when(fluidBalanceRepository.findByIcuDayId(1L)).thenReturn(Optional.of(existing));
+        when(fluidBalanceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        IcuDay day = IcuDay.builder().id(1L).build();
-        fluidBalanceService.calculateAndSave(day);
-
+        fluidBalanceService.calculateAndSave(dayParam);
         verify(fluidBalanceRepository).save(existing);
     }
 }

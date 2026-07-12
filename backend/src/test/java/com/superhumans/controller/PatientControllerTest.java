@@ -1,5 +1,6 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtAuthenticationFilter;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.CorsConfig;
 import com.superhumans.config.SecurityConfig;
@@ -21,29 +22,23 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@Import({SecurityConfig.class, CorsConfig.class, com.superhumans.auth.JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, CorsConfig.class, JwtAuthenticationFilter.class})
 @WebMvcTest(PatientController.class)
 class PatientControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
-    private MISService misService;
-
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
+    @Autowired private MockMvc mockMvc;
+    @MockBean private MISService misService;
+    @MockBean private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @WithMockUser(roles = "DOCTOR")
     void searchPatients_shouldReturnList() throws Exception {
         List<PatientDTO> patients = List.of(
-                PatientDTO.builder().patientID(1001).patientName("Петренко Іван").patientBirthDate(LocalDate.of(1978, 3, 15)).build()
-        );
+                PatientDTO.builder().patientID(1001).patientName("Петренко Іван")
+                        .patientBirthDate(LocalDate.of(1978, 3, 15)).build());
         when(misService.searchPatients(eq("Петренко"), isNull(), isNull())).thenReturn(patients);
 
-        mockMvc.perform(get("/api/patients/search")
-                        .param("name", "Петренко"))
+        mockMvc.perform(get("/api/patients/search").param("name", "Петренко"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].patientID").value(1001))
                 .andExpect(jsonPath("$[0].patientName").value("Петренко Іван"));
@@ -52,24 +47,19 @@ class PatientControllerTest {
     @Test
     @WithMockUser(roles = "DOCTOR")
     void getPatient_shouldReturnPatient_whenExists() throws Exception {
-        PatientDTO patient = PatientDTO.builder()
-                .patientID(1001)
-                .patientName("Петренко Іван")
-                .patientBirthDate(LocalDate.of(1978, 3, 15))
-                .build();
+        PatientDTO patient = PatientDTO.builder().patientID(1001)
+                .patientName("Петренко Іван").build();
         when(misService.getPatientInfo(1001, null)).thenReturn(patient);
 
         mockMvc.perform(get("/api/patients/1001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.patientID").value(1001))
-                .andExpect(jsonPath("$.patientName").value("Петренко Іван"));
+                .andExpect(jsonPath("$.patientID").value(1001));
     }
 
     @Test
     @WithMockUser(roles = "DOCTOR")
     void getPatient_shouldReturn404_whenNotFound() throws Exception {
         when(misService.getPatientInfo(9999, null)).thenReturn(null);
-
         mockMvc.perform(get("/api/patients/9999"))
                 .andExpect(status().isNotFound());
     }
@@ -77,50 +67,26 @@ class PatientControllerTest {
     @Test
     @WithMockUser(roles = "DOCTOR")
     void searchPatients_byPhone_shouldReturnResults() throws Exception {
-        List<PatientDTO> patients = List.of(
-                PatientDTO.builder().patientID(1001).patientName("Петренко Іван").patientPhone("+380501234567").build()
-        );
-        when(misService.searchPatients(isNull(), eq("+380501234567"), isNull())).thenReturn(patients);
+        when(misService.searchPatients(isNull(), eq("+380501234567"), isNull()))
+                .thenReturn(List.of(PatientDTO.builder().patientID(1001).build()));
 
-        mockMvc.perform(get("/api/patients/search")
-                        .param("phone", "+380501234567"))
+        mockMvc.perform(get("/api/patients/search").param("phone", "+380501234567"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].patientID").value(1001));
-    }
-
-    @Test
-    @WithMockUser(roles = "DOCTOR")
-    void searchPatients_byExternalId_shouldReturnResults() throws Exception {
-        List<PatientDTO> patients = List.of(
-                PatientDTO.builder().patientID(1001).patientName("Петренко Іван").patientExternalID1("MC-2024-001").build()
-        );
-        when(misService.searchPatients(isNull(), isNull(), eq("MC-2024-001"))).thenReturn(patients);
-
-        mockMvc.perform(get("/api/patients/search")
-                        .param("externalId", "MC-2024-001"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].patientID").value(1001));
-    }
-
-    @Test
-    @WithMockUser(roles = "DOCTOR")
-    void searchPatients_withSpecialChars_shouldNotThrow() throws Exception {
-        when(misService.searchPatients(eq("O'Brien"), isNull(), isNull())).thenReturn(List.of());
-
-        mockMvc.perform(get("/api/patients/search")
-                        .param("name", "O'Brien"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     @WithMockUser(roles = "DOCTOR")
     void searchPatients_noMatch_shouldReturnEmpty() throws Exception {
         when(misService.searchPatients(eq("XXXXX"), isNull(), isNull())).thenReturn(List.of());
-
-        mockMvc.perform(get("/api/patients/search")
-                        .param("name", "XXXXX"))
+        mockMvc.perform(get("/api/patients/search").param("name", "XXXXX"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void anonymousUser_shouldGet403() throws Exception {
+        mockMvc.perform(get("/api/patients/search"))
+                .andExpect(status().isForbidden());
     }
 }

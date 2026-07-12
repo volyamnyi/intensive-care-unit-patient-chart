@@ -1,5 +1,6 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtAuthenticationFilter;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.CorsConfig;
 import com.superhumans.config.SecurityConfig;
@@ -17,29 +18,22 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@Import({SecurityConfig.class, CorsConfig.class, com.superhumans.auth.JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, CorsConfig.class, JwtAuthenticationFilter.class})
 @WebMvcTest(UserController.class)
 class UserControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
-    private UserRepository userRepository;
-
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
+    @Autowired private MockMvc mockMvc;
+    @MockBean private UserRepository userRepository;
+    @MockBean private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @WithMockUser(username = "doctor1", roles = "DOCTOR")
     void getCurrentUser_shouldReturnUser() throws Exception {
-        User user = User.builder()
-                .id(1L).login("doctor1").fullName("Олександр Мельник")
+        User user = User.builder().id(1L).login("doctor1").fullName("Олександр Мельник")
                 .role(UserRole.DOCTOR).email("melnyk@hospital.ua").build();
         when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(user));
 
@@ -73,5 +67,11 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].role").value("NURSE"));
+    }
+
+    @Test
+    void anonymousUser_shouldGet403() throws Exception {
+        mockMvc.perform(get("/api/users/me"))
+                .andExpect(status().isForbidden());
     }
 }

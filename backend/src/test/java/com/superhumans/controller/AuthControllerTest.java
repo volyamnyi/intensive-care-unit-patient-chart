@@ -5,11 +5,10 @@ import com.superhumans.auth.JwtAuthenticationFilter;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.CorsConfig;
 import com.superhumans.config.SecurityConfig;
-import com.superhumans.exception.GlobalExceptionHandler;
 import com.superhumans.dto.LoginRequest;
-import com.superhumans.dto.LoginResponse;
 import com.superhumans.entity.User;
 import com.superhumans.entity.UserRole;
+import com.superhumans.exception.GlobalExceptionHandler;
 import com.superhumans.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +21,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -31,30 +29,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AuthController.class)
 class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
-    private UserRepository userRepository;
-
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
-
-    @MockBean
-    private PasswordEncoder passwordEncoder;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @MockBean private UserRepository userRepository;
+    @MockBean private JwtTokenProvider jwtTokenProvider;
+    @MockBean private PasswordEncoder passwordEncoder;
 
     @Test
     void login_shouldReturnToken_whenCredentialsValid() throws Exception {
         User user = User.builder()
-                .login("doctor1")
-                .passwordHash("hashed-password")
-                .fullName("Олександр Мельник")
-                .role(UserRole.DOCTOR)
-                .email("melnyk@hospital.ua")
-                .build();
+                .login("doctor1").passwordHash("hashed-password")
+                .fullName("Олександр Мельник").role(UserRole.DOCTOR)
+                .email("melnyk@hospital.ua").build();
 
         when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("doctor123", "hashed-password")).thenReturn(true);
@@ -74,11 +60,9 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_shouldThrow_whenUserNotFound() throws Exception {
+    void login_shouldReturn401_whenUserNotFound() throws Exception {
         when(userRepository.findByLogin("unknown")).thenReturn(Optional.empty());
-
         LoginRequest req = new LoginRequest("unknown", "pass");
-
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -86,16 +70,11 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_shouldThrow_whenWrongPassword() throws Exception {
-        User user = User.builder()
-                .login("doctor1")
-                .passwordHash("hashed-password")
-                .build();
+    void login_shouldReturn401_whenWrongPassword() throws Exception {
+        User user = User.builder().login("doctor1").passwordHash("hashed-password").build();
         when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong", "hashed-password")).thenReturn(false);
-
         LoginRequest req = new LoginRequest("doctor1", "wrong");
-
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -103,19 +82,42 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_shouldThrow_whenEmptyPassword() throws Exception {
-        User user = User.builder()
-                .login("doctor1")
-                .passwordHash("hashed-password")
-                .build();
+    void login_shouldReturn401_whenEmptyPassword() throws Exception {
+        User user = User.builder().login("doctor1").passwordHash("hashed-password").build();
         when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("", "hashed-password")).thenReturn(false);
-
         LoginRequest req = new LoginRequest("doctor1", "");
-
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void login_shouldReturn401_whenEmptyBody() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void login_shouldReturnCyrillicInResponse() throws Exception {
+        User user = User.builder()
+                .login("doctor1").passwordHash("hashed-password")
+                .fullName("Олександр Мельник").role(UserRole.DOCTOR)
+                .email("melnyk@hospital.ua").build();
+
+        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("doctor123", "hashed-password")).thenReturn(true);
+        when(jwtTokenProvider.generateToken("doctor1", "DOCTOR")).thenReturn("token");
+
+        LoginRequest req = new LoginRequest("doctor1", "doctor123");
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Олександр Мельник"))
+                .andExpect(content().encoding("UTF-8"));
     }
 }

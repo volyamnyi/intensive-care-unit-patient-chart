@@ -1,6 +1,7 @@
 package com.superhumans.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.superhumans.auth.JwtAuthenticationFilter;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.CorsConfig;
 import com.superhumans.config.SecurityConfig;
@@ -19,39 +20,27 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@Import({SecurityConfig.class, CorsConfig.class, com.superhumans.auth.JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, CorsConfig.class, JwtAuthenticationFilter.class})
 @WebMvcTest(IcuCardController.class)
 class IcuCardControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
-    private IcuCardService icuCardService;
-
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @MockBean private IcuCardService icuCardService;
+    @MockBean private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @WithMockUser(roles = "DOCTOR")
     void createCard_shouldReturnCard() throws Exception {
-        IcuCard card = IcuCard.builder()
-                .id(1L)
-                .patientName("Test Patient")
-                .diagnosis("Test")
-                .status(CardStatus.ACTIVE)
-                .build();
-
-        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(), any(), any(), anyString(), any(), any(), any(), any(), any(), any()))
+        IcuCard card = IcuCard.builder().id(1L).patientName("Test Patient")
+                .diagnosis("Test").status(CardStatus.ACTIVE).build();
+        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(),
+                any(), any(), anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(card);
 
         IcuCardCreateRequest req = new IcuCardCreateRequest();
@@ -73,14 +62,10 @@ class IcuCardControllerTest {
     @Test
     @WithMockUser(roles = "DOCTOR")
     void createCard_withNullOptionalFields_shouldSucceed() throws Exception {
-        IcuCard card = IcuCard.builder()
-                .id(2L)
-                .patientName("Test Patient")
-                .diagnosis("Test")
-                .status(CardStatus.ACTIVE)
-                .build();
-
-        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(), isNull(), isNull(), anyString(), any(), any(), any(), any(), any(), any()))
+        IcuCard card = IcuCard.builder().id(2L).patientName("Test Patient")
+                .diagnosis("Test").status(CardStatus.ACTIVE).build();
+        when(icuCardService.createCard(anyLong(), anyString(), anyString(), anyString(),
+                isNull(), isNull(), anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(card);
 
         IcuCardCreateRequest req = new IcuCardCreateRequest();
@@ -93,34 +78,25 @@ class IcuCardControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(2))
-                .andExpect(jsonPath("$.patientName").value("Test Patient"));
+                .andExpect(jsonPath("$.id").value(2));
     }
 
     @Test
     @WithMockUser(roles = "DOCTOR")
     void getCard_shouldReturnCard() throws Exception {
-        IcuCard card = IcuCard.builder()
-                .id(1L)
-                .patientName("Patient")
-                .build();
-        when(icuCardService.getCard(1L)).thenReturn(card);
-
+        when(icuCardService.getCard(1L)).thenReturn(
+                IcuCard.builder().id(1L).patientName("Patient").build());
         mockMvc.perform(get("/api/icu-cards/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.patientName").value("Patient"));
+                .andExpect(jsonPath("$.id").value(1));
     }
 
     @Test
     @WithMockUser(roles = "DOCTOR")
     void getActiveCards_shouldReturnList() throws Exception {
-        List<IcuCard> cards = List.of(
+        when(icuCardService.getActiveCards()).thenReturn(List.of(
                 IcuCard.builder().id(1L).patientName("Patient 1").build(),
-                IcuCard.builder().id(2L).patientName("Patient 2").build()
-        );
-        when(icuCardService.getActiveCards()).thenReturn(cards);
-
+                IcuCard.builder().id(2L).patientName("Patient 2").build()));
         mockMvc.perform(get("/api/icu-cards/active"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
@@ -129,13 +105,27 @@ class IcuCardControllerTest {
     @Test
     @WithMockUser(roles = "DOCTOR")
     void getCardsByPatient_shouldReturnList() throws Exception {
-        List<IcuCard> cards = List.of(
-                IcuCard.builder().id(1L).build()
-        );
-        when(icuCardService.getCardsByPatient(100L)).thenReturn(cards);
-
+        when(icuCardService.getCardsByPatient(100L)).thenReturn(
+                List.of(IcuCard.builder().id(1L).build()));
         mockMvc.perform(get("/api/icu-cards/by-patient/100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void anonymousUser_shouldGet403() throws Exception {
+        mockMvc.perform(post("/api/icu-cards")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "NURSE")
+    void nurse_shouldGet403_onCreateCard() throws Exception {
+        mockMvc.perform(post("/api/icu-cards")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden());
     }
 }

@@ -9,27 +9,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class JwtAuthenticationFilterTest {
 
-    @Mock
-    private JwtTokenProvider jwtTokenProvider;
-
-    @Mock
-    private HttpServletRequest request;
-
-    @Mock
-    private HttpServletResponse response;
-
-    @Mock
-    private FilterChain filterChain;
-
-    @InjectMocks
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Mock private JwtTokenProvider jwtTokenProvider;
+    @Mock private HttpServletRequest request;
+    @Mock private HttpServletResponse response;
+    @Mock private FilterChain filterChain;
+    @InjectMocks private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
     void doFilterInternal_shouldSetAuthentication_forValidToken() throws Exception {
@@ -44,7 +34,6 @@ class JwtAuthenticationFilterTest {
         assertNotNull(auth);
         assertEquals("doctor1", auth.getPrincipal());
         assertTrue(auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_DOCTOR")));
-
         verify(filterChain).doFilter(request, response);
         SecurityContextHolder.clearContext();
     }
@@ -52,12 +41,8 @@ class JwtAuthenticationFilterTest {
     @Test
     void doFilterInternal_shouldNotSetAuthentication_whenNoToken() throws Exception {
         when(request.getHeader("Authorization")).thenReturn(null);
-
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
-
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        assertNull(auth);
-
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain).doFilter(request, response);
     }
 
@@ -65,12 +50,8 @@ class JwtAuthenticationFilterTest {
     void doFilterInternal_shouldNotSetAuthentication_forInvalidToken() throws Exception {
         when(request.getHeader("Authorization")).thenReturn("Bearer invalid-token");
         when(jwtTokenProvider.validateToken("invalid-token")).thenReturn(false);
-
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
-
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        assertNull(auth);
-
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain).doFilter(request, response);
         SecurityContextHolder.clearContext();
     }
@@ -78,12 +59,16 @@ class JwtAuthenticationFilterTest {
     @Test
     void doFilterInternal_shouldHandleNonBearerHeader() throws Exception {
         when(request.getHeader("Authorization")).thenReturn("Basic some-credentials");
-
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+    }
 
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        assertNull(auth);
-
+    @Test
+    void doFilterInternal_shouldNotSetAuthentication_whenEmptyBearer() throws Exception {
+        when(request.getHeader("Authorization")).thenReturn("Bearer ");
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(filterChain).doFilter(request, response);
     }
 }
