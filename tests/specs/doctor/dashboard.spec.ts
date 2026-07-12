@@ -3,9 +3,9 @@ import { test, expect } from '../../fixtures/index';
 test.describe('Doctor Dashboard', () => {
   test('displays active patient cards', async ({ page }) => {
     await page.goto('/doctor');
-    await expect(page.getByText('Петренко Іван')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Коваленко Петро')).toBeVisible();
-    await expect(page.getByText('Сидоренко Ольга')).toBeVisible();
+    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Коваленко Олена Вікторівна')).toBeVisible();
+    await expect(page.getByText('Сидоренко Василь Петрович')).toBeVisible();
   });
 
   test('opens patient day page', async ({ page }) => {
