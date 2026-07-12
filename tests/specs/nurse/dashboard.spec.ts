@@ -3,11 +3,15 @@ import { test, expect } from '../../fixtures/index';
 test.describe('Nurse Dashboard', () => {
   test('displays page header with patient selector', async ({ page }) => {
     await page.goto('/nurse');
+    await page.locator('[role="combobox"]').first().click();
+    await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
     await expect(page.getByRole('heading', { name: /Показники/ })).toBeVisible({ timeout: 10000 });
   });
 
   test('hour selector shows 24 tiles', async ({ page }) => {
     await page.goto('/nurse');
+    await page.locator('[role="combobox"]').first().click();
+    await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
     const tiles = page.locator('[class*="MuiBox-root"]').filter({ hasText: /^\d{1,2}:00$/ });
     await expect(tiles.first()).toBeVisible({ timeout: 10000 });
   });

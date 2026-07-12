@@ -3,11 +3,10 @@ import { test, expect } from '../../fixtures/index';
 test.describe('Nurse Vitals Entry', () => {
   test('enters and persists vitals for a patient hour', async ({ page }) => {
     await page.goto('/nurse');
-    await expect(page.getByRole('heading', { name: /Показники/ })).toBeVisible({ timeout: 10000 });
-
     await page.locator('[role="combobox"]').first().click();
     await page.getByRole('option', { name: /Петренко Іван/ }).click();
     await expect(page.getByText('Петренко Іван Сергійович').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Показники/ })).toBeVisible({ timeout: 10000 });
 
     await page.getByText('8:00').first().click();
     await expect(page.getByText('Показники — 8:00')).toBeVisible();
