@@ -29,7 +29,9 @@ public class PrescriptionService {
 
         if (req.getStartHour() != null) {
             int currentHour = LocalTime.now().getHour();
-            if (req.getStartHour() < currentHour) {
+            boolean pastHour = req.getStartHour() < currentHour
+                    && !(req.getStartHour() >= 8 && currentHour < 8);
+            if (pastHour) {
                 throw new BadRequestException("Не можна створити призначення на минулу годину");
             }
         }
