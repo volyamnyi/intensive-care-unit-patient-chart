@@ -24,15 +24,15 @@ test.describe('Doctor Dashboard', () => {
     await page.goto('/doctor');
     await page.getByRole('button', { name: /Відкрити/ }).first().click();
     await page.getByRole('tab', { name: 'Призначення' }).click();
-    await expect(page.getByText('Призначення')).toBeVisible();
+    await expect(page.getByText('Нове призначення')).toBeVisible();
   });
 
   test('scales tab shows scale cards', async ({ page }) => {
     await page.goto('/doctor');
     await page.getByRole('button', { name: /Відкрити/ }).first().click();
     await page.getByRole('tab', { name: 'Шкали' }).click();
-    await expect(page.getByText('APACHE II')).toBeVisible();
-    await expect(page.getByText('SOFA')).toBeVisible();
+    await expect(page.getByText('APACHE II').first()).toBeVisible();
+    await expect(page.getByText('SOFA').first()).toBeVisible();
   });
 
   test('sign off button signs the day', async ({ page }) => {
