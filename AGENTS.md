@@ -10,8 +10,9 @@ backend/   (Spring Boot 3.2.5 + Java 17 + Maven)
 - Monorepo with two independent packages (no workspace orchestration).
 - JWT auth stored in `localStorage`. API base URL: `frontend/src/api/client.ts`.
 - Backend port: **8085** (`application.yml`, not 8080 as root README claims).
-- DB: PostgreSQL 16, `ddl-auto: validate` — schema must be pre-created.
-- Seed data: `backend/src/main/resources/data.sql` (6 users, `spring.sql.init.mode: always`).
+- DB: PostgreSQL 16, `ddl-auto: update` — schema auto-created by Hibernate.
+- Seed data: `backend/src/main/resources/data.sql` (6 users, 3 ICU cards + active days, `spring.sql.init.mode: always`).
+- CI: `.github/workflows/playwright.yml` — Postgres service, JDK 17, Node 22, Playwright with chromium, 40min timeout.
 
 ## Commands
 
@@ -31,10 +32,40 @@ backend/   (Spring Boot 3.2.5 + Java 17 + Maven)
 | `mvn compile` | Compile only |
 | `mvn test` | Run tests |
 
+### Playwright (`cd tests`)
+| Command | Action |
+|---|---|
+| `npx playwright test` | Run all E2E tests |
+| `npx playwright test --list` | List tests without running |
+| `npx playwright show-report` | View HTML report |
+
 ## Testing
 
-- **Backend**: Test deps configured but **no test sources exist yet**.
-- **Frontend**: No test framework configured.
+- **Backend**: 150 tests (21 files — 12 service, 6 controller, 3 repository @DataJpaTest, 3 integration @SpringBootTest, 1 security, 2 auth). Run with `mvn test`.
+- **Frontend**: 23 Vitest tests (3 files — LoginPage, endpoints, AuthContext). Run with `npm t` or `npx vitest run`.
+- **E2E**: 43 Playwright tests in 10 spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api). Run with `npx playwright test` from `tests/`.
+
+## Test Architecture
+
+### Playwright Projects
+
+| Project | Depends On | storageState | Tests |
+|---|---|---|---|
+| setup | — | — | Auth setup (4 roles) |
+| login-chromium | — | none | Login flow (5) |
+| doctor-chromium | setup | `.auth/doctor.json` | Dashboard, cards, prescriptions, notes, sign-off |
+| nurse-chromium | setup | `.auth/nurse.json` | Dashboard, vitals, fluid balance |
+| hod-chromium | setup | `.auth/hod.json` | Dashboard, create card, sign-off |
+| admin-chromium | setup | `.auth/admin.json` | User tables |
+| api-chromium | — | none | Patient search API |
+
+### Key Patterns
+- **Locators**: prefer `getByRole`, `getByLabel`, row-specific filters over `.first()` for determinism
+- **Seed data**: 3 ICU cards (Петренко, Коваленко, Сидоренко) — use `filter({ hasText })` to target them
+- **Auth**: storageState per role, projects depend on `setup`
+- **Parallelism**: `fullyParallel: true` — tests can race; use specific locators not `.first()` for shared data
+- **CI retries**: 2 retries per test
+- **Backend tests**: `@SpringBootTest` tests are `@Transactional` (rollback); `@DataJpaTest` uses `@AutoConfigureTestDatabase(replace = NONE)` (real PostgreSQL)
 
 ## Seed Data
 
