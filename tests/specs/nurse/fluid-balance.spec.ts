@@ -7,7 +7,7 @@ test.describe('Nurse Fluid Balance', () => {
     await expect(page).toHaveURL(/\/nurse\/episode\//);
 
     await page.getByRole('tab', { name: 'Баланс рідини' }).click();
-    await expect(page.getByText('Баланс рідини')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Баланс рідини' })).toBeVisible();
     await expect(page.getByText(/Надійшло:/)).toBeVisible();
     await expect(page.getByText(/Виділено:/)).toBeVisible();
     await expect(page.getByText(/Добовий баланс:/)).toBeVisible();
