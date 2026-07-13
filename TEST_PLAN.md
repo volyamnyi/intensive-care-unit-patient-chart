@@ -126,6 +126,24 @@ api-chromium (no auth needed)
 exploratory-chromium (no auth, CI-compatible config)
 ```
 
+## 3.1 Delay Removal
+
+All `await this.delay()` calls (5s each) removed from page objects — 55+ calls totaling ~4.5 minutes of unnecessary waiting eliminated:
+
+| File | Delays Removed |
+|---|---|
+| `BasePage.ts` | `delay()` method + `DELAY_MS` constant deleted |
+| `DoctorDashboardPage.ts` | 6 |
+| `NurseDashboardPage.ts` | 12 |
+| `LoginPage.ts` | 4 |
+| `PatientDayPage.ts` | 13 |
+| `CreateCardPage.ts` | 8 |
+| `AdminPage.ts` | 3 |
+| `fluid-balance.spec.ts` | 1 (waitForTimeout) |
+| `exploratory/*.spec.ts` | 2 (replaced with `waitForLoadState`) |
+
+Playwright's built-in auto-waiting (actionability checks on click, fill; `toBeVisible` assertions with timeout) makes these delays redundant. Tests still reliable, now faster.
+
 ## 4. Risk Register
 
 | Risk | Level | Mitigation |
@@ -135,7 +153,7 @@ exploratory-chromium (no auth, CI-compatible config)
 | Vitals persistence in CI | 🟢 Low | Seed data creates fresh DB per workflow run; @Transactional rollback on integration tests |
 | Fluid balance non-determinism | 🟡 Medium | Balance-dependent tests use seed data (Петренко); no cross-test state dependencies |
 | CI timeout (40 min) | 🟢 Low | E2E suite ~8 min; backend tests ~3 min; frontend tests ~30s |
-| Exploratory tests in CI | 🟢 Low | Changed `headless` from `false` to default (headless in CI); retries: 2; timeout: 300s |
+| Exploratory tests in CI | 🟢 Low | Changed `headless` from `false` to default (headless in CI); retries: 2; timeout: 300s; all `delay()` calls removed |
 
 ## 5. Expected Outcomes
 

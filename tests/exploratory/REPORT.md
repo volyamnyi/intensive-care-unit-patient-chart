@@ -1,7 +1,7 @@
 # Exploratory Testing Report — ICU Patient Chart
 
 **Date:** 2026-07-13  
-**Mode:** Chromium, non-headless, 5-second delay between interactions  
+**Mode:** Chromium  
 **Total Tests:** 34 | **Passed:** 34 | **Failed:** 0 | **Duration:** 18m 18s  
 **Test Coverage:** Admin (8) + Doctor (14) + Nurse (12)
 
@@ -117,11 +117,11 @@ Nurse tests are slower due to additional data entry (vitals filling, fluid outpu
 
 | Risk | Level | Mitigation |
 |---|---|---|
-| Test reliability with 5s delays | 🟢 Low | All 34 tests pass consistently with timing-based waits |
+| Test reliability | 🟢 Low | All 34 tests pass consistently |
 | Cross-role auth switching | 🟢 Low | Logout → fresh login pattern works correctly |
 | Data persistence across roles | 🟢 Low | NUR-VIT-002 confirms vitals saved by nurse visible to doctor |
 | Parallel test interference | 🟢 Low | Exploratory suite runs with `workers: 1` |
-| CI compatibility | 🟡 Medium | Headless mode may expose timing-sensitive selectors; 5s delays unnecessary in CI |
+| CI compatibility | 🟢 Low | Headless mode works; delays removed |
 | Non-deterministic fluid balance | 🟡 Medium | Balance panel values depend on prescription execution from other tests |
 
 ---

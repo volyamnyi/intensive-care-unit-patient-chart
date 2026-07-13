@@ -1,6 +1,5 @@
 import { Page, expect } from '@playwright/test';
 
-const DELAY_MS = 5000;
 const API_BASE = 'http://localhost:8085';
 
 export class BasePage {
@@ -9,10 +8,6 @@ export class BasePage {
 
   constructor(page: Page) {
     this.page = page;
-  }
-
-  async delay(ms = DELAY_MS): Promise<void> {
-    await this.page.waitForTimeout(ms);
   }
 
   async startApiLogging(): Promise<void> {

@@ -21,24 +21,20 @@ export class LoginPage extends BasePage {
 
   async navigate(): Promise<void> {
     await this.page.goto('/login');
-    await this.delay();
   }
 
   async fillLogin(login: string): Promise<void> {
     await this.loginField.click();
     await this.loginField.fill(login);
-    await this.delay();
   }
 
   async fillPassword(password: string): Promise<void> {
     await this.passwordField.click();
     await this.passwordField.fill(password);
-    await this.delay();
   }
 
   async clickSubmit(): Promise<void> {
     await this.submitButton.click();
-    await this.delay();
   }
 
   async loginAs(login: string, password: string): Promise<void> {

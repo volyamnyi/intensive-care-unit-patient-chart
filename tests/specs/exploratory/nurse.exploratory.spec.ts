@@ -157,7 +157,7 @@ test.describe('Nurse: Exploratory Testing', () => {
     await login.loginAs('nurse1', 'nurse123');
     await nurse.expectUrl(/\/nurse/);
     await page.goto('/doctor');
-    await nurse.delay();
+    await page.waitForLoadState('networkidle');
     await expect(nurse.getHeading()).toBeVisible({ timeout: 10000 });
     await expect(nurse.patientSelect).toBeVisible();
   });

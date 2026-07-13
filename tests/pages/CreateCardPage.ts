@@ -29,13 +29,11 @@ export class CreateCardPage extends BasePage {
 
   async navigate(): Promise<void> {
     await this.page.goto('/doctor/create-card');
-    await this.delay();
   }
 
   async searchPatient(query: string): Promise<void> {
     await this.patientSearch.click();
     await this.patientSearch.fill(query);
-    await this.delay();
   }
 
   searchOption(text: string): Locator {
@@ -46,35 +44,29 @@ export class CreateCardPage extends BasePage {
     const option = this.searchOption(text);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
-    await this.delay();
   }
 
   async fillDiagnosis(text: string): Promise<void> {
     await this.diagnosisField.click();
     await this.diagnosisField.fill(text);
-    await this.delay();
   }
 
   async fillApache(value: string): Promise<void> {
     await this.apacheField.click();
     await this.apacheField.fill(value);
-    await this.delay();
   }
 
   async fillSofa(value: string): Promise<void> {
     await this.sofaField.click();
     await this.sofaField.fill(value);
-    await this.delay();
   }
 
   async clickCreate(): Promise<void> {
     await this.createButton.click();
-    await this.delay();
   }
 
   async clickCancel(): Promise<void> {
     await this.cancelButton.click();
-    await this.delay();
   }
 
   getReadOnlyField(label: string): Locator {

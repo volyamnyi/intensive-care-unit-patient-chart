@@ -111,72 +111,59 @@ export class PatientDayPage extends BasePage {
 
   async switchTab(tabLocator: Locator): Promise<void> {
     await tabLocator.click();
-    await this.delay();
   }
 
   async clickBack(): Promise<void> {
     await this.backButton.click();
-    await this.delay();
   }
 
   async clickSignOff(): Promise<void> {
     await this.signOffButton.click();
-    await this.delay();
   }
 
   async fillPrescriptionMed(text: string): Promise<void> {
     await this.prescriptionMedField.click();
     await this.prescriptionMedField.fill(text);
-    await this.delay();
   }
 
   async fillPrescriptionDose(text: string): Promise<void> {
     await this.prescriptionDoseField.click();
     await this.prescriptionDoseField.fill(text);
-    await this.delay();
   }
 
   async fillPrescriptionRoute(text: string): Promise<void> {
     await this.prescriptionRouteField.click();
     await this.prescriptionRouteField.fill(text);
-    await this.delay();
   }
 
   async fillPrescriptionStartHour(value: string): Promise<void> {
     await this.prescriptionStartHourField.click();
     await this.prescriptionStartHourField.fill(value);
-    await this.delay();
   }
 
   async selectPrescriptionType(value: string): Promise<void> {
     await this.prescriptionTypeSelect.selectOption(value);
-    await this.delay();
   }
 
   async clickAddPrescription(): Promise<void> {
     await this.prescriptionAddButton.click();
-    await this.delay();
   }
 
   async fillNote(text: string): Promise<void> {
     await this.noteTextField.click();
     await this.noteTextField.fill(text);
-    await this.delay();
   }
 
   async clickAddNote(): Promise<void> {
     await this.addNoteButton.click();
-    await this.delay();
   }
 
   async cancelSignOff(): Promise<void> {
     await this.signDialogCancel.click();
-    await this.delay();
   }
 
   async confirmSignOff(): Promise<void> {
     await this.signDialogConfirm.click();
-    await this.delay();
   }
 
   async expectSignOffDialogVisible(): Promise<void> {

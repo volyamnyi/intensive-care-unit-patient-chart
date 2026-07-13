@@ -39,7 +39,7 @@ test.describe('Admin: Exploratory Testing', () => {
     await login.loginAs('admin', 'admin123');
     await admin.expectUrl(/\/admin/);
     await page.goto('/doctor');
-    await admin.delay();
+    await page.waitForLoadState('networkidle');
     await expect(admin.appBarTitle).toBeVisible({ timeout: 10000 });
   });
 

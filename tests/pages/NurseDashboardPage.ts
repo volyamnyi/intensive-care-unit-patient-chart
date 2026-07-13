@@ -70,7 +70,6 @@ export class NurseDashboardPage extends BasePage {
   async navigate(): Promise<void> {
     await this.page.goto('/nurse');
     await this.page.waitForLoadState('networkidle');
-    await this.delay();
   }
 
   patientOption(text: string): Locator {
@@ -87,16 +86,13 @@ export class NurseDashboardPage extends BasePage {
 
   async selectPatient(text: string): Promise<void> {
     await this.patientSelect.click();
-    await this.delay();
     const option = this.patientOption(text);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
-    await this.delay();
   }
 
   async selectHour(hour: number): Promise<void> {
     await this.hourBox(hour).click();
-    await this.delay();
   }
 
   async fillAllVitals(systolic: string, diastolic: string, hr: string, spo2: string, temp: string, cvp: string, resp: string): Promise<void> {
@@ -108,12 +104,10 @@ export class NurseDashboardPage extends BasePage {
     await this.vitalTempField.fill(temp);
     await this.vitalCvpField.fill(cvp);
     await this.vitalRespField.fill(resp);
-    await this.delay();
   }
 
   async clickSaveVitals(): Promise<void> {
     await this.saveVitalsButton.click();
-    await this.delay();
   }
 
   async fillFluidOutput(urine: string, tube: string, drainage: string): Promise<void> {
@@ -121,26 +115,20 @@ export class NurseDashboardPage extends BasePage {
     await this.fluidUrineField.fill(urine);
     await this.fluidTubeField.fill(tube);
     await this.fluidDrainageField.fill(drainage);
-    await this.delay();
   }
 
   async selectStool(value: 'Так' | 'Ні'): Promise<void> {
     await this.fluidStoolSelect.click();
-    await this.delay();
     await this.page.getByRole('option', { name: value }).click();
-    await this.delay();
   }
 
   async clickSaveFluid(): Promise<void> {
     await this.saveFluidButton.click();
-    await this.delay();
   }
 
   async clickLogout(): Promise<void> {
     await this.userMenu.click();
-    await this.delay();
     await this.logoutButton.click();
-    await this.delay();
   }
 
   async expectVitalsValue(label: Locator, value: string): Promise<void> {

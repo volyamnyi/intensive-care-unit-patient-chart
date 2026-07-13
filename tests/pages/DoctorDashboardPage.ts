@@ -32,7 +32,6 @@ export class DoctorDashboardPage extends BasePage {
   async navigate(): Promise<void> {
     await this.page.goto('/doctor');
     await this.page.waitForLoadState('networkidle');
-    await this.delay();
   }
 
   getRows(): Locator {
@@ -48,29 +47,24 @@ export class DoctorDashboardPage extends BasePage {
 
   async clickNewCard(): Promise<void> {
     await this.newCardButton.click();
-    await this.delay();
   }
 
   async searchPatient(text: string): Promise<void> {
     await this.searchField.click();
     await this.searchField.fill(text);
-    await this.delay();
   }
 
   async clickOpenByName(patientName: string): Promise<void> {
     await this.openButtonByName(patientName).click();
-    await this.delay();
   }
 
   async openUserMenu(): Promise<void> {
     await this.userMenu.click();
-    await this.delay();
   }
 
   async clickLogout(): Promise<void> {
     await this.openUserMenu();
     await this.logoutButton.click();
-    await this.delay();
   }
 
   async expectPatientCards(count: number): Promise<void> {

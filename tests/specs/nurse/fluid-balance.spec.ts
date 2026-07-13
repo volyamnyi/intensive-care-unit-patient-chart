@@ -14,7 +14,7 @@ test.describe('Nurse Fluid Balance', () => {
     const executeButton = page.getByRole('button').filter({ has: page.locator('[data-testid="CheckCircleIcon"]') }).first();
     if (await executeButton.isVisible()) {
       await executeButton.click();
-      await page.waitForTimeout(1000);
+
 
       const updatedIntakeText = await page.locator('text=Надійшло:').locator('..').textContent();
       const updatedIntake = parseInt(updatedIntakeText?.match(/(\d+)\s*мл/)?.[1] || '0');

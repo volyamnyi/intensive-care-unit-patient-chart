@@ -30,18 +30,15 @@ export class AdminPage extends BasePage {
   async navigate(): Promise<void> {
     await this.page.goto('/admin');
     await this.page.waitForLoadState('networkidle');
-    await this.delay();
   }
 
   async openUserMenu(): Promise<void> {
     await this.userMenuButton.click();
-    await this.delay();
   }
 
   async clickLogout(): Promise<void> {
     await this.openUserMenu();
     await this.logoutMenuItem.click();
-    await this.delay();
   }
 
   async expectUserInTable(tableLocator: Locator, login: string): Promise<void> {
