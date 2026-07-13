@@ -34,21 +34,32 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        // ICU card creation is limited to doctors / head of department
-                        .requestMatchers(HttpMethod.POST, "/api/icu-cards").hasAnyRole(PRESCRIBER_ROLES)
-                        .requestMatchers("/api/icu-cards/**").hasAnyRole(CLINICAL_ROLES)
-                        // Patient search is visible to every clinical role (incl. administrator)
-                        .requestMatchers("/api/patients/search").hasAnyRole(CLINICAL_ROLES)
-                        // Prescription execution is performed by nurses as well
-                        .requestMatchers(HttpMethod.POST, "/api/prescriptions/*/execute").hasAnyRole("DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT")
-                        // Prescription creation / stop is limited to doctors / head of department
-                        .requestMatchers(HttpMethod.POST, "/api/prescriptions/**").hasAnyRole(PRESCRIBER_ROLES)
-                        .requestMatchers("/api/prescriptions/**").hasAnyRole(CLINICAL_ROLES)
-                        // Day sign-off is limited to doctors / head of department.
-                        // This matcher MUST precede the general "/api/icu-days/**" rule, otherwise
-                        // the more specific restriction would be shadowed by the wildcard.
-                        .requestMatchers(HttpMethod.POST, "/api/icu-days/*/sign-off").hasAnyRole(SIGNER_ROLES)
-                        .requestMatchers("/api/icu-days/**").hasAnyRole(CLINICAL_ROLES)
+                        // Episode management
+                        .requestMatchers(HttpMethod.POST, "/api/episodes").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers("/api/episodes/**").hasAnyRole(CLINICAL_ROLES)
+                        // Clinical day management
+                        .requestMatchers(HttpMethod.POST, "/api/clinical-days").hasAnyRole(CLINICAL_ROLES)
+                        .requestMatchers(HttpMethod.POST, "/api/clinical-days/*/sign/**").hasAnyRole(CLINICAL_ROLES)
+                        // Order creation via clinical-days requires prescriber
+                        .requestMatchers(HttpMethod.POST, "/api/clinical-days/*/orders").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers("/api/clinical-days/**").hasAnyRole(CLINICAL_ROLES)
+                        // Notes (PATCH)
+                        .requestMatchers("/api/notes/**").hasAnyRole(CLINICAL_ROLES)
+                        // Scales
+                        .requestMatchers("/api/scales/**").hasAnyRole(CLINICAL_ROLES)
+                        // Hourly records (PATCH)
+                        .requestMatchers("/api/hourly-records/**").hasAnyRole(CLINICAL_ROLES)
+                        // Medical orders
+                        .requestMatchers(HttpMethod.POST, "/api/orders/*/execute").hasAnyRole(CLINICAL_ROLES)
+                        .requestMatchers(HttpMethod.POST, "/api/orders/**").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers("/api/orders/**").hasAnyRole(CLINICAL_ROLES)
+                        // Order executions (PATCH)
+                        .requestMatchers("/api/executions/**").hasAnyRole(CLINICAL_ROLES)
+                        // Audit - admins and auditors
+                        .requestMatchers("/api/audit/**").hasAnyRole("ADMINISTRATOR")
+                        // Patient search from MIS
+                        .requestMatchers("/api/patients/**").hasAnyRole(CLINICAL_ROLES)
+                        // Users
                         .requestMatchers("/api/users/**").hasAnyRole(CLINICAL_ROLES)
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

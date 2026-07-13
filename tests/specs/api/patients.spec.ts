@@ -19,7 +19,7 @@ test.describe('Patient API', () => {
   });
 
   test('search returns patients', async ({ request }) => {
-    const res = await request.get(`${API}/patients/search`, {
+    const res = await request.get(`${API}/patients`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.ok()).toBeTruthy();
@@ -28,11 +28,11 @@ test.describe('Patient API', () => {
   });
 
   test('search by name filters results', async ({ request }) => {
-    const res = await request.get(`${API}/patients/search?name=Петренко`, {
+    const res = await request.get(`${API}/patients?query=Петренко`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
-    expect(body.some((p: any) => p.patientName?.includes('Петренко'))).toBeTruthy();
+    expect(body.some((p: any) => p.fullName?.includes('Петренко'))).toBeTruthy();
   });
 });

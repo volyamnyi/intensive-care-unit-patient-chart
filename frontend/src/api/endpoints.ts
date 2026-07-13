@@ -1,9 +1,16 @@
 import client from './client';
 import type {
-  Patient, IcuCard, IcuDay, HourlyVital, Prescription,
-  FluidIntake, FluidOutput, FluidBalance, ScaleAssessment,
-  ClinicalNote, CareMeasure,
-  LoginRequest, LoginResponse,
+  User, PatientDto, Episode, ClinicalDay, HourlyRecord, MedicalOrder,
+  OrderExecution, MedicalNote, ClinicalScale, ScaleResult, FluidBalanceItem,
+  PdfResponse, AuditLog, LoginRequest, LoginResponse,
+  SignRequest, SignResponse, ReopenRequest,
+  EpisodeCreateRequest, EpisodePatchRequest, EpisodeCloseRequest,
+  ClinicalDayCreateRequest, ClinicalDayPatchRequest,
+  HourlyRecordCreateRequest,
+  MedicalOrderCreateRequest,
+  OrderExecutionCreateRequest,
+  MedicalNoteCreateRequest,
+  ScaleResultCreateRequest,
 } from '../types';
 
 export const authApi = {
@@ -12,71 +19,115 @@ export const authApi = {
 };
 
 export const patientApi = {
-  search: (name?: string, phone?: string, externalId?: string, signal?: AbortSignal) =>
-    client.get<Patient[]>('/patients/search', { params: { name, phone, externalId }, signal }),
-  getById: (id: number) =>
-    client.get<Patient>(`/patients/${id}`),
+  search: (query?: string, signal?: AbortSignal) =>
+    client.get<PatientDto[]>('/patients', { params: { query }, signal }),
+  getById: (id: string) =>
+    client.get<PatientDto>(`/patients/${id}`),
 };
 
-export const icuCardApi = {
-  create: (data: Partial<IcuCard>) =>
-    client.post<IcuCard>('/icu-cards', data),
-  getById: (id: number) =>
-    client.get<IcuCard>(`/icu-cards/${id}`),
-  getActive: () =>
-    client.get<IcuCard[]>('/icu-cards/active'),
-  getByPatient: (patientId: number) =>
-    client.get<IcuCard[]>(`/icu-cards/by-patient/${patientId}`),
+export const episodeApi = {
+  search: (params?: { patientId?: string; status?: string }) =>
+    client.get<Episode[]>('/episodes', { params }),
+  getById: (id: string) =>
+    client.get<Episode>(`/episodes/${id}`),
+  create: (data: EpisodeCreateRequest) =>
+    client.post<Episode>('/episodes', data),
+  update: (id: string, data: EpisodePatchRequest) =>
+    client.patch<Episode>(`/episodes/${id}`, data),
+  close: (id: string, data: EpisodeCloseRequest) =>
+    client.post<Episode>(`/episodes/${id}/close`, data),
+  getClinicalDays: (episodeId: string) =>
+    client.get<ClinicalDay[]>(`/episodes/${episodeId}/clinical-days`),
 };
 
-export const icuDayApi = {
-  getByCard: (cardId: number) =>
-    client.get<IcuDay[]>(`/icu-days/by-card/${cardId}`),
-  updateApacheSofa: (dayId: number, data: { apacheIi?: number; sofa?: number }) =>
-    client.put(`/icu-days/${dayId}/apache-sofa`, data),
-  getById: (id: number) =>
-    client.get<IcuDay>(`/icu-days/${id}`),
-  saveVitals: (dayId: number, hour: number, data: Partial<HourlyVital>) =>
-    client.put<HourlyVital>(`/icu-days/${dayId}/vitals/${hour}`, data),
-  getVitals: (dayId: number) =>
-    client.get<HourlyVital[]>(`/icu-days/${dayId}/vitals`),
-  addIntake: (dayId: number, hour: number, data: Partial<FluidIntake>) =>
-    client.post(`/icu-days/${dayId}/intake/${hour}`, data),
-  addOutput: (dayId: number, hour: number, data: Partial<FluidOutput>) =>
-    client.post(`/icu-days/${dayId}/output/${hour}`, data),
-  getBalance: (dayId: number) =>
-    client.get<FluidBalance>(`/icu-days/${dayId}/balance`),
-  saveScale: (dayId: number, data: Partial<ScaleAssessment>) =>
-    client.post<ScaleAssessment>(`/icu-days/${dayId}/scales`, data),
-  getScales: (dayId: number) =>
-    client.get<ScaleAssessment[]>(`/icu-days/${dayId}/scales`),
-  getNotes: (dayId: number) =>
-    client.get<ClinicalNote[]>(`/icu-days/${dayId}/notes`),
-  addNote: (dayId: number, data: { content: string; noteType: string }) =>
-    client.post<ClinicalNote>(`/icu-days/${dayId}/notes`, data),
-  getCareMeasures: (dayId: number) =>
-    client.get<CareMeasure[]>(`/icu-days/${dayId}/care-measures`),
-  addCareMeasure: (dayId: number, data: { hour: number; procedure: string; performed: boolean }) =>
-    client.post<CareMeasure>(`/icu-days/${dayId}/care-measures`, data),
-  signOff: (dayId: number) =>
-    client.post<IcuDay>(`/icu-days/${dayId}/sign-off`),
-  getPdf: (dayId: number) =>
-    client.get(`/icu-days/${dayId}/pdf`, { responseType: 'blob' }),
+export const clinicalDayApi = {
+  getById: (id: string) =>
+    client.get<ClinicalDay>(`/clinical-days/${id}`),
+  create: (data: ClinicalDayCreateRequest) =>
+    client.post<ClinicalDay>('/clinical-days', data),
+  update: (id: string, data: ClinicalDayPatchRequest) =>
+    client.patch<ClinicalDay>(`/clinical-days/${id}`, data),
+  signNurse: (id: string, data: SignRequest) =>
+    client.post<SignResponse>(`/clinical-days/${id}/sign/nurse`, data),
+  signDoctor: (id: string, data: SignRequest) =>
+    client.post<SignResponse>(`/clinical-days/${id}/sign/doctor`, data),
+  reopen: (id: string, data: ReopenRequest) =>
+    client.post<ClinicalDay>(`/clinical-days/${id}/reopen`, data),
 };
 
-export const prescriptionApi = {
-  create: (cardId: number, data: Partial<Prescription>) =>
-    client.post<Prescription>(`/prescriptions/by-card/${cardId}`, data),
-  getByCard: (cardId: number) =>
-    client.get<Prescription[]>(`/prescriptions/by-card/${cardId}`),
-  stop: (id: number) =>
-    client.post(`/prescriptions/${id}/stop`),
-  execute: (id: number, dayId: number, hour: number, actualVolume: number) =>
-    client.post<FluidIntake>(`/prescriptions/${id}/execute`, { dayId, hour, actualVolume }),
+export const hourlyRecordApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<HourlyRecord[]>(`/clinical-days/${clinicalDayId}/hourly-records`),
+  create: (clinicalDayId: string, data: HourlyRecordCreateRequest) =>
+    client.post<HourlyRecord>(`/clinical-days/${clinicalDayId}/hourly-records`, data),
+  update: (id: string, data: Partial<HourlyRecordCreateRequest> & { version: number }) =>
+    client.patch<HourlyRecord>(`/hourly-records/${id}`, data),
+};
+
+export const medicalOrderApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<MedicalOrder[]>(`/clinical-days/${clinicalDayId}/orders`),
+  create: (clinicalDayId: string, data: MedicalOrderCreateRequest) =>
+    client.post<MedicalOrder>(`/clinical-days/${clinicalDayId}/orders`, data),
+  update: (id: string, data: { dose?: string; route?: string; frequency?: string; endTime?: string; version: number }) =>
+    client.patch<MedicalOrder>(`/orders/${id}`, data),
+  cancel: (id: string, data: { version: number }) =>
+    client.post<MedicalOrder>(`/orders/${id}/cancel`, data),
+};
+
+export const orderExecutionApi = {
+  getByOrder: (orderId: string) =>
+    client.get<OrderExecution[]>(`/orders/${orderId}/executions`),
+  create: (orderId: string, data: OrderExecutionCreateRequest) =>
+    client.post<OrderExecution>(`/orders/${orderId}/execute`, data),
+  update: (id: string, data: { actualDose?: string; comment?: string; version: number }) =>
+    client.patch<OrderExecution>(`/executions/${id}`, data),
+};
+
+export const medicalNoteApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<MedicalNote[]>(`/clinical-days/${clinicalDayId}/notes`),
+  create: (clinicalDayId: string, data: MedicalNoteCreateRequest) =>
+    client.post<MedicalNote>(`/clinical-days/${clinicalDayId}/notes`, data),
+  update: (id: string, data: { text?: string; version: number }) =>
+    client.patch<MedicalNote>(`/notes/${id}`, data),
+};
+
+export const clinicalScaleApi = {
+  getAvailable: () => client.get<ClinicalScale[]>('/scales'),
+  getResultsByClinicalDay: (clinicalDayId: string) =>
+    client.get<ScaleResult[]>(`/clinical-days/${clinicalDayId}/scales`),
+  createResult: (clinicalDayId: string, data: ScaleResultCreateRequest) =>
+    client.post<ScaleResult>(`/clinical-days/${clinicalDayId}/scales`, data),
+  updateResult: (id: string, data: { result?: string; version: number }) =>
+    client.patch<ScaleResult>(`/scales/${id}`, data),
+};
+
+export const fluidBalanceApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<FluidBalanceItem[]>(`/clinical-days/${clinicalDayId}/fluid-balance`),
+  recalculate: (clinicalDayId: string) =>
+    client.post<FluidBalanceItem[]>(`/clinical-days/${clinicalDayId}/fluid-balance/recalculate`),
+};
+
+export const pdfApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf`),
+  generate: (clinicalDayId: string) =>
+    client.post<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf`),
 };
 
 export const userApi = {
-  getMe: () => client.get<import('../types').User>('/users/me'),
-  getDoctors: () => client.get<import('../types').User[]>('/users/doctors'),
-  getNurses: () => client.get<import('../types').User[]>('/users/nurses'),
+  getMe: () => client.get<User>('/users/me'),
+  getDoctors: () => client.get<User[]>('/users/doctors'),
+  getNurses: () => client.get<User[]>('/users/nurses'),
 };
+
+export const auditApi = {
+  list: (params?: { page?: number; size?: number; action?: string; dateFrom?: string; dateTo?: string }) =>
+    client.get<AuditLog[]>('/audit', { params }),
+  getById: (id: string) =>
+    client.get<AuditLog>(`/audit/${id}`),
+};
+
+

@@ -6,16 +6,16 @@ import { ThemeProvider } from '@mui/material';
 import { theme } from '../../styles/theme';
 import DashboardPage from '../../pages/doctor/DashboardPage';
 
-const mockGetActive = vi.fn();
+const mockSearch = vi.fn();
 
 vi.mock('../../api/endpoints', () => ({
-  icuCardApi: { getActive: () => mockGetActive() },
+  episodeApi: { search: (...args: unknown[]) => mockSearch(...args) },
 }));
 
-const mockCards = [
-  { id: 1, patientName: 'Петренко Іван', diagnosis: 'Пневмонія', apacheIi: 12, sofa: 4, status: 'ACTIVE', icuDays: [{ id: 1, dayNumber: 1, status: 'ACTIVE', date: '2026-07-13' }] },
-  { id: 2, patientName: 'Коваленко Олена', diagnosis: 'Сепсис', apacheIi: 18, sofa: 6, status: 'ACTIVE', icuDays: [{ id: 2, dayNumber: 2, status: 'ACTIVE', date: '2026-07-13' }] },
-  { id: 3, patientName: 'Сидоренко Василь', diagnosis: 'Інсульт', apacheIi: 22, sofa: 8, status: 'ACTIVE', icuDays: [{ id: 3, dayNumber: 1, status: 'ACTIVE', date: '2026-07-13' }] },
+const mockEpisodes = [
+  { id: 'ep-1', patientName: 'Петренко Іван', status: 'ACTIVE' },
+  { id: 'ep-2', patientName: 'Коваленко Олена', status: 'ACTIVE' },
+  { id: 'ep-3', patientName: 'Сидоренко Василь', status: 'ACTIVE' },
 ];
 
 function renderPage() {
@@ -34,13 +34,13 @@ describe('DashboardPage', () => {
   });
 
   it('renders loading spinner initially', () => {
-    mockGetActive.mockReturnValue(new Promise(() => {}));
+    mockSearch.mockReturnValue(new Promise(() => {}));
     renderPage();
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('renders patient cards from API', async () => {
-    mockGetActive.mockResolvedValue({ data: mockCards });
+    mockSearch.mockResolvedValue({ data: mockEpisodes });
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('DashboardPage', () => {
   });
 
   it('search filters by patient name', async () => {
-    mockGetActive.mockResolvedValue({ data: mockCards });
+    mockSearch.mockResolvedValue({ data: mockEpisodes });
     renderPage();
     await waitFor(() => expect(screen.getByText('Петренко Іван')).toBeInTheDocument());
     const search = screen.getByPlaceholderText('Пошук пацієнта за ПІБ...');
@@ -62,7 +62,7 @@ describe('DashboardPage', () => {
   });
 
   it('shows different message for no results when search is active', async () => {
-    mockGetActive.mockResolvedValue({ data: mockCards });
+    mockSearch.mockResolvedValue({ data: mockEpisodes });
     renderPage();
     await waitFor(() => expect(screen.getByText('Петренко Іван')).toBeInTheDocument());
     const search = screen.getByPlaceholderText('Пошук пацієнта за ПІБ...');
@@ -73,7 +73,7 @@ describe('DashboardPage', () => {
   });
 
   it('shows alert when there are no cards at all', async () => {
-    mockGetActive.mockResolvedValue({ data: [] });
+    mockSearch.mockResolvedValue({ data: [] });
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Немає активних пацієнтів')).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('DashboardPage', () => {
   });
 
   it('clearing search restores all cards', async () => {
-    mockGetActive.mockResolvedValue({ data: mockCards });
+    mockSearch.mockResolvedValue({ data: mockEpisodes });
     renderPage();
     await waitFor(() => expect(screen.getByText('Петренко Іван')).toBeInTheDocument());
     const search = screen.getByPlaceholderText('Пошук пацієнта за ПІБ...');

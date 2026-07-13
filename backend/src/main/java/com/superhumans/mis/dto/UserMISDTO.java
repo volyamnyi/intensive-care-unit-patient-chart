@@ -1,14 +1,16 @@
 package com.superhumans.mis.dto;
 
 import lombok.*;
+import java.util.UUID;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class UserMISDTO {
-    private String userLogin;
-    private String userShortName;
-    private String userName;
-    private String userSpecialityCode;
-    private String userSpecialityName;
-    private String userEmail;
-    private String userPhone;
+public class UserMisDTO {
+    private UUID id;
+    private String login;
+    private String fullName;
+    private String shortName;
+    private String specialityCode;
+    private String specialityName;
+    private String email;
+    private String phone;
 }

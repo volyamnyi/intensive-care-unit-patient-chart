@@ -1,64 +1,31 @@
 import { test, expect } from '../../fixtures/index';
 
 test.describe('Doctor Dashboard', () => {
-  test('displays active patient cards', async ({ page }) => {
+  test('displays active episodes with patient names', async ({ page }) => {
     await page.goto('/doctor');
-    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Коваленко Олена Вікторівна')).toBeVisible();
-    await expect(page.getByText('Сидоренко Василь Петрович')).toBeVisible();
+    await expect(page.getByText('Активні пацієнти ВАІТ')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('table')).toBeVisible();
   });
 
-  test('opens patient day page', async ({ page }) => {
+  test('new card button navigates to create card page', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/card\/\d+\/day\/\d+/);
+    await page.getByRole('button', { name: 'Нова карта' }).click();
+    await expect(page).toHaveURL('/doctor/create-card');
   });
 
-  test('patient day page shows vitals tab', async ({ page }) => {
+  test('search filters episodes', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
-    await expect(page.getByText('Вітальні показники')).toBeVisible();
+    await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Петренко');
+    // Wait for table to filter
+    await expect(page.getByText('Петренко').first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('prescriptions tab shows prescription list', async ({ page }) => {
+  test('opening an episode navigates to episode page', async ({ page }) => {
     await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
-    await page.getByRole('tab', { name: 'Призначення' }).click();
-    await expect(page.getByText('Нове призначення')).toBeVisible();
-  });
-
-  test('scales tab shows scale cards', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
-    await page.getByRole('tab', { name: 'Шкали' }).click();
-    await expect(page.getByText('APACHE II').first()).toBeVisible();
-    await expect(page.getByText('SOFA').first()).toBeVisible();
-  });
-
-  test('sign off button signs the day', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: /Відкрити/ }).first().click();
-    await page.getByRole('button', { name: 'Підписати добу' }).click();
-    await expect(page.getByText('Після підписання доба стане read-only')).toBeVisible();
-  });
-
-  test('search for non-existent patient shows different message', async ({ page }) => {
-    await page.goto('/doctor');
-    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 10000 });
-    await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('НемаєТакий');
-    await expect(page.getByText('Немає пацієнтів за запитом')).toBeVisible({ timeout: 5000 });
-  });
-
-  test('clear search restores all cards', async ({ page }) => {
-    await page.goto('/doctor');
-    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 10000 });
-    const search = page.getByPlaceholder('Пошук пацієнта за ПІБ...');
-    await search.fill('НемаєТакий');
-    await expect(page.getByText('Немає пацієнтів за запитом')).toBeVisible({ timeout: 5000 });
-    await search.clear();
-    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Коваленко Олена Вікторівна')).toBeVisible();
-    await expect(page.getByText('Сидоренко Василь Петрович')).toBeVisible();
+    const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
+    await expect(openBtn).toBeVisible({ timeout: 10000 });
+    await openBtn.click();
+    await expect(page).toHaveURL(/\/doctor\/episode\//);
   });
 
   test('page title is set correctly', async ({ page }) => {

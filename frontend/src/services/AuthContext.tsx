@@ -29,10 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     const res = await authApi.login(data);
-    const { token: newToken, login: userName, fullName, role, email } = res.data;
+    const { token: newToken, userId, login: userName, fullName, role, email } = res.data;
     localStorage.setItem('token', newToken);
     setToken(newToken);
-    setUser({ id: 0, login: userName, fullName, role: role as User['role'], email, specialityCode: '', specialityName: '', phone: '' });
+    setUser({ id: userId, login: userName, fullName, role: role as User['role'], email, specialityCode: '', specialityName: '', phone: '' });
   };
 
   const logout = () => {

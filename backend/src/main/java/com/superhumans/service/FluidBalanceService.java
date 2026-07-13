@@ -1,85 +1,104 @@
 package com.superhumans.service;
 
+import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.entity.*;
+import com.superhumans.mapper.FluidBalanceMapper;
 import com.superhumans.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class FluidBalanceService {
 
-    private final FluidIntakeRepository fluidIntakeRepository;
-    private final FluidOutputRepository fluidOutputRepository;
     private final FluidBalanceRepository fluidBalanceRepository;
-    private final IcuDayRepository icuDayRepository;
+    private final HourlyRecordRepository hourlyRecordRepository;
+    private final MedicalOrderRepository medicalOrderRepository;
+    private final OrderExecutionRepository orderExecutionRepository;
+    private final ClinicalDayRepository clinicalDayRepository;
+    private final AuditService auditService;
 
-    public FluidBalanceResponse getBalance(Long dayId) {
-        List<FluidIntake> intakes = fluidIntakeRepository.findByIcuDayId(dayId);
-        List<FluidOutput> outputs = fluidOutputRepository.findByIcuDayId(dayId);
-
-        int totalIntake = intakes.stream()
-                .filter(i -> i.getStatus() == ExecutionStatus.DONE)
-                .mapToInt(i -> i.getVolumeActual() != null ? i.getVolumeActual() : 0)
-                .sum();
-
-        int totalOutput = outputs.stream()
-                .filter(o -> o.getVolume() != null)
-                .filter(o -> o.getType() != OutputType.STOOL)
-                .mapToInt(FluidOutput::getVolume)
-                .sum();
-
-        int dailyBalance = totalIntake - totalOutput;
-        int cumulativeBalance = calculateCumulativeBalance(dayId, dailyBalance);
-
-        return new FluidBalanceResponse(dayId, totalIntake, totalOutput, dailyBalance, cumulativeBalance);
+    public List<FluidBalanceResponse> getBalances(UUID clinicalDayId) {
+        return fluidBalanceRepository.findByClinicalDayIdOrderByHourAsc(clinicalDayId)
+                .stream().map(FluidBalanceMapper::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public FluidBalanceResponse calculateAndSave(IcuDay day) {
-        var balance = getBalance(day.getId());
+    public List<FluidBalanceResponse> recalculate(UUID clinicalDayId, UUID userId) {
+        ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
+                .orElseThrow(() -> new RuntimeException("Clinical day not found: " + clinicalDayId));
 
-        FluidBalance fb = fluidBalanceRepository.findByIcuDayId(day.getId())
-                .orElse(new FluidBalance());
-        fb.setIcuDayId(day.getId());
-        fb.setTotalIntake(balance.getTotalIntake());
-        fb.setTotalOutput(balance.getTotalOutput());
-        fb.setDailyBalance(balance.getDailyBalance());
-        fb.setCumulativeBalance(balance.getCumulativeBalance());
-        fluidBalanceRepository.save(fb);
+        fluidBalanceRepository.deleteByClinicalDayId(clinicalDayId);
 
-        return balance;
-    }
+        List<HourlyRecord> hourlyRecords = hourlyRecordRepository
+                .findByClinicalDayIdOrderByRecordTimeAsc(clinicalDayId);
+        List<MedicalOrder> orders = medicalOrderRepository
+                .findByClinicalDayIdOrderByStartTimeAsc(clinicalDayId);
 
-    private int calculateCumulativeBalance(Long currentDayId, int currentDailyBalance) {
-        IcuDay currentDay = icuDayRepository.findById(currentDayId)
-                .orElseThrow(() -> new RuntimeException("Day not found"));
-        Long cardId = currentDay.getIcuCard().getId();
-        List<IcuDay> allDays = icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(cardId);
-
-        int cumulative = 0;
-        for (IcuDay day : allDays) {
-            if (day.getId().equals(currentDayId)) {
-                cumulative += currentDailyBalance;
-                break;
+        Map<Integer, Double> intakeByHour = new HashMap<>();
+        for (MedicalOrder order : orders) {
+            UUID orderId = order.getId();
+            List<OrderExecution> executions = orderExecutionRepository.findByOrderId(orderId);
+            for (OrderExecution exec : executions) {
+                int hour = exec.getExecutedAt().getHour();
+                double dose = parseDose(exec.getActualDose());
+                intakeByHour.merge(hour, dose, Double::sum);
             }
-            Optional<FluidBalance> fb = fluidBalanceRepository.findByIcuDayId(day.getId());
-            cumulative += fb.map(FluidBalance::getDailyBalance).orElse(0);
         }
-        return cumulative;
+
+        Map<Integer, Double> outputByHour = new HashMap<>();
+        for (HourlyRecord rec : hourlyRecords) {
+            int hour = rec.getRecordTime().getHour();
+            double output = 0.0;
+            if (rec.getUrineOutput() != null) output += rec.getUrineOutput();
+            if (rec.getDrainOutput() != null) output += rec.getDrainOutput();
+            if (rec.getStool() != null && !rec.getStool().isBlank()) output += 200.0;
+            if (rec.getVomit() != null && !rec.getVomit().isBlank()) output += 100.0;
+            outputByHour.merge(hour, output, Double::sum);
+        }
+
+        Set<Integer> allHours = new TreeSet<>();
+        allHours.addAll(intakeByHour.keySet());
+        allHours.addAll(outputByHour.keySet());
+
+        double cumulative = 0.0;
+        List<FluidBalance> results = new ArrayList<>();
+        for (Integer hour : allHours) {
+            double intake = intakeByHour.getOrDefault(hour, 0.0);
+            double output = outputByHour.getOrDefault(hour, 0.0);
+            double balance = intake - output;
+            cumulative += balance;
+
+            FluidBalance fb = FluidBalance.builder()
+                    .clinicalDay(day)
+                    .hour(hour)
+                    .intake(intake)
+                    .output(output)
+                    .balance(balance)
+                    .cumulativeBalance(cumulative)
+                    .build();
+            fb.setCreatedBy(userId);
+            fb.setUpdatedBy(userId);
+            results.add(fb);
+        }
+
+        results = fluidBalanceRepository.saveAll(results);
+        auditService.logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
+        return results.stream().map(FluidBalanceMapper::toResponse).collect(Collectors.toList());
     }
 
-    @lombok.AllArgsConstructor
-    @lombok.Getter
-    public static class FluidBalanceResponse {
-        private Long icuDayId;
-        private Integer totalIntake;
-        private Integer totalOutput;
-        private Integer dailyBalance;
-        private Integer cumulativeBalance;
+    private double parseDose(String actualDose) {
+        if (actualDose == null || actualDose.isBlank()) return 0.0;
+        String numeric = actualDose.replaceAll("[^0-9.,]", "").replace(",", ".");
+        try {
+            return Double.parseDouble(numeric);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 }

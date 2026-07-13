@@ -1,46 +1,24 @@
 import { test, expect } from '../../fixtures/index';
 
 test.describe('Nurse Dashboard', () => {
-  test('displays page header with patient selector', async ({ page }) => {
+  test('displays active patients list', async ({ page }) => {
     await page.goto('/nurse');
-    await page.locator('[role="combobox"]').first().click();
-    await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
-    await expect(page.getByRole('heading', { name: /Показники/ })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Активні пацієнти')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('table')).toBeVisible();
   });
 
-  test('hour selector shows 24 tiles', async ({ page }) => {
+  test('opens patient day page by clicking open', async ({ page }) => {
     await page.goto('/nurse');
-    await page.locator('[role="combobox"]').first().click();
-    await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
-    const tiles = page.locator('[class*="MuiBox-root"]').filter({ hasText: /^\d{1,2}:00$/ });
-    await expect(tiles.first()).toBeVisible({ timeout: 10000 });
+    const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
+    await expect(openBtn).toBeVisible({ timeout: 10000 });
+    await openBtn.click();
+    await expect(page).toHaveURL(/\/doctor\/episode\//);
   });
 
-  test('can select patient from dropdown', async ({ page }) => {
+  test('search filters the patients table', async ({ page }) => {
     await page.goto('/nurse');
-    await page.locator('[role="combobox"]').first().click();
-    await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
-    await expect(page.getByText('Петренко Іван Сергійович').first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('vital signs form is visible when patient selected', async ({ page }) => {
-    await page.goto('/nurse');
-    await page.locator('[role="combobox"]').first().click();
-    await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
-    await expect(page.getByText('АТ сист (мм.рт.ст)').first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('fluid output form is visible', async ({ page }) => {
-    await page.goto('/nurse');
-    await page.locator('[role="combobox"]').first().click();
-    await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
-    await expect(page.getByText('Сеча (мл)').first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('patient select has aria-label', async ({ page }) => {
-    await page.goto('/nurse');
-    const combobox = page.getByRole('combobox').first();
-    await expect(combobox).toHaveAttribute('aria-label', 'Пацієнт');
+    await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Коваленко');
+    await expect(page.getByText('Коваленко').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('page title is set correctly', async ({ page }) => {

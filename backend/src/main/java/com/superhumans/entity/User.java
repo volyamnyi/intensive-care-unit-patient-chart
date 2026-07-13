@@ -1,23 +1,17 @@
 package com.superhumans.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Table(name = "users")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class User extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 50)
     private String login;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false, length = 200)
@@ -36,6 +30,6 @@ public class User {
     @Column(name = "speciality_name", length = 200)
     private String specialityName;
 
-    @Column(name = "phone", length = 20)
+    @Column(length = 20)
     private String phone;
 }

@@ -3,7 +3,8 @@ import { test, expect } from '../../fixtures/index';
 test.describe('Admin Page', () => {
   test('displays doctors and nurses tables', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByText('Лікарі')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Користувачі системи')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Лікарі')).toBeVisible();
     await expect(page.getByText('Медсестри')).toBeVisible();
   });
 

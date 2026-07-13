@@ -1,17 +1,23 @@
 package com.superhumans.mis;
 
-import com.superhumans.mis.dto.DictionaryItemDTO;
-import com.superhumans.mis.dto.DocumentDTO;
-import com.superhumans.mis.dto.PatientDTO;
-import com.superhumans.mis.dto.UserMISDTO;
-
-import java.time.LocalDate;
+import com.superhumans.mis.dto.*;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-public interface MISService {
-    List<PatientDTO> searchPatients(String name, String phone, String externalId);
-    PatientDTO getPatientInfo(Integer patientId, String documentSequenceNumber);
-    UserMISDTO getUserDetails(String login, String specialityCode);
-    List<DocumentDTO> getPatientDocuments(Integer patientId, LocalDate start, LocalDate end);
-    List<DictionaryItemDTO> getDocumentApproveStatuses();
+public interface MisService {
+
+    Optional<PatientDTO> getPatient(UUID patientId);
+
+    Optional<HospitalizationDTO> getHospitalization(UUID hospitalizationId);
+
+    Optional<UserMisDTO> getUser(UUID userId);
+
+    List<UserMisDTO> getDepartmentUsers(UUID departmentId);
+
+    List<DepartmentDTO> getDepartments();
+
+    List<DictionaryItemDTO> getDictionary(String dictionaryName);
+
+    List<PatientDTO> searchPatients(String query);
 }

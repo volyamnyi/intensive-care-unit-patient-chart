@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { authApi, patientApi, icuCardApi, icuDayApi, prescriptionApi, userApi } from '../../api/endpoints';
+import {
+  authApi, patientApi, episodeApi, clinicalDayApi, hourlyRecordApi,
+  medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi,
+  fluidBalanceApi, pdfApi, userApi, auditApi,
+} from '../../api/endpoints';
 
 const { mockClient } = vi.hoisted(() => ({
   mockClient: {
     post: vi.fn(),
     get: vi.fn(),
-    put: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
@@ -23,68 +27,95 @@ describe('authApi', () => {
 });
 
 describe('patientApi', () => {
-  it('search calls /patients/search with params', () => {
+  it('search calls /patients with query param', () => {
     patientApi.search('Іван');
-    expect(mockClient.get).toHaveBeenCalledWith('/patients/search', {
-      params: { name: 'Іван', phone: undefined, externalId: undefined },
+    expect(mockClient.get).toHaveBeenCalledWith('/patients', {
+      params: { query: 'Іван' },
       signal: undefined,
     });
   });
 
   it('getById calls /patients/:id', () => {
-    patientApi.getById(1);
-    expect(mockClient.get).toHaveBeenCalledWith('/patients/1');
+    patientApi.getById('1001');
+    expect(mockClient.get).toHaveBeenCalledWith('/patients/1001');
   });
 });
 
-describe('icuCardApi', () => {
-  it('create posts to /icu-cards', () => {
-    icuCardApi.create({ patientName: 'Test' });
-    expect(mockClient.post).toHaveBeenCalledWith('/icu-cards', { patientName: 'Test' });
+describe('episodeApi', () => {
+  it('search calls /episodes with params', () => {
+    episodeApi.search({ status: 'ACTIVE' });
+    expect(mockClient.get).toHaveBeenCalledWith('/episodes', { params: { status: 'ACTIVE' } });
   });
 
-  it('getById calls /icu-cards/:id', () => {
-    icuCardApi.getById(1);
-    expect(mockClient.get).toHaveBeenCalledWith('/icu-cards/1');
+  it('getById calls /episodes/:id', () => {
+    episodeApi.getById('ep-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/episodes/ep-1');
   });
 
-  it('getActive calls /icu-cards/active', () => {
-    icuCardApi.getActive();
-    expect(mockClient.get).toHaveBeenCalledWith('/icu-cards/active');
-  });
-});
-
-describe('icuDayApi', () => {
-  it('getByCard calls /icu-days/by-card/:id', () => {
-    icuDayApi.getByCard(1);
-    expect(mockClient.get).toHaveBeenCalledWith('/icu-days/by-card/1');
-  });
-
-  it('saveVitals puts to /icu-days/:id/vitals/:hour', () => {
-    icuDayApi.saveVitals(1, 10, { heartRate: 80 });
-    expect(mockClient.put).toHaveBeenCalledWith('/icu-days/1/vitals/10', { heartRate: 80 });
-  });
-
-  it('getBalance calls /icu-days/:id/balance', () => {
-    icuDayApi.getBalance(1);
-    expect(mockClient.get).toHaveBeenCalledWith('/icu-days/1/balance');
-  });
-
-  it('signOff posts to /icu-days/:id/sign-off', () => {
-    icuDayApi.signOff(1);
-    expect(mockClient.post).toHaveBeenCalledWith('/icu-days/1/sign-off');
+  it('create posts to /episodes', () => {
+    episodeApi.create({ patientId: '1001', hospitalizationId: '2001', departmentId: '3001' });
+    expect(mockClient.post).toHaveBeenCalledWith('/episodes', { patientId: '1001', hospitalizationId: '2001', departmentId: '3001' });
   });
 });
 
-describe('prescriptionApi', () => {
-  it('create posts to /prescriptions/by-card/:id', () => {
-    prescriptionApi.create(1, { medication: 'Saline' });
-    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/by-card/1', { medication: 'Saline' });
+describe('clinicalDayApi', () => {
+  it('getById calls /clinical-days/:id', () => {
+    clinicalDayApi.getById('cd-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/clinical-days/cd-1');
   });
 
-  it('execute posts to /prescriptions/:id/execute', () => {
-    prescriptionApi.execute(1, 2, 10, 500);
-    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/1/execute', { dayId: 2, hour: 10, actualVolume: 500 });
+  it('signNurse posts to /clinical-days/:id/sign/nurse', () => {
+    clinicalDayApi.signNurse('cd-1', { password: 'pass' });
+    expect(mockClient.post).toHaveBeenCalledWith('/clinical-days/cd-1/sign/nurse', { password: 'pass' });
+  });
+});
+
+describe('hourlyRecordApi', () => {
+  it('getByClinicalDay calls /clinical-days/:id/hourly-records', () => {
+    hourlyRecordApi.getByClinicalDay('cd-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/clinical-days/cd-1/hourly-records');
+  });
+});
+
+describe('medicalOrderApi', () => {
+  it('cancel posts to /orders/:id/cancel', () => {
+    medicalOrderApi.cancel('ord-1', { version: 1 });
+    expect(mockClient.post).toHaveBeenCalledWith('/orders/ord-1/cancel', { version: 1 });
+  });
+});
+
+describe('orderExecutionApi', () => {
+  it('create posts to /orders/:id/execute', () => {
+    orderExecutionApi.create('ord-1', { orderId: 'ord-1' });
+    expect(mockClient.post).toHaveBeenCalledWith('/orders/ord-1/execute', { orderId: 'ord-1' });
+  });
+});
+
+describe('medicalNoteApi', () => {
+  it('getByClinicalDay calls /clinical-days/:id/notes', () => {
+    medicalNoteApi.getByClinicalDay('cd-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/clinical-days/cd-1/notes');
+  });
+});
+
+describe('clinicalScaleApi', () => {
+  it('getAvailable calls /scales', () => {
+    clinicalScaleApi.getAvailable();
+    expect(mockClient.get).toHaveBeenCalledWith('/scales');
+  });
+});
+
+describe('fluidBalanceApi', () => {
+  it('getByClinicalDay calls /clinical-days/:id/fluid-balance', () => {
+    fluidBalanceApi.getByClinicalDay('cd-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/clinical-days/cd-1/fluid-balance');
+  });
+});
+
+describe('pdfApi', () => {
+  it('generate posts to /clinical-days/:id/pdf', () => {
+    pdfApi.generate('cd-1');
+    expect(mockClient.post).toHaveBeenCalledWith('/clinical-days/cd-1/pdf');
   });
 });
 
@@ -97,5 +128,17 @@ describe('userApi', () => {
   it('getDoctors calls /users/doctors', () => {
     userApi.getDoctors();
     expect(mockClient.get).toHaveBeenCalledWith('/users/doctors');
+  });
+
+  it('getNurses calls /users/nurses', () => {
+    userApi.getNurses();
+    expect(mockClient.get).toHaveBeenCalledWith('/users/nurses');
+  });
+});
+
+describe('auditApi', () => {
+  it('list calls /audit with params', () => {
+    auditApi.list({ page: 0, size: 10 });
+    expect(mockClient.get).toHaveBeenCalledWith('/audit', { params: { page: 0, size: 10 } });
   });
 });

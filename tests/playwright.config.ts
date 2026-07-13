@@ -70,16 +70,5 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/api/*.spec.ts',
     },
-    {
-      name: 'exploratory-chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        launchOptions: { args: ['--start-maximized'] },
-      },
-      testMatch: '**/exploratory/*.spec.ts',
-      timeout: 300000,
-      retries: process.env.CI ? 2 : 0,
-      workers: 1,
-    },
   ],
 });

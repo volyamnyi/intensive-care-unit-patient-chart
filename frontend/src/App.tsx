@@ -90,7 +90,7 @@ function AppRoutes() {
       }>
         <Route index element={<DashboardPage />} />
         <Route path="create-card" element={<CreateCardPage />} />
-        <Route path="card/:cardId/day/:dayId" element={<PatientDayPage />} />
+        <Route path="episode/:episodeId" element={<PatientDayPage />} />
       </Route>
 
       <Route path="/nurse" element={

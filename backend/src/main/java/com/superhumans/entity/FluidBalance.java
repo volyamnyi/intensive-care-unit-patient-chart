@@ -4,26 +4,23 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "fluid_balance")
+@Table(name = "fluid_balances")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class FluidBalance {
+public class FluidBalance extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "clinical_day_id", nullable = false)
+    private ClinicalDay clinicalDay;
 
-    @Column(name = "icu_day_id", nullable = false)
-    private Long icuDayId;
+    @Column(nullable = false)
+    private Integer hour;
 
-    @Column(name = "total_intake")
-    private Integer totalIntake;
+    private Double intake;
 
-    @Column(name = "total_output")
-    private Integer totalOutput;
+    private Double output;
 
-    @Column(name = "daily_balance")
-    private Integer dailyBalance;
+    private Double balance;
 
     @Column(name = "cumulative_balance")
-    private Integer cumulativeBalance;
+    private Double cumulativeBalance;
 }

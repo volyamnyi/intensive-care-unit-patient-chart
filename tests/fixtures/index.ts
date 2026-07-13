@@ -1,13 +1,10 @@
-import { test as base, type Page, type Locator } from '@playwright/test';
+import { test as base, type Page } from '@playwright/test';
 
-type RoleFixtures = {
+export const test = base.extend<{
   doctorPage: Page;
   nursePage: Page;
   adminPage: Page;
-  getByRoleName: (role: string, name: string | RegExp) => Locator;
-};
-
-export const test = base.extend<RoleFixtures>({
+}>({
   doctorPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({ storageState: '.auth/doctor.json' });
     const page = await ctx.newPage();
@@ -25,10 +22,6 @@ export const test = base.extend<RoleFixtures>({
     const page = await ctx.newPage();
     await use(page);
     await ctx.close();
-  },
-  getByRoleName: async ({ page }, use) => {
-    const fn = (role: string, name: string | RegExp) => page.getByRole(role as any, { name });
-    await use(fn);
   },
 });
 

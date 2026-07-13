@@ -1,154 +1,186 @@
 package com.superhumans.service;
 
+import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.entity.*;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class FluidBalanceServiceTest {
 
-    @Mock private FluidIntakeRepository fluidIntakeRepository;
-    @Mock private FluidOutputRepository fluidOutputRepository;
-    @Mock private FluidBalanceRepository fluidBalanceRepository;
-    @Mock private IcuDayRepository icuDayRepository;
-    @InjectMocks private FluidBalanceService fluidBalanceService;
+    @Mock
+    private FluidBalanceRepository fluidBalanceRepository;
 
-    private IcuCard card;
-    private IcuDay day;
+    @Mock
+    private HourlyRecordRepository hourlyRecordRepository;
+
+    @Mock
+    private MedicalOrderRepository medicalOrderRepository;
+
+    @Mock
+    private OrderExecutionRepository orderExecutionRepository;
+
+    @Mock
+    private ClinicalDayRepository clinicalDayRepository;
+
+    @Mock
+    private AuditService auditService;
+
+    @InjectMocks
+    private FluidBalanceService fluidBalanceService;
+
+    @Captor
+    private ArgumentCaptor<List<FluidBalance>> batchCaptor;
+
+    private UUID clinicalDayId;
+    private UUID userId;
+    private ClinicalDay clinicalDay;
 
     @BeforeEach
     void setUp() {
-        card = IcuCard.builder().id(1L).build();
-        day = IcuDay.builder().id(1L).icuCard(card).dayNumber(1).build();
-    }
-
-    private void mockCumulativeBase() {
-        when(icuDayRepository.findById(1L)).thenReturn(Optional.of(day));
-        when(icuDayRepository.findByIcuCardIdOrderByDayNumberAsc(1L)).thenReturn(List.of(day));
-    }
-
-    @Test
-    void getBalance_shouldCalculateCorrectly() {
-        mockCumulativeBase();
-        List<FluidIntake> intakes = List.of(
-                FluidIntake.builder().id(1L).volumeActual(500).status(ExecutionStatus.DONE).build(),
-                FluidIntake.builder().id(2L).volumeActual(300).status(ExecutionStatus.DONE).build()
-        );
-        List<FluidOutput> outputs = List.of(
-                FluidOutput.builder().id(1L).type(OutputType.URINE).volume(400).build(),
-                FluidOutput.builder().id(2L).type(OutputType.TUBE).volume(100).build(),
-                FluidOutput.builder().id(3L).type(OutputType.DRAINAGE).volume(50).build()
-        );
-
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(outputs);
-
-        var balance = fluidBalanceService.getBalance(1L);
-        assertEquals(800, balance.getTotalIntake().intValue());
-        assertEquals(550, balance.getTotalOutput().intValue());
-        assertEquals(250, balance.getDailyBalance().intValue());
+        clinicalDayId = UUID.randomUUID();
+        userId = UUID.randomUUID();
+        clinicalDay = ClinicalDay.builder()
+                .status(ClinicalDayStatus.OPEN)
+                .build();
+        clinicalDay.setId(clinicalDayId);
     }
 
     @Test
-    void getBalance_shouldExcludeStoolFromOutput() {
-        mockCumulativeBase();
-        List<FluidIntake> intakes = List.of(
-                FluidIntake.builder().id(1L).volumeActual(1000).status(ExecutionStatus.DONE).build()
-        );
-        List<FluidOutput> outputs = List.of(
-                FluidOutput.builder().id(1L).type(OutputType.URINE).volume(400).build(),
-                FluidOutput.builder().id(2L).type(OutputType.TUBE).volume(100).build(),
-                FluidOutput.builder().id(3L).type(OutputType.DRAINAGE).volume(50).build(),
-                FluidOutput.builder().id(4L).type(OutputType.STOOL).isPresent(true).build()
-        );
+    void getBalances_returnsList() {
+        FluidBalance fb = new FluidBalance();
+        fb.setId(UUID.randomUUID());
+        fb.setClinicalDay(clinicalDay);
+        fb.setHour(8);
+        fb.setIntake(500.0);
+        fb.setOutput(300.0);
+        fb.setBalance(200.0);
+        fb.setCumulativeBalance(200.0);
 
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(outputs);
+        when(fluidBalanceRepository.findByClinicalDayIdOrderByHourAsc(clinicalDayId))
+                .thenReturn(List.of(fb));
 
-        var balance = fluidBalanceService.getBalance(1L);
-        assertEquals(1000, balance.getTotalIntake().intValue());
-        assertEquals(550, balance.getTotalOutput().intValue());
-        assertEquals(450, balance.getDailyBalance().intValue());
+        List<FluidBalanceResponse> results = fluidBalanceService.getBalances(clinicalDayId);
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getHour()).isEqualTo(8);
+        assertThat(results.get(0).getIntake()).isEqualTo(500.0);
+        assertThat(results.get(0).getOutput()).isEqualTo(300.0);
+        assertThat(results.get(0).getBalance()).isEqualTo(200.0);
+        assertThat(results.get(0).getCumulativeBalance()).isEqualTo(200.0);
     }
 
     @Test
-    void getBalance_shouldOnlyCountDoneIntakes() {
-        mockCumulativeBase();
-        List<FluidIntake> intakes = List.of(
-                FluidIntake.builder().id(1L).volumeActual(500).status(ExecutionStatus.DONE).build(),
-                FluidIntake.builder().id(2L).volumeActual(300).status(ExecutionStatus.PENDING).build()
-        );
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
+    void getBalances_empty() {
+        when(fluidBalanceRepository.findByClinicalDayIdOrderByHourAsc(clinicalDayId))
+                .thenReturn(List.of());
 
-        var balance = fluidBalanceService.getBalance(1L);
-        assertEquals(500, balance.getTotalIntake().intValue());
+        List<FluidBalanceResponse> results = fluidBalanceService.getBalances(clinicalDayId);
+
+        assertThat(results).isEmpty();
     }
 
     @Test
-    void getBalance_shouldReturnZeros_whenNoData() {
-        mockCumulativeBase();
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
+    void recalculate_aggregatesFromHourlyAndOrders() {
+        HourlyRecord r1 = new HourlyRecord();
+        r1.setId(UUID.randomUUID());
+        r1.setRecordTime(LocalDateTime.now().withHour(8));
+        r1.setUrineOutput(400.0);
+        r1.setDrainOutput(100.0);
 
-        var balance = fluidBalanceService.getBalance(1L);
-        assertEquals(0, balance.getTotalIntake().intValue());
-        assertEquals(0, balance.getTotalOutput().intValue());
-        assertEquals(0, balance.getDailyBalance().intValue());
+        HourlyRecord r2 = new HourlyRecord();
+        r2.setId(UUID.randomUUID());
+        r2.setRecordTime(LocalDateTime.now().withHour(10));
+        r2.setUrineOutput(300.0);
+        r2.setStool("Yes");
+        r2.setVomit("Yes");
+
+        MedicalOrder order = new MedicalOrder();
+        order.setId(UUID.randomUUID());
+
+        OrderExecution exec = new OrderExecution();
+        exec.setId(UUID.randomUUID());
+        exec.setOrder(order);
+        exec.setExecutedAt(LocalDateTime.now().withHour(8));
+        exec.setActualDose("500");
+
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+        when(hourlyRecordRepository.findByClinicalDayIdOrderByRecordTimeAsc(clinicalDayId))
+                .thenReturn(List.of(r1, r2));
+        when(medicalOrderRepository.findByClinicalDayIdOrderByStartTimeAsc(clinicalDayId))
+                .thenReturn(List.of(order));
+        when(orderExecutionRepository.findByOrderId(order.getId())).thenReturn(List.of(exec));
+
+        FluidBalance fb1 = new FluidBalance();
+        fb1.setId(UUID.randomUUID());
+        fb1.setClinicalDay(clinicalDay);
+        fb1.setHour(8);
+
+        FluidBalance fb2 = new FluidBalance();
+        fb2.setId(UUID.randomUUID());
+        fb2.setClinicalDay(clinicalDay);
+        fb2.setHour(10);
+
+        when(fluidBalanceRepository.saveAll(anyList())).thenReturn(List.of(fb1, fb2));
+
+        List<FluidBalanceResponse> results = fluidBalanceService.recalculate(clinicalDayId, userId);
+
+        verify(fluidBalanceRepository).deleteByClinicalDayId(clinicalDayId);
+        verify(fluidBalanceRepository).saveAll(batchCaptor.capture());
+        assertThat(batchCaptor.getValue()).hasSize(2);
+
+        FluidBalance savedFb8 = batchCaptor.getValue().get(0);
+        assertThat(savedFb8.getHour()).isEqualTo(8);
+        assertThat(savedFb8.getIntake()).isEqualTo(500.0);
+        assertThat(savedFb8.getOutput()).isEqualTo(500.0);
+
+        FluidBalance savedFb10 = batchCaptor.getValue().get(1);
+        assertThat(savedFb10.getHour()).isEqualTo(10);
+        assertThat(savedFb10.getIntake()).isEqualTo(0.0);
+        assertThat(savedFb10.getOutput()).isEqualTo(600.0);
+
+        verify(auditService).logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
     }
 
     @Test
-    void getBalance_shouldReturnNegativeBalance() {
-        mockCumulativeBase();
-        List<FluidIntake> intakes = List.of(
-                FluidIntake.builder().id(1L).volumeActual(200).status(ExecutionStatus.DONE).build()
-        );
-        List<FluidOutput> outputs = List.of(
-                FluidOutput.builder().id(1L).type(OutputType.URINE).volume(500).build()
-        );
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(intakes);
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(outputs);
+    void recalculate_withNoData_savesNothing() {
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+        when(hourlyRecordRepository.findByClinicalDayIdOrderByRecordTimeAsc(clinicalDayId))
+                .thenReturn(List.of());
+        when(medicalOrderRepository.findByClinicalDayIdOrderByStartTimeAsc(clinicalDayId))
+                .thenReturn(List.of());
 
-        var balance = fluidBalanceService.getBalance(1L);
-        assertEquals(-300, balance.getDailyBalance().intValue());
+        List<FluidBalanceResponse> results = fluidBalanceService.recalculate(clinicalDayId, userId);
+
+        verify(fluidBalanceRepository).deleteByClinicalDayId(clinicalDayId);
+        verify(fluidBalanceRepository).saveAll(batchCaptor.capture());
+        assertThat(batchCaptor.getValue()).isEmpty();
+        verify(auditService).logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
     }
 
     @Test
-    void calculateAndSave_shouldPersistBalance() {
-        mockCumulativeBase();
-        IcuDay dayParam = IcuDay.builder().id(1L).build();
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(fluidBalanceRepository.findByIcuDayId(1L)).thenReturn(Optional.empty());
-        when(fluidBalanceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+    void recalculate_whenClinicalDayNotFound_throws() {
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.empty());
 
-        fluidBalanceService.calculateAndSave(dayParam);
-        verify(fluidBalanceRepository).save(any());
-    }
-
-    @Test
-    void calculateAndSave_shouldUpdateExistingBalance() {
-        mockCumulativeBase();
-        IcuDay dayParam = IcuDay.builder().id(1L).build();
-        FluidBalance existing = new FluidBalance();
-        when(fluidIntakeRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(fluidOutputRepository.findByIcuDayId(1L)).thenReturn(List.of());
-        when(fluidBalanceRepository.findByIcuDayId(1L)).thenReturn(Optional.of(existing));
-        when(fluidBalanceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-
-        fluidBalanceService.calculateAndSave(dayParam);
-        verify(fluidBalanceRepository).save(existing);
+        assertThatThrownBy(() -> fluidBalanceService.recalculate(clinicalDayId, userId))
+                .isInstanceOf(RuntimeException.class);
     }
 }

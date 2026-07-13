@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  id: string;
   login: string;
   fullName: string;
   role: 'DOCTOR' | 'NURSE' | 'HEAD_OF_DEPARTMENT' | 'ADMINISTRATOR';
@@ -9,143 +9,298 @@ export interface User {
   phone: string;
 }
 
-export interface Patient {
-  patientID: number;
-  patientName: string;
-  patientBirthDate: string;
-  patientSexCode: string;
-  patientAddress: string;
-  patientPhone: string;
-  patientEmail: string;
-  patientExternalID1: string;
-  patientExternalID2: string;
-  patientHeight: number;
-  patientWeight: number;
+export interface PatientDto {
+  id: string;
+  fullName: string;
+  birthDate: string;
+  sexCode: string;
+  address: string;
+  phone: string;
+  email: string;
+  externalId1: string;
+  externalId2: string;
+  height: number | null;
+  weight: number | null;
   bloodGroup: string;
   rhFactor: string;
 }
 
-export interface IcuCard {
-  id: number;
-  patientId: number;
-  patientName: string;
-  medicalCardNumber: string;
+export interface EpisodeCreateRequest {
+  patientId: string;
+  hospitalizationId?: string;
+  departmentId?: string;
   admissionDate: string;
-  diagnosis: string;
-  apacheIi: number;
-  sofa: number;
-  status: 'ACTIVE' | 'CLOSED';
-  createdBy: string;
-  createdAt: string;
-  icuDays: IcuDay[];
-  prescriptions: Prescription[];
-  patientHeight: number | null;
-  patientWeight: number | null;
-  idealBodyWeight: number | null;
-  bloodGroup: string | null;
-  rhFactor: string | null;
-  patientSexCode: string | null;
-  patientBirthDate: string | null;
 }
 
-export interface IcuDay {
-  id: number;
-  dayNumber: number;
-  date: string;
-  status: 'ACTIVE' | 'SIGNED' | 'ARCHIVED';
-  doctorId: number;
-  signedAt: string | null;
-  pdfUrl: string | null;
-  escalationSent: boolean;
-  apacheIi: number | null;
-  sofa: number | null;
+export interface EpisodePatchRequest {
+  hospitalizationId?: string;
+  departmentId?: string;
+  dischargeDate?: string;
+  version: number;
 }
 
-export interface HourlyVital {
-  id: number;
-  hour: number;
-  systolicBp: number | null;
-  diastolicBp: number | null;
-  heartRate: number | null;
-  spo2: number | null;
-  temperature: number | null;
-  cvp: number | null;
-  respiratoryRate: number | null;
-  ventilatorMode: string | null;
-  tidalVolume: number | null;
-  minuteVentilation: number | null;
-  peep: number | null;
-  fio2: number | null;
-  ventFrequency: number | null;
+export interface EpisodeCloseRequest {
+  dischargeDate: string;
+  version: number;
 }
 
-export interface Prescription {
-  id: number;
-  type: 'THERAPY' | 'LAB';
-  medication: string;
+export interface ClinicalDayCreateRequest {
+  episodeId: string;
+  startDateTime: string;
+  endDateTime: string;
+}
+
+export interface ClinicalDayPatchRequest {
+  endDateTime?: string;
+  version: number;
+}
+
+export interface HourlyRecordCreateRequest {
+  recordTime: string;
+  consciousness?: string;
+  temperature?: number;
+  heartRate?: number;
+  respiratoryRate?: number;
+  systolicBP?: number;
+  diastolicBP?: number;
+  meanArterialPressure?: number;
+  spo2?: number;
+  etco2?: number;
+  fio2?: number;
+  cvp?: number;
+  urineOutput?: number;
+  drainOutput?: number;
+  stool?: string;
+  vomit?: string;
+  painScore?: number;
+  notes?: string;
+}
+
+export interface MedicalOrderCreateRequest {
+  category: string;
+  drugName: string;
   dose: string;
+  unit: string;
   route: string;
   frequency: string;
-  startHour: number;
-  endHour: number;
-  startDate: string;
-  endDate: string;
-  doctorId: number;
-  status: 'ACTIVE' | 'STOPPED' | 'EXPIRED';
-  createdAt: string;
+  startTime: string;
+  endTime?: string;
 }
 
-export interface FluidIntake {
-  id: number;
-  hour: number;
-  medicationName: string;
-  volumeOrdered: number;
-  volumeActual: number;
-  prescriptionId: number;
-  status: 'PENDING' | 'DONE' | 'SKIPPED';
+export interface OrderExecutionCreateRequest {
+  executedBy: string;
+  executedAt: string;
+  actualDose: string;
+  comment?: string;
 }
 
-export interface FluidOutput {
-  id: number;
-  hour: number;
-  type: 'URINE' | 'TUBE' | 'DRAINAGE' | 'STOOL';
-  volume: number;
-  isPresent: boolean;
-}
-
-export interface FluidBalance {
-  icuDayId: number;
-  totalIntake: number;
-  totalOutput: number;
-  dailyBalance: number;
-  cumulativeBalance: number;
-}
-
-export interface ScaleAssessment {
-  id: number;
-  scaleType: 'APACHE_II' | 'SOFA' | 'RASS' | 'CAM_ICU' | 'BRADEN';
-  score: number;
-  subScoresJson: string;
-  assessedAt: string;
-  assessedBy: string;
-  hour: number;
-}
-
-export interface ClinicalNote {
-  id: number;
-  content: string;
+export interface MedicalNoteCreateRequest {
   noteType: string;
+  text: string;
+}
+
+export interface ScaleResultCreateRequest {
+  scaleId: string;
+  result: string;
+}
+
+export interface SignRequest {
+  userId: string;
+  hash?: string;
+}
+
+export interface SignResponse {
+  signatureId: string;
+  clinicalDayId: string;
+  role: string;
+  signedAt: string;
+  hash: string | null;
+  version: number;
+}
+
+export interface ReopenRequest {
+  reason: string;
+  version: number;
+}
+
+export interface Episode {
+  id: string;
+  patientId: string;
+  patientName: string | null;
+  hospitalizationId: string | null;
+  departmentId: string | null;
+  admissionDate: string;
+  dischargeDate: string | null;
+  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
   createdBy: string;
   createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  version: number;
 }
 
-export interface CareMeasure {
-  id: number;
-  hour: number;
-  procedure: string;
-  performed: boolean;
-  performedBy: string;
+export interface ClinicalDay {
+  id: string;
+  episodeId: string;
+  dayNumber: number;
+  startDateTime: string;
+  endDateTime: string;
+  status: 'OPEN' | 'NURSE_SIGNED' | 'DOCTOR_SIGNED' | 'CLOSED' | 'REOPENED';
+  doctorSigned: boolean | null;
+  nurseSigned: boolean | null;
+  closedAt: string | null;
+  createdBy: string;
   createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface HourlyRecord {
+  id: string;
+  clinicalDayId: string;
+  recordTime: string;
+  consciousness: string | null;
+  temperature: number | null;
+  heartRate: number | null;
+  respiratoryRate: number | null;
+  systolicBP: number | null;
+  diastolicBP: number | null;
+  meanArterialPressure: number | null;
+  spo2: number | null;
+  etco2: number | null;
+  fio2: number | null;
+  cvp: number | null;
+  urineOutput: number | null;
+  drainOutput: number | null;
+  stool: string | null;
+  vomit: string | null;
+  painScore: number | null;
+  notes: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface MedicalOrder {
+  id: string;
+  clinicalDayId: string;
+  category: string;
+  drugName: string;
+  dose: string;
+  unit: string;
+  route: string;
+  frequency: string;
+  startTime: string;
+  endTime: string | null;
+  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface OrderExecution {
+  id: string;
+  orderId: string;
+  executedBy: string;
+  executedAt: string;
+  actualDose: string;
+  status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'PARTIALLY_COMPLETED' | 'CANCELLED';
+  comment: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface MedicalNote {
+  id: string;
+  clinicalDayId: string;
+  authorId: string;
+  role: string;
+  noteType: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface ClinicalScale {
+  id: string;
+  name: string;
+  description: string | null;
+  isAutomatic: boolean | null;
+  status: string;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface ScaleResult {
+  id: string;
+  clinicalDayId: string;
+  scaleId: string;
+  scaleName: string;
+  result: string;
+  calculatedAt: string;
+  calculatedBy: string;
+  createdAt: string;
+  version: number;
+}
+
+export interface FluidBalanceItem {
+  id: string;
+  clinicalDayId: string;
+  hour: number;
+  intake: number | null;
+  output: number | null;
+  balance: number | null;
+  cumulativeBalance: number | null;
+  version: number;
+}
+
+export interface Signature {
+  id: string;
+  clinicalDayId: string;
+  userId: string;
+  role: string;
+  signedAt: string;
+  hash: string | null;
+  status: string;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface PdfResponse {
+  id: string;
+  clinicalDayId: string;
+  fileName: string;
+  fileVersion: number;
+  generatedAt: string;
+  generatedBy: string;
+  checksum: string | null;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  userId: string | null;
+  entity: string;
+  entityId: string | null;
+  action: string;
+  oldValue: string | null;
+  newValue: string | null;
+  correlationId: string | null;
 }
 
 export interface LoginRequest {
@@ -155,8 +310,11 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
+  userId: string;
   login: string;
   fullName: string;
   role: string;
   email: string;
 }
+
+

@@ -9,59 +9,35 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> A full-stack electronic medical record system for Intensive Care Units (ICU). Enables doctors and nurses to digitally manage patient ICU charts — including hourly vital sign tracking, fluid balance monitoring, prescription management, clinical scale assessments, PDF generation, and automated day transitions.
-
----
-
-## Table of Contents
-
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Architecture Overview](#architecture-overview)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-  - [1. Clone the Repository](#1-clone-the-repository)
-  - [2. Database Setup](#2-database-setup)
-  - [3. Backend Setup](#3-backend-setup)
-  - [4. Frontend Setup](#4-frontend-setup)
-- [Configuration](#configuration)
-  - [Backend Configuration](#backend-configuration)
-  - [Frontend Configuration](#frontend-configuration)
-- [Running the Application](#running-the-application)
-- [API Documentation](#api-documentation)
-- [Seed Data](#seed-data)
-- [Project Structure](#project-structure)
-- [Development](#development)
-- [Deployment](#deployment)
-- [Security](#security)
-- [Roadmap](#roadmap)
-- [License](#license)
+> A full-stack electronic medical record system for Intensive Care Units (ICU). Enables doctors and nurses to digitally manage patient ICU charts — including hourly vital sign tracking, fluid balance monitoring, prescription management, clinical scale assessments, PDF generation, and digital signing workflows.
 
 ---
 
 ## Features
 
-### For Doctors
-- **Patient Dashboard** — View all active ICU patients with key metrics (APACHE II, SOFA scores)
-- **ICU Card Creation** — Search patients from the hospital information system (MIS) and create new ICU cards with diagnosis, APACHE II, and SOFA scores
-- **Hourly Vital Signs** — Review complete 24-hour vital sign tables (systolic/diastolic BP, heart rate, SpO₂, temperature, CVP, respiratory rate) with color-coded completion status
-- **Prescription Management** — Create, view, and stop medication prescriptions with dose, route, and scheduling
-- **Clinical Scale Assessments** — View APACHE II, SOFA, RASS, CAM-ICU, and Braden scale evaluations
-- **Day Sign-Off** — Sign off completed ICU days, triggering automatic PDF generation and MIS submission
-- **PDF Export** — Generate professional PDF documents for each signed ICU day
+### For Doctors / HOD
+- **Episode Dashboard** — View all active ICU episodes with patient names and status
+- **Episode Creation** — Search patients from the hospital information system (MIS) and create new episodes
+- **Clinical Day Timeline** — Visual timeline of all clinical days per episode with status (OPEN, NURSE_SIGNED, DOCTOR_SIGNED, REOPENED)
+- **Hourly Vital Signs** — Full 24-hour vital sign tables with color-coded completion status
+- **Prescription Management** — Create and cancel medication/lab orders with dose, route, frequency
+- **Clinical Scale Assessments** — Record and view APACHE II, SOFA, RASS, CAM-ICU, Braden scores
+- **Medical Notes** — Add typed clinical notes per day
+- **Digital Sign-Off** — Two-stage signing workflow (nurse → doctor/HOD), triggers PDF generation
+- **PDF Export** — Auto-generated professional PDF for each signed day
+- **Fluid Balance** — Calculated intake/output per hour with cumulative totals
+- **Reopen Workflow** — HOD can reopen a signed day for corrections
 
 ### For Nurses
-- **Patient Selection** — Switch between active patients via dropdown
-- **Hourly Vital Sign Entry** — Enter and save vital signs for each hour of the current ICU day
-- **Hour Strip Navigation** — Visual 24-hour strip with color-coded completed, missed, and current hours
-- **Fluid Output Tracking** — Record urine, tube drainage, and stool output
-- **Prescription Execution** — One-click administration of active medication prescriptions
-- **Fluid Balance Panel** — Real-time view of total intake, output, daily balance, and cumulative balance
+- **Episode List** — View all active episodes with patient names
+- **Hourly Vital Sign Entry** — Enter vitals for each hour with HTML5 validation (min/max ranges)
+- **Hour Selector** — Visual 24-hour strip with color-coded completed/missed/current hours
+- **Fluid Balance** — View intake, output, daily and cumulative balance
+- **Nurse Sign-Off** — First stage of the two-stage signing workflow
 
 ### Automated
-- **Daily Day Transitions** — Automatic closing of previous ICU day and creation of a new day at 07:00
-- **Escalation Notifications** — Automatic email alerts to the Head of Department if a day remains unsigned after 09:00
-- **Audit Logging** — All actions are logged for compliance and traceability
+- **Audit Logging** — All entity operations are logged with user, timestamp, and diff
+- **Optimistic Locking** — JPA `@Version` prevents concurrent edit conflicts
 
 ---
 
@@ -74,14 +50,13 @@
 | Spring Boot | 3.2.5 | Application framework |
 | Spring Data JPA | — | ORM / database access |
 | Spring Security | — | JWT-based authentication |
-| Spring WebSocket | — | STOMP real-time updates |
-| Spring Mail | — | Email notifications |
 | PostgreSQL | 16 | Relational database |
 | Hibernate | — | JPA implementation |
 | jjwt | 0.12.5 | JWT token handling |
 | iText 7 | 8.0.4 | PDF generation |
 | Lombok | — | Boilerplate reduction |
 | Maven | — | Build tool |
+| Testcontainers | 1.19.8 | Integration test containers |
 
 ### Frontend
 | Technology | Version | Purpose |
@@ -90,262 +65,255 @@
 | TypeScript | 6.0 | Type-safe JavaScript |
 | Vite | 8.1 | Build tool / dev server |
 | MUI (Material UI) | 9.2 | Component library |
-| MUI Icons | 9.2 | Icon set |
 | Axios | 1.18 | HTTP client |
 | React Router DOM | 7.18 | Client-side routing |
 | Emotion | 11.14 | CSS-in-JS styling |
 | Day.js | 1.11 | Date manipulation |
-| Rubik + Mulish | — | Typography |
 | Oxlint | 1.71 | Linter |
+| Vitest | 3.2 | Unit testing |
+
+### E2E Testing
+| Technology | Version | Purpose |
+|---|---|---|
+| Playwright | 1.61 | Browser automation |
+| Allure | 3.2 | CI test reporting |
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
 ┌──────────────┐     HTTP/JSON      ┌──────────────┐     JDBC      ┌────────────┐
 │   Frontend   │ ◄──────────────────► │   Backend    │ ◄────────────► │ PostgreSQL │
-│  (React 19)  │   localhost:5173     │ (Spring Boot)│  localhost:5432│            │
-│              │     ┌─────────┐     │ localhost:8080│               │            │
-│  Vite Dev    │     │  Axios  │     │              │               │            │
-│  Server      │     │ JWT Auth│     │  JWT Filter  │               │            │
-└──────────────┘     └─────────┘     └──────┬───────┘               └────────────┘
-                                            │
-                                    ┌───────┴───────┐
-                                    │  MockMISService│
-                                    │  (or real MIS) │
-                                    └───────────────┘
+│  (React 19)  │   localhost:5173     │ (Spring Boot)│  localhost:5432│    16      │
+│              │                      │ localhost:8085│               │            │
+│  Vite Dev    │    JWT Bearer Auth   │              │               │            │
+│  Server      │                      │  JWT Filter  │               │            │
+└──────────────┘                      └──────┬───────┘               └────────────┘
+                                             │
+                                     ┌───────┴───────┐
+                                     │  MockMisService│
+                                     │  (or real MIS) │
+                                     └───────────────┘
 ```
 
-- The frontend communicates with the backend via RESTful JSON APIs over HTTP
-- Authentication is stateless using JWT tokens stored in `localStorage`
-- The backend integrates with the Hospital Information System (MIS) via a pluggable service interface (currently using a mock implementation)
+- Frontend communicates via RESTful JSON APIs with JWT Bearer auth
+- Backend integrates with MIS via a pluggable `MisService` interface (mock implementation by default)
 - Scheduled tasks handle day transitions and escalation checks
-- WebSocket support is configured for future real-time updates
 
 ---
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-- **Java Development Kit (JDK)** 17 or later — [Download](https://adoptium.net/)
-- **Node.js** 20 or later — [Download](https://nodejs.org/)
-- **npm** 10 or later (ships with Node.js)
-- **PostgreSQL** 16 or later — [Download](https://www.postgresql.org/download/)
-- **Maven** 3.9 or later — [Download](https://maven.apache.org/download.cgi) (or use the included `mvnw` wrapper)
+- **JDK** 17 or later
+- **Node.js** 20 or later, **npm** 10+
+- **PostgreSQL** 16
+- **Maven** 3.9+ (or use `mvnw`)
+- **Docker** (only for integration tests via Testcontainers)
 
 ---
 
 ## Getting Started
 
-### 1. Clone the Repository
+### 1. Database
 
 ```bash
-git clone https://github.com/your-organization/icu-patient-chart.git
-cd icu-patient-chart
+psql -U postgres -c "CREATE DATABASE my_fullstack_db;"
 ```
 
-### 2. Database Setup
-
-```bash
-# Connect to PostgreSQL
-psql -U postgres
-
-# Create the database
-CREATE DATABASE my_fullstack_db;
-
-# Verify
-\l    # list databases
-\q    # quit
-```
-
-The schema is validated on application startup (`ddl-auto: validate`). If you are running for the first time, either:
-- Change `ddl-auto` to `update` in `backend/src/main/resources/application.yml` temporarily, or
-- Execute the schema manually using a tool like pgAdmin or DBeaver against your entity model
-
-### 3. Backend Setup
+### 2. Backend
 
 ```bash
 cd backend
-
-# Build the project
 mvn clean package -DskipTests
-
-# The JAR will be in: target/patient-chart-backend-1.0.0.jar
+java -jar target/patient-chart-backend-*.jar
+# Starts on http://localhost:8085
 ```
 
-### 4. Frontend Setup
+### 3. Frontend
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Verify TypeScript compilation
-npx tsc --noEmit
+npm run dev
+# Starts on http://localhost:5173
 ```
+
+Open **http://localhost:5173** and log in with seed credentials.
 
 ---
 
 ## Configuration
 
-### Backend Configuration
-
-All backend settings are in `backend/src/main/resources/application.yml`:
+Backend settings in `backend/src/main/resources/application.yml`:
 
 ```yaml
 server:
-  port: 8080
+  port: 8085
 
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/my_fullstack_db
     username: postgres
     password: admin
+  jpa:
+    hibernate:
+      ddl-auto: update       # Auto-creates schema from entities
 
 app:
   jwt:
-    secret: <base64-encoded-secret>
-    expiration-ms: 86400000       # 24 hours
+    secret: <base64-secret>
+    expiration-ms: 86400000
   mis:
-    mock-enabled: true            # Set false in production with real MIS
-  scheduling:
-    day-close-hour: 7             # 07:00 daily auto-close
-    escalation-hour: 9            # 09:00 escalation email check
+    mock-enabled: true
 ```
 
-| Property | Description | Default |
-|---|---|---|
-| `server.port` | Backend server port | `8080` |
-| `spring.datasource.url` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/my_fullstack_db` |
-| `app.jwt.secret` | Base64-encoded JWT signing secret | (see file) |
-| `app.jwt.expiration-ms` | JWT token validity period | `86400000` (24h) |
-| `app.mis.mock-enabled` | Use mock MIS (no real integration) | `true` |
-| `app.scheduling.day-close-hour` | Hour for automatic day close | `7` |
-| `app.scheduling.escalation-hour` | Hour for escalation email check | `9` |
-
-> **⚠️ Production**: Replace the JWT secret with a strong randomly generated value. Disable mock mode and implement a real `MISService`. Configure SMTP settings for email notifications.
-
-### Frontend Configuration
-
-The API base URL is defined in `frontend/src/api/client.ts`:
+Frontend API URL in `frontend/src/api/client.ts`:
 
 ```typescript
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = 'http://localhost:8085/api';
 ```
-
-For production deployment, update this to your backend URL or configure a reverse proxy.
 
 ---
 
 ## Running the Application
 
-### Development Mode
-
-**Terminal 1 — Backend:**
+### Development
 
 ```bash
-cd backend
-mvn spring-boot:run
+# Terminal 1 — Backend
+cd backend && mvn spring-boot:run
+
+# Terminal 2 — Frontend
+cd frontend && npm run dev
 ```
 
-The backend starts on `http://localhost:8080`.
-
-**Terminal 2 — Frontend:**
+### Production
 
 ```bash
-cd frontend
-npm run dev
+cd frontend && npm run build          # outputs to frontend/dist/
+cd ../backend && mvn clean package -DskipTests
+java -jar backend/target/patient-chart-backend-*.jar
 ```
-
-The frontend starts on `http://localhost:5173`.
-
-Open your browser and navigate to **http://localhost:5173**.
-
-### Production Mode
-
-```bash
-# Build backend
-cd backend && mvn clean package -DskipTests
-
-# Build frontend
-cd ../frontend && npm run build
-
-# Serve frontend build via backend or a web server
-# The frontend build output is in frontend/dist/
-
-# Run backend JAR
-java -jar backend/target/patient-chart-backend-1.0.0.jar
-```
-
-For production, it is recommended to serve the frontend build through a reverse proxy (e.g., Nginx) that forwards `/api/*` requests to the backend.
 
 ---
 
-## API Documentation
+## API Endpoints
 
 ### Authentication
-
-All API endpoints except `/api/auth/login` require a JWT token in the `Authorization` header:
-
-```
-Authorization: Bearer <token>
-```
-
-### Endpoints
-
 | Method | URL | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/auth/login` | No | Login, returns JWT token |
-| `GET` | `/api/patients/search?query=` | Yes | Search patients in MIS |
-| `GET` | `/api/patients/{id}` | Yes | Get patient by MIS ID |
-| `POST` | `/api/icu-cards` | Yes | Create new ICU card |
-| `GET` | `/api/icu-cards/{id}` | Yes | Get ICU card by ID |
-| `GET` | `/api/icu-cards/active` | Yes | List all active ICU cards |
-| `GET` | `/api/icu-cards/by-patient/{patientId}` | Yes | Get cards for a patient |
-| `GET` | `/api/icu-days/by-card/{cardId}` | Yes | List all days for a card |
-| `GET` | `/api/icu-days/{id}` | Yes | Get ICU day by ID |
-| `PUT` | `/api/icu-days/{dayId}/vitals/{hour}` | Yes | Save hourly vitals |
-| `GET` | `/api/icu-days/{dayId}/vitals` | Yes | Get all vitals for a day |
-| `POST` | `/api/icu-days/{dayId}/intake/{hour}` | Yes | Record fluid intake |
-| `POST` | `/api/icu-days/{dayId}/output/{hour}` | Yes | Record fluid output |
-| `GET` | `/api/icu-days/{dayId}/balance` | Yes | Get fluid balance |
-| `POST` | `/api/icu-days/{dayId}/scales` | Yes | Save scale assessment |
-| `GET` | `/api/icu-days/{dayId}/scales` | Yes | Get scale assessments |
-| `POST` | `/api/icu-days/{dayId}/sign-off` | Doctor | Sign off an ICU day |
-| `GET` | `/api/icu-days/{dayId}/pdf` | Yes | Download PDF summary |
-| `POST` | `/api/prescriptions/by-card/{cardId}` | Yes | Create prescription |
-| `GET` | `/api/prescriptions/by-card/{cardId}` | Yes | List prescriptions |
-| `POST` | `/api/prescriptions/{id}/stop` | Yes | Stop a prescription |
-| `POST` | `/api/prescriptions/{id}/execute` | Yes | Execute prescription |
-| `GET` | `/api/users/me` | Yes | Get current user |
-| `GET` | `/api/users/doctors` | Yes | List doctors |
-| `GET` | `/api/users/nurses` | Yes | List nurses |
+| `POST` | `/api/auth/login` | No | Login, returns JWT + user info |
+
+### Episodes (replaces legacy ICU cards)
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/episodes` | Yes | Search episodes by patientId / status |
+| `GET` | `/api/episodes/{id}` | Yes | Get episode by ID |
+| `POST` | `/api/episodes` | Yes | Create episode |
+| `PATCH` | `/api/episodes/{id}` | Yes | Update episode |
+| `POST` | `/api/episodes/{id}/close` | Yes | Close episode |
+| `GET` | `/api/episodes/{id}/clinical-days` | Yes | List clinical days for episode |
+
+### Patients (MIS)
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/patients` | Yes | Search patients by query (name, card#, phone) |
+
+### Clinical Days
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/clinical-days/{id}` | Yes | Get clinical day |
+| `POST` | `/api/clinical-days` | Yes | Create clinical day |
+| `PATCH` | `/api/clinical-days/{id}` | Yes | Update clinical day |
+| `POST` | `/api/clinical-days/{id}/sign/nurse` | Nurse | Nurse sign-off |
+| `POST` | `/api/clinical-days/{id}/sign/doctor` | Doctor/HOD | Doctor sign-off |
+| `POST` | `/api/clinical-days/{id}/reopen` | HOD | Reopen signed day |
+
+### Hourly Records
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/clinical-days/{id}/hourly-records` | Yes | List hourly records |
+| `POST` | `/api/clinical-days/{id}/hourly-records` | Yes | Create hourly record |
+| `PATCH` | `/api/hourly-records/{id}` | Yes | Update hourly record |
+
+### Medical Orders
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/clinical-days/{id}/orders` | Yes | List orders |
+| `POST` | `/api/clinical-days/{id}/orders` | Doctor | Create order |
+| `PATCH` | `/api/orders/{id}` | Doctor | Update order |
+| `POST` | `/api/orders/{id}/cancel` | Doctor | Cancel order |
+
+### Order Executions
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/orders/{id}/executions` | Yes | List executions |
+| `POST` | `/api/orders/{id}/execute` | Nurse | Execute order |
+| `PATCH` | `/api/executions/{id}` | Yes | Update execution |
+
+### Medical Notes
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/clinical-days/{id}/notes` | Yes | List notes |
+| `POST` | `/api/clinical-days/{id}/notes` | Yes | Create note |
+| `PATCH` | `/api/notes/{id}` | Yes | Update note |
+
+### Clinical Scales
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/scales` | Yes | List available scales |
+| `GET` | `/api/clinical-days/{id}/scales` | Yes | Get scale results |
+| `POST` | `/api/clinical-days/{id}/scales` | Yes | Create scale result |
+| `PATCH` | `/api/scales/{id}` | Yes | Update scale result |
+
+### Fluid Balance
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/clinical-days/{id}/fluid-balance` | Yes | Get balance items |
+| `POST` | `/api/clinical-days/{id}/fluid-balance/recalculate` | Yes | Recalculate balance |
+
+### PDF
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/clinical-days/{id}/pdf` | Yes | Get PDF metadata |
+| `POST` | `/api/clinical-days/{id}/pdf` | Yes | Generate PDF |
+
+### Users
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/users/me` | Yes | Current user |
+| `GET` | `/api/users/doctors` | Admin | List doctors |
+| `GET` | `/api/users/nurses` | Admin | List nurses |
+
+### Audit
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/audit` | Admin | List audit logs |
+| `GET` | `/api/audit/{id}` | Admin | Get audit log entry |
 
 ---
 
 ## Seed Data
 
-The application seeds 6 users on startup via `backend/src/main/resources/data.sql`:
+6 users seeded via `backend/src/main/resources/data.sql`:
 
-| Login | Password | Role | Full Name |
-|---|---|---|---|
-| `doctor1` | `doctor123` | DOCTOR | Олександр Мельник |
-| `doctor2` | `doctor123` | DOCTOR | Наталія Бойко |
-| `nurse1` | `nurse123` | NURSE | Олена Ткаченко |
-| `nurse2` | `nurse123` | NURSE | Марія Кравчук |
-| `head1` | `head123` | HEAD_OF_DEPARTMENT | Василь Гончарук |
-| `admin` | `admin123` | ADMINISTRATOR | Адмін Системи |
+| Login | Password | Role |
+|---|---|---|
+| `doctor1` / `doctor2` | `doctor123` | DOCTOR |
+| `nurse1` / `nurse2` | `nurse123` | NURSE |
+| `head1` | `head123` | HEAD_OF_DEPARTMENT |
+| `admin` | `admin123` | ADMINISTRATOR |
 
-The mock MIS service provides three test patients for searching and card creation:
+3 mock patients (from MIS mock):
 
-| Patient Name | Medical Card # | Year of Birth |
+| Full Name | Card # | Year |
 |---|---|---|
 | Петренко Іван Сергійович | МК-001234 | 1978 |
 | Коваленко Олена Вікторівна | МК-005678 | 1985 |
 | Сидоренко Василь Петрович | МК-009012 | 1962 |
+
+3 seed episodes + 3 open clinical days with fixed UUIDs (used in integration tests).
 
 ---
 
@@ -355,37 +323,36 @@ The mock MIS service provides three test patients for searching and card creatio
 icu-patient-chart/
 ├── backend/
 │   ├── pom.xml
-│   └── src/main/
-│   ├── java/com/superhumans/
-│   │   ├── SuperhumansApplication.java
-│       │   ├── auth/             # JWT authentication
-│       │   ├── config/           # Security, CORS, WebSocket config
-│       │   ├── controller/       # REST controllers (6)
-│       │   ├── dto/              # Request/response DTOs
-│       │   ├── entity/           # JPA entities (12)
-│       │   ├── mis/              # MIS integration (mock + interface)
-│       │   ├── repository/       # Spring Data JPA repositories (10)
-│       │   └── service/          # Business logic services (10)
-│       └── resources/
-│           ├── application.yml
-│           └── data.sql          # Seed data
+│   └── src/main/java/com/superhumans/
+│       ├── SuperhumansApplication.java
+│       ├── auth/             # JWT authentication (filter + token provider)
+│       ├── config/           # Security, CORS
+│       ├── controller/       # REST controllers (11)
+│       ├── dto/              # Request/response DTOs
+│       ├── entity/           # JPA entities (15)
+│       ├── exception/        # Domain exceptions + global handler
+│       ├── mapper/           # Entity ↔ DTO mappers
+│       ├── mis/              # MIS integration (mock + interface)
+│       ├── repository/       # Spring Data repositories (13)
+│       └── service/          # Business logic services (12)
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tsconfig*.json
 │   └── src/
-│       ├── App.tsx               # Root component / routing
-│       ├── api/                  # Axios client & endpoint definitions
-│       ├── styles/               # MUI theme & CSS animations
-│       ├── services/             # Auth context
-│       ├── layouts/              # Doctor & Nurse layouts
-│       ├── pages/                # Page components
-│       │   ├── LoginPage.tsx
-│       │   ├── doctor/           # Dashboard, CreateCard, PatientDay
-│       │   └── nurse/            # NurseDashboard
-│       ├── components/           # Shared component stubs
-│       └── types/                # TypeScript interfaces
-├── docs/                         # Project documentation (Ukrainian)
+│       ├── App.tsx           # Root component + routing
+│       ├── api/              # Axios client + endpoint definitions
+│       ├── components/       # Shared UI components (12)
+│       ├── layouts/          # Doctor & Nurse layouts
+│       ├── pages/            # LoginPage, doctor/, nurse/, admin/
+│       ├── services/         # AuthContext
+│       ├── styles/           # MUI theme + animations
+│       └── types/            # TypeScript interfaces
+├── tests/                    # Playwright E2E tests
+│   ├── playwright.config.ts
+│   ├── pages/                # Page objects (6)
+│   ├── fixtures/             # Role-based test fixtures
+│   └── specs/                # Test specs (13 files, 37 tests)
 └── README.md
 ```
 
@@ -393,138 +360,81 @@ icu-patient-chart/
 
 ## Development
 
-### Code Quality
+### Commands
 
-```bash
-# Frontend linting
-cd frontend && npm run lint
+#### Backend
+| Command | Action |
+|---|---|
+| `mvn spring-boot:run` | Dev server on `:8085` |
+| `mvn clean package -DskipTests` | Build JAR |
+| `mvn compile` | Compile only |
+| `mvn test` | Run unit tests (106) |
+| `mvn test -Pintegration-test` | Run integration tests (7) — requires Docker |
 
-# Frontend type checking
-cd frontend && npx tsc --noEmit
+#### Frontend
+| Command | Action |
+|---|---|
+| `npm run dev` | Vite dev server on `:5173` |
+| `npm run build` | `tsc -b && vite build` |
+| `npm run lint` | Oxlint |
+| `npx tsc --noEmit` | Type-check without build |
+| `npm t` | Run Vitest unit tests (35) |
 
-# Backend compilation
-cd backend && mvn compile
-```
+#### E2E Tests (`cd tests`)
+| Command | Action |
+|---|---|
+| `npx playwright test` | Run all E2E tests (37) |
+| `npx playwright test --ui` | Run with Playwright UI mode |
+| `npx playwright test --list` | List tests |
+| `npx playwright show-report` | View HTML report |
+
+### Testing Summary
+- **Backend unit tests**: 106 tests (12 service classes) — `mvn test`
+- **Backend integration tests**: 7 tests via Testcontainers — `mvn test -Pintegration-test`
+- **Frontend Vitest tests**: 35 tests (5 files)
+- **E2E Playwright tests**: 37 tests (13 spec files, 7 projects)
+- **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
 ### Commit Conventions
 
-This project follows [Conventional Commits](https://www.conventionalcommits.org/):
-
+[Conventional Commits](https://www.conventionalcommits.org/):
 ```
 feat: add new feature
 fix: correct a bug
-refactor: restructure code without changing behavior
+refactor: restructure code
 docs: update documentation
 chore: maintenance tasks
 ```
-
-### Available Scripts
-
-#### Frontend
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Vite development server on `:5173` |
-| `npm run build` | Type-check and build for production |
-| `npm run preview` | Preview production build locally |
-| `npm run lint` | Run Oxlint static analysis |
-
-#### Backend
-
-| Command | Description |
-|---|---|
-| `mvn spring-boot:run` | Run backend in development mode |
-| `mvn clean package` | Build production JAR |
-| `mvn compile` | Compile without running tests |
-| `mvn test` | Run tests |
-
----
-
-## Deployment
-
-### Traditional Deployment
-
-1. **Build the frontend** — `npm run build` produces static files in `frontend/dist/`
-2. **Build the backend** — `mvn clean package -DskipTests` produces a JAR
-3. **Serve the frontend** via Nginx, Apache, or the backend itself
-4. **Run the backend** — `java -jar patient-chart-backend-1.0.0.jar`
-5. **Configure a reverse proxy** to route `/api/*` to the backend
-
-### Docker Deployment (Recommended)
-
-*Docker support coming soon — a `Dockerfile` and `docker-compose.yml` are planned.*
-
-Until then, a manual setup guide:
-
-```bash
-# Build
-cd frontend && npm run build
-cd ../backend && mvn clean package -DskipTests
-
-# Run with PostgreSQL
-java -jar backend/target/patient-chart-backend-1.0.0.jar
-```
-
-### Environment Variables (Production)
-
-> **Note**: Currently, configuration is file-based. For production, consider externalizing:
-> - `SPRING_DATASOURCE_URL`
-> - `SPRING_DATASOURCE_USERNAME`
-> - `SPRING_DATASOURCE_PASSWORD`
-> - `APP_JWT_SECRET`
-> - `APP_MIS_MOCK_ENABLED`
-
----
-
-## Security
-
-- **Authentication**: JWT-based, stateless authentication
-- **Password Storage**: BCrypt hashing
-- **Authorization**: Role-based access control (DOCTOR, NURSE, HEAD_OF_DEPARTMENT, ADMINISTRATOR)
-- **CORS**: Restricted to `http://localhost:5173` and `http://localhost:3000` in development
-- **CSRF**: Disabled (stateless API)
-- **Audit Trail**: All operations are logged via `AuditService`
 
 ### Role Permissions
 
 | Operation | DOCTOR | NURSE | HOD | ADMIN |
 |---|---|---|---|---|
-| Create ICU card | ✓ | ✗ | ✓ | ✗ |
-| Sign off day | ✓ | ✗ | ✓ | ✗ |
+| Create episode | ✓ | ✗ | ✓ | ✗ |
+| Create clinical day | ✓ | ✗ | ✓ | ✗ |
+| Sign off (nurse stage) | ✗ | ✓ | ✗ | ✗ |
+| Sign off (doctor stage) | ✓ | ✗ | ✓ | ✗ |
+| Reopen signed day | ✗ | ✗ | ✓ | ✗ |
 | Create prescriptions | ✓ | ✗ | ✓ | ✗ |
-| Enter vitals | ✗ | ✓ | ✗ | ✗ |
 | Execute prescriptions | ✗ | ✓ | ✗ | ✗ |
+| Enter vitals | ✗ | ✓ | ✗ | ✗ |
 | View patient data | ✓ | ✓ | ✓ | ✓ |
+| Audit log access | ✗ | ✗ | ✗ | ✓ |
 
 ---
 
-## Roadmap
+## Security
 
-- [x] Core ICU chart management (CRUD)
-- [x] Hourly vital sign tracking
-- [x] Prescription management & execution
-- [x] Fluid balance calculations
-- [x] Clinical scale assessments
-- [x] JWT authentication & RBAC
-- [x] PDF generation (iText 7)
-- [x] Automated day transitions & escalation
-- [x] MIS integration (mock)
-- [ ] Real-time updates via WebSocket
-- [ ] Docker containerization & docker-compose
-- [ ] Internationalization (i18n) support
-- [ ] Dark mode theme
-- [ ] Reporting & analytics dashboard
-- [ ] Integration with real HIS/MIS systems
-- [ ] Mobile-responsive layout
+- **Authentication**: JWT Bearer tokens stored in `localStorage`
+- **Password Storage**: BCrypt hashing
+- **Authorization**: Spring Security method + URL-based RBAC
+- **CORS**: Restricted to `http://localhost:5173` and `http://localhost:3000`
+- **CSRF**: Disabled (stateless API)
+- **Audit**: `AuditService` logs all entity operations
+- **Optimistic Locking**: `@Version` field on all entities prevents concurrent overwrites
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
-## Support
-
-For questions, feature requests, or bug reports, please open an issue on the [GitHub repository](https://github.com/your-organization/icu-patient-chart/issues).
+MIT License. See [LICENSE](LICENSE).

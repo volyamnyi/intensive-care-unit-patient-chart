@@ -1,10 +1,18 @@
 package com.superhumans.repository;
 
 import com.superhumans.entity.AuditLog;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
-    List<AuditLog> findByUserIdOrderByCreatedAtDesc(String userId);
-    List<AuditLog> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(String entityType, Long entityId);
+public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
+    Page<AuditLog> findByEntityAndEntityIdOrderByTimestampDesc(String entity, UUID entityId, Pageable pageable);
+    Page<AuditLog> findByUserIdOrderByTimestampDesc(UUID userId, Pageable pageable);
+    Page<AuditLog> findByEntityOrderByTimestampDesc(String entity, Pageable pageable);
+    Page<AuditLog> findByActionOrderByTimestampDesc(String action, Pageable pageable);
+    Page<AuditLog> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime start, LocalDateTime end, Pageable pageable);
+    Page<AuditLog> findAllByOrderByTimestampDesc(Pageable pageable);
 }

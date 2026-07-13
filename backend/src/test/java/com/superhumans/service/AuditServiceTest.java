@@ -1,65 +1,184 @@
 package com.superhumans.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.entity.AuditLog;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.repository.AuditLogRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class AuditServiceTest {
 
-    @Mock private AuditLogRepository auditLogRepository;
-    @InjectMocks private AuditService auditService;
+    @Mock
+    private AuditLogRepository auditLogRepository;
 
-    @Test
-    void log_shouldSaveAuditEntry() {
-        when(auditLogRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        auditService.log("doctor1", "CREATE_CARD", "IcuCard", 1L, "details", "127.0.0.1");
-        verify(auditLogRepository).save(argThat(log ->
-                "doctor1".equals(log.getUserId()) &&
-                "CREATE_CARD".equals(log.getAction()) &&
-                "IcuCard".equals(log.getEntityType()) &&
-                1L == log.getEntityId() &&
-                "details".equals(log.getDetails()) &&
-                "127.0.0.1".equals(log.getIpAddress()) &&
-                log.getCreatedAt() != null
-        ));
+    @InjectMocks
+    private AuditService auditService;
+
+    @Captor
+    private ArgumentCaptor<AuditLog> logCaptor;
+
+    private UUID logId;
+    private UUID entityId;
+    private UUID userId;
+
+    @BeforeEach
+    void setUp() {
+        logId = UUID.randomUUID();
+        entityId = UUID.randomUUID();
+        userId = UUID.randomUUID();
     }
 
     @Test
-    void log_shouldHandleLongDetails() {
-        when(auditLogRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        String longDetails = "a".repeat(1000);
-        auditService.log("doctor1", "UPDATE_CARD", "IcuCard", 1L, longDetails, "127.0.0.1");
-        verify(auditLogRepository).save(argThat(log -> longDetails.equals(log.getDetails())));
+    void getAuditLog_whenFound_returnsResponse() {
+        AuditLog log = AuditLog.builder()
+                .id(logId)
+                .entity("Episode")
+                .entityId(entityId)
+                .action("CREATE")
+                .userId(userId)
+                .build();
+        when(auditLogRepository.findById(logId)).thenReturn(Optional.of(log));
+
+        AuditLogResponse result = auditService.getAuditLog(logId);
+
+        assertThat(result.getId()).isEqualTo(logId);
+        assertThat(result.getEntity()).isEqualTo("Episode");
+        assertThat(result.getAction()).isEqualTo("CREATE");
     }
 
     @Test
-    void log_shouldAllowNullDetailsAndIp() {
-        when(auditLogRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        auditService.log("nurse1", "EXECUTE_PRESCRIPTION", "FluidIntake", 5L, null, null);
-        verify(auditLogRepository).save(argThat(log ->
-                "nurse1".equals(log.getUserId()) &&
-                log.getDetails() == null &&
-                log.getIpAddress() == null
-        ));
+    void getAuditLog_whenNotFound_throws() {
+        when(auditLogRepository.findById(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> auditService.getAuditLog(logId))
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void log_shouldRecordBackdatedEntry_withHourDifference() {
-        when(auditLogRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        auditService.log("nurse1", "BACKDATE_VITALS", "HourlyVital", 10L,
-                "Backdated: entered at hour 14 for hour 8, diff 6h", "192.168.1.1");
-        verify(auditLogRepository).save(argThat(log ->
-                "BACKDATE_VITALS".equals(log.getAction()) &&
-                log.getDetails().contains("Backdated") &&
-                log.getDetails().contains("diff 6h")
-        ));
+    void getAuditLogs_noFilters_returnsAll() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(auditLogRepository.findAllByOrderByTimestampDesc(pageable))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(null, null, null, null, null, null, pageable);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getAuditLogs_filterByUserId() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(auditLogRepository.findByUserIdOrderByTimestampDesc(eq(userId), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(userId, null, null, null, null, null, pageable);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getAuditLogs_filterByEntityAndEntityId() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(auditLogRepository.findByEntityAndEntityIdOrderByTimestampDesc(
+                eq("Episode"), eq(entityId), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(null, "Episode", entityId, null, null, null, pageable);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getAuditLogs_filterByEntity() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(auditLogRepository.findByEntityOrderByTimestampDesc(eq("Episode"), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(null, "Episode", null, null, null, null, pageable);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getAuditLogs_filterByAction() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(auditLogRepository.findByActionOrderByTimestampDesc(eq("CREATE"), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(null, null, null, "CREATE", null, null, pageable);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getAuditLogs_filterByDateRange() {
+        Pageable pageable = PageRequest.of(0, 10);
+        LocalDateTime from = LocalDateTime.now().minusDays(1);
+        LocalDateTime to = LocalDateTime.now();
+        when(auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(eq(from), eq(to), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(null, null, null, null, from, to, pageable);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void logCreate_savesEntry() {
+        auditService.logCreate("Episode", entityId, userId);
+
+        verify(auditLogRepository).save(logCaptor.capture());
+        assertThat(logCaptor.getValue().getEntity()).isEqualTo("Episode");
+        assertThat(logCaptor.getValue().getEntityId()).isEqualTo(entityId);
+        assertThat(logCaptor.getValue().getAction()).isEqualTo("CREATE");
+        assertThat(logCaptor.getValue().getUserId()).isEqualTo(userId);
+    }
+
+    @Test
+    void logUpdate_setsOldAndNewValues() {
+        auditService.logUpdate("Episode", entityId, userId, "old state", "new state");
+
+        verify(auditLogRepository).save(logCaptor.capture());
+        assertThat(logCaptor.getValue().getAction()).isEqualTo("UPDATE");
+        assertThat(logCaptor.getValue().getOldValue()).isEqualTo("old state");
+        assertThat(logCaptor.getValue().getNewValue()).isEqualTo("new state");
+    }
+
+    @Test
+    void logDelete_savesEntry() {
+        auditService.logDelete("Episode", entityId, userId);
+
+        verify(auditLogRepository).save(logCaptor.capture());
+        assertThat(logCaptor.getValue().getAction()).isEqualTo("DELETE");
+    }
+
+    @Test
+    void logAction_savesEntry() {
+        auditService.logAction("Episode", entityId, "CANCEL", userId);
+
+        verify(auditLogRepository).save(logCaptor.capture());
+        assertThat(logCaptor.getValue().getAction()).isEqualTo("CANCEL");
     }
 }

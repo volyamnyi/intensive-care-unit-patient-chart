@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  Box, AppBar, Toolbar, Typography, Container, IconButton, Menu, MenuItem,
+  Box, Typography, IconButton, Menu, MenuItem,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress,
 } from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
@@ -65,38 +65,27 @@ export default function AdminPage() {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#FAFAF8' }}>
-      <AppBar position="static" sx={{ bgcolor: '#1F1F1F' }}>
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 700 }}>
-            <RouterLink to="/admin" style={{ color: 'white', textDecoration: 'none' }}>
-              Панель адміністратора
-            </RouterLink>
-          </Typography>
-          <IconButton aria-label="Меню користувача" sx={{ color: 'rgba(255,255,255,0.85)' }} onClick={(e) => setAnchorEl(e.currentTarget)}>
-            <AccountCircle />
-          </IconButton>
-          <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
-            <MenuItem disabled>{user?.fullName}</MenuItem>
-            <MenuItem onClick={handleLogout}>Вийти</MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="xl" sx={{ mt: 3, mb: 3 }} className="fade-in-up">
-        <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700, mb: 3 }}>
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700 }}>
           Користувачі системи
         </Typography>
-        {loading ? (
-          <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />
-        ) : (
-          <>
-            {renderTable('Лікарі', doctors)}
-            {renderTable('Медсестри', nurses)}
-          </>
-        )}
-        <Outlet />
-      </Container>
+        <IconButton aria-label="Меню користувача" onClick={(e) => setAnchorEl(e.currentTarget)}>
+          <AccountCircle />
+        </IconButton>
+        <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
+          <MenuItem disabled>{user?.fullName}</MenuItem>
+          <MenuItem onClick={handleLogout}>Вийти</MenuItem>
+        </Menu>
+      </Box>
+      {loading ? (
+        <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />
+      ) : (
+        <>
+          {renderTable('Лікарі', doctors)}
+          {renderTable('Медсестри', nurses)}
+        </>
+      )}
     </Box>
   );
 }

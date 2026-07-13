@@ -3,6 +3,7 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "audit_logs")
@@ -10,27 +11,40 @@ import java.time.LocalDateTime;
 public class AuditLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(columnDefinition = "UUID", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(nullable = false, length = 50)
-    private String userId;
+    @Column(nullable = false)
+    private LocalDateTime timestamp;
 
-    @Column(nullable = false, length = 50)
-    private String action;
+    @Column(name = "user_id")
+    private UUID userId;
 
-    @Column(name = "entity_type", length = 50)
-    private String entityType;
+    @Column(nullable = false, length = 100)
+    private String entity;
 
     @Column(name = "entity_id")
-    private Long entityId;
+    private UUID entityId;
 
-    @Column(columnDefinition = "TEXT")
-    private String details;
+    @Column(nullable = false, length = 100)
+    private String action;
 
-    @Column(name = "ip_address", length = 45)
-    private String ipAddress;
+    @Column(name = "old_value", columnDefinition = "TEXT")
+    private String oldValue;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "new_value", columnDefinition = "TEXT")
+    private String newValue;
+
+    @Column(name = "correlation_id", length = 100)
+    private String correlationId;
+
+    @PrePersist
+    protected void onCreate() {
+        if (id == null) {
+            id = UUID.randomUUID();
+        }
+        if (timestamp == null) {
+            timestamp = LocalDateTime.now();
+        }
+    }
 }
