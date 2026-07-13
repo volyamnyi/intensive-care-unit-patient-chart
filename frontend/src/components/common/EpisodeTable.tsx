@@ -70,7 +70,10 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
                 {onSelect && (
                   <Box
                     sx={{ color: '#1F6B4C', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => { e.stopPropagation(); onSelect(ep); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onSelect(ep); } }}
                   >
                     Відкрити
                   </Box>

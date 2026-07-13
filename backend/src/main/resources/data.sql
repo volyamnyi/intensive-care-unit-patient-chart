@@ -18,6 +18,10 @@ ON CONFLICT (login) DO UPDATE SET
   speciality_name = EXCLUDED.speciality_name,
   phone = EXCLUDED.phone;
 
+-- Reset seed data to prevent data pollution from prior test runs
+-- CASCADE handles all FK-dependent tables (clinical_days, hourly_records, etc.)
+TRUNCATE episodes CASCADE;
+
 -- Seed episodes (patient IDs match those in MockMISServiceImpl)
 INSERT INTO episodes (id, patient_id, hospitalization_id, department_id, admission_date, status, created_at, created_by, updated_at, updated_by, version)
 VALUES

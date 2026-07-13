@@ -9,9 +9,9 @@ test.describe('HOD Dashboard', () => {
 
   test('can create a new ICU card', async ({ page }) => {
     await page.goto('/doctor/create-card');
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill('Бондаренко');
+    await page.getByLabel('ПІБ, телефон або № медкарти').fill('Ткачук');
 
-    const option = page.getByRole('option', { name: /Бондаренко/ });
+    const option = page.getByRole('option', { name: /Ткачук/ });
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
 
