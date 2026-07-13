@@ -99,6 +99,7 @@ function AppRoutes() {
         </Guard>
       }>
         <Route index element={<NurseDashboardPage />} />
+        <Route path="episode/:episodeId" element={<PatientDayPage />} />
       </Route>
 
       <Route path="/admin" element={

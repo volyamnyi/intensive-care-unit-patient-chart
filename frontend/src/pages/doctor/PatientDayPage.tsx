@@ -45,8 +45,11 @@ export default function PatientDayPage() {
     ]).then(([epRes, daysRes]) => {
       setEpisode(epRes.data);
       setClinicalDays(daysRes.data);
-      const openDay = daysRes.data.find(d => d.status === 'OPEN' || d.status === 'REOPENED');
-      setSelectedDay(openDay || daysRes.data[0] || null);
+      const isDoctorRole = user?.role === 'DOCTOR' || user?.role === 'HEAD_OF_DEPARTMENT';
+      const target = isDoctorRole
+        ? daysRes.data.find(d => d.status === 'NURSE_SIGNED')
+        : daysRes.data.find(d => d.status === 'OPEN' || d.status === 'REOPENED');
+      setSelectedDay(target || daysRes.data[0] || null);
     }).finally(() => setLoading(false));
   }, [episodeId]);
 
@@ -163,7 +166,7 @@ export default function PatientDayPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate('/doctor')}>
+          <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(isNurse ? '/nurse' : '/doctor')}>
             Назад
           </Button>
           {canSign && (

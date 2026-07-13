@@ -10,7 +10,10 @@ test.describe('Doctor Prescriptions', () => {
 
     await page.getByLabel('Препарат').fill('Dopamine');
     await page.getByLabel('Доза').fill('200');
+    await page.getByLabel('Од.').fill('mcg');
     await page.getByLabel('Шлях').fill('IV');
+    await page.getByLabel('Частота').fill('stat');
+    await page.getByLabel('Початок').fill('2025-04-08T08:00');
 
     await page.getByRole('button', { name: 'Створити' }).click();
 
@@ -26,7 +29,10 @@ test.describe('Doctor Prescriptions', () => {
 
     await page.getByLabel('Препарат').fill('Norepinephrine');
     await page.getByLabel('Доза').fill('4');
+    await page.getByLabel('Од.').fill('mcg');
     await page.getByLabel('Шлях').fill('IV');
+    await page.getByLabel('Частота').fill('stat');
+    await page.getByLabel('Початок').fill('2025-04-08T08:00');
 
     await page.getByRole('button', { name: 'Створити' }).click();
 

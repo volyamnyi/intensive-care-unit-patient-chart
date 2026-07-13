@@ -44,7 +44,7 @@ export default function NurseDashboardPage() {
       ) : (
         <EpisodeTable
           episodes={filteredEpisodes}
-          onSelect={(ep) => navigate('/doctor/episode/' + ep.id)}
+          onSelect={(ep) => navigate('/nurse/episode/' + ep.id)}
         />
       )}
     </Box>
