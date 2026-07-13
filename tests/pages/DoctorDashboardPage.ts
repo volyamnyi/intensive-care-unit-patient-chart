@@ -22,7 +22,7 @@ export class DoctorDashboardPage extends BasePage {
     this.patientTable = page.getByRole('table');
     this.loadingSpinner = page.getByRole('progressbar');
     this.patientCards = page.locator('tbody tr').filter({ has: page.getByRole('button', { name: 'Відкрити' }) });
-    this.emptyState = page.getByText('Немає активних пацієнтів');
+    this.emptyState = page.getByText('Немає пацієнтів за запитом');
     this.appBarTitle = page.getByText('Карта інтенсивної терапії').first();
     this.navPatients = page.getByRole('button', { name: 'Пацієнти' });
     this.userMenu = page.getByRole('button', { name: /меню користувача/i });
