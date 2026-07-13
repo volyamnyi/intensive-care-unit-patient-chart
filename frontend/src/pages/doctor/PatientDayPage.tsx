@@ -45,6 +45,8 @@ export default function PatientDayPage() {
       setPrescriptions(prescRes.data);
       const foundDay = cardRes.data.icuDays?.find((d) => d.id === Number(dayId));
       setDay(foundDay || null);
+    }).catch((err) => {
+      console.error('Failed to load patient day data:', err);
     }).finally(() => setLoading(false));
   }, [cardId, dayId]);
 
@@ -260,6 +262,7 @@ export default function PatientDayPage() {
         <Grid container spacing={2}>
           {['APACHE_II', 'SOFA', 'RASS', 'CAM_ICU', 'BRADEN'].map((type) => {
             const scale = scales.find((s) => s.scaleType === type);
+            const fallback = type === 'APACHE_II' ? day?.apacheIi : type === 'SOFA' ? day?.sofa : undefined;
             const names: Record<string, string> = {
               APACHE_II: 'APACHE II', SOFA: 'SOFA',
               RASS: 'RASS (Richmond Agitation-Sedation Scale)',
@@ -272,6 +275,8 @@ export default function PatientDayPage() {
                   <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 600 }}>{names[type]}</Typography>
                   {scale ? (
                     <Typography variant="body1" sx={{ mt: 0.5 }}>Бал: <strong>{scale.score}</strong> (год. {scale.hour}:00)</Typography>
+                  ) : fallback != null ? (
+                    <Typography variant="body1" sx={{ mt: 0.5 }}>Бал: <strong>{fallback}</strong> (з карти)</Typography>
                   ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Не заповнено</Typography>
                   )}
