@@ -38,4 +38,9 @@ test.describe('Login', () => {
     await page.goto('/doctor');
     await expect(page).toHaveURL('/login');
   });
+
+  test('login page has correct title', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page).toHaveTitle('ВАІТ — Вхід');
+  });
 });

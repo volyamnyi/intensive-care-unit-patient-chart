@@ -18,4 +18,9 @@ test.describe('Admin Page', () => {
     await expect(page.getByText('nurse1')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('nurse2')).toBeVisible();
   });
+
+  test('page title is set correctly', async ({ page }) => {
+    await page.goto('/admin');
+    await expect(page).toHaveTitle('ВАІТ — Адміністратор');
+  });
 });

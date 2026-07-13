@@ -28,4 +28,40 @@ test.describe('Nurse Vitals Entry', () => {
     await expect(page.getByLabel('ЧСС (в 1 хв)')).toHaveValue('72');
     await expect(page.getByLabel('SpO2 (%)')).toHaveValue('98');
   });
+
+  test('save vitals shows success snackbar', async ({ page }) => {
+    await page.goto('/nurse');
+    await page.locator('[role="combobox"]').first().click();
+    await page.getByRole('option', { name: /Петренко Іван/ }).click();
+    await expect(page.getByText('Петренко Іван Сергійович').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Показники/ })).toBeVisible({ timeout: 10000 });
+
+    await page.getByText('8:00').first().click();
+    await page.getByLabel('АТ сист (мм.рт.ст)').fill('110');
+    await page.getByLabel('АТ діас (мм.рт.ст)').fill('70');
+    await page.getByLabel('ЧСС (в 1 хв)').fill('65');
+
+    await page.getByRole('button', { name: 'Зберегти показники' }).click();
+    await expect(page.getByText('Показники збережено')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('vitals fields have HTML5 validation attributes', async ({ page }) => {
+    await page.goto('/nurse');
+    await page.locator('[role="combobox"]').first().click();
+    await page.getByRole('option', { name: /Петренко Іван/ }).click();
+    await expect(page.getByLabel('АТ сист (мм.рт.ст)')).toBeVisible({ timeout: 10000 });
+
+    const sysField = page.getByLabel('АТ сист (мм.рт.ст)');
+    await expect(sysField).toHaveAttribute('type', 'number');
+    await expect(sysField).toHaveAttribute('min', '60');
+    await expect(sysField).toHaveAttribute('max', '300');
+
+    const hrField = page.getByLabel('ЧСС (в 1 хв)');
+    await expect(hrField).toHaveAttribute('min', '20');
+    await expect(hrField).toHaveAttribute('max', '300');
+
+    const tempField = page.getByLabel('Темп. тіла (°С)');
+    await expect(tempField).toHaveAttribute('min', '30');
+    await expect(tempField).toHaveAttribute('max', '45');
+  });
 });

@@ -48,6 +48,10 @@ export default function PatientDayPage() {
     }).finally(() => setLoading(false));
   }, [cardId, dayId]);
 
+  useEffect(() => {
+    document.title = card ? `ВАІТ — ${card.patientName}` : 'ВАІТ — Пацієнт';
+  }, [card]);
+
   const handleCreatePrescription = async () => {
     if (!cardId) return;
     await prescriptionApi.create(Number(cardId), newPrescription);

@@ -5,6 +5,7 @@ frontend/dist/
 *.log
 test-results/
 playwright-report/
+tests/.auth/
 .mcp.json
 .idea/
 *.iml

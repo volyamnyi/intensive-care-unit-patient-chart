@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, Grid, TextField, Button, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Alert, CircularProgress,
-  Select, MenuItem, FormControl, InputLabel, IconButton
+  Select, MenuItem, FormControl, InputLabel, IconButton, Snackbar
 } from '@mui/material';
 import { CheckCircle } from '@mui/icons-material';
 import { icuCardApi, icuDayApi, prescriptionApi } from '../../api/endpoints';
@@ -25,6 +25,10 @@ export default function NurseDashboardPage() {
     temperature: '', cvp: '', respiratoryRate: ''
   });
   const [outputForm, setOutputForm] = useState({ urine: '', tube: '', drainage: '', stool: false });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [fluidSaveErrors, setFluidSaveErrors] = useState<string[]>([]);
+
+  useEffect(() => { document.title = 'ВАІТ — Медсестра'; }, []);
 
   useEffect(() => {
     icuCardApi.getActive()
@@ -79,7 +83,29 @@ export default function NurseDashboardPage() {
     });
     const res = await icuDayApi.getVitals(selectedDay.id);
     setVitals(res.data);
+    setSnackbarOpen(true);
   };
+
+  const handleSaveFluid = async () => {
+    if (!selectedDay) return;
+    try {
+      const dayId = selectedDay.id;
+      const requests: { type: string; volume: number | null; isPresent: boolean | null }[] = [];
+      if (outputForm.urine) requests.push({ type: 'URINE', volume: Number(outputForm.urine), isPresent: null });
+      if (outputForm.tube) requests.push({ type: 'TUBE', volume: Number(outputForm.tube), isPresent: null });
+      if (outputForm.drainage) requests.push({ type: 'DRAINAGE', volume: Number(outputForm.drainage), isPresent: null });
+      requests.push({ type: 'STOOL', volume: null, isPresent: outputForm.stool });
+      await Promise.all(requests.map(r => icuDayApi.addOutput(dayId, currentHour, r as any)));
+      const b = await icuDayApi.getBalance(dayId);
+      setBalance(b.data);
+      setSnackbarOpen(true);
+      setFluidSaveErrors([]);
+    } catch {
+      setFluidSaveErrors(['Помилка при збереженні втрат рідини']);
+    }
+  };
+
+  const handleCloseSnackbar = () => setSnackbarOpen(false);
 
   const handleExecutePrescription = async (prescriptionId: number, dose: string) => {
     if (!selectedDay) return;
@@ -99,6 +125,7 @@ export default function NurseDashboardPage() {
       <FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel>Пацієнт</InputLabel>
         <Select value={selectedCard?.id || ''} label="Пацієнт"
+          inputProps={{ 'aria-label': 'Пацієнт' }}
           onChange={(e) => {
             const card = cards.find(c => c.id === Number(e.target.value))!;
             setSelectedCard(card);
@@ -149,13 +176,13 @@ export default function NurseDashboardPage() {
               <Paper sx={{ p: 2.5, mb: 2, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>Показники — {currentHour}:00</Typography>
                 <Grid container spacing={1}>
-                  <Grid size={4}><TextField fullWidth size="small" label="АТ сист (мм.рт.ст)" value={vitalForm.systolicBp} onChange={(e) => setVitalForm({ ...vitalForm, systolicBp: e.target.value })} /></Grid>
-                  <Grid size={4}><TextField fullWidth size="small" label="АТ діас (мм.рт.ст)" value={vitalForm.diastolicBp} onChange={(e) => setVitalForm({ ...vitalForm, diastolicBp: e.target.value })} /></Grid>
-                  <Grid size={4}><TextField fullWidth size="small" label="ЧСС (в 1 хв)" value={vitalForm.heartRate} onChange={(e) => setVitalForm({ ...vitalForm, heartRate: e.target.value })} /></Grid>
-                  <Grid size={3}><TextField fullWidth size="small" label="SpO2 (%)" value={vitalForm.spo2} onChange={(e) => setVitalForm({ ...vitalForm, spo2: e.target.value })} /></Grid>
-                  <Grid size={3}><TextField fullWidth size="small" label="Темп. тіла (°С)" value={vitalForm.temperature} onChange={(e) => setVitalForm({ ...vitalForm, temperature: e.target.value })} /></Grid>
-                  <Grid size={3}><TextField fullWidth size="small" label="ЦВТ (мм.вод.ст)" value={vitalForm.cvp} onChange={(e) => setVitalForm({ ...vitalForm, cvp: e.target.value })} /></Grid>
-                  <Grid size={3}><TextField fullWidth size="small" label="ЧД (в 1 хв)" value={vitalForm.respiratoryRate} onChange={(e) => setVitalForm({ ...vitalForm, respiratoryRate: e.target.value })} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" type="number" label="АТ сист (мм.рт.ст)" value={vitalForm.systolicBp} onChange={(e) => setVitalForm({ ...vitalForm, systolicBp: e.target.value })} slotProps={{ htmlInput: { min: 60, max: 300, step: 1 } }} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" type="number" label="АТ діас (мм.рт.ст)" value={vitalForm.diastolicBp} onChange={(e) => setVitalForm({ ...vitalForm, diastolicBp: e.target.value })} slotProps={{ htmlInput: { min: 30, max: 200, step: 1 } }} /></Grid>
+                  <Grid size={4}><TextField fullWidth size="small" type="number" label="ЧСС (в 1 хв)" value={vitalForm.heartRate} onChange={(e) => setVitalForm({ ...vitalForm, heartRate: e.target.value })} slotProps={{ htmlInput: { min: 20, max: 300, step: 1 } }} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" type="number" label="SpO2 (%)" value={vitalForm.spo2} onChange={(e) => setVitalForm({ ...vitalForm, spo2: e.target.value })} slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" type="number" label="Темп. тіла (°С)" value={vitalForm.temperature} onChange={(e) => setVitalForm({ ...vitalForm, temperature: e.target.value })} slotProps={{ htmlInput: { min: 30, max: 45, step: 0.1 } }} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" type="number" label="ЦВТ (мм.вод.ст)" value={vitalForm.cvp} onChange={(e) => setVitalForm({ ...vitalForm, cvp: e.target.value })} slotProps={{ htmlInput: { min: 0, max: 50, step: 1 } }} /></Grid>
+                  <Grid size={3}><TextField fullWidth size="small" type="number" label="ЧД (в 1 хв)" value={vitalForm.respiratoryRate} onChange={(e) => setVitalForm({ ...vitalForm, respiratoryRate: e.target.value })} slotProps={{ htmlInput: { min: 4, max: 80, step: 1 } }} /></Grid>
                 </Grid>
                 <Button variant="contained" sx={{ mt: 2 }} onClick={handleSaveVitals}>Зберегти показники</Button>
               </Paper>
@@ -170,6 +197,7 @@ export default function NurseDashboardPage() {
                     <FormControl size="small">
                       <InputLabel>Випорожнення</InputLabel>
                       <Select value={outputForm.stool ? 'yes' : 'no'} label="Випорожнення"
+                        inputProps={{ 'aria-label': 'Випорожнення' }}
                         onChange={(e) => setOutputForm({ ...outputForm, stool: e.target.value === 'yes' })}>
                         <MenuItem value="no">Ні</MenuItem>
                         <MenuItem value="yes">Так</MenuItem>
@@ -177,7 +205,7 @@ export default function NurseDashboardPage() {
                     </FormControl>
                   </Grid>
                 </Grid>
-                <Button variant="contained" sx={{ mt: 2 }}>Зберегти втрати</Button>
+                <Button variant="contained" sx={{ mt: 2 }} onClick={handleSaveFluid}>Зберегти втрати</Button>
               </Paper>
 
               <Paper sx={{ p: 2.5, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
@@ -242,6 +270,12 @@ export default function NurseDashboardPage() {
           </Grid>
         </>
       )}
+      <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity="success" variant="filled" sx={{ borderRadius: 2 }}>
+          {fluidSaveErrors.length > 0 ? fluidSaveErrors[0] : 'Показники збережено'}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

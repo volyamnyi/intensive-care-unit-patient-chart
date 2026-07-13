@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Card, CardContent, TextField, Button, Typography, Alert } from '@mui/material';
 import { useAuth } from '../services/AuthContext';
 
 export default function LoginPage() {
+  useEffect(() => { document.title = 'ВАІТ — Вхід'; }, []);
   const { login } = useAuth();
   const [loginField, setLoginField] = useState('');
   const [password, setPassword] = useState('');

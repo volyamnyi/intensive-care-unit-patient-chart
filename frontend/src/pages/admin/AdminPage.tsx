@@ -10,6 +10,7 @@ import { userApi } from '../../api/endpoints';
 import type { User } from '../../types';
 
 export default function AdminPage() {
+  useEffect(() => { document.title = 'ВАІТ — Адміністратор'; }, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

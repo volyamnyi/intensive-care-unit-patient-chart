@@ -41,4 +41,28 @@ test.describe('Doctor Dashboard', () => {
     await page.getByRole('button', { name: 'Підписати добу' }).click();
     await expect(page.getByText('Після підписання доба стане read-only')).toBeVisible();
   });
+
+  test('search for non-existent patient shows different message', async ({ page }) => {
+    await page.goto('/doctor');
+    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 10000 });
+    await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('НемаєТакий');
+    await expect(page.getByText('Немає пацієнтів за запитом')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('clear search restores all cards', async ({ page }) => {
+    await page.goto('/doctor');
+    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 10000 });
+    const search = page.getByPlaceholder('Пошук пацієнта за ПІБ...');
+    await search.fill('НемаєТакий');
+    await expect(page.getByText('Немає пацієнтів за запитом')).toBeVisible({ timeout: 5000 });
+    await search.clear();
+    await expect(page.getByText('Петренко Іван Сергійович')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Коваленко Олена Вікторівна')).toBeVisible();
+    await expect(page.getByText('Сидоренко Василь Петрович')).toBeVisible();
+  });
+
+  test('page title is set correctly', async ({ page }) => {
+    await page.goto('/doctor');
+    await expect(page).toHaveTitle('ВАІТ — Лікар');
+  });
 });

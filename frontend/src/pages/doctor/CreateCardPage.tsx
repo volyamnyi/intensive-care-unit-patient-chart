@@ -7,6 +7,7 @@ import { patientApi, icuCardApi } from '../../api/endpoints';
 import type { Patient } from '../../types';
 
 export default function CreateCardPage() {
+  useEffect(() => { document.title = 'ВАІТ — Нова карта'; }, []);
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);

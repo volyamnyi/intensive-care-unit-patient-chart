@@ -36,4 +36,15 @@ test.describe('Nurse Dashboard', () => {
     await page.getByRole('option', { name: /Петренко Іван Сергійович/ }).click();
     await expect(page.getByText('Сеча (мл)').first()).toBeVisible({ timeout: 10000 });
   });
+
+  test('patient select has aria-label', async ({ page }) => {
+    await page.goto('/nurse');
+    const combobox = page.getByRole('combobox').first();
+    await expect(combobox).toHaveAttribute('aria-label', 'Пацієнт');
+  });
+
+  test('page title is set correctly', async ({ page }) => {
+    await page.goto('/nurse');
+    await expect(page).toHaveTitle('ВАІТ — Медсестра');
+  });
 });

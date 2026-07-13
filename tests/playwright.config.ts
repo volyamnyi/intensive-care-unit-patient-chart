@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './specs',
+  testDir: '.',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -69,6 +69,17 @@ export default defineConfig({
       name: 'api-chromium',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/api/*.spec.ts',
+    },
+    {
+      name: 'exploratory-chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: { args: ['--start-maximized'] },
+      },
+      testMatch: '**/exploratory/*.spec.ts',
+      timeout: 300000,
+      retries: process.env.CI ? 2 : 0,
+      workers: 1,
     },
   ],
 });
