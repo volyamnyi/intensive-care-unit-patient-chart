@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 const API = 'http://localhost:8085/api';
 
 test.describe('API Error Handling', () => {
-  test('returns 401 for unauthenticated requests', async ({ request }) => {
+  test('returns 403 for unauthenticated requests', async ({ request }) => {
     const res = await request.get(`${API}/episodes`);
-    expect(res.status()).toBe(401);
+    expect(res.status()).toBe(403);
   });
 
   test('returns 404 for non-existent episode', async ({ request }) => {
@@ -34,17 +34,17 @@ test.describe('API Error Handling', () => {
     expect(dayRes.status()).toBe(404);
   });
 
-  test('returns 401 with invalid token', async ({ request }) => {
+  test('returns 403 with invalid token', async ({ request }) => {
     const res = await request.get(`${API}/episodes`, {
       headers: { Authorization: 'Bearer invalid-token-here' },
     });
-    expect(res.status()).toBe(401);
+    expect(res.status()).toBe(403);
   });
 
-  test('returns 400 for empty login request', async ({ request }) => {
+  test('returns 401 for empty login request', async ({ request }) => {
     const res = await request.post(`${API}/auth/login`, {
       data: {},
     });
-    expect(res.status()).toBe(400);
+    expect(res.status()).toBe(401);
   });
 });

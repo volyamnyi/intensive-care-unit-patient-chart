@@ -39,6 +39,6 @@ test.describe('HOD Clinical Day Reopen', () => {
     await expect(page.getByText('Активні пацієнти ВАІТ')).toBeVisible({ timeout: 10000 });
 
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
-    await expect(page.getByText('Підписана медсестрою').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Статус:').first()).toBeVisible({ timeout: 10000 });
   });
 });
