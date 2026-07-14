@@ -11,6 +11,14 @@ import java.util.stream.Collectors;
 @Service
 public class MockMisServiceImpl implements MisService {
 
+    private boolean simulateErrors = false;
+    private String errorMode = "none";
+
+    public void setErrorMode(String mode) {
+        this.errorMode = mode;
+        this.simulateErrors = !"none".equals(mode);
+    }
+
     private final Map<UUID, PatientDTO> patients = new LinkedHashMap<>();
     private final Map<UUID, UserMisDTO> users = new LinkedHashMap<>();
     private final Map<UUID, DepartmentDTO> departments = new LinkedHashMap<>();
@@ -139,6 +147,21 @@ public class MockMisServiceImpl implements MisService {
 
     @Override
     public List<PatientDTO> searchPatients(String query) {
+        if (simulateErrors) {
+            switch (errorMode) {
+                case "timeout":
+                    try {
+                        Thread.sleep(30000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    throw new RuntimeException("MIS timeout");
+                case "not_found":
+                    throw new RuntimeException("Patient not found in MIS");
+                case "unavailable":
+                    throw new RuntimeException("MIS service unavailable");
+            }
+        }
         if (query == null || query.isBlank()) {
             return List.copyOf(patients.values());
         }

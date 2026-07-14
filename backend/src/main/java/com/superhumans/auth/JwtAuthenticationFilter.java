@@ -1,5 +1,7 @@
 package com.superhumans.auth;
 
+import com.superhumans.entity.AuditLog;
+import com.superhumans.repository.AuditLogRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +15,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -20,6 +23,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final AuditLogRepository auditLogRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -33,6 +37,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     login, jwtTokenProvider.getUserIdFromToken(token),
                     List.of(new SimpleGrantedAuthority("ROLE_" + role)));
             SecurityContextHolder.getContext().setAuthentication(auth);
+
+            AuditLog auditLog = new AuditLog();
+            auditLog.setUserId(jwtTokenProvider.getUserIdFromToken(token));
+            auditLog.setAction("LOGIN");
+            auditLog.setDetails("User logged in: " + login);
+            auditLog.setTimestamp(LocalDateTime.now());
+            auditLog.setIpAddress(request.getRemoteAddr());
+            auditLog.setUserRole(role);
+            auditLogRepository.save(auditLog);
         }
         filterChain.doFilter(request, response);
     }

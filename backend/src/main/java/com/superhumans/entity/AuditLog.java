@@ -38,6 +38,18 @@ public class AuditLog {
     @Column(name = "correlation_id", length = 100)
     private String correlationId;
 
+    @Column(columnDefinition = "TEXT")
+    private String details;
+
+    @Column(name = "ip_address")
+    private String ipAddress;
+
+    @Column(name = "user_role")
+    private String userRole;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
+
     @PrePersist
     protected void onCreate() {
         if (id == null) {

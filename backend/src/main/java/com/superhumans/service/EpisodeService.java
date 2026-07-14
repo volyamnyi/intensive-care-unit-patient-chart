@@ -109,4 +109,12 @@ public class EpisodeService {
         auditService.logAction("Episode", id, "CLOSE", userId);
         return EpisodeMapper.toResponse(episode);
     }
+
+    @Transactional
+    public void archiveEpisode(UUID id) {
+        Episode episode = episodeRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
+        episode.setStatus(EpisodeStatus.ARCHIVED);
+        episodeRepository.save(episode);
+    }
 }

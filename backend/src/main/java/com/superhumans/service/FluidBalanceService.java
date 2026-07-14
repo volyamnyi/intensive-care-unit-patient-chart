@@ -82,13 +82,17 @@ public class FluidBalanceService {
                     .balance(balance)
                     .cumulativeBalance(cumulative)
                     .build();
-            fb.setCreatedBy(userId);
-            fb.setUpdatedBy(userId);
+            if (userId != null) {
+                fb.setCreatedBy(userId);
+                fb.setUpdatedBy(userId);
+            }
             results.add(fb);
         }
 
         results = fluidBalanceRepository.saveAll(results);
-        auditService.logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
+        if (userId != null) {
+            auditService.logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
+        }
         return results.stream().map(FluidBalanceMapper::toResponse).collect(Collectors.toList());
     }
 

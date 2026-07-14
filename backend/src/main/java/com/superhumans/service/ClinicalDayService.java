@@ -7,6 +7,7 @@ import com.superhumans.mapper.ClinicalDayMapper;
 import com.superhumans.mapper.SignatureMapper;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.EpisodeRepository;
+import com.superhumans.repository.HourlyRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class ClinicalDayService {
 
     private final ClinicalDayRepository clinicalDayRepository;
     private final EpisodeRepository episodeRepository;
+    private final HourlyRecordRepository hourlyRecordRepository;
     private final SignatureService signatureService;
     private final AuditService auditService;
 
@@ -149,6 +151,17 @@ public class ClinicalDayService {
         day = clinicalDayRepository.save(day);
         auditService.logAction("ClinicalDay", id, "REOPEN", userId);
         return ClinicalDayMapper.toResponse(day);
+    }
+
+    public boolean canAdvanceToNextDay(UUID episodeId) {
+        ClinicalDay currentDay = clinicalDayRepository.findCurrentDayByEpisodeId(episodeId)
+                .orElseThrow(() -> new RuntimeException("No open clinical day"));
+        if (currentDay.getStatus() != ClinicalDayStatus.OPEN && currentDay.getStatus() != ClinicalDayStatus.REOPENED) {
+            return false;
+        }
+        int expectedHours = 24;
+        long recordedHours = hourlyRecordRepository.countByClinicalDayId(currentDay.getId());
+        return recordedHours >= expectedHours;
     }
 
     private void assertNotLocked(ClinicalDay day) {

@@ -42,21 +42,23 @@ public class ClinicalDayController {
     }
 
     @PostMapping("/{id}/sign/nurse")
-    public ResponseEntity<SignResponse> signNurse(
+    public ResponseEntity<Void> signNurse(
             @PathVariable UUID id,
             @Valid @RequestBody SignRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(clinicalDayService.signNurse(id, request, userId));
+        clinicalDayService.signNurse(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/sign/doctor")
-    public ResponseEntity<SignResponse> signDoctor(
+    public ResponseEntity<Void> signDoctor(
             @PathVariable UUID id,
             @Valid @RequestBody SignRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(clinicalDayService.signDoctor(id, request, userId));
+        clinicalDayService.signDoctor(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/reopen")

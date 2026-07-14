@@ -69,4 +69,10 @@ public class EpisodeController {
         UUID userId = (UUID) auth.getCredentials();
         return ResponseEntity.ok(episodeService.closeEpisode(id, request, userId));
     }
+
+    @PutMapping("/{id}/archive")
+    public ResponseEntity<Void> archiveEpisode(@PathVariable UUID id) {
+        episodeService.archiveEpisode(id);
+        return ResponseEntity.noContent().build();
+    }
 }
