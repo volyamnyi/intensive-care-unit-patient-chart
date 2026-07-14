@@ -1,0 +1,356 @@
+[
+  {
+    "tcId": "TC-01.04",
+    "status": true,
+    "detail": "ADMIN redirected to /admin",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-01.05",
+    "status": true,
+    "detail": "Error alert: true, URL: http://localhost:5173/login",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-02.05",
+    "status": true,
+    "detail": "Unauthenticated → http://localhost:5173/login",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-04.01",
+    "status": true,
+    "detail": "DOCTOR → http://localhost:5173/doctor",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-04.02",
+    "status": true,
+    "detail": "NURSE → http://localhost:5173/nurse",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-04.03",
+    "status": true,
+    "detail": "ADMIN → http://localhost:5173/admin",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-02.01",
+    "status": true,
+    "detail": "NURSE→/doctor → http://localhost:5173/nurse",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-02.02",
+    "status": true,
+    "detail": "DOCTOR→/nurse → http://localhost:5173/doctor",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-02.03",
+    "status": true,
+    "detail": "ADMIN→/doctor → http://localhost:5173/admin",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-03.01",
+    "status": true,
+    "detail": "After logout: http://localhost:5173/login",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-05.03",
+    "status": true,
+    "detail": "Page title: \"ВАІТ — Лікар\"",
+    "severity": "P3"
+  },
+  {
+    "tcId": "TC-05.04",
+    "status": true,
+    "detail": "Dashboard heading \"Активні пацієнти ВАІТ\" visible",
+    "severity": "P3"
+  },
+  {
+    "tcId": "TC-06.04",
+    "status": true,
+    "detail": "Placeholder: \"Пошук пацієнта за ПІБ...\"",
+    "severity": "P4"
+  },
+  {
+    "tcId": "TC-06.03",
+    "status": true,
+    "detail": "Rows: initial=5 filtered=1 restored=5",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-08.03",
+    "status": true,
+    "detail": "Search \"ZZZ\" completed (0 options)",
+    "severity": "P3"
+  },
+  {
+    "tcId": "TC-09.01",
+    "status": true,
+    "detail": "Fields: ALL OK",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-09.02",
+    "status": true,
+    "detail": "Birth date field",
+    "severity": "P3"
+  },
+  {
+    "tcId": "TC-09.03",
+    "status": true,
+    "detail": "Sex field",
+    "severity": "P3"
+  },
+  {
+    "tcId": "TC-09.04",
+    "status": true,
+    "detail": "Height field",
+    "severity": "P3"
+  },
+  {
+    "tcId": "TC-10.04",
+    "status": true,
+    "detail": "Error on duplicate: true",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-11.04",
+    "status": true,
+    "detail": "Nurse \"Нова карта\": false (expect absent)",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-11.05",
+    "status": true,
+    "detail": "Nurse dashboard title visible",
+    "severity": "P3"
+  },
+  {
+    "tcId": "TC-12.04",
+    "status": true,
+    "detail": "Doctor back → http://localhost:5173/doctor",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-12.05",
+    "status": true,
+    "detail": "Nurse back → http://localhost:5173/nurse",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-12.06",
+    "status": true,
+    "detail": "Episode heading visible",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-13.01",
+    "status": false,
+    "detail": "Timeline day chips: 0 — ",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-14.01",
+    "status": true,
+    "detail": "Vitals tab: 0 hour pills found",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-17.01",
+    "status": true,
+    "detail": "Vitals tab accessible (validation check)",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-18.04",
+    "status": true,
+    "detail": "Orders tab loaded: newOrderBtn=true",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-18.01",
+    "status": false,
+    "detail": "Order created with Активне status",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-20.01",
+    "status": true,
+    "detail": "Nurse orders tab: execute=false",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-21.01",
+    "status": true,
+    "detail": "Order validation triggered",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-22.04",
+    "status": false,
+    "detail": "Note timestamp: false",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-22.01",
+    "status": true,
+    "detail": "Note added successfully",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-25.01",
+    "status": true,
+    "detail": "Doctor scales tab accessible",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-25.02",
+    "status": true,
+    "detail": "Nurse scales tab accessible",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-26.01",
+    "status": true,
+    "detail": "Fluid balance tab renders",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-27.01",
+    "status": true,
+    "detail": "Recalculate button",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-27.02",
+    "status": true,
+    "detail": "Recalculate clicked",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-28.01",
+    "status": true,
+    "detail": "Sign button visible: true",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-30.01",
+    "status": true,
+    "detail": "Sign dialog title: true",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-31.01",
+    "status": true,
+    "detail": "Tables: 2",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-31.02",
+    "status": true,
+    "detail": "\"Лікарі\" section visible",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-31.03",
+    "status": true,
+    "detail": "\"Медсестри\" section visible",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-32.01",
+    "status": true,
+    "detail": "Admin menu has Вийти",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-33.01",
+    "status": true,
+    "detail": "Doctor: Пацієнти nav link",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-34.01",
+    "status": true,
+    "detail": "Doctor role label \"Лікар\"",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-34.02",
+    "status": false,
+    "detail": "Nurse role label \"Медсестра\": false",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-33.04",
+    "status": true,
+    "detail": "Nurse nav links: 0 (expect 0)",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-35.01",
+    "status": true,
+    "detail": "Status chip visible: true",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-36.01",
+    "status": true,
+    "detail": "404: http://localhost:5173/nonexistent-route (no crash)",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-36.02",
+    "status": true,
+    "detail": "Invalid episode: no crash=true",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-37.01",
+    "status": true,
+    "detail": "Back: http://localhost:5173/doctor",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-37.02",
+    "status": true,
+    "detail": "Forward: http://localhost:5173/doctor/episode/a1111111-1111-1111-1111-111111111111",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-37.03",
+    "status": true,
+    "detail": "Refresh: http://localhost:5173/doctor/episode/a1111111-1111-1111-1111-111111111111",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-38.01",
+    "status": true,
+    "detail": "Direct /doctor/create-card: http://localhost:5173/doctor/create-card",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-40.01",
+    "status": true,
+    "detail": "All 5 tabs rendered for audit",
+    "severity": "P2"
+  },
+  {
+    "tcId": "TC-55.01",
+    "status": true,
+    "detail": "Doctor can create orders: true",
+    "severity": "P1"
+  },
+  {
+    "tcId": "TC-55.02",
+    "status": true,
+    "detail": "Nurse cannot create orders: false (expect false)",
+    "severity": "P1"
+  }
+]
