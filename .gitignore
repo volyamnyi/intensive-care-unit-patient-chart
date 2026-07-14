@@ -8,8 +8,16 @@ playwright-report/
 tests/.auth/
 tests/exploratory-report/
 tests/exploratory-report-v1/
+tests/exploratory-report-v3/
+tests/exploratory-screenshots/
 .mcp.json
 .idea/
+backend/.idea/
 *.iml
 .DS_Store
+Thumbs.db
 .claude-flow/
+*.class
+*.jar
+*.war
+*.zip
