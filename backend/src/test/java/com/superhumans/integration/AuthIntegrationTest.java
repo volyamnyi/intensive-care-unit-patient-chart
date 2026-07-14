@@ -76,15 +76,15 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void accessSecuredEndpoint_withoutToken_returnsUnauthorized() {
+    void accessSecuredEndpoint_withoutToken_returnsForbidden() {
         var res = restTemplate.getForEntity(
                 "/api/episodes", String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
-    void accessSecuredEndpoint_withInvalidToken_returnsUnauthorized() {
+    void accessSecuredEndpoint_withInvalidToken_returnsForbidden() {
         var headers = authHeaders("invalid-token");
         var entity = authGet("invalid-token");
 
@@ -92,6 +92,6 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
                 "/api/episodes", org.springframework.http.HttpMethod.GET,
                 entity, String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 }

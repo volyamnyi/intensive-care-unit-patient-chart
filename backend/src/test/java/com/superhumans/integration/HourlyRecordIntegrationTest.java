@@ -17,6 +17,8 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID SEED_DAY_ID =
             UUID.fromString("b1111111-1111-1111-1111-111111111111");
+    private static final UUID OTHER_OPEN_DAY_ID =
+            UUID.fromString("b2222222-2222-2222-2222-222222222222");
 
     @Test
     void getHourlyRecords_returnsEmptyListInitially() {
@@ -25,16 +27,17 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
         var res = restTemplate.exchange(
                 "/api/clinical-days/{dayId}/hourly-records", HttpMethod.GET, entity,
                 new ParameterizedTypeReference<List<HourlyRecordResponse>>() {},
-                SEED_DAY_ID);
+                OTHER_OPEN_DAY_ID);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody()).isEmpty();
     }
 
     @Test
     void createHourlyRecord_createsSuccessfully() {
         HourlyRecordCreateRequest req = new HourlyRecordCreateRequest();
-        req.setRecordTime(LocalDateTime.now());
+        req.setRecordTime(LocalDateTime.now().withHour(8));
         req.setHeartRate(80);
         req.setSystolicBP(120);
         req.setDiastolicBP(80);
@@ -47,7 +50,7 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/hourly-records", HttpMethod.POST, entity,
                 HourlyRecordResponse.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody().getHeartRate()).isEqualTo(80);
         assertThat(res.getBody().getSystolicBP()).isEqualTo(120);
@@ -57,7 +60,7 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createThenListHourlyRecords_returnsCreatedRecord() {
         HourlyRecordCreateRequest req = new HourlyRecordCreateRequest();
-        req.setRecordTime(LocalDateTime.now());
+        req.setRecordTime(LocalDateTime.now().withHour(9));
         req.setHeartRate(75);
         req.setTemperature(37.0);
 
@@ -81,7 +84,7 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
     @Test
     void updateHourlyRecord_updatesFields() {
         HourlyRecordCreateRequest createReq = new HourlyRecordCreateRequest();
-        createReq.setRecordTime(LocalDateTime.now());
+        createReq.setRecordTime(LocalDateTime.now().withHour(10));
         createReq.setHeartRate(70);
 
         var createEntity = authEntity(createReq, getNurseToken());
@@ -107,7 +110,7 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
     @Test
     void updateHourlyRecord_withVersionMismatch_returnsConflict() {
         HourlyRecordCreateRequest createReq = new HourlyRecordCreateRequest();
-        createReq.setRecordTime(LocalDateTime.now());
+        createReq.setRecordTime(LocalDateTime.now().withHour(11));
         createReq.setHeartRate(70);
 
         var createEntity = authEntity(createReq, getNurseToken());

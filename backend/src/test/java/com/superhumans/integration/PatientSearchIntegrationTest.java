@@ -47,7 +47,7 @@ class PatientSearchIntegrationTest extends AbstractIntegrationTest {
                 new ParameterizedTypeReference<List<PatientDTO>>() {});
 
         assertThat(res.getBody()).extracting(PatientDTO::getFullName)
-                .contains("Петренко Петро", "Коваленко Катерина", "Сидоренко Сергій");
+                .contains("Петренко Іван Сергійович", "Коваленко Олена Вікторівна", "Сидоренко Василь Петрович");
     }
 
     @Test

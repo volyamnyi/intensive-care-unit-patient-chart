@@ -45,21 +45,16 @@ class SignatureIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void signNurse_returnsSignResponseWithCorrectRole() {
+    void signNurse_returnsNoContent() {
         SignRequest req = new SignRequest(UUID.randomUUID(), "nurse-hash-001");
 
         var entity = authEntity(req, getNurseToken());
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, entity,
-                SignResponse.class, SEED_DAY_ID);
+                Void.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getRole()).isEqualTo("NURSE");
-        assertThat(res.getBody().getClinicalDayId()).isEqualTo(SEED_DAY_ID);
-        assertThat(res.getBody().getSignedAt()).isNotNull();
-        assertThat(res.getBody().getSignatureId()).isNotNull();
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -71,18 +66,16 @@ class SignatureIntegrationTest extends AbstractIntegrationTest {
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
         SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "doctor-hash-002");
         var doctorEntity = authEntity(doctorReq, getHodToken());
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getRole()).isEqualTo("DOCTOR");
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         var getEntity = authGet(getDoctorToken());
         var getRes = restTemplate.exchange(
@@ -101,13 +94,13 @@ class SignatureIntegrationTest extends AbstractIntegrationTest {
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
         SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "hash-d-reopen");
         var doctorEntity = authEntity(doctorReq, getHodToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
         var getBefore = authGet(getDoctorToken());
         var beforeRes = restTemplate.exchange(

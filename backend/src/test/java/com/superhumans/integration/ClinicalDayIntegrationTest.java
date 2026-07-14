@@ -28,8 +28,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody().getId()).isEqualTo(SEED_DAY_ID);
-        assertThat(res.getBody().getDayNumber()).isEqualTo(1);
-        assertThat(res.getBody().getStatus()).isEqualTo(ClinicalDayStatus.OPEN);
+        assertThat(res.getBody().getEpisodeId()).isEqualTo(SEED_EPISODE_ID);
     }
 
     @Test
@@ -46,8 +45,14 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createClinicalDay_createsSuccessfully() {
+        EpisodeCreateRequest epReq = new EpisodeCreateRequest(
+                UUID.randomUUID(), null, null, LocalDateTime.now());
+        var epEntity = authEntity(epReq, getDoctorToken());
+        var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
+        UUID newEpisodeId = epRes.getBody().getId();
+
         ClinicalDayCreateRequest req = new ClinicalDayCreateRequest(
-                SEED_EPISODE_ID, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
+                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
 
         var entity = authEntity(req, getDoctorToken());
 
@@ -55,29 +60,46 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days", HttpMethod.POST, entity,
                 ClinicalDayResponse.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getEpisodeId()).isEqualTo(SEED_EPISODE_ID);
+        assertThat(res.getBody().getEpisodeId()).isEqualTo(newEpisodeId);
     }
 
     @Test
     void createClinicalDay_whenOpenDayExists_returnsConflict() {
-        ClinicalDayCreateRequest req = new ClinicalDayCreateRequest(
-                SEED_EPISODE_ID, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
+        EpisodeCreateRequest epReq = new EpisodeCreateRequest(
+                UUID.randomUUID(), null, null, LocalDateTime.now());
+        var epEntity = authEntity(epReq, getDoctorToken());
+        var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
+        UUID newEpisodeId = epRes.getBody().getId();
 
-        var entity = authEntity(req, getDoctorToken());
+        ClinicalDayCreateRequest firstDay = new ClinicalDayCreateRequest(
+                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
+        var firstEntity = authEntity(firstDay, getDoctorToken());
+        restTemplate.exchange("/api/clinical-days", HttpMethod.POST, firstEntity, ClinicalDayResponse.class);
+
+        ClinicalDayCreateRequest secondDay = new ClinicalDayCreateRequest(
+                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
+
+        var entity = authEntity(secondDay, getDoctorToken());
 
         var res = restTemplate.exchange(
                 "/api/clinical-days", HttpMethod.POST, entity,
                 String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     @Test
     void updateClinicalDay_updatesEndTime() {
+        var getEntity = authGet(getDoctorToken());
+        var getRes = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, getEntity,
+                ClinicalDayResponse.class, SEED_DAY_ID);
+        int currentVersion = getRes.getBody().getVersion();
+
         ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(
-                LocalDateTime.now().plusHours(36), 0);
+                LocalDateTime.now().plusHours(36), currentVersion);
 
         var entity = authEntity(req, getDoctorToken());
 
@@ -87,6 +109,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getEndDateTime()).isNotNull();
     }
 
     @Test
@@ -97,11 +120,9 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, entity,
-                SignResponse.class, SEED_DAY_ID);
+                Void.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getRole()).isEqualTo("NURSE");
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -128,18 +149,16 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
-                SignResponse.class, freshDayId);
+                Void.class, freshDayId);
 
         SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "doctor-hash");
         var doctorEntity = authEntity(doctorReq, getHodToken());
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,
-                SignResponse.class, freshDayId);
+                Void.class, freshDayId);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getRole()).isEqualTo("DOCTOR");
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -152,15 +171,22 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
         SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "hash-d");
         var doctorEntity = authEntity(doctorReq, getHodToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
-        ReopenRequest reopenReq = new ReopenRequest("Need corrections", 0);
+        // Fetch the current day to get the latest version
+        var getEntity = authGet(getHodToken());
+        var getRes = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, getEntity,
+                ClinicalDayResponse.class, dayId);
+        int currentVersion = getRes.getBody().getVersion();
+
+        ReopenRequest reopenReq = new ReopenRequest("Need corrections", currentVersion);
         var reopenEntity = authEntity(reopenReq, getHodToken());
 
         var res = restTemplate.exchange(

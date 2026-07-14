@@ -17,6 +17,8 @@ class MedicalNoteIntegrationTest extends AbstractIntegrationTest {
             UUID.fromString("b1111111-1111-1111-1111-111111111111");
     private static final UUID NURSE_SIGNED_DAY_ID =
             UUID.fromString("b1111112-1111-1111-1111-111111111111");
+    private static final UUID OTHER_OPEN_DAY_ID =
+            UUID.fromString("b2222222-2222-2222-2222-222222222222");
 
     @Test
     void getNotes_returnsEmptyListInitially() {
@@ -25,7 +27,7 @@ class MedicalNoteIntegrationTest extends AbstractIntegrationTest {
         var res = restTemplate.exchange(
                 "/api/clinical-days/{dayId}/notes", HttpMethod.GET, entity,
                 new ParameterizedTypeReference<List<MedicalNoteResponse>>() {},
-                SEED_DAY_ID);
+                OTHER_OPEN_DAY_ID);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isEmpty();

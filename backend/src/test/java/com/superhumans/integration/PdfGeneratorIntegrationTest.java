@@ -49,9 +49,9 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
 
         var signRes = restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, signEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
-        assertThat(signRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(signRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
         var pdfEntity = authGet(getDoctorToken());
 
@@ -75,7 +75,7 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
         var signEntity = authEntity(signReq, getHodToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, signEntity,
-                SignResponse.class, dayId);
+                Void.class, dayId);
 
         var genEntity = authGet(getDoctorToken());
         restTemplate.exchange(
@@ -103,6 +103,6 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/pdf", HttpMethod.POST, entity,
                 String.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 }

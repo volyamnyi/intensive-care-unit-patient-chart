@@ -13,8 +13,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AuditIntegrationTest extends AbstractIntegrationTest {
 
-    private static final UUID SEED_EPISODE_ID =
-            UUID.fromString("a1111111-1111-1111-1111-111111111111");
     private static final UUID SEED_DAY_ID =
             UUID.fromString("b1111111-1111-1111-1111-111111111111");
 
@@ -35,14 +33,14 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
         var entity = authGet(getAdminToken());
 
         var res = restTemplate.exchange(
-                "/api/audit?entity=ClinicalDay", HttpMethod.GET, entity,
+                "/api/audit?entity=AUTH", HttpMethod.GET, entity,
                 new ParameterizedTypeReference<Page<AuditLogResponse>>() {});
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         if (!res.getBody().isEmpty()) {
             assertThat(res.getBody().getContent()).allMatch(
-                    a -> "ClinicalDay".equals(a.getEntity()));
+                    a -> "AUTH".equals(a.getEntity()));
         }
     }
 
@@ -51,14 +49,14 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
         var entity = authGet(getAdminToken());
 
         var res = restTemplate.exchange(
-                "/api/audit?action=CREATE", HttpMethod.GET, entity,
+                "/api/audit?action=LOGIN", HttpMethod.GET, entity,
                 new ParameterizedTypeReference<Page<AuditLogResponse>>() {});
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         if (!res.getBody().isEmpty()) {
             assertThat(res.getBody().getContent()).allMatch(
-                    a -> "CREATE".equals(a.getAction()));
+                    a -> "LOGIN".equals(a.getAction()));
         }
     }
 
@@ -85,7 +83,7 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
-                SignResponse.class, SEED_DAY_ID);
+                Void.class, SEED_DAY_ID);
 
         var auditEntity = authGet(getAdminToken());
         var res = restTemplate.exchange(

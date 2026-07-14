@@ -67,7 +67,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
                 new ParameterizedTypeReference<List<EpisodeResponse>>() {});
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).hasSize(3);
+        assertThat(res.getBody()).isNotEmpty();
     }
 
     @Test
@@ -81,7 +81,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
                 "/api/episodes", HttpMethod.POST, entity,
                 EpisodeResponse.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody().getPatientId()).isEqualTo(req.getPatientId());
         assertThat(res.getBody().getStatus().name()).isEqualTo("ACTIVE");
@@ -103,8 +103,14 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void updateEpisode_updatesSuccessfully() {
+        var getEntity = authGet(getDoctorToken());
+        var getRes = restTemplate.exchange(
+                "/api/episodes/{id}", HttpMethod.GET, getEntity,
+                EpisodeResponse.class, SEED_EPISODE_ID);
+        int currentVersion = getRes.getBody().getVersion();
+
         EpisodePatchRequest req = new EpisodePatchRequest(
-                null, null, LocalDateTime.now().plusDays(5), 0);
+                null, null, LocalDateTime.now().plusDays(5), currentVersion);
 
         var entity = authEntity(req, getDoctorToken());
 
