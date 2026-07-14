@@ -6,7 +6,10 @@ frontend/dist/
 test-results/
 playwright-report/
 tests/.auth/
+tests/exploratory-report/
+tests/exploratory-report-v1/
 .mcp.json
 .idea/
 *.iml
 .DS_Store
+.claude-flow/

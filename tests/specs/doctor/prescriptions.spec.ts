@@ -17,7 +17,7 @@ test.describe('Doctor Prescriptions', () => {
 
     await page.getByRole('button', { name: 'Створити' }).click();
 
-    await expect(page.getByText('Dopamine')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Dopamine').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('prescription status shows active after creation', async ({ page }) => {
