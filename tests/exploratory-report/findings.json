@@ -1,0 +1,296 @@
+[
+  {
+    "section": "Login",
+    "step": "Login page title",
+    "status": "PASS",
+    "detail": "Title visible"
+  },
+  {
+    "section": "Login",
+    "step": "Login field",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Login",
+    "step": "Password field",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Login",
+    "step": "Submit button",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Login",
+    "step": "Invalid credentials error",
+    "status": "PASS",
+    "detail": "MUI Alert with error text visible"
+  },
+  {
+    "section": "Login",
+    "step": "Doctor login",
+    "status": "PASS",
+    "detail": "Redirected to /doctor"
+  },
+  {
+    "section": "Dashboard",
+    "step": "Active patients title",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Dashboard",
+    "step": "Patients table visible",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Dashboard",
+    "step": "Table has 3 rows",
+    "status": "PASS",
+    "detail": "Петренко Іван Сергійович12.07.2026-АктивнийВідкрити | Коваленко Олена Вікторівна13.07.2026-АктивнийВідкрити | Сидоренко "
+  },
+  {
+    "section": "Dashboard",
+    "step": "Search Коваленко",
+    "status": "PASS",
+    "detail": "Rows: 1"
+  },
+  {
+    "section": "Dashboard",
+    "step": "Navigate to /doctor/create-card",
+    "status": "PASS",
+    "detail": "Reached create-card page"
+  },
+  {
+    "section": "CreateCard",
+    "step": "Short search (<2 chars)",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "CreateCard",
+    "step": "Search Бондаренко",
+    "status": "PASS",
+    "detail": "MIS returned Бондаренко"
+  },
+  {
+    "section": "Episode",
+    "step": "Open episode",
+    "status": "PASS",
+    "detail": "Opened: http://localhost:5173/doctor/episode/a1111111-1111-1111-1111-111111111"
+  },
+  {
+    "section": "Episode Tabs",
+    "step": "Found 5 tabs",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Episode Tabs",
+    "step": "Tab \"Вітальні показники\" clicked",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Episode Tabs",
+    "step": "Tab \"Призначення\" clicked",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Episode Tabs",
+    "step": "Tab \"Шкали\" clicked",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Episode Tabs",
+    "step": "Tab \"Нотатки\" clicked",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Episode Tabs",
+    "step": "Tab \"Баланс рідини\" clicked",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "SignOff",
+    "step": "Sign dialog",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "SignOff",
+    "step": "Cancel",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Navigation",
+    "step": "Back button",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "Login",
+    "status": "PASS",
+    "detail": "Redirected to /nurse"
+  },
+  {
+    "section": "Nurse",
+    "step": "Dashboard title",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "Search Сидоренко",
+    "status": "PASS",
+    "detail": "Rows: 1"
+  },
+  {
+    "section": "Nurse",
+    "step": "Open episode",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "Episode tabs: 5",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "Vitals form labels: 14",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"АТ сист (мм.рт.ст)\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"АТ діас (мм.рт.ст)\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"ЧСС (в 1 хв)\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"SpO2 (%)\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"Темп. тіла (°С)\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"ЦВТ (мм.вод.ст)\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"ЧД (в 1 хв)\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "  Label: \"Свідомість\"",
+    "status": "INFO",
+    "detail": ""
+  },
+  {
+    "section": "Nurse",
+    "step": "Save vitals",
+    "status": "PASS",
+    "detail": "Vitals filled and saved"
+  },
+  {
+    "section": "Nurse",
+    "step": "Fluid balance tab clicked",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "HOD",
+    "step": "Login",
+    "status": "PASS",
+    "detail": "Shared /doctor route"
+  },
+  {
+    "section": "HOD",
+    "step": "Can see \"Нова карта\"",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "HOD",
+    "step": "Open episode",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Admin",
+    "step": "Login",
+    "status": "PASS",
+    "detail": "Redirected to /admin"
+  },
+  {
+    "section": "Admin",
+    "step": "Title \"Користувачі системи\"",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Admin",
+    "step": "Doctors section",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "Admin",
+    "step": "Nurses section",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "section": "AccessCtrl",
+    "step": "Admin accessing /nurse",
+    "status": "PASS",
+    "detail": "Redirected to /admin"
+  },
+  {
+    "section": "AccessCtrl",
+    "step": "Admin accessing /doctor",
+    "status": "PASS",
+    "detail": "Redirected to /admin"
+  },
+  {
+    "section": "MIS Search",
+    "step": "Search Ткачук",
+    "status": "PASS",
+    "detail": "Found in MIS results"
+  }
+]
