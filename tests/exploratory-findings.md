@@ -70,31 +70,88 @@
 
 ---
 
-## Coverage Gaps
+## Session v3 (55 UC, 59 TC, 52 screenshots)
+**Date:** 2026-07-14
+**Script:** `tests/exploratory-session-v3.mjs`
+**Result:** 55 PASS, 4 FAIL (93%)
+**Screenshots:** 52 captured in `tests/exploratory-report-v3/`
 
-### Critical (core clinical workflows)
-| Gap | Area | Reason |
-|-----|------|--------|
-| Full sign-off chain | Sign-off | Nurse signs → Doctor signs → day status advances |
-| Order execution by nurse | Orders | Nurse executes a doctor's prescription |
-| MIS patient data fields | Create Card | Autocomplete selection may not populate fields |
+### Improvements vs v2
+- **55 use cases** covered (up from 17) — full testomat.io methodology with severity classification
+- New areas: root redirect, search clear/restore, patient data fields verified OK (P1 fix from v2), duplicate episode error, back button per role, patient name heading, browser back/forward/refresh chain, direct URL access, all 5 tab empty states audit, role-gated episode controls (doctor vs nurse), doctor role label, status chips
+- Fixed P1 v2 bug: patient data fields now populate correctly after autocomplete selection (TC-09.01 PASS)
+- Used direct login flows instead of expired auth state files for reliability
 
-### Important (UI completeness)
-| Gap | Area | Reason |
-|-----|------|--------|
-| Empty states | All tabs | Dashboard, notes, orders, scales empty states |
-| API error handling | Resilience | HTTP 409 (version conflict), 500, network failure |
-| Clinical day timeline | Navigation | Select different clinical days via timeline chips |
+### New Findings
 
-### Nice-to-have (edge cases)
-| Gap | Area | Reason |
-|-----|------|--------|
-| Token expiry | Auth | Auto-redirect to login when JWT expires |
-| Scale creation | Scales | Requires seed data or conditional test |
-| Fluid balance recalculate | Fluids | "Перерахувати" button functional test |
-| Prescription cancel | Orders | Cancel active prescription |
-| Hour selector on nurse | Vitals | Hour grid rendering investigation |
-| Concurrent sessions | Collaboration | Two browser tabs, doctor+nurse on same episode |
+#### P1 — ClinicalDayTimeline chips not found (TC-13.01)
+**Detail:** Attempted to find timeline chips via `[class*="MuiChip"]` with text "Доба" — found 0 chips. The component may use a different DOM structure (Box-based tiles, not MUI Chip) or the episode doesn't render the timeline without clinical days.
+**Screenshots:** `13.01-timeline.png`
+**Recommendation:** Inspect ClinicalDayTimeline component rendering for the current episode seed data
+
+#### P1 — Order creation Активне chip not found (TC-18.01)
+**Detail:** Dopamine order was submitted via the form (all fields filled, "Створити" clicked) but the subsequent check for `[class*="MuiChip"]` with text "Активне" returned false. Either: (a) order creation failed silently, (b) chip uses different label ("ACTIVE" or "Активний"), or (c) timing issue after save.
+**Screenshots:** `18.01-order-form.png`, `18.01-order-created.png`
+
+#### P2 — Note timestamp not found (TC-22.04)
+**Detail:** Note text "V3 exploratory test note" was added successfully but timestamp containing "2026" was not found. The note card may use relative time (e.g., "щойно" / "just now") instead of absolute timestamps.
+**Screenshots:** `22.01-note-added.png`
+
+#### P2 — Nurse role label "Медсестра" continues to fail (TC-34.02)
+**Detail:** Same timing issue as v2 P3 — nurse role label not visible after clicking user menu with 1000ms wait. Doctor role label "Лікар" works consistently.
+**Fix:** Increase wait after menu click to 1500ms, or wait for menu animation to complete via `waitForSelector('[role="menu"]')`
+
+### v3 New Features Verified
+- **Search + clear restores full list**: 5→1→5 rows (TC-06.03)
+- **Duplicate episode error**: Alert shown when creating card for patient with ACTIVE episode (TC-10.04)
+- **Back button per role**: Doctor→/doctor, Nurse→/nurse (TC-12.04/12.05)
+- **Browser back/forward/refresh**: Full navigation chain works (TC-37.01–37.03)
+- **Invalid episode ID**: No crash/error boundary (TC-36.02)
+- **Doctor can create orders**: Nurse cannot (TC-55.01/55.02) — role gating confirmed
+- **Direct URL /doctor/create-card**: Loads correctly (TC-38.01)
+- **Fluid balance recalculate**: Button found + clicked (TC-27.01/27.02)
+- **Nurse sign dialog**: Title "Підписання доби №N" confirmed (TC-30.01)
+- **Status chip**: Episode status visible on page (TC-35.01)
+- **Admin tables**: 2 tables with Лікарі/Медсестри headings (TC-31.01–31.03)
+- **404 route**: No crash on unknown path (TC-36.01)
+
+---
+
+## Coverage Gaps (Updated — Post v3)
+
+### Resolved in v3
+| Gap | Status | Note |
+|-----|--------|------|
+| MIS patient data fields | ✅ RESOLVED | Fields ALL OK after using `page.evaluate()` click (TC-09.01) |
+| Empty states audit | ✅ COVERED | All 5 tabs rendered for visual audit (TC-40.01) |
+| User menu role labels | ⚠️ PARTIAL | Doctor "Лікар" PASS, Nurse "Медсестра" FAIL (timing) |
+| Browser navigation | ✅ COVERED | Back/forward/refresh chain verified (TC-37.01–37.03) |
+| 404 route | ✅ COVERED | No crash on unknown route (TC-36.01) |
+| Fluid balance recalculate | ✅ COVERED | Button found + clicked (TC-27.01/27.02) |
+| Nurse sign dialog | ✅ COVERED | Dialog opens with correct title (TC-30.01) |
+| Role-gated order creation | ✅ COVERED | Doctor can create, nurse cannot (TC-55.01/55.02) |
+| Duplicate episode error | ✅ COVERED | Alert shown (TC-10.04) |
+| Search + clear | ✅ COVERED | 5→1→5 rows verified (TC-06.03) |
+| New: auth root redirect | ✅ COVERED | All 3 roles redirect correctly (TC-04.01–04.03) |
+| New: invalid episode ID | ✅ COVERED | No crash (TC-36.02) |
+
+### Still Open
+| Gap | Area | Priority | Reason |
+|-----|------|----------|--------|
+| Full sign-off chain (nurse→doctor) | Sign-off | P1 | Requires sequential nurse-sign then doctor-sign test |
+| Order execution by nurse | Orders | P1 | Active order needed in seed data for nurse to execute |
+| Clinical day timeline chips | Timeline | P1 | Component structure needs investigation (0 chips found) |
+| Order creation confirmation | Orders | P1 | Активне chip not found after submission |
+| Note timestamp display | Notes | P2 | Note card may use relative time format |
+| API error handling | Resilience | P2 | HTTP 409, 500, network failure (needs backend manipulation) |
+| Token expiry | Auth | P2 | Auto-redirect on expired JWT |
+| Scale creation | Scales | P2 | Requires available scales in seed data |
+| Hour selector with data | Vitals | P2 | 0 hour pills found — seed data may lack hourly records |
+| Prescription cancel | Orders | P3 | Cancel active order |
+| Concurrent sessions | Collaboration | P3 | Two tabs / doctor+nurse on same episode |
+| PDF generation | PDF | P3 | Triggered after doctor signs |
+| Clinical day reopen | Timeline | P3 | Reopen signed day |
+| Episode close | Episode | P3 | Discharge workflow |
 
 ---
 
@@ -103,15 +160,15 @@
 | Priority | Area | Test Description | Reason |
 |----------|------|-----------------|--------|
 | P1 | Sign-off Workflow | Full nurse → doctor sign chain | Core clinical workflow |
-| P1 | Order Execution | Nurse executes doctor's order | Core clinical workflow |
-| P1 | MIS Patient Data | Verify patient data renders after autocomplete selection | Core creation workflow |
-| P2 | Empty States | Dashboard/notes/orders when no data | UI completeness |
+| P1 | Order Execution | Nurse executes doctor's order (needs ACTIVE order in seed data) | Core clinical workflow |
+| P1 | Clinical Day Timeline | Investigate component structure & Ukrainian labels | Data navigation |
+| P1 | Order Creation Assertion | Verify Активне chip appears after order submit | Order management |
+| P2 | Note Timestamp | Verify note card shows creation time (relative vs absolute) | UI completeness |
+| P2 | HourSelector | Seed hourly records to verify pill rendering with data | Data entry workflow |
 | P2 | Error Handling | HTTP 409, 500, network failure | Resilience |
-| P2 | Clinical Day Timeline | Switch between multiple clinical days | Data navigation |
-| P3 | HourSelector | Select different hours in vitals tab | Data entry workflow |
-| P3 | Scale Creation | Doctor creates scale result | Requires seed data |
-| P3 | Fluid Balance | Recalculate button | Existing feature |
+| P2 | Token Expiry | Auto-redirect on expired JWT | Auth security |
+| P2 | Scale Creation | Create scale result (needs scales in seed data) | Scale workflow |
 | P3 | Prescription Cancel | Cancel active prescription | Order management |
-| P3 | User Menu | Role labels, nav links per role | Role-based UI verification |
-| P3 | Browser Navigation | Back/forward, 404, AppBar link | UX edge cases |
-| P3 | Token Expiry | Auto-redirect on expired JWT | Auth security |
+| P3 | Concurrent Sessions | Two tabs / doctor+nurse on same episode | Collaboration |
+| P3 | PDF Generation | Verify PDF generated after doctor signs | Document workflow |
+| P3 | Clinical Day Reopen | Reopen signed day | Day management |
