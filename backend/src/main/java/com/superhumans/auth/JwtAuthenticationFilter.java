@@ -40,6 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             AuditLog auditLog = new AuditLog();
             auditLog.setUserId(jwtTokenProvider.getUserIdFromToken(token));
+            auditLog.setEntity("AUTH");
             auditLog.setAction("LOGIN");
             auditLog.setDetails("User logged in: " + login);
             auditLog.setTimestamp(LocalDateTime.now());
