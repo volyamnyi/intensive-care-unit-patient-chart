@@ -1,0 +1,105 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import ClinicalDayTimeline from '../../components/common/ClinicalDayTimeline';
+import type { ClinicalDay } from '../../types';
+
+const mockDays: ClinicalDay[] = [
+  {
+    id: 'day-1',
+    episodeId: 'ep-1',
+    dayNumber: 1,
+    startDateTime: '2025-06-01T08:00:00Z',
+    endDateTime: '2025-06-02T08:00:00Z',
+    status: 'OPEN',
+    doctorSigned: false,
+    nurseSigned: false,
+    closedAt: null,
+    createdBy: 'nurse-1',
+    createdAt: '2025-06-01T08:00:00Z',
+    updatedBy: 'nurse-1',
+    updatedAt: '2025-06-01T08:00:00Z',
+    version: 1,
+  },
+  {
+    id: 'day-2',
+    episodeId: 'ep-1',
+    dayNumber: 2,
+    startDateTime: '2025-06-02T08:00:00Z',
+    endDateTime: '2025-06-03T08:00:00Z',
+    status: 'NURSE_SIGNED',
+    doctorSigned: false,
+    nurseSigned: true,
+    closedAt: null,
+    createdBy: 'nurse-1',
+    createdAt: '2025-06-02T08:00:00Z',
+    updatedBy: 'nurse-1',
+    updatedAt: '2025-06-02T08:00:00Z',
+    version: 1,
+  },
+  {
+    id: 'day-3',
+    episodeId: 'ep-1',
+    dayNumber: 3,
+    startDateTime: '2025-06-03T08:00:00Z',
+    endDateTime: '2025-06-04T08:00:00Z',
+    status: 'DOCTOR_SIGNED',
+    doctorSigned: true,
+    nurseSigned: true,
+    closedAt: null,
+    createdBy: 'nurse-1',
+    createdAt: '2025-06-03T08:00:00Z',
+    updatedBy: 'doc-1',
+    updatedAt: '2025-06-03T08:00:00Z',
+    version: 1,
+  },
+];
+
+function renderTimeline(props: Partial<React.ComponentProps<typeof ClinicalDayTimeline>> = {}) {
+  return render(
+    <ClinicalDayTimeline
+      days={props.days ?? []}
+      selectedDayId={props.selectedDayId}
+      onSelectDay={props.onSelectDay ?? vi.fn()}
+    />
+  );
+}
+
+describe('ClinicalDayTimeline', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows "Немає клінічних днів" empty state', () => {
+    renderTimeline({ days: [] });
+    expect(screen.getByText('Немає клінічних днів')).toBeInTheDocument();
+  });
+
+  it('renders day chips for each clinical day', () => {
+    renderTimeline({ days: mockDays });
+    expect(screen.getByText('Доба 1')).toBeInTheDocument();
+    expect(screen.getByText('Доба 2')).toBeInTheDocument();
+    expect(screen.getByText('Доба 3')).toBeInTheDocument();
+  });
+
+  it('highlights the selected day with a unique style', () => {
+    renderTimeline({ days: mockDays, selectedDayId: 'day-2' });
+    const day2 = screen.getByText('Доба 2').closest('div');
+    const day1 = screen.getByText('Доба 1').closest('div');
+    expect(day2).toHaveStyle('border: 2px solid #8AAB9E');
+    expect(day1).not.toHaveStyle('border: 2px solid #8AAB9E');
+  });
+
+  it('calls onSelectDay when a day chip is clicked', async () => {
+    const onSelectDay = vi.fn();
+    renderTimeline({ days: mockDays, onSelectDay });
+    await userEvent.click(screen.getByText('Доба 2'));
+    expect(onSelectDay).toHaveBeenCalledWith(mockDays[1]);
+  });
+
+  it('renders dates for each day', () => {
+    renderTimeline({ days: mockDays });
+    expect(screen.getByText('1 черв.')).toBeInTheDocument();
+    expect(screen.getByText('2 черв.')).toBeInTheDocument();
+  });
+});

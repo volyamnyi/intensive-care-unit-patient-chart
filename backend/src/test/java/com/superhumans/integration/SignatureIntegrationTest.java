@@ -1,0 +1,130 @@
+package com.superhumans.integration;
+
+import com.superhumans.dto.*;
+import com.superhumans.entity.ClinicalDayStatus;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.*;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class SignatureIntegrationTest extends AbstractIntegrationTest {
+
+    private static final UUID SEED_EPISODE_ID =
+            UUID.fromString("a1111111-1111-1111-1111-111111111111");
+    private static final UUID SEED_DAY_ID =
+            UUID.fromString("b1111111-1111-1111-1111-111111111111");
+    private static final UUID NURSE_SIGNED_DAY_ID =
+            UUID.fromString("b1111112-1111-1111-1111-111111111111");
+
+    @Test
+    void nurseSignedDay_hasCorrectFields() {
+        var entity = authGet(getNurseToken());
+
+        var res = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, entity,
+                ClinicalDayResponse.class, NURSE_SIGNED_DAY_ID);
+
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getNurseSigned()).isTrue();
+        assertThat(res.getBody().getDoctorSigned()).isFalse();
+    }
+
+    @Test
+    void openDay_hasNoSignatures() {
+        var entity = authGet(getNurseToken());
+
+        var res = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, entity,
+                ClinicalDayResponse.class, SEED_DAY_ID);
+
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getNurseSigned()).isFalse();
+        assertThat(res.getBody().getDoctorSigned()).isFalse();
+    }
+
+    @Test
+    void signNurse_returnsSignResponseWithCorrectRole() {
+        SignRequest req = new SignRequest(UUID.randomUUID(), "nurse-hash-001");
+
+        var entity = authEntity(req, getNurseToken());
+
+        var res = restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, entity,
+                SignResponse.class, SEED_DAY_ID);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getRole()).isEqualTo("NURSE");
+        assertThat(res.getBody().getClinicalDayId()).isEqualTo(SEED_DAY_ID);
+        assertThat(res.getBody().getSignedAt()).isNotNull();
+        assertThat(res.getBody().getSignatureId()).isNotNull();
+    }
+
+    @Test
+    void signDoctor_afterNurse_updatesDayStatus() {
+        UUID dayId = UUID.fromString("b3333333-3333-3333-3333-333333333333");
+        UUID episodeId = UUID.fromString("a3333333-3333-3333-3333-333333333333");
+
+        SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "nurse-hash-002");
+        var nurseEntity = authEntity(nurseReq, getNurseToken());
+        restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
+                SignResponse.class, dayId);
+
+        SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "doctor-hash-002");
+        var doctorEntity = authEntity(doctorReq, getHodToken());
+
+        var res = restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,
+                SignResponse.class, dayId);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getRole()).isEqualTo("DOCTOR");
+
+        var getEntity = authGet(getDoctorToken());
+        var getRes = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, getEntity,
+                ClinicalDayResponse.class, dayId);
+
+        assertThat(getRes.getBody().getStatus()).isEqualTo(ClinicalDayStatus.DOCTOR_SIGNED);
+    }
+
+    @Test
+    void reopenClearsSignatures() {
+        UUID dayId = UUID.fromString("b2222222-2222-2222-2222-222222222222");
+        UUID episodeId = UUID.fromString("a2222222-2222-2222-2222-222222222222");
+
+        SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "hash-n-reopen");
+        var nurseEntity = authEntity(nurseReq, getNurseToken());
+        restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
+                SignResponse.class, dayId);
+
+        SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "hash-d-reopen");
+        var doctorEntity = authEntity(doctorReq, getHodToken());
+        restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,
+                SignResponse.class, dayId);
+
+        var getBefore = authGet(getDoctorToken());
+        var beforeRes = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, getBefore,
+                ClinicalDayResponse.class, dayId);
+
+        int version = beforeRes.getBody().getVersion();
+
+        ReopenRequest reopenReq = new ReopenRequest("Потрібні виправлення", version);
+        var reopenEntity = authEntity(reopenReq, getHodToken());
+
+        var reopenRes = restTemplate.exchange(
+                "/api/clinical-days/{id}/reopen", HttpMethod.POST, reopenEntity,
+                ClinicalDayResponse.class, dayId);
+
+        assertThat(reopenRes.getBody().getStatus()).isEqualTo(ClinicalDayStatus.REOPENED);
+        assertThat(reopenRes.getBody().getNurseSigned()).isFalse();
+        assertThat(reopenRes.getBody().getDoctorSigned()).isFalse();
+    }
+}
