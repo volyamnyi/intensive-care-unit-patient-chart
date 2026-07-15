@@ -44,6 +44,9 @@ class OrderExecutionServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private FluidBalanceService fluidBalanceService;
+
     @InjectMocks
     private OrderExecutionService orderExecutionService;
 
@@ -120,6 +123,7 @@ class OrderExecutionServiceTest {
         assertThat(execCaptor.getValue().getExecutedBy()).isEqualTo(userId);
         assertThat(execCaptor.getValue().getActualDose()).isEqualTo("10");
         verify(auditService).logAction("OrderExecution", executionId, "EXECUTE", userId);
+        verify(fluidBalanceService).recalculate(any(), eq(userId));
     }
 
     @Test

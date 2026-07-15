@@ -42,6 +42,9 @@ class HourlyRecordServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private FluidBalanceService fluidBalanceService;
+
     @InjectMocks
     private HourlyRecordService hourlyRecordService;
 
@@ -118,6 +121,7 @@ class HourlyRecordServiceTest {
         assertThat(recordCaptor.getValue().getHeartRate()).isEqualTo(80);
         assertThat(recordCaptor.getValue().getSystolicBP()).isEqualTo(120);
         verify(auditService).logCreate("HourlyRecord", recordId, userId);
+        verify(fluidBalanceService).recalculate(clinicalDayId, userId);
     }
 
     @Test
