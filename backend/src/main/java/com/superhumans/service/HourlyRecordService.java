@@ -27,6 +27,7 @@ public class HourlyRecordService {
     private final HourlyRecordRepository hourlyRecordRepository;
     private final ClinicalDayRepository clinicalDayRepository;
     private final AuditService auditService;
+    private final FluidBalanceService fluidBalanceService;
 
     public HourlyRecordResponse getHourlyRecord(UUID id) {
         HourlyRecord record = hourlyRecordRepository.findById(id)
@@ -51,6 +52,7 @@ public class HourlyRecordService {
         record.setUpdatedBy(userId);
         record = hourlyRecordRepository.save(record);
         auditService.logCreate("HourlyRecord", record.getId(), userId);
+        fluidBalanceService.recalculate(clinicalDayId, userId);
         return HourlyRecordMapper.toResponse(record);
     }
 

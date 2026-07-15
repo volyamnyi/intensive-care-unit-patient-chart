@@ -137,7 +137,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, entity,
                 String.class, freshDayId);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     @Test

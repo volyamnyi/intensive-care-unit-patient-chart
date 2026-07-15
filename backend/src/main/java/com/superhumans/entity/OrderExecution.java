@@ -1,7 +1,5 @@
 package com.superhumans.entity;
 
-import com.superhumans.config.SpringContext;
-import com.superhumans.service.FluidBalanceService;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -32,12 +30,4 @@ public class OrderExecution extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
-    @PostPersist
-    @PostUpdate
-    public void recalculateFluidBalance() {
-        if (order != null && order.getClinicalDay() != null && order.getClinicalDay().getId() != null) {
-            FluidBalanceService service = SpringContext.getBean(FluidBalanceService.class);
-            service.recalculate(order.getClinicalDay().getId(), null);
-        }
-    }
 }

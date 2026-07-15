@@ -32,6 +32,7 @@ public class OrderExecutionService {
     private final MedicalOrderRepository medicalOrderRepository;
     private final ClinicalDayRepository clinicalDayRepository;
     private final AuditService auditService;
+    private final FluidBalanceService fluidBalanceService;
 
     public OrderExecutionResponse getExecution(UUID id) {
         OrderExecution execution = orderExecutionRepository.findById(id)
@@ -66,6 +67,7 @@ public class OrderExecutionService {
         execution.setUpdatedBy(userId);
         execution = orderExecutionRepository.save(execution);
         auditService.logAction("OrderExecution", execution.getId(), "EXECUTE", userId);
+        fluidBalanceService.recalculate(order.getClinicalDay().getId(), userId);
         return OrderExecutionMapper.toResponse(execution);
     }
 

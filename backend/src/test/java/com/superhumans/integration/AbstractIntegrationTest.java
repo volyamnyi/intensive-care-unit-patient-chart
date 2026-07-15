@@ -10,6 +10,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -18,6 +20,7 @@ import java.util.UUID;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data.sql")
 public abstract class AbstractIntegrationTest {
 
     @Container
@@ -46,6 +49,8 @@ public abstract class AbstractIntegrationTest {
     @BeforeEach
     void setUpAuth() {
         baseUrl = "http://localhost:" + port;
+        var factory = new JdkClientHttpRequestFactory();
+        restTemplate.getRestTemplate().setRequestFactory(factory);
         doctorToken = null;
         nurseToken = null;
         hodToken = null;

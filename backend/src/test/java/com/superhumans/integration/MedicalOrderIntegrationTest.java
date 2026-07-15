@@ -33,7 +33,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/orders", HttpMethod.POST, entity,
                 MedicalOrderResponse.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody().getDrugName()).isEqualTo("Норадреналін");
         assertThat(res.getBody().getStatus().name()).isEqualTo("ACTIVE");

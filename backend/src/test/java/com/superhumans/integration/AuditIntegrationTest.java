@@ -1,12 +1,15 @@
 package com.superhumans.integration;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.superhumans.dto.*;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.data.domain.Page;
 import org.springframework.http.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,52 +19,60 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
     private static final UUID SEED_DAY_ID =
             UUID.fromString("b1111111-1111-1111-1111-111111111111");
 
-    @Test
-    void getAllAuditLogs_returnsPaginated() {
-        var entity = authGet(getAdminToken());
+    private final ObjectMapper mapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
-        var res = restTemplate.exchange(
-                "/api/audit", HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Page<AuditLogResponse>>() {});
-
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
+    private List<AuditLogResponse> parseContent(String json) throws Exception {
+        JsonNode root = mapper.readTree(json);
+        JsonNode content = root.get("content");
+        return mapper.readValue(content.toString(),
+                new TypeReference<List<AuditLogResponse>>() {});
     }
 
     @Test
-    void getAuditLogs_byEntityType_returnsFiltered() {
+    void getAllAuditLogs_returnsPaginated() throws Exception {
         var entity = authGet(getAdminToken());
 
         var res = restTemplate.exchange(
-                "/api/audit?entity=AUTH", HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Page<AuditLogResponse>>() {});
+                "/api/audit", HttpMethod.GET, entity, String.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        if (!res.getBody().isEmpty()) {
-            assertThat(res.getBody().getContent()).allMatch(
-                    a -> "AUTH".equals(a.getEntity()));
+        assertThat(parseContent(res.getBody())).isNotNull();
+    }
+
+    @Test
+    void getAuditLogs_byEntityType_returnsFiltered() throws Exception {
+        var entity = authGet(getAdminToken());
+
+        var res = restTemplate.exchange(
+                "/api/audit?entity=AUTH", HttpMethod.GET, entity, String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        var logs = parseContent(res.getBody());
+        if (!logs.isEmpty()) {
+            assertThat(logs).allMatch(a -> "AUTH".equals(a.getEntity()));
         }
     }
 
     @Test
-    void getAuditLogs_byAction_returnsFiltered() {
+    void getAuditLogs_byAction_returnsFiltered() throws Exception {
         var entity = authGet(getAdminToken());
 
         var res = restTemplate.exchange(
-                "/api/audit?action=LOGIN", HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Page<AuditLogResponse>>() {});
+                "/api/audit?action=LOGIN", HttpMethod.GET, entity, String.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        if (!res.getBody().isEmpty()) {
-            assertThat(res.getBody().getContent()).allMatch(
-                    a -> "LOGIN".equals(a.getAction()));
+        var logs = parseContent(res.getBody());
+        if (!logs.isEmpty()) {
+            assertThat(logs).allMatch(a -> "LOGIN".equals(a.getAction()));
         }
     }
 
     @Test
-    void getAuditLogs_byDateRange_returnsFiltered() {
+    void getAuditLogs_byDateRange_returnsFiltered() throws Exception {
         var entity = authGet(getAdminToken());
 
         LocalDateTime dateFrom = LocalDateTime.now().minusDays(7);
@@ -69,16 +80,16 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/audit?dateFrom={from}&dateTo={to}",
-                HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Page<AuditLogResponse>>() {},
+                HttpMethod.GET, entity, String.class,
                 dateFrom.toString(), dateTo.toString());
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
+        assertThat(parseContent(res.getBody())).isNotNull();
     }
 
     @Test
-    void auditLogCreated_afterSignAction() {
+    void auditLogCreated_afterSignAction() throws Exception {
         SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "audit-nurse-hash");
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
@@ -87,12 +98,11 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
 
         var auditEntity = authGet(getAdminToken());
         var res = restTemplate.exchange(
-                "/api/audit?action=SIGN_NURSE", HttpMethod.GET, auditEntity,
-                new ParameterizedTypeReference<Page<AuditLogResponse>>() {});
+                "/api/audit?action=SIGN_NURSE", HttpMethod.GET, auditEntity, String.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getContent())
-                .anyMatch(a -> SEED_DAY_ID.equals(a.getEntityId()));
+        var logs = parseContent(res.getBody());
+        assertThat(logs).anyMatch(a -> SEED_DAY_ID.equals(a.getEntityId()));
     }
 }

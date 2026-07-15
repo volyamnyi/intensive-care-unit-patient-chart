@@ -1,7 +1,5 @@
 package com.superhumans.entity;
 
-import com.superhumans.config.SpringContext;
-import com.superhumans.service.FluidBalanceService;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -108,12 +106,4 @@ public class HourlyRecord extends BaseEntity {
             throw new IllegalArgumentException("Glucose must be between 1.0 and 30.0 mmol/L");
     }
 
-    @PostPersist
-    @PostUpdate
-    public void recalculateFluidBalance() {
-        if (clinicalDay != null && clinicalDay.getId() != null) {
-            FluidBalanceService service = SpringContext.getBean(FluidBalanceService.class);
-            service.recalculate(clinicalDay.getId(), null);
-        }
-    }
 }
