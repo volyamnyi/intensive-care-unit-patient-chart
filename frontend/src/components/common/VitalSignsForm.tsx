@@ -1,4 +1,4 @@
-import { Grid, TextField, Button, Paper, Typography } from '@mui/material';
+import { Grid, TextField, Button, Paper, Typography, useTheme } from '@mui/material';
 import type { HourlyRecordCreateRequest } from '../../types';
 
 interface VitalSignsFormProps {
@@ -20,8 +20,10 @@ const setStr = (prev: HourlyRecordCreateRequest, field: keyof HourlyRecordCreate
 });
 
 export default function VitalSignsForm({ values, onChange, onSave, saving, title }: VitalSignsFormProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   return (
-    <Paper sx={{ p: 2.5, border: '1px solid #2A2A2A', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}>
+    <Paper sx={{ p: 2.5, border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)' }}>
       {title && (
         <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>{title}</Typography>
       )}
