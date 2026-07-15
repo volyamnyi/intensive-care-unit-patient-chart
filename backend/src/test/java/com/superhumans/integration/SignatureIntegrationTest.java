@@ -46,13 +46,22 @@ class SignatureIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void signNurse_returnsNoContent() {
-        SignRequest req = new SignRequest(UUID.randomUUID(), "nurse-hash-001");
+        EpisodeCreateRequest epReq = new EpisodeCreateRequest(
+                UUID.randomUUID(), null, null, java.time.LocalDateTime.now());
+        var epEntity = authEntity(epReq, getDoctorToken());
+        var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
 
+        ClinicalDayCreateRequest dayReq = new ClinicalDayCreateRequest(
+                epRes.getBody().getId(), java.time.LocalDateTime.now(), java.time.LocalDateTime.now().plusDays(1));
+        var dayEntity = authEntity(dayReq, getDoctorToken());
+        var dayRes = restTemplate.exchange("/api/clinical-days", HttpMethod.POST, dayEntity, ClinicalDayResponse.class);
+
+        SignRequest req = new SignRequest(UUID.randomUUID(), "nurse-hash-001");
         var entity = authEntity(req, getNurseToken());
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, entity,
-                Void.class, SEED_DAY_ID);
+                Void.class, dayRes.getBody().getId());
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }

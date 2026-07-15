@@ -69,12 +69,18 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void getLatestPdf_afterGeneration_returnsPdf() {
-        UUID dayId = NURSE_SIGNED_DAY_ID;
+        UUID dayId = UUID.fromString("b2222222-2222-2222-2222-222222222222");
 
-        SignRequest signReq = new SignRequest(UUID.randomUUID(), "pdf-doctor-hash-2");
-        var signEntity = authEntity(signReq, getHodToken());
+        SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "pdf-nurse-hash");
+        var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
-                "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, signEntity,
+                "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
+                Void.class, dayId);
+
+        SignRequest docReq = new SignRequest(UUID.randomUUID(), "pdf-doctor-hash-2");
+        var docEntity = authEntity(docReq, getHodToken());
+        restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, docEntity,
                 Void.class, dayId);
 
         var genEntity = authGet(getDoctorToken());

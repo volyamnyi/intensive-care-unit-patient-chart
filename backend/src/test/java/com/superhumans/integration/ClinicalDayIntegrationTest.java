@@ -92,10 +92,11 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void updateClinicalDay_updatesEndTime() {
+        UUID dayId = UUID.fromString("b2222222-2222-2222-2222-222222222222");
         var getEntity = authGet(getDoctorToken());
         var getRes = restTemplate.exchange(
                 "/api/clinical-days/{id}", HttpMethod.GET, getEntity,
-                ClinicalDayResponse.class, SEED_DAY_ID);
+                ClinicalDayResponse.class, dayId);
         int currentVersion = getRes.getBody().getVersion();
 
         ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(
@@ -105,7 +106,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}", HttpMethod.PATCH, entity,
-                ClinicalDayResponse.class, SEED_DAY_ID);
+                ClinicalDayResponse.class, dayId);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
