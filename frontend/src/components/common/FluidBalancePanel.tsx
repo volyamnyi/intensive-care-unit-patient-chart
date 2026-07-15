@@ -1,4 +1,4 @@
-import { Box, Typography, Button, Paper } from '@mui/material';
+import { Box, Typography, Button, Paper, useTheme } from '@mui/material';
 import type { FluidBalanceItem } from '../../types';
 
 interface FluidBalancePanelProps {
@@ -8,6 +8,8 @@ interface FluidBalancePanelProps {
 }
 
 export default function FluidBalancePanel({ items, onRecalculate, loading }: FluidBalancePanelProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const totalIntake = items.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = items.reduce((s, i) => s + (i.output || 0), 0);
   const dailyBalance = totalIntake - totalOutput;
@@ -16,8 +18,8 @@ export default function FluidBalancePanel({ items, onRecalculate, loading }: Flu
 
   return (
     <Paper sx={{
-      p: 2.5, mb: 2, bgcolor: '#141414',
-      border: '1px solid #2A2A2A', boxShadow: '0 2px 12px rgba(0,0,0,0.2)',
+      p: 2.5, mb: 2, bgcolor: isDark ? '#141414' : '#FFFFFF',
+      border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)',
     }}>
       <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>
         Баланс рідини
