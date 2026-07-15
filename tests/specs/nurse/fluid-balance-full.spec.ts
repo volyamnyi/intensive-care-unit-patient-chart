@@ -6,7 +6,7 @@ test.describe('Nurse Fluid Balance Full', () => {
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     await expect(page).toHaveURL(/\/nurse\/episode\//);
 
-    await page.getByRole('tab', { name: 'Баланс рідини' }).click();
+    await page.getByRole('tab', { name: 'Баланс' }).click();
     await expect(page.getByRole('heading', { name: 'Баланс рідини' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Перерахувати' }).click();
@@ -21,7 +21,7 @@ test.describe('Nurse Fluid Balance Full', () => {
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     await expect(page).toHaveURL(/\/nurse\/episode\//);
 
-    await page.getByRole('tab', { name: 'Баланс рідини' }).click();
+    await page.getByRole('tab', { name: 'Баланс' }).click();
     await expect(page.getByText(/мл/).first()).toBeVisible();
   });
 });
