@@ -29,7 +29,6 @@ export default function SignDialog({ open, onClose, onConfirm, dayNumber, signin
         <Button onClick={onClose}>Скасувати</Button>
         <Button
           variant="contained" onClick={onConfirm} disabled={signing}
-          sx={{ bgcolor: '#FF5F33', '&:hover': { bgcolor: '#E8552E' } }}
         >
           {signing ? 'Підписання...' : 'Підписати'}
         </Button>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Tabs, Tab, Button, Chip, Grid, Alert, CircularProgress } from '@mui/material';
+import { Box, Typography, Tabs, Tab, Button, Chip, Grid, Alert, CircularProgress, Paper, useTheme } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
@@ -20,6 +20,7 @@ const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
 export default function PatientDayPage() {
   const { episodeId } = useParams();
   const navigate = useNavigate();
+  const theme = useTheme();
   const { user } = useAuth();
 
   const [episode, setEpisode] = useState<Episode | null>(null);
@@ -51,21 +52,25 @@ export default function PatientDayPage() {
         : daysRes.data.find(d => d.status === 'OPEN' || d.status === 'REOPENED');
       setSelectedDay(target || daysRes.data[0] || null);
     }).finally(() => setLoading(false));
-  }, [episodeId]);
+  }, [episodeId, user]);
 
   const loadDayData = useCallback(async (day: ClinicalDay) => {
-    const [recRes, ordRes, noteRes, scaleRes, balRes] = await Promise.all([
-      hourlyRecordApi.getByClinicalDay(day.id),
-      medicalOrderApi.getByClinicalDay(day.id),
-      medicalNoteApi.getByClinicalDay(day.id),
-      clinicalScaleApi.getResultsByClinicalDay(day.id),
-      fluidBalanceApi.getByClinicalDay(day.id),
-    ]);
-    setRecords(recRes.data);
-    setOrders(ordRes.data);
-    setNotes(noteRes.data);
-    setScaleResults(scaleRes.data);
-    setBalanceItems(balRes.data);
+    try {
+      const [recRes, ordRes, noteRes, scaleRes, balRes] = await Promise.all([
+        hourlyRecordApi.getByClinicalDay(day.id),
+        medicalOrderApi.getByClinicalDay(day.id),
+        medicalNoteApi.getByClinicalDay(day.id),
+        clinicalScaleApi.getResultsByClinicalDay(day.id),
+        fluidBalanceApi.getByClinicalDay(day.id),
+      ]);
+      setRecords(recRes.data);
+      setOrders(ordRes.data);
+      setNotes(noteRes.data);
+      setScaleResults(scaleRes.data);
+      setBalanceItems(balRes.data);
+    } catch {
+      // data stays stale on error
+    }
   }, []);
 
   useEffect(() => {
@@ -75,7 +80,7 @@ export default function PatientDayPage() {
   }, [selectedDay?.id]);
 
   useEffect(() => {
-    clinicalScaleApi.getAvailable().then(res => setAvailableScales(res.data));
+    clinicalScaleApi.getAvailable().then(res => setAvailableScales(res.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -84,59 +89,87 @@ export default function PatientDayPage() {
 
   const handleSaveVitals = async () => {
     if (!selectedDay) return;
-    const recTime = `${new Date().toISOString().split('T')[0]}T${String(currentHour).padStart(2, '0')}:00:00`;
-    await hourlyRecordApi.create(selectedDay.id, { ...vitalForm, recordTime: recTime });
-    const res = await hourlyRecordApi.getByClinicalDay(selectedDay.id);
-    setRecords(res.data);
+    try {
+      const recTime = `${new Date().toISOString().split('T')[0]}T${String(currentHour).padStart(2, '0')}:00:00`;
+      await hourlyRecordApi.create(selectedDay.id, { ...vitalForm, recordTime: recTime });
+      const res = await hourlyRecordApi.getByClinicalDay(selectedDay.id);
+      setRecords(res.data);
+    } catch {
+      // error handled silently
+    }
   };
 
   const handleCreateOrder = async (order: MedicalOrderCreateRequest) => {
     if (!selectedDay) return;
-    await medicalOrderApi.create(selectedDay.id, order);
-    const res = await medicalOrderApi.getByClinicalDay(selectedDay.id);
-    setOrders(res.data);
+    try {
+      await medicalOrderApi.create(selectedDay.id, order);
+      const res = await medicalOrderApi.getByClinicalDay(selectedDay.id);
+      setOrders(res.data);
+    } catch {
+      // error handled silently
+    }
   };
 
   const handleCancelOrder = async (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order || !selectedDay) return;
-    await medicalOrderApi.cancel(orderId, { version: order.version });
-    const res = await medicalOrderApi.getByClinicalDay(selectedDay.id);
-    setOrders(res.data);
+    try {
+      await medicalOrderApi.cancel(orderId, { version: order.version });
+      const res = await medicalOrderApi.getByClinicalDay(selectedDay.id);
+      setOrders(res.data);
+    } catch {
+      // error handled silently
+    }
   };
 
   const handleCreateNote = async (text: string, noteType: string) => {
     if (!selectedDay) return;
-    await medicalNoteApi.create(selectedDay.id, { text, noteType });
-    const res = await medicalNoteApi.getByClinicalDay(selectedDay.id);
-    setNotes(res.data);
+    try {
+      await medicalNoteApi.create(selectedDay.id, { text, noteType });
+      const res = await medicalNoteApi.getByClinicalDay(selectedDay.id);
+      setNotes(res.data);
+    } catch {
+      // error handled silently
+    }
   };
 
   const handleCreateScaleResult = async (scaleId: string, result: string) => {
     if (!selectedDay) return;
-    await clinicalScaleApi.createResult(selectedDay.id, { scaleId, result });
-    const res = await clinicalScaleApi.getResultsByClinicalDay(selectedDay.id);
-    setScaleResults(res.data);
+    try {
+      await clinicalScaleApi.createResult(selectedDay.id, { scaleId, result });
+      const res = await clinicalScaleApi.getResultsByClinicalDay(selectedDay.id);
+      setScaleResults(res.data);
+    } catch {
+      // error handled silently
+    }
   };
 
   const handleRecalculateBalance = async () => {
     if (!selectedDay) return;
-    const res = await fluidBalanceApi.recalculate(selectedDay.id);
-    setBalanceItems(res.data);
+    try {
+      const res = await fluidBalanceApi.recalculate(selectedDay.id);
+      setBalanceItems(res.data);
+    } catch {
+      // error handled silently
+    }
   };
 
   const handleSignOff = async () => {
     if (!selectedDay || !user) return;
-    if (user.role === 'NURSE') {
-      await clinicalDayApi.signNurse(selectedDay.id, { userId: user.id });
-    } else {
-      await clinicalDayApi.signDoctor(selectedDay.id, { userId: user.id });
+    try {
+      if (user.role === 'NURSE') {
+        await clinicalDayApi.signNurse(selectedDay.id, { userId: user.id });
+      } else {
+        await clinicalDayApi.signDoctor(selectedDay.id, { userId: user.id });
+      }
+      setSignDialogOpen(false);
+      const daysRes = await episodeApi.getClinicalDays(episodeId!);
+      setClinicalDays(daysRes.data);
+      const updated = daysRes.data.find(d => d.id === selectedDay.id);
+      if (updated) setSelectedDay(updated);
+    } catch {
+      // error handled silently
     }
-    setSignDialogOpen(false);
-    const daysRes = await episodeApi.getClinicalDays(episodeId!);
-    setClinicalDays(daysRes.data);
-    const updated = daysRes.data.find(d => d.id === selectedDay.id);
-    if (updated) setSelectedDay(updated);
   };
 
   if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
@@ -156,13 +189,13 @@ export default function PatientDayPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700 }}>
+          <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary }}>
             {episode.patientName || 'Пацієнт'}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {selectedDay ? `Доба №${selectedDay.dayNumber}` : ''}
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
+            {selectedDay ? `Доба №${selectedDay.dayNumber}` : 'Немає відкритої доби'}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -170,34 +203,35 @@ export default function PatientDayPage() {
             Назад
           </Button>
           {canSign && (
-            <Button variant="contained" onClick={() => setSignDialogOpen(true)}
-              sx={{ bgcolor: '#FF5F33', '&:hover': { bgcolor: '#E8552E' } }}>
+            <Button variant="contained" onClick={() => setSignDialogOpen(true)}>
               Підписати добу
             </Button>
           )}
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-        <Chip label={`Статус: ${selectedDay?.status === 'OPEN' ? 'Відкрита' : selectedDay?.status === 'NURSE_SIGNED' ? 'Підписана медсестрою' : selectedDay?.status === 'DOCTOR_SIGNED' ? 'Підписана' : selectedDay?.status === 'REOPENED' ? 'Перевідкрита' : 'Закрита'}`}
-          color={selectedDay?.status === 'OPEN' ? 'success' : selectedDay?.status === 'DOCTOR_SIGNED' ? 'info' : 'warning'} size="small" />
+      <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+        <Chip label={`${selectedDay?.status === 'OPEN' ? 'Відкрита' : selectedDay?.status === 'NURSE_SIGNED' ? 'Підписана медсестрою' : selectedDay?.status === 'DOCTOR_SIGNED' ? 'Підписана' : selectedDay?.status === 'REOPENED' ? 'Перевідкрита' : 'Закрита'}`}
+          color={selectedDay?.status === 'OPEN' ? 'warning' : selectedDay?.status === 'NURSE_SIGNED' ? 'info' : selectedDay?.status === 'DOCTOR_SIGNED' ? 'success' : 'warning'} size="small" />
         <Chip label={`№ ${episode.id?.slice(0, 8)}`} variant="outlined" size="small" />
       </Box>
 
-      <ClinicalDayTimeline
-        days={clinicalDays}
-        selectedDayId={selectedDay?.id}
-        onSelectDay={(day) => setSelectedDay(day)}
-      />
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <ClinicalDayTimeline
+          days={clinicalDays}
+          selectedDayId={selectedDay?.id}
+          onSelectDay={(day) => setSelectedDay(day)}
+        />
+      </Paper>
 
       {selectedDay && (
         <>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 1, mt: 2 }}>
-            <Tab label="Вітальні показники" />
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, mt: 0 }}>
+            <Tab label="Вітальні" />
             <Tab label="Призначення" />
             <Tab label="Шкали" />
             <Tab label="Нотатки" />
-            <Tab label="Баланс рідини" />
+            <Tab label="Баланс" />
           </Tabs>
 
           {tab === 0 && (

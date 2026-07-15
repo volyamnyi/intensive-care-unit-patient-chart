@@ -86,8 +86,8 @@ describe('ClinicalDayTimeline', () => {
     renderTimeline({ days: mockDays, selectedDayId: 'day-2' });
     const day2 = screen.getByText('Доба 2').closest('div');
     const day1 = screen.getByText('Доба 1').closest('div');
-    expect(day2).toHaveStyle('border: 2px solid #8AAB9E');
-    expect(day1).not.toHaveStyle('border: 2px solid #8AAB9E');
+    expect(day2).toHaveStyle('border: 2px solid rgb(255, 95, 51)');
+    expect(day1).not.toHaveStyle('border: 2px solid rgb(255, 95, 51)');
   });
 
   it('calls onSelectDay when a day chip is clicked', async () => {

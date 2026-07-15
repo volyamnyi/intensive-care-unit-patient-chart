@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material';
-import { theme } from '../../styles/theme';
 import LoginPage from '../../pages/LoginPage';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 
 const mockLogin = vi.fn();
 
@@ -18,11 +17,11 @@ beforeEach(() => {
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <MemoryRouter>
         <LoginPage />
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

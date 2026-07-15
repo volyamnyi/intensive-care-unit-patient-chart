@@ -21,7 +21,7 @@ const setStr = (prev: HourlyRecordCreateRequest, field: keyof HourlyRecordCreate
 
 export default function VitalSignsForm({ values, onChange, onSave, saving, title }: VitalSignsFormProps) {
   return (
-    <Paper sx={{ p: 2.5, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+    <Paper sx={{ p: 2.5, border: '1px solid #2A2A2A', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}>
       {title && (
         <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>{title}</Typography>
       )}

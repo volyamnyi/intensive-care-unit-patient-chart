@@ -175,11 +175,11 @@ describe('PatientDayPage', () => {
     await waitFor(() => {
       const tabs = screen.getAllByRole('tab');
       expect(tabs.map(t => t.textContent)).toEqual([
-        'Вітальні показники',
+        'Вітальні',
         'Призначення',
         'Шкали',
         'Нотатки',
-        'Баланс рідини',
+        'Баланс',
       ]);
     });
   });

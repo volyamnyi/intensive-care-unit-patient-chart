@@ -55,7 +55,7 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
             const result = getResultForScale(scale.id);
             return (
               <Grid size={{ xs: 12, md: 6 }} key={scale.id}>
-                <Paper sx={{ p: 2, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+                <Paper sx={{ p: 2, border: '1px solid #2A2A2A', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}>
                   <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 600 }}>
                     {scale.name}
                   </Typography>

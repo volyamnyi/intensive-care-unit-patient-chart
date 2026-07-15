@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import { theme } from './styles/theme';
+import { useThemeMode, ThemeModeProvider } from './styles/ThemeContext';
 import './styles/animations.css';
 import { AuthProvider, useAuth } from './services/AuthContext';
 import { useEffect, useRef } from 'react';
@@ -117,7 +117,8 @@ function AppRoutes() {
   );
 }
 
-export default function App() {
+function ThemedApp() {
+  const { theme } = useThemeMode();
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -127,5 +128,13 @@ export default function App() {
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeModeProvider>
+      <ThemedApp />
+    </ThemeModeProvider>
   );
 }

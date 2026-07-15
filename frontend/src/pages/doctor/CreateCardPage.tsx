@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Paper, Typography, Button, Grid, TextField, Alert } from '@mui/material';
+import { Box, Paper, Typography, Button, Grid, TextField, Alert, useTheme } from '@mui/material';
 import { episodeApi } from '../../api/endpoints';
 import PatientSearch from '../../components/common/PatientSearch';
 import type { PatientDto } from '../../types';
@@ -8,6 +8,7 @@ import type { PatientDto } from '../../types';
 export default function CreateCardPage() {
   useEffect(() => { document.title = 'ВАІТ — Нова карта'; }, []);
   const navigate = useNavigate();
+  const theme = useTheme();
   const [selectedPatient, setSelectedPatient] = useState<PatientDto | null>(null);
   const [error, setError] = useState('');
 
@@ -26,19 +27,19 @@ export default function CreateCardPage() {
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-      <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700, mb: 3 }}>
+      <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary, mb: 3 }}>
         Нова карта інтенсивної терапії
       </Typography>
-      {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
-      <Paper sx={{ p: 3, mb: 3, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-        <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2, color: theme.palette.text.primary }}>
           Пошук пацієнта
         </Typography>
         <PatientSearch onSelect={setSelectedPatient} />
       </Paper>
       {selectedPatient && (
-        <Paper sx={{ p: 3, mb: 3, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2, color: theme.palette.text.primary }}>
             Дані пацієнта (з МІС)
           </Typography>
           <Grid container spacing={2}>
@@ -71,12 +72,7 @@ export default function CreateCardPage() {
       )}
       {selectedPatient && (
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            size="large"
-            onClick={handleCreate}
-            sx={{ bgcolor: '#FF5F33', '&:hover': { bgcolor: '#E8552E' } }}
-          >
+          <Button variant="contained" size="large" onClick={handleCreate}>
             Створити карту
           </Button>
           <Button variant="outlined" size="large" onClick={() => navigate('/doctor')}>

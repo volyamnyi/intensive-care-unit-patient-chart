@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Typography, IconButton, Menu, MenuItem,
+  Box, Typography, IconButton, Menu, MenuItem, useTheme,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress,
 } from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
@@ -13,6 +13,7 @@ export default function AdminPage() {
   useEffect(() => { document.title = 'ВАІТ — Адміністратор'; }, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [doctors, setDoctors] = useState<User[]>([]);
   const [nurses, setNurses] = useState<User[]>([]);
@@ -32,7 +33,7 @@ export default function AdminPage() {
     : u.role === 'ADMINISTRATOR' ? 'Адміністратор' : u.role;
 
   const renderTable = (title: string, rows: User[]) => (
-    <Paper sx={{ p: 2.5, mb: 3, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+    <Paper sx={{ p: 2.5, mb: 3 }}>
       <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>{title}</Typography>
       <TableContainer>
         <Table size="small">
@@ -55,7 +56,7 @@ export default function AdminPage() {
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3, color: '#5A5A5A' }}>Немає даних</TableCell>
+                <TableCell colSpan={4} align="center" sx={{ py: 3, color: theme.palette.text.secondary }}>Немає даних</TableCell>
               </TableRow>
             )}
           </TableBody>

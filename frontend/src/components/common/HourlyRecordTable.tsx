@@ -13,7 +13,7 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
   };
 
   return (
-    <TableContainer component={Paper} sx={{ border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+    <TableContainer component={Paper} sx={{ border: '1px solid #2A2A2A', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}>
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -31,7 +31,7 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
           {hours.map((h) => {
             const r = getRec(h);
             const isPast = h < new Date().getHours();
-            const bg = isPast && r ? '#F0F7F3' : isPast && !r ? '#FFF5F3' : 'inherit';
+            const bg = isPast && r ? '#1A3A2A' : isPast && !r ? '#3A1A1A' : 'inherit';
             return (
               <TableRow key={h} sx={{ bgcolor: bg }}>
                 <TableCell sx={{ fontWeight: 600 }}>{h}:00</TableCell>

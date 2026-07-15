@@ -14,13 +14,14 @@ export default function NurseDashboardPage() {
   useEffect(() => {
     episodeApi.search({ status: 'ACTIVE' })
       .then((res) => setEpisodes(res.data))
+      .catch(() => setEpisodes([]))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { document.title = 'ВАІТ — Медсестра'; }, []);
 
   const filteredEpisodes = episodes.filter((ep) =>
-    ep.patientName?.toLowerCase().includes(search.toLowerCase())
+    (ep.patientName ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;

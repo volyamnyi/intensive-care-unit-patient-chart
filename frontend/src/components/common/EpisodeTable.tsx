@@ -69,7 +69,7 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
               <TableCell>
                 {onSelect && (
                   <Box
-                    sx={{ color: '#1F6B4C', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                    sx={{ color: '#FF8C66', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                     role="button"
                     tabIndex={0}
                     onClick={(e) => { e.stopPropagation(); onSelect(ep); }}

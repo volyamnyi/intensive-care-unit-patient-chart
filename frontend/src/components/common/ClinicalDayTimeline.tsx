@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, useTheme } from '@mui/material';
 import type { ClinicalDay } from '../../types';
 
 interface ClinicalDayTimelineProps {
@@ -7,23 +7,30 @@ interface ClinicalDayTimelineProps {
   onSelectDay: (day: ClinicalDay) => void;
 }
 
-const statusColors: Record<string, string> = {
-  OPEN: '#FFF5F3',
-  NURSE_SIGNED: '#FFF5F3',
-  DOCTOR_SIGNED: '#F0F7F3',
-  CLOSED: '#F0F7F3',
-  REOPENED: '#FFFBE6',
-};
+function getStatusColor(theme: import('@mui/material').Theme): Record<string, string> {
+  const isDark = theme.palette.mode === 'dark';
+  return {
+    OPEN: isDark ? '#1A1A1A' : '#F5F5F0',
+    NURSE_SIGNED: isDark ? '#1A1A1A' : '#F5F5F0',
+    DOCTOR_SIGNED: isDark ? '#1A1A1A' : '#F5F5F0',
+    CLOSED: isDark ? '#1A1A1A' : '#F5F5F0',
+    REOPENED: isDark ? '#2A2A2A' : '#E8E6E1',
+  };
+}
 
-const statusBorderColors: Record<string, string> = {
-  OPEN: '#FFD6CC',
-  NURSE_SIGNED: '#FFD6CC',
-  DOCTOR_SIGNED: '#D4E8DE',
-  CLOSED: '#D4E8DE',
-  REOPENED: '#FFE58F',
-};
+function getStatusBorderColor(theme: import('@mui/material').Theme): Record<string, string> {
+  const isDark = theme.palette.mode === 'dark';
+  return {
+    OPEN: isDark ? '#2A2A2A' : '#D0CEC9',
+    NURSE_SIGNED: isDark ? '#2A2A2A' : '#D0CEC9',
+    DOCTOR_SIGNED: isDark ? '#2A2A2A' : '#D0CEC9',
+    CLOSED: isDark ? '#2A2A2A' : '#D0CEC9',
+    REOPENED: isDark ? '#2A2A2A' : '#C0BEB9',
+  };
+}
 
 export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }: ClinicalDayTimelineProps) {
+  const theme = useTheme();
   if (days.length === 0) {
     return <Typography color="text.secondary">Немає клінічних днів</Typography>;
   }
@@ -43,8 +50,8 @@ export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }
               px: 1,
               borderRadius: 2,
               cursor: 'pointer',
-              bgcolor: statusColors[day.status] || '#FAFAF8',
-              border: isSelected ? '2px solid #8AAB9E' : (statusBorderColors[day.status] || '1px solid #E8E6E1'),
+              bgcolor: getStatusColor(theme)[day.status] || (theme.palette.mode === 'dark' ? '#1A1A1A' : '#F5F5F0'),
+              border: isSelected ? '2px solid #FF5F33' : `1px solid ${getStatusBorderColor(theme)[day.status] || (theme.palette.mode === 'dark' ? '#2A2A2A' : '#D0CEC9')}`,
               fontWeight: 700,
               fontSize: 13,
               transition: 'all 0.2s ease',

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Box, Paper, Typography, Grid, TextField, Button, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow, Chip, IconButton,
+  TableCell, TableContainer, TableHead, TableRow, Chip, IconButton, useTheme,
 } from '@mui/material';
 import { CheckCircle } from '@mui/icons-material';
 import type { MedicalOrder, MedicalOrderCreateRequest } from '../../types';
@@ -34,10 +34,12 @@ const emptyOrder: MedicalOrderCreateRequest = {
 };
 
 export default function MedicalOrdersPanel({
-  orders, onCreateOrder, onExecuteOrder, onCancelOrder: _onCancelOrder, canCreate, canExecute,
+  orders, onCreateOrder, onExecuteOrder, onCancelOrder, canCreate, canExecute,
 }: MedicalOrdersPanelProps) {
+  const theme = useTheme();
   const [newOrder, setNewOrder] = useState<MedicalOrderCreateRequest>(emptyOrder);
   const [showForm, setShowForm] = useState(false);
+  const showActions = canExecute || !!onCancelOrder;
 
   const handleCreate = () => {
     if (!onCreateOrder || !newOrder.drugName || !newOrder.dose) return;
@@ -51,7 +53,7 @@ export default function MedicalOrdersPanel({
       {canCreate && (
         <Box sx={{ mb: 2 }}>
           {showForm ? (
-            <Paper sx={{ p: 2, mb: 2, border: '1px solid #E8E6E1' }}>
+            <Paper sx={{ p: 2, mb: 2 }}>
               <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1 }}>
                 Нове призначення
               </Typography>
@@ -116,7 +118,7 @@ export default function MedicalOrdersPanel({
         </Box>
       )}
 
-      <TableContainer component={Paper} sx={{ border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+      <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -124,13 +126,13 @@ export default function MedicalOrdersPanel({
               <TableCell>Доза</TableCell>
               <TableCell>Шлях</TableCell>
               <TableCell>Статус</TableCell>
-              {canExecute && <TableCell>Виконання</TableCell>}
+              {showActions && <TableCell>Дії</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canExecute ? 5 : 4} align="center" sx={{ py: 3, color: '#5A5A5A' }}>
+                <TableCell colSpan={showActions ? 5 : 4} align="center" sx={{ py: 3, color: theme.palette.text.secondary }}>
                   Немає призначень
                 </TableCell>
               </TableRow>
@@ -147,15 +149,20 @@ export default function MedicalOrdersPanel({
                       color={order.status === 'ACTIVE' ? 'success' : order.status === 'CANCELLED' ? 'default' : 'info'}
                     />
                   </TableCell>
-                  {canExecute && (
+                  {showActions && (
                     <TableCell>
-                      {order.status === 'ACTIVE' && onExecuteOrder && (
+                      {order.status === 'ACTIVE' && canExecute && onExecuteOrder && (
                         <IconButton
                           onClick={() => onExecuteOrder(order.id)}
-                          sx={{ color: '#1F6B4C', '&:hover': { bgcolor: '#F0F7F3' } }}
+                          sx={{ color: theme.palette.secondary.main, '&:hover': { bgcolor: theme.palette.action.hover } }}
                         >
                           <CheckCircle />
                         </IconButton>
+                      )}
+                      {order.status === 'ACTIVE' && !canExecute && onCancelOrder && (
+                        <Button size="small" color="error" onClick={() => onCancelOrder(order.id)}>
+                          Скасувати
+                        </Button>
                       )}
                     </TableCell>
                   )}

@@ -15,17 +15,17 @@ export default function HourSelector({ hours, currentHour, onSelect, filledHours
       {hours.map((h, i) => {
         const isFilled = filledHours.includes(h);
         let bgcolor = '';
-        let textColor = '#1F1F1F';
-        let border = '1px solid #E8E6E1';
+        let textColor = '#FFFFFF';
+        let border = '1px solid #2A2A2A';
 
         if (i === currentIdx) {
-          bgcolor = '#B6CECA';
-          textColor = '#1F1F1F';
-          border = '2px solid #8AAB9E';
+          bgcolor = '#FF5F33';
+          textColor = '#FFFFFF';
+          border = '2px solid #FF8C66';
         } else if (i < currentIdx) {
-          bgcolor = isFilled ? '#F0F7F3' : '#FFF5F3';
-          textColor = isFilled ? '#1F6B4C' : '#C42E1A';
-          border = isFilled ? '1px solid #D4E8DE' : '1px solid #FFD6CC';
+          bgcolor = isFilled ? '#1A3A2A' : '#3A1A1A';
+          textColor = isFilled ? '#4CAF50' : '#FF5252';
+          border = isFilled ? '1px solid #2A2A2A' : '1px solid #2A2A2A';
         }
 
         return (

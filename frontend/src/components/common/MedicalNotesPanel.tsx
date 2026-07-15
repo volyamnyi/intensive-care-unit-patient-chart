@@ -35,7 +35,7 @@ export default function MedicalNotesPanel({ notes, onCreateNote }: MedicalNotesP
         <Typography color="text.secondary">Немає нотаток</Typography>
       ) : (
         notes.map((n) => (
-          <Paper key={n.id} sx={{ p: 2, mb: 1, border: '1px solid #E8E6E1', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+          <Paper key={n.id} sx={{ p: 2, mb: 1, border: '1px solid #2A2A2A', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}>
             <Typography variant="body2" color="text.secondary">
               {n.authorId} &middot; {new Date(n.createdAt).toLocaleString('uk-UA')} &middot; {n.role}
             </Typography>
