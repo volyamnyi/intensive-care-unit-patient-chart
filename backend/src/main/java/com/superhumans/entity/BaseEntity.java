@@ -6,6 +6,8 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
+
 @MappedSuperclass
 @Getter @Setter
 public abstract class BaseEntity {
