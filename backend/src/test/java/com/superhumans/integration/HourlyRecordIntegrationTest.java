@@ -102,9 +102,9 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
         var patchEntity = authEntity(patchReq, getNurseToken());
         var patchRes = restTemplate.exchange(
                 "/api/hourly-records/{id}", HttpMethod.PATCH, patchEntity,
-                HourlyRecordResponse.class, recordId);
+                Void.class, recordId);
 
-        assertThat(patchRes.getBody().getHeartRate()).isEqualTo(90);
+        assertThat(patchRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test

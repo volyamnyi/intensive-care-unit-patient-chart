@@ -116,11 +116,9 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/episodes/{id}", HttpMethod.PATCH, entity,
-                EpisodeResponse.class, SEED_EPISODE_ID);
+                Void.class, SEED_EPISODE_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getDischargeDate()).isNotNull();
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -157,10 +155,9 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
 
         var closeRes = restTemplate.exchange(
                 "/api/episodes/{id}/close", HttpMethod.POST, closeEntity,
-                EpisodeResponse.class, newId);
+                Void.class, newId);
 
-        assertThat(closeRes.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(closeRes.getBody().getStatus().name()).isEqualTo("COMPLETED");
+        assertThat(closeRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test

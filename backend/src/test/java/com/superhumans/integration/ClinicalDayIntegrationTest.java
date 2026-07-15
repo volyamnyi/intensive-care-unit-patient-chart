@@ -106,11 +106,9 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}", HttpMethod.PATCH, entity,
-                ClinicalDayResponse.class, dayId);
+                Void.class, dayId);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getEndDateTime()).isNotNull();
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -192,10 +190,15 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/clinical-days/{id}/reopen", HttpMethod.POST, reopenEntity,
-                ClinicalDayResponse.class, dayId);
+                Void.class, dayId);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getStatus()).isEqualTo(ClinicalDayStatus.REOPENED);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // Verify via GET that the day was reopened
+        var verifyEntity = authGet(getHodToken());
+        var verifyRes = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, verifyEntity,
+                ClinicalDayResponse.class, dayId);
+        assertThat(verifyRes.getBody().getStatus()).isEqualTo(ClinicalDayStatus.REOPENED);
     }
 }

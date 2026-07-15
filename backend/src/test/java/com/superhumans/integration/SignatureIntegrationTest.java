@@ -123,10 +123,17 @@ class SignatureIntegrationTest extends AbstractIntegrationTest {
 
         var reopenRes = restTemplate.exchange(
                 "/api/clinical-days/{id}/reopen", HttpMethod.POST, reopenEntity,
-                ClinicalDayResponse.class, dayId);
+                Void.class, dayId);
 
-        assertThat(reopenRes.getBody().getStatus()).isEqualTo(ClinicalDayStatus.REOPENED);
-        assertThat(reopenRes.getBody().getNurseSigned()).isFalse();
-        assertThat(reopenRes.getBody().getDoctorSigned()).isFalse();
+        assertThat(reopenRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // Verify via GET that the day was reopened and signatures cleared
+        var getAfter = authGet(getDoctorToken());
+        var afterRes = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, getAfter,
+                ClinicalDayResponse.class, dayId);
+        assertThat(afterRes.getBody().getStatus()).isEqualTo(ClinicalDayStatus.REOPENED);
+        assertThat(afterRes.getBody().getNurseSigned()).isFalse();
+        assertThat(afterRes.getBody().getDoctorSigned()).isFalse();
     }
 }

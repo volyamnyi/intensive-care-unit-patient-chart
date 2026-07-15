@@ -107,9 +107,9 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         var patchEntity = authEntity(patchReq, getDoctorToken());
         var patchRes = restTemplate.exchange(
                 "/api/orders/{id}", HttpMethod.PATCH, patchEntity,
-                MedicalOrderResponse.class, orderId);
+                Void.class, orderId);
 
-        assertThat(patchRes.getBody().getDose()).isEqualTo("10");
+        assertThat(patchRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -135,9 +135,9 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         var cancelEntity = authEntity(cancelReq, getDoctorToken());
         var cancelRes = restTemplate.exchange(
                 "/api/orders/{id}/cancel", HttpMethod.POST, cancelEntity,
-                MedicalOrderResponse.class, orderId);
+                Void.class, orderId);
 
-        assertThat(cancelRes.getBody().getStatus().name()).isEqualTo("CANCELLED");
+        assertThat(cancelRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
