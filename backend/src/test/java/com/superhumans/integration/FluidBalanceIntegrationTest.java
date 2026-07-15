@@ -15,6 +15,8 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID SEED_DAY_ID =
             UUID.fromString("b1111111-1111-1111-1111-111111111111");
+    private static final UUID OTHER_OPEN_DAY_ID =
+            UUID.fromString("b2222222-2222-2222-2222-222222222222");
 
     @Test
     void getFluidBalance_returnsEmptyInitially() {
@@ -99,6 +101,63 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
                 SEED_DAY_ID);
 
         assertThat(getRes.getBody()).isNotEmpty();
+    }
+
+    @Test
+    void autoRecalculate_afterHourlyRecord_returnsPopulated() {
+        HourlyRecordCreateRequest hrReq = new HourlyRecordCreateRequest();
+        hrReq.setRecordTime(LocalDateTime.now().withHour(8));
+        hrReq.setUrineOutput(400.0);
+
+        var hrEntity = authEntity(hrReq, getNurseToken());
+        restTemplate.exchange(
+                "/api/clinical-days/{dayId}/hourly-records", HttpMethod.POST, hrEntity,
+                HourlyRecordResponse.class, OTHER_OPEN_DAY_ID);
+
+        var getEntity = authGet(getDoctorToken());
+        var res = restTemplate.exchange(
+                "/api/clinical-days/{dayId}/fluid-balance", HttpMethod.GET, getEntity,
+                new ParameterizedTypeReference<List<FluidBalanceResponse>>() {},
+                OTHER_OPEN_DAY_ID);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotEmpty();
+        assertThat(res.getBody().get(0).getOutput()).isPositive();
+    }
+
+    @Test
+    void autoRecalculate_afterOrderExecution_includesIntake() {
+        MedicalOrderCreateRequest orderReq = new MedicalOrderCreateRequest();
+        orderReq.setCategory("INFUSION");
+        orderReq.setDrugName("Фізрозчин");
+        orderReq.setDose("500");
+        orderReq.setUnit("мл");
+        orderReq.setRoute("в/в");
+        orderReq.setFrequency("крапельно");
+        orderReq.setStartTime(LocalDateTime.now().withHour(9));
+
+        var orderEntity = authEntity(orderReq, getDoctorToken());
+        var orderRes = restTemplate.exchange(
+                "/api/clinical-days/{dayId}/orders", HttpMethod.POST, orderEntity,
+                MedicalOrderResponse.class, OTHER_OPEN_DAY_ID);
+
+        UUID orderId = orderRes.getBody().getId();
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
+                UUID.randomUUID(), LocalDateTime.now().withHour(9), "500", "");
+        var execEntity = authEntity(execReq, getNurseToken());
+        restTemplate.exchange(
+                "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,
+                OrderExecutionResponse.class, orderId);
+
+        var getEntity = authGet(getDoctorToken());
+        var res = restTemplate.exchange(
+                "/api/clinical-days/{dayId}/fluid-balance", HttpMethod.GET, getEntity,
+                new ParameterizedTypeReference<List<FluidBalanceResponse>>() {},
+                OTHER_OPEN_DAY_ID);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotEmpty();
+        assertThat(res.getBody().get(0).getIntake()).isPositive();
     }
 
     @Test
