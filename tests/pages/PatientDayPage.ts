@@ -35,11 +35,11 @@ export class PatientDayPage extends BasePage {
     super(page);
     this.backButton = page.getByRole('button', { name: 'Назад' });
     this.signOffButton = page.getByRole('button', { name: 'Підписати добу' });
-    this.vitalsTab = page.getByRole('tab', { name: 'Вітальні показники' });
+    this.vitalsTab = page.getByRole('tab', { name: 'Вітальні' });
     this.prescriptionsTab = page.getByRole('tab', { name: 'Призначення' });
     this.scalesTab = page.getByRole('tab', { name: 'Шкали' });
     this.notesTab = page.getByRole('tab', { name: 'Нотатки' });
-    this.balanceTab = page.getByRole('tab', { name: 'Баланс рідини' });
+    this.balanceTab = page.getByRole('tab', { name: 'Баланс' });
 
     this.vitalSystolicField = page.getByLabel('АТ сист (мм.рт.ст)');
     this.vitalDiastolicField = page.getByLabel('АТ діас (мм.рт.ст)');

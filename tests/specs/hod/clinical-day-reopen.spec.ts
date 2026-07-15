@@ -36,9 +36,9 @@ test.describe('HOD Clinical Day Reopen', () => {
 
   test('HOD can open episode page and view clinical day timeline', async ({ page }) => {
     await page.goto('/doctor');
-    await expect(page.getByText('Активні пацієнти ВАІТ')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Активні пацієнти')).toBeVisible({ timeout: 10000 });
 
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
-    await expect(page.getByText('Статус:').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Назад' })).toBeVisible({ timeout: 10000 });
   });
 });

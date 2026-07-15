@@ -27,7 +27,7 @@ async function closeActiveEpisode(request: any, token: string) {
 test.describe('HOD Dashboard', () => {
   test('displays active patients list', async ({ page }) => {
     await page.goto('/doctor');
-    await expect(page.getByText('Активні пацієнти ВАІТ')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Активні пацієнти')).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('table')).toBeVisible();
   });
 

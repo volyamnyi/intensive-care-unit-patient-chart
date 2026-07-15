@@ -9,7 +9,7 @@ export class DoctorDashboardPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.title = page.getByText('Активні пацієнти ВАІТ');
+    this.title = page.getByText('Активні пацієнти');
     this.newCardButton = page.getByRole('button', { name: 'Нова карта' });
     this.searchField = page.getByPlaceholder('Пошук пацієнта за ПІБ...');
     this.loadingSpinner = page.getByRole('progressbar');

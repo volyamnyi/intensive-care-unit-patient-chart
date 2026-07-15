@@ -6,11 +6,11 @@ test.describe('Episode Page', () => {
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
-    await expect(page.getByRole('tab', { name: 'Вітальні показники' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Вітальні' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Призначення' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Шкали' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Нотатки' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Баланс рідини' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Баланс' })).toBeVisible();
   });
 
   test('switching tabs shows different content', async ({ page }) => {
@@ -24,7 +24,7 @@ test.describe('Episode Page', () => {
     await page.getByRole('tab', { name: 'Нотатки' }).click();
     await expect(page.getByLabel('Нова нотатка')).toBeVisible();
 
-    await page.getByRole('tab', { name: 'Баланс рідини' }).click();
+    await page.getByRole('tab', { name: 'Баланс' }).click();
     await expect(page.getByRole('heading', { name: 'Баланс рідини' })).toBeVisible();
   });
 

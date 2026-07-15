@@ -3,7 +3,7 @@ import { test, expect } from '../../fixtures/index';
 test.describe('Doctor Dashboard', () => {
   test('displays active episodes with patient names', async ({ page }) => {
     await page.goto('/doctor');
-    await expect(page.getByText('Активні пацієнти ВАІТ')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Активні пацієнти')).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('table')).toBeVisible();
   });
 

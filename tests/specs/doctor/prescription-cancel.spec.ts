@@ -33,7 +33,7 @@ test.describe('Prescription Cancel', () => {
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
     await expect(page.getByText('Нове призначення')).toBeVisible();
-    await page.getByRole('button', { name: 'Скасувати' }).click();
+    await page.getByRole('button', { name: 'Скасувати' }).first().click();
     await expect(page.getByRole('button', { name: '+ Нове призначення' })).toBeVisible();
   });
 });

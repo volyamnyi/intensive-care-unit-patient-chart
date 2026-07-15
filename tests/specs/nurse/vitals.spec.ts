@@ -6,7 +6,7 @@ test.describe('Nurse Vitals Entry', () => {
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     await expect(page).toHaveURL(/\/nurse\/episode\//);
  
-    await expect(page.getByRole('tab', { name: 'Вітальні показники' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Вітальні' })).toBeVisible();
 
     await page.getByLabel('АТ сист (мм.рт.ст)').fill('120');
     await page.getByLabel('АТ діас (мм.рт.ст)').fill('80');
