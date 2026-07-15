@@ -12,7 +12,7 @@ async function getToken(request: any, login: string, password: string) {
   return (await res.json()).token as string;
 }
 
-test.describe('PDF Generation', () => {
+test.describe.serial('PDF Generation', () => {
   test('generates a PDF for a signed clinical day', async ({ request }) => {
     const docToken = await getToken(request, 'doctor1', 'doctor123');
     const nrsToken = await getToken(request, 'nurse1', 'nurse123');

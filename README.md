@@ -305,15 +305,17 @@ java -jar backend/target/patient-chart-backend-*.jar
 | `head1` | `head123` | HEAD_OF_DEPARTMENT |
 | `admin` | `admin123` | ADMINISTRATOR |
 
-3 mock patients (from MIS mock):
+5 mock patients (from MIS mock):
 
 | Full Name | Card # | Year |
 |---|---|---|
 | Петренко Іван Сергійович | МК-001234 | 1978 |
 | Коваленко Олена Вікторівна | МК-005678 | 1985 |
 | Сидоренко Василь Петрович | МК-009012 | 1962 |
+| Бондаренко Наталія Петрівна | МК-003456 | 1990 |
+| Ткачук Андрій Миколайович | МК-007890 | 1975 |
 
-3 seed episodes + 3 open clinical days with fixed UUIDs (used in integration tests).
+3 seed episodes with 4 seed clinical days (3 OPEN, 1 NURSE_SIGNED) with fixed UUIDs (used in integration tests).
 
 ---
 
@@ -383,7 +385,8 @@ icu-patient-chart/
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (37) |
+| `npx playwright test` | Run all E2E tests (37 total, 7 projects) |
+| `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests (36) |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
 | `npx playwright show-report` | View HTML report |
@@ -392,8 +395,10 @@ icu-patient-chart/
 - **Backend unit tests**: 106 tests (12 service classes) — `mvn test`
 - **Backend integration tests**: 7 tests via Testcontainers — `mvn test -Pintegration-test`
 - **Frontend Vitest tests**: 35 tests (5 files)
-- **E2E Playwright tests**: 37 tests (13 spec files, 7 projects)
+- **E2E Playwright tests**: 37 tests (24 spec files, 7 projects)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
+
+> **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.
 
 ### Commit Conventions
 

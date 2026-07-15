@@ -1,8 +1,8 @@
 import { test, expect } from '../../fixtures/index';
 
 const API = 'http://localhost:8085/api';
-const EPISODE_ID = 'a1111111-1111-1111-1111-111111111111';
-const NURSE_SIGNED_DAY_ID = 'b1111112-1111-1111-1111-111111111111';
+const EPISODE_ID = 'a2222222-2222-2222-2222-222222222222';
+const NURSE_SIGNED_DAY_ID = 'b4444444-4444-4444-4444-444444444444';
 
 async function getHodToken(request: any) {
   const res = await request.post(`${API}/auth/login`, {

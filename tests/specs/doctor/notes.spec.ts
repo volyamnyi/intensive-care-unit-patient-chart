@@ -1,10 +1,10 @@
 ﻿import { test, expect } from '../../fixtures/index';
 
+const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
+
 test.describe('Doctor Notes', () => {
   test('adds a clinical note to a patient day', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
     await page.getByRole('tab', { name: 'Нотатки' }).click();
 
@@ -16,9 +16,7 @@ test.describe('Doctor Notes', () => {
   });
 
   test('shows error when adding empty note', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
     await page.getByRole('tab', { name: 'Нотатки' }).click();
 

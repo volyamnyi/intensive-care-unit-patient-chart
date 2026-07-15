@@ -73,7 +73,18 @@ tests/     (Playwright 1.61)
 
 Mock MIS provides 5 test patients: Петренко, Коваленко, Сидоренко, Бондаренко, Ткачук.
 
-3 seed episodes (UUIDs defined in `data.sql`), each with an OPEN clinical day.
+3 seed episodes with 4 clinical days:
+
+| Episode | Clinical Days |
+|---|---|
+| `a1111111` (Петренко) | `b1111111` OPEN, `b1111112` NURSE_SIGNED |
+| `a2222222` (Коваленко) | `b2222222` OPEN, `b4444444` NURSE_SIGNED |
+| `a3333333` (Сидоренко) | `b3333333` OPEN |
+
+**E2E test data isolation** (each spec targets a specific episode, no `.first()` race):
+- `a1111111`: `signoff-full-chain` (signs `b1111111` + `b1111112`), `signoff`
+- `a2222222`: `clinical-day-reopen` (reopens `b4444444`), `pdf-generation` (signs `b2222222`)
+- `a3333333`: `notes`, `notes-full`, `prescriptions`, `prescription-cancel`
 
 ## Data Model
 
@@ -341,6 +352,7 @@ All endpoints prefixed with `/api`.
 - **Routing**: `/doctor/*` for DOCTOR/HOD, `/nurse/*` for NURSE, `/admin/*` for ADMINISTRATOR
 - **DB**: `ddl-auto: update` — never write manual DDL; schema auto-created by Hibernate from entity annotations
 - **Data seeding**: Only via `data.sql` (`spring.sql.init.mode: always`)
+- **Stale test data**: `data.sql` uses `ON CONFLICT (id) DO NOTHING`, so modified data persists across backend restarts. After running signing/reopen tests, reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 
 ## Project Files (kept in repo)
 

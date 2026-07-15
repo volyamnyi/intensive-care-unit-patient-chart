@@ -1,12 +1,11 @@
 import { test, expect } from '../../fixtures/index';
 
 const API = 'http://localhost:8085/api';
+const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
 
 test.describe('Prescription Cancel', () => {
   test('creates prescription via UI and shows active status', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
     await page.getByRole('tab', { name: 'Призначення' }).click();
 
@@ -25,9 +24,7 @@ test.describe('Prescription Cancel', () => {
   });
 
   test('prescription form has cancel button to close form', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
     await page.getByRole('tab', { name: 'Призначення' }).click();
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
