@@ -23,9 +23,10 @@ test.describe('Optimistic Locking - 409 Conflict', () => {
     const oldVersion = episode.version;
 
     // First update with current version succeeds (version 0 -> 1)
+    // Include a dischargeDate to make the entity dirty (updated_by already matches seed data)
     const update1 = await request.patch(`${API}/episodes/a1111111-1111-1111-1111-111111111111`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: { version: oldVersion },
+      data: { version: oldVersion, dischargeDate: '2026-07-20T10:00:00' },
     });
     expect(update1.status()).toBe(204);
 

@@ -27,8 +27,14 @@ test.describe('HOD Clinical Day Reopen', () => {
       headers: { Authorization: `Bearer ${token}` },
       data: { reason: 'E2E test reopen', version: day.version },
     });
-    expect(reopenRes.ok()).toBeTruthy();
-    const reopened = await reopenRes.json();
+    expect(reopenRes.status()).toBe(204);
+
+    // Verify via GET that the day was reopened and signatures cleared
+    const verifyRes = await request.get(`${API}/clinical-days/${NURSE_SIGNED_DAY_ID}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(verifyRes.ok()).toBeTruthy();
+    const reopened = await verifyRes.json();
     expect(reopened.status).toBe('REOPENED');
     expect(reopened.doctorSigned).toBe(false);
     expect(reopened.nurseSigned).toBe(false);
