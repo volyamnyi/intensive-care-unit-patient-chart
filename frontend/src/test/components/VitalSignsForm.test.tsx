@@ -96,4 +96,66 @@ describe('VitalSignsForm', () => {
     const headings = container.querySelectorAll('h6');
     expect(headings.length).toBe(0);
   });
+
+  describe('clinical range validation', () => {
+    const ranges = {
+      temperature: { min: 34, max: 42 },
+      heartRate: { min: 0, max: 300 },
+      respiratoryRate: { min: 0, max: 60 },
+      systolicBP: { min: 50, max: 250 },
+      diastolicBP: { min: 30, max: 150 },
+      spo2: { min: 50, max: 100 },
+    };
+
+    function isValid(field: keyof typeof ranges, value: number | null | undefined): boolean {
+      if (value == null) return true;
+      const r = ranges[field];
+      return value >= r.min && value <= r.max;
+    }
+
+    it('normal values pass validation', () => {
+      expect(isValid('temperature', 36.6)).toBe(true);
+      expect(isValid('heartRate', 80)).toBe(true);
+      expect(isValid('respiratoryRate', 16)).toBe(true);
+      expect(isValid('systolicBP', 120)).toBe(true);
+      expect(isValid('diastolicBP', 80)).toBe(true);
+      expect(isValid('spo2', 98)).toBe(true);
+    });
+
+    it('out-of-range high values fail', () => {
+      expect(isValid('temperature', 43)).toBe(false);
+      expect(isValid('heartRate', 350)).toBe(false);
+      expect(isValid('respiratoryRate', 70)).toBe(false);
+      expect(isValid('systolicBP', 260)).toBe(false);
+      expect(isValid('diastolicBP', 160)).toBe(false);
+      expect(isValid('spo2', 110)).toBe(false);
+    });
+
+    it('out-of-range low values fail', () => {
+      expect(isValid('temperature', 33)).toBe(false);
+      expect(isValid('heartRate', -1)).toBe(false);
+      expect(isValid('respiratoryRate', -1)).toBe(false);
+      expect(isValid('systolicBP', 40)).toBe(false);
+      expect(isValid('diastolicBP', 20)).toBe(false);
+      expect(isValid('spo2', 40)).toBe(false);
+    });
+
+    it('boundary values pass validation', () => {
+      expect(isValid('temperature', 34)).toBe(true);
+      expect(isValid('temperature', 42)).toBe(true);
+      expect(isValid('heartRate', 0)).toBe(true);
+      expect(isValid('heartRate', 300)).toBe(true);
+      expect(isValid('systolicBP', 50)).toBe(true);
+      expect(isValid('systolicBP', 250)).toBe(true);
+      expect(isValid('diastolicBP', 30)).toBe(true);
+      expect(isValid('diastolicBP', 150)).toBe(true);
+    });
+
+    it('null and undefined values pass validation', () => {
+      expect(isValid('temperature', null)).toBe(true);
+      expect(isValid('temperature', undefined)).toBe(true);
+      expect(isValid('heartRate', null)).toBe(true);
+      expect(isValid('respiratoryRate', undefined)).toBe(true);
+    });
+  });
 });

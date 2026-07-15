@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Tabs, Tab, Button, Chip, Grid, Alert, CircularProgress, Paper, useTheme } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
@@ -37,6 +37,8 @@ export default function PatientDayPage() {
   const [vitalForm, setVitalForm] = useState<HourlyRecordCreateRequest>({ recordTime: '' });
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const lastManualSave = useRef(0);
 
   useEffect(() => {
     if (!episodeId) return;
@@ -87,8 +89,30 @@ export default function PatientDayPage() {
     document.title = episode ? `ВАІТ — ${episode.patientName}` : 'ВАІТ — Пацієнт';
   }, [episode]);
 
+  useEffect(() => {
+    const hasData = vitalForm.systolicBP || vitalForm.diastolicBP || vitalForm.heartRate
+      || vitalForm.spo2 || vitalForm.temperature || vitalForm.consciousness;
+    if (!selectedDay || !hasData) return;
+    if (Date.now() - lastManualSave.current < 5000) return;
+    const timer = setTimeout(async () => {
+      try {
+        setAutoSaving(true);
+        const recTime = `${new Date().toISOString().split('T')[0]}T${String(currentHour).padStart(2, '0')}:00:00`;
+        await hourlyRecordApi.create(selectedDay.id, { ...vitalForm, recordTime: recTime });
+        const res = await hourlyRecordApi.getByClinicalDay(selectedDay.id);
+        setRecords(res.data);
+      } catch {
+        // auto-save failed silently
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [vitalForm, selectedDay, currentHour]);
+
   const handleSaveVitals = async () => {
     if (!selectedDay) return;
+    lastManualSave.current = Date.now();
     try {
       const recTime = `${new Date().toISOString().split('T')[0]}T${String(currentHour).padStart(2, '0')}:00:00`;
       await hourlyRecordApi.create(selectedDay.id, { ...vitalForm, recordTime: recTime });
@@ -247,6 +271,7 @@ export default function PatientDayPage() {
                   values={vitalForm}
                   onChange={setVitalForm}
                   onSave={handleSaveVitals}
+                  saving={autoSaving}
                   title={`Показники — ${currentHour}:00`}
                 />
               </Grid>

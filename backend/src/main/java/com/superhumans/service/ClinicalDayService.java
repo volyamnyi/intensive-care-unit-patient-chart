@@ -56,6 +56,12 @@ public class ClinicalDayService {
         Optional<ClinicalDay> lastDay = clinicalDayRepository
                 .findFirstByEpisodeIdOrderByDayNumberDesc(request.getEpisodeId());
 
+        if (lastDay.isPresent() && lastDay.get().getStatus() != ClinicalDayStatus.CLOSED
+                && lastDay.get().getStatus() != ClinicalDayStatus.DOCTOR_SIGNED) {
+            throw new BusinessException(ErrorCode.DOCUMENT_LOCKED,
+                    "Previous clinical day must be completed before creating a new day");
+        }
+
         ClinicalDay day = ClinicalDayMapper.toEntity(request);
         day.setEpisode(episode);
         day.setDayNumber(lastDay.map(d -> d.getDayNumber() + 1).orElse(1));

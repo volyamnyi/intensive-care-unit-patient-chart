@@ -15,4 +15,6 @@ public class AuditLogResponse {
     private String oldValue;
     private String newValue;
     private String correlationId;
+    private String ipAddress;
+    private String userRole;
 }

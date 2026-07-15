@@ -33,12 +33,13 @@ public class ClinicalDayController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<ClinicalDayResponse> updateClinicalDay(
+    public ResponseEntity<Void> updateClinicalDay(
             @PathVariable UUID id,
             @Valid @RequestBody ClinicalDayPatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(clinicalDayService.updateClinicalDay(id, request, userId));
+        clinicalDayService.updateClinicalDay(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/sign/nurse")
@@ -62,11 +63,12 @@ public class ClinicalDayController {
     }
 
     @PostMapping("/{id}/reopen")
-    public ResponseEntity<ClinicalDayResponse> reopenClinicalDay(
+    public ResponseEntity<Void> reopenClinicalDay(
             @PathVariable UUID id,
             @Valid @RequestBody ReopenRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(clinicalDayService.reopenClinicalDay(id, request, userId));
+        clinicalDayService.reopenClinicalDay(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 }

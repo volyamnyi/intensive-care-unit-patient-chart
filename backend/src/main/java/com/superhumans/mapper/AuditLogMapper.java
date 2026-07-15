@@ -16,6 +16,8 @@ public class AuditLogMapper {
                 .oldValue(entity.getOldValue())
                 .newValue(entity.getNewValue())
                 .correlationId(entity.getCorrelationId())
+                .ipAddress(entity.getIpAddress())
+                .userRole(entity.getUserRole())
                 .build();
     }
 }

@@ -44,11 +44,12 @@ public class ClinicalScaleController {
     }
 
     @PatchMapping("/scales/{id}")
-    public ResponseEntity<ScaleResultResponse> updateScaleResult(
+    public ResponseEntity<Void> updateScaleResult(
             @PathVariable UUID id,
             @Valid @RequestBody ScaleResultPatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(clinicalScaleService.updateScaleResult(id, request, userId));
+        clinicalScaleService.updateScaleResult(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -53,3 +53,16 @@ logging:
   level:
     com.superhumans: DEBUG
     org.springframework.security: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-password: ${SSL_KEYSTORE_PASSWORD}
+    key-store-type: PKCS12

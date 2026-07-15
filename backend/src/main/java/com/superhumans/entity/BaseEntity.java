@@ -30,6 +30,9 @@ public abstract class BaseEntity {
     @Column(nullable = false)
     private Integer version;
 
+    @Column(name = "is_deleted")
+    private Boolean deleted = false;
+
     @PrePersist
     protected void onCreate() {
         if (id == null) {

@@ -301,6 +301,8 @@ export interface AuditLog {
   oldValue: string | null;
   newValue: string | null;
   correlationId: string | null;
+  ipAddress: string | null;
+  userRole: string | null;
 }
 
 export interface LoginRequest {

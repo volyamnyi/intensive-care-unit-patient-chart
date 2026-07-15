@@ -54,7 +54,6 @@ jobs:
       - name: Check backend formatting
         run: mvn compile checkstyle:check
         working-directory: backend
-        continue-on-error: true
 
   test:
     timeout-minutes: 40
@@ -95,7 +94,7 @@ jobs:
             frontend/package-lock.json
 
       - name: Build and test backend
-        run: mvn clean package
+        run: mvn clean verify
         working-directory: backend
 
       - name: Start backend

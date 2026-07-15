@@ -38,20 +38,22 @@ public class MedicalOrderController {
     }
 
     @PatchMapping("/orders/{id}")
-    public ResponseEntity<MedicalOrderResponse> updateOrder(
+    public ResponseEntity<Void> updateOrder(
             @PathVariable UUID id,
             @Valid @RequestBody MedicalOrderPatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(medicalOrderService.updateOrder(id, request, userId));
+        medicalOrderService.updateOrder(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/orders/{id}/cancel")
-    public ResponseEntity<MedicalOrderResponse> cancelOrder(
+    public ResponseEntity<Void> cancelOrder(
             @PathVariable UUID id,
             @Valid @RequestBody MedicalOrderPatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(medicalOrderService.cancelOrder(id, request.getVersion(), userId));
+        medicalOrderService.cancelOrder(id, request.getVersion(), userId);
+        return ResponseEntity.noContent().build();
     }
 }

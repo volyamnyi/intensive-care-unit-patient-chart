@@ -2,6 +2,8 @@ package com.superhumans.controller;
 
 import com.superhumans.entity.User;
 import com.superhumans.entity.UserRole;
+import com.superhumans.mis.MisService;
+import com.superhumans.mis.dto.UserMisDTO;
 import com.superhumans.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -16,6 +19,7 @@ import java.util.List;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final MisService misService;
 
     @GetMapping("/me")
     public ResponseEntity<User> getMe(Authentication auth) {
@@ -32,5 +36,12 @@ public class UserController {
     @GetMapping("/nurses")
     public ResponseEntity<List<User>> getNurses() {
         return ResponseEntity.ok(userRepository.findByRole(UserRole.NURSE));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserMisDTO> getMisUser(@PathVariable UUID id) {
+        return misService.getUser(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

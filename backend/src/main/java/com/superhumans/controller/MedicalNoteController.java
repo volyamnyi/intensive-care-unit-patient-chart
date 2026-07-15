@@ -38,11 +38,12 @@ public class MedicalNoteController {
     }
 
     @PatchMapping("/notes/{id}")
-    public ResponseEntity<MedicalNoteResponse> updateNote(
+    public ResponseEntity<Void> updateNote(
             @PathVariable UUID id,
             @Valid @RequestBody MedicalNotePatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(medicalNoteService.updateNote(id, request, userId));
+        medicalNoteService.updateNote(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 }

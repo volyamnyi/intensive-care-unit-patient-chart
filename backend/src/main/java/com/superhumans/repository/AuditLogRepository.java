@@ -10,6 +10,32 @@ import java.util.List;
 import java.util.UUID;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
+
+    @Override
+    default void deleteById(UUID uuid) {
+        throw new UnsupportedOperationException("Audit logs cannot be deleted");
+    }
+
+    @Override
+    default void delete(AuditLog entity) {
+        throw new UnsupportedOperationException("Audit logs cannot be deleted");
+    }
+
+    @Override
+    default void deleteAll(Iterable<? extends AuditLog> entities) {
+        throw new UnsupportedOperationException("Audit logs cannot be deleted");
+    }
+
+    @Override
+    default void deleteAllById(Iterable<? extends UUID> ids) {
+        throw new UnsupportedOperationException("Audit logs cannot be deleted");
+    }
+
+    @Override
+    default void deleteAll() {
+        throw new UnsupportedOperationException("Audit logs cannot be deleted");
+    }
+
     Page<AuditLog> findByEntityAndEntityIdOrderByTimestampDesc(String entity, UUID entityId, Pageable pageable);
     Page<AuditLog> findByUserIdOrderByTimestampDesc(UUID userId, Pageable pageable);
     Page<AuditLog> findByEntityOrderByTimestampDesc(String entity, Pageable pageable);

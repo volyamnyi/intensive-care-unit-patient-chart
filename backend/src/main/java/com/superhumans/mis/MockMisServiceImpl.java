@@ -1,7 +1,11 @@
 package com.superhumans.mis;
 
 import com.superhumans.mis.dto.*;
+import com.superhumans.service.AuditService;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,7 +13,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class MockMisServiceImpl implements MisService {
+
+    private final AuditService auditService;
 
     private boolean simulateErrors = false;
     private String errorMode = "none";
@@ -25,7 +32,7 @@ public class MockMisServiceImpl implements MisService {
     private final Map<UUID, List<UserMisDTO>> departmentUsers = new LinkedHashMap<>();
 
     @PostConstruct
-    void init() {
+    public void init() {
         initPatients();
         initUsers();
         initDepartments();
@@ -105,19 +112,50 @@ public class MockMisServiceImpl implements MisService {
         return UUID.fromString(String.format("00000000-0000-0000-0000-%012d", num));
     }
 
+    private UUID getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getCredentials() instanceof UUID id) {
+            return id;
+        }
+        return null;
+    }
+
+    private void checkErrors() {
+        if (simulateErrors) {
+            switch (errorMode) {
+                case "timeout":
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    throw new RuntimeException("MIS timeout");
+                case "not_found":
+                    throw new RuntimeException("Resource not found in MIS");
+                case "unavailable":
+                    throw new RuntimeException("MIS service unavailable");
+            }
+        }
+    }
+
     @Override
     public Optional<PatientDTO> getPatient(UUID patientId) {
-        return Optional.ofNullable(patients.get(patientId));
+        checkErrors();
+        Optional<PatientDTO> result = Optional.ofNullable(patients.get(patientId));
+        auditService.logAction("MIS", null, "GET_PATIENT", getCurrentUserId());
+        return result;
     }
 
     @Override
     public Optional<HospitalizationDTO> getHospitalization(UUID hospitalizationId) {
+        checkErrors();
         // Return a mock hospitalization for the known patient IDs
         UUID patientId = hospitalizationId; // In mock, hospitalization ID maps to patient
         PatientDTO patient = patients.get(patientId);
         if (patient == null) return Optional.empty();
 
         DepartmentDTO dept = departments.values().iterator().next();
+        auditService.logAction("MIS", null, "GET_HOSPITALIZATION", getCurrentUserId());
         return Optional.of(HospitalizationDTO.builder()
                 .id(hospitalizationId)
                 .patientId(patientId)
@@ -132,36 +170,32 @@ public class MockMisServiceImpl implements MisService {
 
     @Override
     public Optional<UserMisDTO> getUser(UUID userId) {
-        return Optional.ofNullable(users.get(userId));
+        checkErrors();
+        Optional<UserMisDTO> result = Optional.ofNullable(users.get(userId));
+        auditService.logAction("MIS", null, "GET_USER", getCurrentUserId());
+        return result;
     }
 
     @Override
     public List<UserMisDTO> getDepartmentUsers(UUID departmentId) {
-        return departmentUsers.getOrDefault(departmentId, List.of());
+        checkErrors();
+        List<UserMisDTO> result = departmentUsers.getOrDefault(departmentId, List.of());
+        auditService.logAction("MIS", null, "GET_DEPARTMENT_USERS", getCurrentUserId());
+        return result;
     }
 
     @Override
     public List<DepartmentDTO> getDepartments() {
-        return List.copyOf(departments.values());
+        checkErrors();
+        List<DepartmentDTO> result = List.copyOf(departments.values());
+        auditService.logAction("MIS", null, "GET_DEPARTMENTS", getCurrentUserId());
+        return result;
     }
 
     @Override
     public List<PatientDTO> searchPatients(String query) {
-        if (simulateErrors) {
-            switch (errorMode) {
-                case "timeout":
-                    try {
-                        Thread.sleep(30000);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    throw new RuntimeException("MIS timeout");
-                case "not_found":
-                    throw new RuntimeException("Patient not found in MIS");
-                case "unavailable":
-                    throw new RuntimeException("MIS service unavailable");
-            }
-        }
+        checkErrors();
+        auditService.logAction("MIS", null, "SEARCH_PATIENTS", getCurrentUserId());
         if (query == null || query.isBlank()) {
             return List.copyOf(patients.values());
         }
@@ -175,6 +209,8 @@ public class MockMisServiceImpl implements MisService {
 
     @Override
     public List<DictionaryItemDTO> getDictionary(String dictionaryName) {
+        checkErrors();
+        auditService.logAction("MIS", null, "GET_DICTIONARY", getCurrentUserId());
         return switch (dictionaryName) {
             case "orderCategories" -> List.of(
                     new DictionaryItemDTO("MEDICATION", "Медикаменти"),

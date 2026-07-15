@@ -38,11 +38,12 @@ public class HourlyRecordController {
     }
 
     @PatchMapping("/hourly-records/{id}")
-    public ResponseEntity<HourlyRecordResponse> updateHourlyRecord(
+    public ResponseEntity<Void> updateHourlyRecord(
             @PathVariable UUID id,
             @Valid @RequestBody HourlyRecordPatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(hourlyRecordService.updateHourlyRecord(id, request, userId));
+        hourlyRecordService.updateHourlyRecord(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 }

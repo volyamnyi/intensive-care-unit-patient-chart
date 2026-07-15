@@ -53,21 +53,23 @@ public class EpisodeController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<EpisodeResponse> updateEpisode(
+    public ResponseEntity<Void> updateEpisode(
             @PathVariable UUID id,
             @Valid @RequestBody EpisodePatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(episodeService.updateEpisode(id, request, userId));
+        episodeService.updateEpisode(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/close")
-    public ResponseEntity<EpisodeResponse> closeEpisode(
+    public ResponseEntity<Void> closeEpisode(
             @PathVariable UUID id,
             @Valid @RequestBody EpisodeCloseRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(episodeService.closeEpisode(id, request, userId));
+        episodeService.closeEpisode(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/archive")

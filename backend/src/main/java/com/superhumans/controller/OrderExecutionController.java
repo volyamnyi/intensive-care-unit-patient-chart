@@ -38,11 +38,12 @@ public class OrderExecutionController {
     }
 
     @PatchMapping("/executions/{id}")
-    public ResponseEntity<OrderExecutionResponse> updateExecution(
+    public ResponseEntity<Void> updateExecution(
             @PathVariable UUID id,
             @Valid @RequestBody OrderExecutionPatchRequest request,
             Authentication auth) {
         UUID userId = (UUID) auth.getCredentials();
-        return ResponseEntity.ok(orderExecutionService.updateExecution(id, request, userId));
+        orderExecutionService.updateExecution(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 }

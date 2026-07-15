@@ -86,6 +86,7 @@ public class HourlyRecordService {
         record.setUpdatedBy(userId);
         record = hourlyRecordRepository.save(record);
         auditService.logUpdate("HourlyRecord", id, userId, null, "Updated hourly record");
+        fluidBalanceService.recalculate(record.getClinicalDay().getId(), userId);
         return HourlyRecordMapper.toResponse(record);
     }
 
