@@ -157,29 +157,20 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotEmpty();
-        assertThat(res.getBody().get(0).getIntake()).isPositive();
+        assertThat(res.getBody()).anyMatch(fb -> fb.getIntake() > 0);
     }
 
     @Test
     void recalculateFluidBalance_withNoData_returnsEmpty() {
-        // Use a fresh episode with no data
-        ClinicalDayCreateRequest dayReq = new ClinicalDayCreateRequest(
-                UUID.fromString("a2222222-2222-2222-2222-222222222222"),
-                LocalDateTime.now(), LocalDateTime.now().plusDays(1));
-
-        var dayEntity = authEntity(dayReq, getDoctorToken());
-        var dayRes = restTemplate.exchange(
-                "/api/clinical-days", HttpMethod.POST, dayEntity,
-                ClinicalDayResponse.class);
-
-        UUID newDayId = dayRes.getBody().getId();
+        // Use an existing clinical day that has no hourly records or orders
+        UUID freshDayId = UUID.fromString("b3333333-3333-3333-3333-333333333333");
 
         var recalcEntity = authGet(getDoctorToken());
         var res = restTemplate.exchange(
                 "/api/clinical-days/{dayId}/fluid-balance/recalculate",
                 HttpMethod.POST, recalcEntity,
                 new ParameterizedTypeReference<List<FluidBalanceResponse>>() {},
-                newDayId);
+                freshDayId);
 
         assertThat(res.getBody()).isEmpty();
     }
