@@ -1,4 +1,4 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, useTheme } from '@mui/material';
 import type { HourlyRecord } from '../../types';
 
 interface HourlyRecordTableProps {
@@ -7,13 +7,15 @@ interface HourlyRecordTableProps {
 }
 
 export default function HourlyRecordTable({ records, hours }: HourlyRecordTableProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const getRec = (hour: number) => {
     const h = hour < 10 ? `0${hour}:00` : `${hour}:00`;
     return records.find((r) => r.recordTime.includes(h));
   };
 
   return (
-    <TableContainer component={Paper} sx={{ border: '1px solid #2A2A2A', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}>
+    <TableContainer component={Paper} sx={{ border: `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)' }}>
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -31,7 +33,14 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
           {hours.map((h) => {
             const r = getRec(h);
             const isPast = h < new Date().getHours();
-            const bg = isPast && r ? '#1A3A2A' : isPast && !r ? '#3A1A1A' : 'inherit';
+            let bg: string;
+            if (isPast && r) {
+              bg = isDark ? '#1A3A2A' : '#E8F5E9';
+            } else if (isPast && !r) {
+              bg = isDark ? '#3A1A1A' : '#FFEBEE';
+            } else {
+              bg = 'inherit';
+            }
             return (
               <TableRow key={h} sx={{ bgcolor: bg }}>
                 <TableCell sx={{ fontWeight: 600 }}>{h}:00</TableCell>
