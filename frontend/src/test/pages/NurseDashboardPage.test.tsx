@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material';
-import { theme } from '../../styles/theme';
+import { ThemeProvider, createTheme } from '@mui/material';
+const theme = createTheme({});
 import NurseDashboardPage from '../../pages/nurse/NurseDashboardPage';
 
 const mockSearch = vi.fn();

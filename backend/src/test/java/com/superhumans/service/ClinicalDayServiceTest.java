@@ -5,6 +5,7 @@ import com.superhumans.entity.*;
 import com.superhumans.exception.*;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.EpisodeRepository;
+import com.superhumans.repository.HourlyRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,9 @@ class ClinicalDayServiceTest {
 
     @Mock
     private AuditService auditService;
+
+    @Mock
+    private HourlyRecordRepository hourlyRecordRepository;
 
     @InjectMocks
     private ClinicalDayService clinicalDayService;
@@ -255,5 +259,65 @@ class ClinicalDayServiceTest {
 
         assertThatThrownBy(() -> clinicalDayService.reopenClinicalDay(dayId, req, userId))
                 .isInstanceOf(VersionConflictException.class);
+    }
+
+    @Test
+    void canAdvanceToNextDay_whenNotEnoughRecords_returnsFalse() {
+        when(clinicalDayRepository.findCurrentDayByEpisodeId(episodeId)).thenReturn(Optional.of(testDay));
+        when(hourlyRecordRepository.countByClinicalDayId(dayId)).thenReturn(10L);
+
+        boolean result = clinicalDayService.canAdvanceToNextDay(episodeId);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void canAdvanceToNextDay_whenEnoughRecords_returnsTrue() {
+        when(clinicalDayRepository.findCurrentDayByEpisodeId(episodeId)).thenReturn(Optional.of(testDay));
+        when(hourlyRecordRepository.countByClinicalDayId(dayId)).thenReturn(24L);
+
+        boolean result = clinicalDayService.canAdvanceToNextDay(episodeId);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void canAdvanceToNextDay_whenDaySigned_returnsFalse() {
+        testDay.setStatus(ClinicalDayStatus.DOCTOR_SIGNED);
+        when(clinicalDayRepository.findCurrentDayByEpisodeId(episodeId)).thenReturn(Optional.of(testDay));
+
+        boolean result = clinicalDayService.canAdvanceToNextDay(episodeId);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void canAdvanceToNextDay_whenDayClosed_returnsFalse() {
+        testDay.setStatus(ClinicalDayStatus.CLOSED);
+        when(clinicalDayRepository.findCurrentDayByEpisodeId(episodeId)).thenReturn(Optional.of(testDay));
+
+        boolean result = clinicalDayService.canAdvanceToNextDay(episodeId);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void canAdvanceToNextDay_whenNoOpenDay_throws() {
+        when(clinicalDayRepository.findCurrentDayByEpisodeId(episodeId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> clinicalDayService.canAdvanceToNextDay(episodeId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("No open clinical day");
+    }
+
+    @Test
+    void canAdvanceToNextDay_whenReopenedWithEnoughRecords_returnsTrue() {
+        testDay.setStatus(ClinicalDayStatus.REOPENED);
+        when(clinicalDayRepository.findCurrentDayByEpisodeId(episodeId)).thenReturn(Optional.of(testDay));
+        when(hourlyRecordRepository.countByClinicalDayId(dayId)).thenReturn(24L);
+
+        boolean result = clinicalDayService.canAdvanceToNextDay(episodeId);
+
+        assertThat(result).isTrue();
     }
 }

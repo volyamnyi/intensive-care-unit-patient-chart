@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from '@mui/material';
-import { theme } from '../../styles/theme';
+import { ThemeProvider, createTheme } from '@mui/material';
+const theme = createTheme({});
 import PatientDayPage from '../../pages/doctor/PatientDayPage';
 import type { Episode, ClinicalDay, ClinicalScale } from '../../types';
 
