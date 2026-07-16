@@ -10,7 +10,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class HospitalizationDTO {
     UUID id;
-    UUID patientId;
+    Long patientId;
     UUID departmentId;
     LocalDateTime admissionDate;
     String diagnosis;

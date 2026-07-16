@@ -14,7 +14,7 @@ import lombok.experimental.FieldDefaults;
 public class Episode extends BaseEntity {
 
     @Column(name = "patient_id", nullable = false)
-    UUID patientId;
+    Long patientId;
 
     @Column(name = "hospitalization_id")
     UUID hospitalizationId;

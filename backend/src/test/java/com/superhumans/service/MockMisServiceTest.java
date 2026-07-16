@@ -35,14 +35,14 @@ class MockMisServiceTest {
 
     @Test
     void getPatient_whenFound_returnsPatient() {
-        var result = misService.getPatient(UUID.fromString("00000000-0000-0000-0000-000000001001"));
+        var result = misService.getPatient(1001L);
         assertThat(result).isPresent();
         assertThat(result.get().getFullName()).contains("Петренко");
     }
 
     @Test
     void getPatient_whenNotFound_returnsEmpty() {
-        var result = misService.getPatient(unknownId);
+        var result = misService.getPatient(9999L);
         assertThat(result).isEmpty();
     }
 
@@ -148,7 +148,7 @@ class MockMisServiceTest {
     void getPatient_whenErrorModeUnavailable_throws() {
         misService.setErrorMode("unavailable");
         try {
-            misService.getPatient(UUID.fromString("00000000-0000-0000-0000-000000001001"));
+            misService.getPatient(1001L);
         } catch (RuntimeException e) {
             assertThat(e.getMessage()).contains("unavailable");
             misService.setErrorMode("none");
@@ -159,7 +159,7 @@ class MockMisServiceTest {
     void getPatient_whenErrorModeNotFound_throws() {
         misService.setErrorMode("not_found");
         try {
-            misService.getPatient(UUID.fromString("00000000-0000-0000-0000-000000001001"));
+            misService.getPatient(1001L);
         } catch (RuntimeException e) {
             assertThat(e.getMessage()).contains("not found");
             misService.setErrorMode("none");

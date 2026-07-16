@@ -31,7 +31,7 @@ public class EpisodeController {
 
     @GetMapping
     public ResponseEntity<List<EpisodeResponse>> searchEpisodes(
-            @RequestParam(required = false) UUID patientId,
+            @RequestParam(required = false) Long patientId,
             @RequestParam(required = false) EpisodeStatus status) {
         return ResponseEntity.ok(episodeService.searchEpisodes(patientId, status));
     }

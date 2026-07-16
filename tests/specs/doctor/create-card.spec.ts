@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures/index';
 
 const API = 'http://localhost:8085/api';
-const PATIENT_ID = '00000000-0000-0000-0000-000000001004'; // Бондаренко
+const PATIENT_ID = 1004; // Бондаренко
 
 async function getToken(request: any) {
   const res = await request.post(`${API}/auth/login`, {

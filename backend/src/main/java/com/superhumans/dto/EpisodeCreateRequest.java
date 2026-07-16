@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EpisodeCreateRequest {
     @NotNull
-    UUID patientId;
+    Long patientId;
     UUID hospitalizationId;
     UUID departmentId;
     @NotNull

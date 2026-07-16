@@ -10,7 +10,7 @@ export interface User {
 }
 
 export interface PatientDto {
-  id: string;
+  id: number;
   fullName: string;
   birthDate: string;
   sexCode: string;
@@ -26,7 +26,7 @@ export interface PatientDto {
 }
 
 export interface EpisodeCreateRequest {
-  patientId: string;
+  patientId: number;
   hospitalizationId?: string;
   departmentId?: string;
   admissionDate: string;
@@ -125,7 +125,7 @@ export interface ReopenRequest {
 
 export interface Episode {
   id: string;
-  patientId: string;
+  patientId: number;
   patientName: string | null;
   hospitalizationId: string | null;
   departmentId: string | null;

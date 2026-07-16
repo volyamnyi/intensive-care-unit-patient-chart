@@ -29,7 +29,7 @@ vi.mock('../../components/common/PatientSearch', () => ({
 }));
 
 const testPatient: PatientDto = {
-  id: 'pat-1',
+  id: 1001,
   fullName: 'Петренко Іван',
   birthDate: '1990-05-15',
   sexCode: 'M',
@@ -125,7 +125,7 @@ describe('CreateCardPage', () => {
     await userEvent.click(screen.getByText('Створити карту'));
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledWith({
-        patientId: 'pat-1',
+        patientId: 1001,
         admissionDate: expect.any(String),
       });
       expect(mockNavigate).toHaveBeenCalledWith('/doctor/episode/ep-1');

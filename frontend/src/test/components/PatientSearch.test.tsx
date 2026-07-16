@@ -16,13 +16,13 @@ vi.mock('../../api/endpoints', () => ({
 
 const testPatients: PatientDto[] = [
   {
-    id: 'p1', fullName: 'Петренко Іван', birthDate: '1990-05-15',
+    id: 1001, fullName: 'Петренко Іван', birthDate: '1990-05-15',
     sexCode: 'M', address: 'м. Київ, вул. Хрещатик, 1',
     phone: '+380501234567', email: '', externalId1: '123456',
     externalId2: '', height: 180, weight: 80, bloodGroup: 'A', rhFactor: '+',
   },
   {
-    id: 'p2', fullName: 'Коваленко Олена', birthDate: '1985-10-20',
+    id: 1002, fullName: 'Коваленко Олена', birthDate: '1985-10-20',
     sexCode: 'F', address: 'м. Львів, вул. Лесі Українки',
     phone: '+380507654321', email: '', externalId1: '789012',
     externalId2: '', height: 165, weight: null, bloodGroup: 'B', rhFactor: '-',

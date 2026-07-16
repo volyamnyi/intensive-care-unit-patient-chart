@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EpisodeResponse {
     UUID id;
-    UUID patientId;
+    Long patientId;
     String patientName;
     UUID hospitalizationId;
     UUID departmentId;

@@ -7,7 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -26,7 +25,7 @@ public class PatientController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PatientDTO> getPatient(@PathVariable UUID id) {
+    public ResponseEntity<PatientDTO> getPatient(@PathVariable Long id) {
         return misService.getPatient(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

@@ -26,7 +26,7 @@ export const patientApi = {
 };
 
 export const episodeApi = {
-  search: (params?: { patientId?: string; status?: string }) =>
+  search: (params?: { patientId?: number; status?: string }) =>
     client.get<Episode[]>('/episodes', { params }),
   getById: (id: string) =>
     client.get<Episode>(`/episodes/${id}`),

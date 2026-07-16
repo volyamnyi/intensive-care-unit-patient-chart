@@ -71,7 +71,7 @@ vi.mock('../../services/AuthContext', () => ({
 
 const mockEpisode: Episode = {
   id: 'ep-1',
-  patientId: 'pat-1',
+  patientId: 1001,
   patientName: 'Петренко Іван',
   hospitalizationId: null,
   departmentId: null,

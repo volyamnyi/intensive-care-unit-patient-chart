@@ -49,14 +49,14 @@ class EpisodeServiceTest {
     private ArgumentCaptor<Episode> episodeCaptor;
 
     private UUID episodeId;
-    private UUID patientId;
+    private Long patientId;
     private UUID userId;
     private Episode testEpisode;
 
     @BeforeEach
     void setUp() {
         episodeId = UUID.randomUUID();
-        patientId = UUID.randomUUID();
+        patientId = 1001L;
         userId = UUID.randomUUID();
         testEpisode = Episode.builder()
                 .patientId(patientId)

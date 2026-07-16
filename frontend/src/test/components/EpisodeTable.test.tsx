@@ -7,7 +7,7 @@ import type { Episode } from '../../types';
 const mockEpisodes: Episode[] = [
   {
     id: 'ep-1',
-    patientId: 'pat-1',
+    patientId: 1001,
     patientName: 'Петренко Іван',
     hospitalizationId: null,
     departmentId: null,
@@ -22,7 +22,7 @@ const mockEpisodes: Episode[] = [
   },
   {
     id: 'ep-2',
-    patientId: 'pat-2',
+    patientId: 1002,
     patientName: 'Коваленко Олена',
     hospitalizationId: null,
     departmentId: null,

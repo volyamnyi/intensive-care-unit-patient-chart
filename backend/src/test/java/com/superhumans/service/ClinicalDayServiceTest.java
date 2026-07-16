@@ -61,7 +61,7 @@ class ClinicalDayServiceTest {
         userId = UUID.randomUUID();
         testEpisode = new Episode();
         testEpisode.setId(episodeId);
-        testEpisode.setPatientId(UUID.randomUUID());
+        testEpisode.setPatientId(1001L);
         testEpisode.setStatus(EpisodeStatus.ACTIVE);
         testEpisode.setVersion(0);
 

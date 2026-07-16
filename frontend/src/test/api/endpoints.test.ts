@@ -53,8 +53,8 @@ describe('episodeApi', () => {
   });
 
   it('create posts to /episodes', () => {
-    episodeApi.create({ patientId: '1001', hospitalizationId: '2001', departmentId: '3001', admissionDate: '2024-01-01T00:00:00Z' });
-    expect(mockClient.post).toHaveBeenCalledWith('/episodes', { patientId: '1001', hospitalizationId: '2001', departmentId: '3001', admissionDate: '2024-01-01T00:00:00Z' });
+    episodeApi.create({ patientId: 1001, hospitalizationId: '2001', departmentId: '3001', admissionDate: '2024-01-01T00:00:00Z' });
+    expect(mockClient.post).toHaveBeenCalledWith('/episodes', { patientId: 1001, hospitalizationId: '2001', departmentId: '3001', admissionDate: '2024-01-01T00:00:00Z' });
   });
 });
 

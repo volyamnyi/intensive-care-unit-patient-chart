@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface MisService {
 
-    Optional<PatientDTO> getPatient(UUID patientId);
+    Optional<PatientDTO> getPatient(Long patientId);
 
     Optional<HospitalizationDTO> getHospitalization(UUID hospitalizationId);
 

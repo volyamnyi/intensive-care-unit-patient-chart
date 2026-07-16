@@ -11,8 +11,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface EpisodeRepository extends JpaRepository<Episode, UUID> {
-    List<Episode> findByPatientId(UUID patientId);
-    Optional<Episode> findByPatientIdAndStatus(UUID patientId, EpisodeStatus status);
+    List<Episode> findByPatientId(Long patientId);
+    Optional<Episode> findByPatientIdAndStatus(Long patientId, EpisodeStatus status);
     List<Episode> findByStatus(EpisodeStatus status);
     List<Episode> findByDepartmentId(UUID departmentId);
     List<Episode> findByAdmissionDateBetween(LocalDateTime start, LocalDateTime end);

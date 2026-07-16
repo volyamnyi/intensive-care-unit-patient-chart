@@ -2,14 +2,13 @@ package com.superhumans.mis.dto;
 
 import lombok.*;
 import java.time.LocalDate;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PatientDTO {
-    UUID id;
+    Long id;
     String fullName;
     LocalDate birthDate;
     String sexCode;

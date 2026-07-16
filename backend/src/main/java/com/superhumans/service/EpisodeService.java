@@ -39,7 +39,7 @@ public class EpisodeService {
         return EpisodeMapper.toResponse(episode, patientName);
     }
 
-    public List<EpisodeResponse> searchEpisodes(UUID patientId, EpisodeStatus status) {
+    public List<EpisodeResponse> searchEpisodes(Long patientId, EpisodeStatus status) {
         List<Episode> episodes;
         if (patientId != null && status != null) {
             episodes = episodeRepository.findByPatientIdAndStatus(patientId, status).stream().toList();

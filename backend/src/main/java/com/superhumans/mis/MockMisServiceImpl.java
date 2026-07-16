@@ -29,7 +29,8 @@ public class MockMisServiceImpl implements MisService {
         this.simulateErrors = !"none".equals(mode);
     }
 
-    final Map<UUID, PatientDTO> patients = new LinkedHashMap<>();
+    final Map<Long, PatientDTO> patients = new LinkedHashMap<>();
+    final Set<UUID> knownHospitalizationIds = new HashSet<>();
     final Map<UUID, UserMisDTO> users = new LinkedHashMap<>();
     final Map<UUID, DepartmentDTO> departments = new LinkedHashMap<>();
     final Map<UUID, List<UserMisDTO>> departmentUsers = new LinkedHashMap<>();
@@ -42,24 +43,26 @@ public class MockMisServiceImpl implements MisService {
     }
 
     void initPatients() {
-        addPatient(toUuid(1001), "Петренко Іван Сергійович", LocalDate.of(1978, 3, 15), "M",
+        knownHospitalizationIds.add(toUuid(1001));
+        knownHospitalizationIds.add(toUuid(1002));
+        addPatient(1001L, "Петренко Іван Сергійович", LocalDate.of(1978, 3, 15), "M",
                 "м. Київ, вул. Хрещатик, 15", "380501234567", "ivan.petrenko@mail.com",
                 "МК-001234", "301020251234", 178, 82, "A(II)", "Rh+");
-        addPatient(toUuid(1002), "Коваленко Олена Вікторівна", LocalDate.of(1985, 11, 22), "F",
+        addPatient(1002L, "Коваленко Олена Вікторівна", LocalDate.of(1985, 11, 22), "F",
                 "м. Львів, вул. Шевченка, 8", "380671112233", "olena.kov@mail.com",
                 "МК-005678", "150320259876", 165, 58, "B(III)", "Rh+");
-        addPatient(toUuid(1003), "Сидоренко Василь Петрович", LocalDate.of(1962, 7, 8), "M",
+        addPatient(1003L, "Сидоренко Василь Петрович", LocalDate.of(1962, 7, 8), "M",
                 "м. Харків, пр. Науки, 42", "380631234567", "vasyl.syd@mail.com",
                 "МК-009012", "070820253456", 182, 90, "O(I)", "Rh−");
-        addPatient(toUuid(1004), "Бондаренко Тетяна Миколаївна", LocalDate.of(1990, 5, 12), "F",
+        addPatient(1004L, "Бондаренко Тетяна Миколаївна", LocalDate.of(1990, 5, 12), "F",
                 "м. Одеса, вул. Дерибасівська, 20", "380501112233", "t.bond@mail.com",
                 "МК-011111", "120520259001", 170, 65, "A(II)", "Rh+");
-        addPatient(toUuid(1005), "Ткачук Андрій Вікторович", LocalDate.of(1982, 9, 3), "M",
+        addPatient(1005L, "Ткачук Андрій Вікторович", LocalDate.of(1982, 9, 3), "M",
                 "м. Дніпро, пр. Яворницького, 55", "380632223344", "and.tkach@mail.com",
                 "МК-022222", "030920259002", 185, 88, "AB(IV)", "Rh−");
     }
 
-    void addPatient(UUID id, String name, LocalDate birthDate, String sex, String address,
+    void addPatient(Long id, String name, LocalDate birthDate, String sex, String address,
                             String phone, String email, String extId1, String extId2,
                             Integer height, Integer weight, String bloodGroup, String rhFactor) {
         patients.put(id, PatientDTO.builder()
@@ -142,7 +145,7 @@ public class MockMisServiceImpl implements MisService {
     }
 
     @Override
-    public Optional<PatientDTO> getPatient(UUID patientId) {
+    public Optional<PatientDTO> getPatient(Long patientId) {
         checkErrors();
         Optional<PatientDTO> result = Optional.ofNullable(patients.get(patientId));
         auditService.logAction("MIS", null, "GET_PATIENT", getCurrentUserId());
@@ -152,16 +155,18 @@ public class MockMisServiceImpl implements MisService {
     @Override
     public Optional<HospitalizationDTO> getHospitalization(UUID hospitalizationId) {
         checkErrors();
-        // Return a mock hospitalization for the known patient IDs
-        UUID patientId = hospitalizationId; // In mock, hospitalization ID maps to patient
-        PatientDTO patient = patients.get(patientId);
+        if (hospitalizationId == null || !knownHospitalizationIds.contains(hospitalizationId)) {
+            return Optional.empty();
+        }
+        // Map hospitalization to a patient by using the last 4 digits
+        PatientDTO patient = patients.values().stream().findFirst().orElse(null);
         if (patient == null) return Optional.empty();
 
         DepartmentDTO dept = departments.values().iterator().next();
         auditService.logAction("MIS", null, "GET_HOSPITALIZATION", getCurrentUserId());
         return Optional.of(HospitalizationDTO.builder()
                 .id(hospitalizationId)
-                .patientId(patientId)
+                .patientId(patient.getId())
                 .departmentId(dept.getId())
                 .admissionDate(LocalDateTime.now().minusDays(3))
                 .diagnosis("Діагноз при госпіталізації")

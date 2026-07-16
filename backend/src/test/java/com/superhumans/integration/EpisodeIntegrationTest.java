@@ -15,8 +15,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID SEED_EPISODE_ID =
             UUID.fromString("a1111111-1111-1111-1111-111111111111");
-    private static final UUID SEED_PATIENT_ID =
-            UUID.fromString("00000000-0000-0000-0000-000000001001");
+    private static final long SEED_PATIENT_ID = 1001L;
 
     @Test
     void getExistingEpisode_returnsEpisode() {
@@ -73,7 +72,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createEpisode_asDoctor_succeeds() {
         EpisodeCreateRequest req = new EpisodeCreateRequest(
-                UUID.randomUUID(), null, null, LocalDateTime.now());
+                1006L, null, null, LocalDateTime.now());
 
         var entity = authEntity(req, getDoctorToken());
 
@@ -90,7 +89,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createEpisode_asNurse_returnsForbidden() {
         EpisodeCreateRequest req = new EpisodeCreateRequest(
-                UUID.randomUUID(), null, null, LocalDateTime.now());
+                1007L, null, null, LocalDateTime.now());
 
         var entity = authEntity(req, getNurseToken());
 
@@ -138,7 +137,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void closeEpisode_closesSuccessfully() {
         EpisodeCreateRequest createReq = new EpisodeCreateRequest(
-                UUID.randomUUID(), null, null, LocalDateTime.now());
+                1008L, null, null, LocalDateTime.now());
 
         var createEntity = authEntity(createReq, getDoctorToken());
 
@@ -163,7 +162,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void closeEpisode_withWrongVersion_returnsConflict() {
         EpisodeCreateRequest createReq = new EpisodeCreateRequest(
-                UUID.randomUUID(), null, null, LocalDateTime.now());
+                1009L, null, null, LocalDateTime.now());
 
         var createEntity = authEntity(createReq, getDoctorToken());
         var createRes = restTemplate.exchange(
