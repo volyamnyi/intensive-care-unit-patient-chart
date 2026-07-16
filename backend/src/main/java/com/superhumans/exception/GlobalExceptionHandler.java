@@ -2,6 +2,7 @@ package com.superhumans.exception;
 
 import com.superhumans.dto.ErrorResponse;
 import jakarta.persistence.OptimisticLockException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -63,6 +64,23 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex) {
         return ResponseEntity.badRequest().body(
                 new ErrorResponse(ErrorCode.BAD_REQUEST, ex.getMessage(), UUID.randomUUID().toString()));
+    }
+
+    @ExceptionHandler(DuplicateHourlyRecordException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateHourlyRecord(DuplicateHourlyRecordException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String message = ex.getMostSpecificCause().getMessage();
+        if (message != null && message.contains("ukq1fhtacn518q9viq4oonaghi9")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    new ErrorResponse(ErrorCode.DUPLICATE_HOURLY_RECORD, "Hourly record already exists for this hour", UUID.randomUUID().toString()));
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new ErrorResponse(ErrorCode.VERSION_CONFLICT, "Data integrity violation", UUID.randomUUID().toString()));
     }
 
     @ExceptionHandler(RuntimeException.class)

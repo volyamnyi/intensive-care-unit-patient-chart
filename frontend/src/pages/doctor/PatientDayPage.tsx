@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Tabs, Tab, Button, Chip, Grid, Alert, CircularProgress, Paper, useTheme } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
+import { Box, Typography, Tabs, Tab, Button, Chip, Grid, Alert, CircularProgress, Paper, Dialog, DialogTitle, DialogContent, DialogActions, TextField, useTheme } from '@mui/material';
+import { ArrowBack, LockOpen } from '@mui/icons-material';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
 import ClinicalDayTimeline from '../../components/common/ClinicalDayTimeline';
@@ -36,6 +36,8 @@ export default function PatientDayPage() {
   const [currentHour, setCurrentHour] = useState(HOURS.find(h => h <= new Date().getHours()) || 8);
   const [vitalForm, setVitalForm] = useState<HourlyRecordCreateRequest>({ recordTime: '' });
   const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [autoSaving, setAutoSaving] = useState(false);
   const lastManualSave = useRef(0);
@@ -196,6 +198,21 @@ export default function PatientDayPage() {
     }
   };
 
+  const handleReopen = async () => {
+    if (!selectedDay || !user || !reopenReason.trim()) return;
+    try {
+      await clinicalDayApi.reopen(selectedDay.id, { reason: reopenReason.trim(), version: selectedDay.version });
+      setReopenDialogOpen(false);
+      setReopenReason('');
+      const daysRes = await episodeApi.getClinicalDays(episodeId!);
+      setClinicalDays(daysRes.data);
+      const updated = daysRes.data.find(d => d.id === selectedDay.id);
+      if (updated) setSelectedDay(updated);
+    } catch {
+      // error handled silently
+    }
+  };
+
   if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
   if (!episode) return <Alert severity="error">Епізод не знайдено</Alert>;
 
@@ -206,9 +223,13 @@ export default function PatientDayPage() {
 
   const isNurse = user?.role === 'NURSE';
   const isDoctor = user?.role === 'DOCTOR' || user?.role === 'HEAD_OF_DEPARTMENT';
+  const isHod = user?.role === 'HEAD_OF_DEPARTMENT';
   const canSign = selectedDay && (
     (isNurse && selectedDay.status === 'OPEN') ||
     (isDoctor && selectedDay.status === 'NURSE_SIGNED')
+  );
+  const canReopen = isHod && selectedDay && (
+    selectedDay.status === 'NURSE_SIGNED' || selectedDay.status === 'DOCTOR_SIGNED'
   );
 
   return (
@@ -229,6 +250,11 @@ export default function PatientDayPage() {
           {canSign && (
             <Button variant="contained" onClick={() => setSignDialogOpen(true)}>
               Підписати добу
+            </Button>
+          )}
+          {canReopen && (
+            <Button variant="outlined" color="warning" startIcon={<LockOpen />} onClick={() => setReopenDialogOpen(true)}>
+              Перевідкрити
             </Button>
           )}
         </Box>
@@ -314,6 +340,30 @@ export default function PatientDayPage() {
           )}
         </>
       )}
+
+      <Dialog open={reopenDialogOpen} onClose={() => setReopenDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Перевідкрити добу №{selectedDay?.dayNumber}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            Ви впевнені, що хочете перевідкрити цю добу? Підписи будуть скасовані.
+          </Typography>
+          <TextField
+            autoFocus
+            label="Причина перевідкриття"
+            fullWidth
+            multiline
+            rows={3}
+            value={reopenReason}
+            onChange={e => setReopenReason(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReopenDialogOpen(false)}>Скасувати</Button>
+          <Button onClick={handleReopen} variant="contained" color="warning" disabled={!reopenReason.trim()}>
+            Перевідкрити
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <SignDialog
         open={signDialogOpen}

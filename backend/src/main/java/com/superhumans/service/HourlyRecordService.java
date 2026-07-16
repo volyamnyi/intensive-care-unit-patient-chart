@@ -7,6 +7,7 @@ import com.superhumans.entity.ClinicalDay;
 import com.superhumans.entity.ClinicalDayStatus;
 import com.superhumans.entity.HourlyRecord;
 import com.superhumans.exception.DocumentLockedException;
+import com.superhumans.exception.DuplicateHourlyRecordException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.HourlyRecordMapper;
@@ -48,6 +49,11 @@ public class HourlyRecordService {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + clinicalDayId));
         assertNotLocked(day);
+
+        int recordHour = request.getRecordTime().getHour();
+        if (hourlyRecordRepository.findByClinicalDayIdAndRecordHour(clinicalDayId, recordHour).isPresent()) {
+            throw new DuplicateHourlyRecordException(clinicalDayId, recordHour);
+        }
 
         HourlyRecord record = HourlyRecordMapper.toEntity(request);
         record.setClinicalDay(day);

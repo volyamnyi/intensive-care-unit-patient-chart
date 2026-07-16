@@ -48,6 +48,7 @@ public class FluidBalanceService {
             UUID orderId = order.getId();
             List<OrderExecution> executions = orderExecutionRepository.findByOrderId(orderId);
             for (OrderExecution exec : executions) {
+                if (exec.getExecutedAt() == null) continue;
                 int hour = exec.getExecutedAt().getHour();
                 double dose = parseDose(exec.getActualDose());
                 intakeByHour.merge(hour, dose, Double::sum);

@@ -10,6 +10,7 @@ import java.util.UUID;
 public interface HourlyRecordRepository extends JpaRepository<HourlyRecord, UUID> {
     List<HourlyRecord> findByClinicalDayIdOrderByRecordTimeAsc(UUID clinicalDayId);
     Optional<HourlyRecord> findByClinicalDayIdAndRecordTime(UUID clinicalDayId, LocalDateTime recordTime);
+    Optional<HourlyRecord> findByClinicalDayIdAndRecordHour(UUID clinicalDayId, Integer recordHour);
     List<HourlyRecord> findByClinicalDayIdAndRecordTimeBetweenOrderByRecordTimeAsc(
             UUID clinicalDayId, LocalDateTime start, LocalDateTime end);
     void deleteByClinicalDayId(UUID clinicalDayId);
