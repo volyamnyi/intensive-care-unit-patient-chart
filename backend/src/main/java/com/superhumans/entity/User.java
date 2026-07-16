@@ -2,34 +2,37 @@ package com.superhumans.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Entity
 @Table(name = "users")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class User extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 50)
-    private String login;
+    String login;
 
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+    String passwordHash;
 
     @Column(name = "full_name", nullable = false, length = 200)
-    private String fullName;
+    String fullName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private UserRole role;
+    UserRole role;
 
     @Column(length = 100)
-    private String email;
+    String email;
 
     @Column(name = "speciality_code", length = 20)
-    private String specialityCode;
+    String specialityCode;
 
     @Column(name = "speciality_name", length = 200)
-    private String specialityName;
+    String specialityName;
 
     @Column(length = 20)
-    private String phone;
+    String phone;
 }

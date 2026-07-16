@@ -11,25 +11,28 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class MockMisServiceImpl implements MisService {
 
-    private final AuditService auditService;
+    final AuditService auditService;
 
-    private boolean simulateErrors = false;
-    private String errorMode = "none";
+    boolean simulateErrors = false;
+    String errorMode = "none";
 
     public void setErrorMode(String mode) {
         this.errorMode = mode;
         this.simulateErrors = !"none".equals(mode);
     }
 
-    private final Map<UUID, PatientDTO> patients = new LinkedHashMap<>();
-    private final Map<UUID, UserMisDTO> users = new LinkedHashMap<>();
-    private final Map<UUID, DepartmentDTO> departments = new LinkedHashMap<>();
-    private final Map<UUID, List<UserMisDTO>> departmentUsers = new LinkedHashMap<>();
+    final Map<UUID, PatientDTO> patients = new LinkedHashMap<>();
+    final Map<UUID, UserMisDTO> users = new LinkedHashMap<>();
+    final Map<UUID, DepartmentDTO> departments = new LinkedHashMap<>();
+    final Map<UUID, List<UserMisDTO>> departmentUsers = new LinkedHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -38,7 +41,7 @@ public class MockMisServiceImpl implements MisService {
         initDepartments();
     }
 
-    private void initPatients() {
+    void initPatients() {
         addPatient(toUuid(1001), "Петренко Іван Сергійович", LocalDate.of(1978, 3, 15), "M",
                 "м. Київ, вул. Хрещатик, 15", "380501234567", "ivan.petrenko@mail.com",
                 "МК-001234", "301020251234", 178, 82, "A(II)", "Rh+");
@@ -56,7 +59,7 @@ public class MockMisServiceImpl implements MisService {
                 "МК-022222", "030920259002", 185, 88, "AB(IV)", "Rh−");
     }
 
-    private void addPatient(UUID id, String name, LocalDate birthDate, String sex, String address,
+    void addPatient(UUID id, String name, LocalDate birthDate, String sex, String address,
                             String phone, String email, String extId1, String extId2,
                             Integer height, Integer weight, String bloodGroup, String rhFactor) {
         patients.put(id, PatientDTO.builder()
@@ -68,7 +71,7 @@ public class MockMisServiceImpl implements MisService {
                 .build());
     }
 
-    private void initUsers() {
+    void initUsers() {
         addUser(toUuid(11), "doctor1", "Олександр Мельник", "Мельник О.",
                 "101", "Лікар-анестезіолог", "melnyk@hospital.ua", "380501111111");
         addUser(toUuid(12), "doctor2", "Наталія Бойко", "Бойко Н.",
@@ -83,7 +86,7 @@ public class MockMisServiceImpl implements MisService {
                 "999", "Адміністратор", "admin@hospital.ua", "380506666666");
     }
 
-    private void addUser(UUID id, String login, String name, String shortName,
+    void addUser(UUID id, String login, String name, String shortName,
                          String specCode, String specName, String email, String phone) {
         users.put(id, UserMisDTO.builder()
                 .id(id).login(login).fullName(name).shortName(shortName)
@@ -92,7 +95,7 @@ public class MockMisServiceImpl implements MisService {
                 .build());
     }
 
-    private void initDepartments() {
+    void initDepartments() {
         DepartmentDTO icu = DepartmentDTO.builder()
                 .id(toUuid(1)).name("Відділення анестезіології та інтенсивної терапії").code("VAIT").build();
         departments.put(icu.getId(), icu);
@@ -108,11 +111,11 @@ public class MockMisServiceImpl implements MisService {
                 users.get(toUuid(11)), users.get(toUuid(15))));
     }
 
-    private UUID toUuid(long num) {
+    UUID toUuid(long num) {
         return UUID.fromString(String.format("00000000-0000-0000-0000-%012d", num));
     }
 
-    private UUID getCurrentUserId() {
+    UUID getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getCredentials() instanceof UUID id) {
             return id;
@@ -120,7 +123,7 @@ public class MockMisServiceImpl implements MisService {
         return null;
     }
 
-    private void checkErrors() {
+    void checkErrors() {
         if (simulateErrors) {
             switch (errorMode) {
                 case "timeout":

@@ -47,18 +47,13 @@ export default function LoginPage() {
         bgcolor: isDark ? '#1A1A1A' : '#FFFFFF',
       }}>
         <CardContent sx={{ p: 0 }}>
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Box sx={{
-              width: 56, height: 56, borderRadius: '14px',
-              background: 'linear-gradient(135deg, #FF5F33 0%, #FF8C66 100%)',
-              mx: 'auto', mb: 2.5,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 900, fontSize: 24, color: '#FFFFFF',
-              fontFamily: '"Rubik", sans-serif',
-              boxShadow: '0 4px 16px rgba(255, 95, 51, 0.3)',
-            }}>
-              VA
-            </Box>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Box
+              component="img"
+              src={isDark ? '/superhumans-white.svg' : '/superhumans.svg'}
+              alt="Superhumans"
+              sx={{ height: 56, width: 'auto', mx: 'auto', mb: 2.5, display: 'block' }}
+            />
             <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', mb: 0.5, fontWeight: 800, color: isDark ? '#FFFFFF' : '#1F1F1F', letterSpacing: '-0.5px' }}>
               ВАІТ
             </Typography>

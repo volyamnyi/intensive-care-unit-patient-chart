@@ -352,9 +352,9 @@ icu-patient-chart/
 │       └── types/            # TypeScript interfaces
 ├── tests/                    # Playwright E2E tests
 │   ├── playwright.config.ts
-│   ├── pages/                # Page objects (6)
+│   ├── pages/                # Page objects (7)
 │   ├── fixtures/             # Role-based test fixtures
-│   └── specs/                # Test specs (13 files, 37 tests)
+│   └── specs/                # Test specs (28 files, 79 tests)
 └── README.md
 ```
 
@@ -370,8 +370,8 @@ icu-patient-chart/
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (106) |
-| `mvn test -Pintegration-test` | Run integration tests (7) — requires Docker |
+| `mvn test` | Run unit tests (149) |
+| `mvn test -Pintegration-test` | Run integration tests (79) — requires Docker |
 
 #### Frontend
 | Command | Action |
@@ -380,22 +380,36 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest unit tests (35) |
+| `npm t` | Run Vitest unit tests (144) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (37 total, 7 projects) |
-| `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests (36) |
+| `npx playwright test` | Run all E2E tests (79 total, 7 projects) |
+| `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests (79) |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
 | `npx playwright show-report` | View HTML report |
 
+### Main Test Scenario
+
+**All tests run exclusively via GitHub Actions CI — never locally.**
+
+| Test type | CI job | Trigger |
+|---|---|---|
+| Backend unit (149) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
+| Frontend Vitest (144) | `test` → `npm test` | Same |
+| Playwright E2E (79) | `test` → `npx playwright test` | Same |
+| Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
+
+Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
+
 ### Testing Summary
-- **Backend unit tests**: 106 tests (12 service classes) — `mvn test`
-- **Backend integration tests**: 7 tests via Testcontainers — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 35 tests (5 files)
-- **E2E Playwright tests**: 37 tests (24 spec files, 7 projects)
+- **Backend unit tests**: 149 tests (14 classes) — `mvn test`
+- **Backend integration tests**: 79 tests via Testcontainers (13 classes) — `mvn test -Pintegration-test`
+- **Frontend Vitest tests**: 144 tests (18 files)
+- **E2E Playwright tests**: 79 tests (28 spec files, 7 projects)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
 > **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.

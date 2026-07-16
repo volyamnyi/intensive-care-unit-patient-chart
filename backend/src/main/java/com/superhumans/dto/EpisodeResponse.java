@@ -4,20 +4,23 @@ import com.superhumans.entity.EpisodeStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class EpisodeResponse {
-    private UUID id;
-    private UUID patientId;
-    private String patientName;
-    private UUID hospitalizationId;
-    private UUID departmentId;
-    private LocalDateTime admissionDate;
-    private LocalDateTime dischargeDate;
-    private EpisodeStatus status;
-    private UUID createdBy;
-    private LocalDateTime createdAt;
-    private UUID updatedBy;
-    private LocalDateTime updatedAt;
-    private Integer version;
+    UUID id;
+    UUID patientId;
+    String patientName;
+    UUID hospitalizationId;
+    UUID departmentId;
+    LocalDateTime admissionDate;
+    LocalDateTime dischargeDate;
+    EpisodeStatus status;
+    UUID createdBy;
+    LocalDateTime createdAt;
+    UUID updatedBy;
+    LocalDateTime updatedAt;
+    Integer version;
 }

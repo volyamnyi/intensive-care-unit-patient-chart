@@ -26,24 +26,27 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PdfGeneratorService {
 
-    private final GeneratedPdfRepository generatedPdfRepository;
-    private final ClinicalDayRepository clinicalDayRepository;
-    private final EpisodeRepository episodeRepository;
-    private final HourlyRecordRepository hourlyRecordRepository;
-    private final AuditService auditService;
-    private final MedicalOrderRepository medicalOrderRepository;
-    private final OrderExecutionRepository orderExecutionRepository;
-    private final MedicalNoteRepository medicalNoteRepository;
-    private final ScaleResultRepository scaleResultRepository;
-    private final FluidBalanceRepository fluidBalanceRepository;
-    private final SignatureRepository signatureRepository;
-    private final UserRepository userRepository;
-    private final MisService misService;
+    GeneratedPdfRepository generatedPdfRepository;
+    ClinicalDayRepository clinicalDayRepository;
+    EpisodeRepository episodeRepository;
+    HourlyRecordRepository hourlyRecordRepository;
+    AuditService auditService;
+    MedicalOrderRepository medicalOrderRepository;
+    OrderExecutionRepository orderExecutionRepository;
+    MedicalNoteRepository medicalNoteRepository;
+    ScaleResultRepository scaleResultRepository;
+    FluidBalanceRepository fluidBalanceRepository;
+    SignatureRepository signatureRepository;
+    UserRepository userRepository;
+    MisService misService;
 
     public PdfResponse getLatestPdf(UUID clinicalDayId) {
         GeneratedPdf pdf = generatedPdfRepository

@@ -17,13 +17,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Component
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final AuditLogRepository auditLogRepository;
+    JwtTokenProvider jwtTokenProvider;
+    AuditLogRepository auditLogRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

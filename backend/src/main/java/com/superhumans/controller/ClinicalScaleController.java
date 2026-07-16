@@ -14,13 +14,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ClinicalScaleController {
 
-    private final ClinicalScaleService clinicalScaleService;
+    ClinicalScaleService clinicalScaleService;
 
     @GetMapping("/scales")
     public ResponseEntity<List<ClinicalScale>> getAvailableScales() {

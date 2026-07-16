@@ -11,17 +11,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FluidBalanceService {
 
-    private final FluidBalanceRepository fluidBalanceRepository;
-    private final HourlyRecordRepository hourlyRecordRepository;
-    private final MedicalOrderRepository medicalOrderRepository;
-    private final OrderExecutionRepository orderExecutionRepository;
-    private final ClinicalDayRepository clinicalDayRepository;
-    private final AuditService auditService;
+    FluidBalanceRepository fluidBalanceRepository;
+    HourlyRecordRepository hourlyRecordRepository;
+    MedicalOrderRepository medicalOrderRepository;
+    OrderExecutionRepository orderExecutionRepository;
+    ClinicalDayRepository clinicalDayRepository;
+    AuditService auditService;
 
     public List<FluidBalanceResponse> getBalances(UUID clinicalDayId) {
         return fluidBalanceRepository.findByClinicalDayIdOrderByHourAsc(clinicalDayId)

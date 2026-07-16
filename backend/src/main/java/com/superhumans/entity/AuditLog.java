@@ -5,52 +5,55 @@ import lombok.*;
 import org.hibernate.annotations.Where;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Entity
 @Table(name = "audit_logs")
 @Where(clause = "is_deleted IS NULL OR is_deleted = false")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuditLog {
 
     @Id
     @Column(columnDefinition = "UUID", updatable = false, nullable = false)
-    private UUID id;
+    UUID id;
 
     @Column(nullable = false)
-    private LocalDateTime timestamp;
+    LocalDateTime timestamp;
 
     @Column(name = "user_id")
-    private UUID userId;
+    UUID userId;
 
     @Column(nullable = false, length = 100)
-    private String entity;
+    String entity;
 
     @Column(name = "entity_id")
-    private UUID entityId;
+    UUID entityId;
 
     @Column(nullable = false, length = 100)
-    private String action;
+    String action;
 
     @Column(name = "old_value", columnDefinition = "TEXT")
-    private String oldValue;
+    String oldValue;
 
     @Column(name = "new_value", columnDefinition = "TEXT")
-    private String newValue;
+    String newValue;
 
     @Column(name = "correlation_id", length = 100)
-    private String correlationId;
+    String correlationId;
 
     @Column(columnDefinition = "TEXT")
-    private String details;
+    String details;
 
     @Column(name = "ip_address")
-    private String ipAddress;
+    String ipAddress;
 
     @Column(name = "user_role")
-    private String userRole;
+    String userRole;
 
     @Column(name = "is_deleted")
-    private Boolean isDeleted = false;
+    Boolean isDeleted = false;
 
     @PrePersist
     protected void onCreate() {

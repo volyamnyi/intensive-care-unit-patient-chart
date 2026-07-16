@@ -12,14 +12,17 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserController {
 
-    private final UserRepository userRepository;
-    private final MisService misService;
+    UserRepository userRepository;
+    MisService misService;
 
     @GetMapping("/me")
     public ResponseEntity<User> getMe(Authentication auth) {

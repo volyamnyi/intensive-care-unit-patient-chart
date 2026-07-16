@@ -3,13 +3,16 @@ package com.superhumans.dto;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class SignResponse {
-    private UUID signatureId;
-    private UUID clinicalDayId;
-    private String role;
-    private LocalDateTime signedAt;
-    private String hash;
-    private Integer version;
+    UUID signatureId;
+    UUID clinicalDayId;
+    String role;
+    LocalDateTime signedAt;
+    String hash;
+    Integer version;
 }

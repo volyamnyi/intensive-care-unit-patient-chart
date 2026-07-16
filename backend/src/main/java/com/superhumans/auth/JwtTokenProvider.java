@@ -9,12 +9,15 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Component
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtTokenProvider {
 
-    private final SecretKey key;
-    private final long expirationMs;
+    SecretKey key;
+    long expirationMs;
 
     public JwtTokenProvider(
             @Value("${app.jwt.secret}") String secret,

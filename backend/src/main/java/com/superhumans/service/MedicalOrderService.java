@@ -20,14 +20,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MedicalOrderService {
 
-    private final MedicalOrderRepository medicalOrderRepository;
-    private final ClinicalDayRepository clinicalDayRepository;
-    private final AuditService auditService;
+    MedicalOrderRepository medicalOrderRepository;
+    ClinicalDayRepository clinicalDayRepository;
+    AuditService auditService;
 
     public MedicalOrderResponse getOrder(UUID id) {
         MedicalOrder order = medicalOrderRepository.findById(id)

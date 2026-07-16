@@ -25,13 +25,12 @@ export default function DoctorLayout() {
       <AppBar position="static">
         <Toolbar>
           <Box component={RouterLink} to="/doctor" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, textDecoration: 'none', flexGrow: 1 }}>
-            <Box sx={{
-              width: 36, height: 36, borderRadius: '10px',
-              bgcolor: '#FF5F33', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 900, fontSize: 16, color: '#FFFFFF', fontFamily: '"Rubik", sans-serif',
-            }}>
-              VA
-            </Box>
+            <Box
+              component="img"
+              src={mode === 'dark' ? '/superhumans-white.svg' : '/superhumans.svg'}
+              alt="Superhumans"
+              sx={{ height: 36, width: 'auto' }}
+            />
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <Typography sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, fontSize: 18, color: theme.palette.text.primary, lineHeight: 1.2, letterSpacing: '-0.5px' }}>
                 ВАІТ

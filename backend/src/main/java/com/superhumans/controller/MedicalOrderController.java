@@ -13,13 +13,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MedicalOrderController {
 
-    private final MedicalOrderService medicalOrderService;
+    MedicalOrderService medicalOrderService;
 
     @GetMapping("/clinical-days/{clinicalDayId}/orders")
     public ResponseEntity<List<MedicalOrderResponse>> getOrders(

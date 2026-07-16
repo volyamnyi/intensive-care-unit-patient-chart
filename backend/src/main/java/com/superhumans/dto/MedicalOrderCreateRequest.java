@@ -4,22 +4,25 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class MedicalOrderCreateRequest {
     @NotBlank
-    private String category;
+    String category;
     @NotBlank
-    private String drugName;
+    String drugName;
     @NotBlank
-    private String dose;
+    String dose;
     @NotBlank
-    private String unit;
+    String unit;
     @NotBlank
-    private String route;
+    String route;
     @NotBlank
-    private String frequency;
+    String frequency;
     @NotNull
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    LocalDateTime startTime;
+    LocalDateTime endTime;
 }

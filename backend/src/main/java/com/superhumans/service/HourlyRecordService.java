@@ -19,15 +19,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class HourlyRecordService {
 
-    private final HourlyRecordRepository hourlyRecordRepository;
-    private final ClinicalDayRepository clinicalDayRepository;
-    private final AuditService auditService;
-    private final FluidBalanceService fluidBalanceService;
+    HourlyRecordRepository hourlyRecordRepository;
+    ClinicalDayRepository clinicalDayRepository;
+    AuditService auditService;
+    FluidBalanceService fluidBalanceService;
 
     public HourlyRecordResponse getHourlyRecord(UUID id) {
         HourlyRecord record = hourlyRecordRepository.findById(id)

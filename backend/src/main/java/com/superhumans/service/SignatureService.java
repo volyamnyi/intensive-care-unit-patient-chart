@@ -12,12 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SignatureService {
 
-    private final SignatureRepository signatureRepository;
+    SignatureRepository signatureRepository;
 
     @Transactional
     public Signature createSignature(ClinicalDay day, UUID userId, String role, String hash) {

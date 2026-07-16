@@ -17,14 +17,17 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api/episodes")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class EpisodeController {
 
-    private final EpisodeService episodeService;
-    private final ClinicalDayService clinicalDayService;
+    EpisodeService episodeService;
+    ClinicalDayService clinicalDayService;
 
     @GetMapping
     public ResponseEntity<List<EpisodeResponse>> searchEpisodes(

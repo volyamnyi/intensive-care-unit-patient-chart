@@ -4,19 +4,22 @@ import com.superhumans.entity.OrderExecutionStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderExecutionResponse {
-    private UUID id;
-    private UUID orderId;
-    private UUID executedBy;
-    private LocalDateTime executedAt;
-    private String actualDose;
-    private OrderExecutionStatus status;
-    private String comment;
-    private UUID createdBy;
-    private LocalDateTime createdAt;
-    private UUID updatedBy;
-    private LocalDateTime updatedAt;
-    private Integer version;
+    UUID id;
+    UUID orderId;
+    UUID executedBy;
+    LocalDateTime executedAt;
+    String actualDose;
+    OrderExecutionStatus status;
+    String comment;
+    UUID createdBy;
+    LocalDateTime createdAt;
+    UUID updatedBy;
+    LocalDateTime updatedAt;
+    Integer version;
 }

@@ -7,82 +7,85 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.*;
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Entity
 @Table(name = "hourly_records", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"clinical_day_id", "record_hour"})
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class HourlyRecord extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "clinical_day_id", nullable = false)
-    private ClinicalDay clinicalDay;
+    ClinicalDay clinicalDay;
 
     @Column(name = "record_time", nullable = false)
-    private LocalDateTime recordTime;
+    LocalDateTime recordTime;
 
     @Column(name = "record_hour", nullable = false)
-    private Integer recordHour;
+    Integer recordHour;
 
     @Column(length = 50)
-    private String consciousness;
+    String consciousness;
 
     @DecimalMin("34.0") @DecimalMax("42.0")
-    private Double temperature;
+    Double temperature;
 
     @Min(0) @Max(300)
     @Column(name = "heart_rate")
-    private Integer heartRate;
+    Integer heartRate;
 
     @Min(0) @Max(60)
     @Column(name = "respiratory_rate")
-    private Integer respiratoryRate;
+    Integer respiratoryRate;
 
     @Min(50) @Max(250)
     @Column(name = "systolic_bp")
-    private Integer systolicBP;
+    Integer systolicBP;
 
     @Min(30) @Max(150)
     @Column(name = "diastolic_bp")
-    private Integer diastolicBP;
+    Integer diastolicBP;
 
     @Column(name = "mean_arterial_pressure")
-    private Integer meanArterialPressure;
+    Integer meanArterialPressure;
 
     @DecimalMin("50.0") @DecimalMax("100.0")
     @Column(name = "spo2")
-    private Double spo2;
+    Double spo2;
 
     @DecimalMin("1.0") @DecimalMax("30.0")
-    private Double glucose;
+    Double glucose;
 
     @Column(name = "etco2")
-    private Double etco2;
+    Double etco2;
 
     @Column(name = "fio2")
-    private Double fio2;
+    Double fio2;
 
     @Column(name = "cvp")
-    private Double cvp;
+    Double cvp;
 
     @Column(name = "urine_output")
-    private Double urineOutput;
+    Double urineOutput;
 
     @Column(name = "drain_output")
-    private Double drainOutput;
+    Double drainOutput;
 
     @Column(columnDefinition = "TEXT")
-    private String stool;
+    String stool;
 
     @Column(columnDefinition = "TEXT")
-    private String vomit;
+    String vomit;
 
     @Column(name = "pain_score")
-    private Integer painScore;
+    Integer painScore;
 
     @Column(columnDefinition = "TEXT")
-    private String notes;
+    String notes;
 
     @PrePersist
     @PreUpdate

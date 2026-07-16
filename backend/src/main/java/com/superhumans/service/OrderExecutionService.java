@@ -23,16 +23,19 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class OrderExecutionService {
 
-    private final OrderExecutionRepository orderExecutionRepository;
-    private final MedicalOrderRepository medicalOrderRepository;
-    private final ClinicalDayRepository clinicalDayRepository;
-    private final AuditService auditService;
-    private final FluidBalanceService fluidBalanceService;
+    OrderExecutionRepository orderExecutionRepository;
+    MedicalOrderRepository medicalOrderRepository;
+    ClinicalDayRepository clinicalDayRepository;
+    AuditService auditService;
+    FluidBalanceService fluidBalanceService;
 
     public OrderExecutionResponse getExecution(UUID id) {
         OrderExecution execution = orderExecutionRepository.findById(id)

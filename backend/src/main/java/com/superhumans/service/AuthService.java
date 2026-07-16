@@ -10,14 +10,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final PasswordEncoder passwordEncoder;
+    UserRepository userRepository;
+    JwtTokenProvider jwtTokenProvider;
+    PasswordEncoder passwordEncoder;
 
     public ResponseEntity<LoginResponse> login(LoginRequest req) {
         User user = userRepository.findByLogin(req.getLogin()).orElse(null);

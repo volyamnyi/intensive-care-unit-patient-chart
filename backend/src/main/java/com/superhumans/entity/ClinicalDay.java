@@ -3,35 +3,38 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Entity
 @Table(name = "clinical_days")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ClinicalDay extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "episode_id", nullable = false)
-    private Episode episode;
+    Episode episode;
 
     @Column(name = "day_number", nullable = false)
-    private Integer dayNumber;
+    Integer dayNumber;
 
     @Column(name = "start_date_time", nullable = false)
-    private LocalDateTime startDateTime;
+    LocalDateTime startDateTime;
 
     @Column(name = "end_date_time", nullable = false)
-    private LocalDateTime endDateTime;
+    LocalDateTime endDateTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private ClinicalDayStatus status;
+    ClinicalDayStatus status;
 
     @Column(name = "doctor_signed")
-    private Boolean doctorSigned;
+    Boolean doctorSigned;
 
     @Column(name = "nurse_signed")
-    private Boolean nurseSigned;
+    Boolean nurseSigned;
 
     @Column(name = "closed_at")
-    private LocalDateTime closedAt;
+    LocalDateTime closedAt;
 }

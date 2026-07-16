@@ -16,6 +16,20 @@ tests/     (Playwright 1.61)
 - CI: `.github/workflows/playwright.yml` — Postgres service, JDK 17, Node 22, Playwright chromium, 40min timeout.
 - Mock MIS: `MockMisServiceImpl` provides 5 test patients + department/user data.
 
+## Main Test Scenario
+
+**All tests run exclusively via GitHub Actions CI — never locally.**
+
+| Test type | CI job | Trigger |
+|---|---|---|
+| Backend unit (149) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
+| Frontend Vitest (144) | `test` → `npm test` | Same |
+| Playwright E2E (79) | `test` → `npx playwright test` | Same |
+| Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
+
+Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
+
 ## Commands
 
 ### Backend (`cd backend`)
@@ -24,8 +38,8 @@ tests/     (Playwright 1.61)
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run 106 unit tests (excludes integration) |
-| `mvn test -Pintegration-test` | Run integration tests (requires Docker/PostgreSQL) |
+| `mvn test` | Run 149 unit tests (excludes integration) |
+| `mvn test -Pintegration-test` | Run 79 integration tests (requires Docker/PostgreSQL) |
 | `mvn verify` | Run all + JaCoCo coverage check + Checkstyle |
 
 ### Frontend (`cd frontend`)
@@ -35,20 +49,20 @@ tests/     (Playwright 1.61)
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run 35 Vitest tests |
+| `npm t` or `npx vitest run` | Run 144 Vitest tests |
 
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all 37 E2E tests |
+| `npx playwright test` | Run all 79 E2E tests |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
-- **Backend**: 106 unit tests (mock-based) + 7 integration tests (Testcontainers PostgreSQL). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 35 Vitest tests (13 files — pages, components, AuthContext, endpoints). Run with `npm t`.
-- **E2E**: 37 Playwright tests in 24 spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
+- **Backend**: 149 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 144 Vitest tests (18 files — pages, components, AuthContext, endpoints). Run with `npm t`.
+- **E2E**: 79 Playwright tests in 28 spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
 
@@ -359,23 +373,24 @@ All endpoints prefixed with `/api`.
 ```
 AGENTS.md              ← This file — agent guide
 README.md              ← Project README with badges and usage
+UseManual.md           ← User manual (Ukrainian)
 .gitignore             ← Global ignore rules
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire
-  src/main/java/       ← 127 Java source files
+  src/main/java/       ← 129 Java source files
   src/main/resources/  ← application.yml, data.sql, PDF template
-  src/test/java/       ← 25 test files (12 unit + 13 integration)
+  src/test/java/       ← 28 test files (14 unit + 13 integration + 1 abstract)
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 45 TS/TSX source + 13 test files
+  src/                 ← 46 TS/TSX source + 18 test files
 tests/
   playwright.config.ts ← Playwright config with 7 projects
   package.json         ← Test dependencies
-  specs/               ← 24 spec files
+  specs/               ← 28 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/

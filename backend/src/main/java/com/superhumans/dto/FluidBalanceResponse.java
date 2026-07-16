@@ -2,15 +2,18 @@ package com.superhumans.dto;
 
 import lombok.*;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class FluidBalanceResponse {
-    private UUID id;
-    private UUID clinicalDayId;
-    private Integer hour;
-    private Double intake;
-    private Double output;
-    private Double balance;
-    private Double cumulativeBalance;
-    private Integer version;
+    UUID id;
+    UUID clinicalDayId;
+    Integer hour;
+    Double intake;
+    Double output;
+    Double balance;
+    Double cumulativeBalance;
+    Integer version;
 }

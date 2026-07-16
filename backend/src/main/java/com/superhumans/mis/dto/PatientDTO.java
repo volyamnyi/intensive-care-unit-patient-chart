@@ -3,20 +3,23 @@ package com.superhumans.mis.dto;
 import lombok.*;
 import java.time.LocalDate;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class PatientDTO {
-    private UUID id;
-    private String fullName;
-    private LocalDate birthDate;
-    private String sexCode;
-    private String address;
-    private String phone;
-    private String email;
-    private String externalId1;
-    private String externalId2;
-    private Integer height;
-    private Integer weight;
-    private String bloodGroup;
-    private String rhFactor;
+    UUID id;
+    String fullName;
+    LocalDate birthDate;
+    String sexCode;
+    String address;
+    String phone;
+    String email;
+    String externalId1;
+    String externalId2;
+    Integer height;
+    Integer weight;
+    String bloodGroup;
+    String rhFactor;
 }

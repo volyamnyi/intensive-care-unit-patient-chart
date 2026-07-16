@@ -2,13 +2,16 @@ package com.superhumans.dto;
 
 import lombok.*;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class LoginResponse {
-    private String token;
-    private UUID userId;
-    private String login;
-    private String fullName;
-    private String role;
-    private String email;
+    String token;
+    UUID userId;
+    String login;
+    String fullName;
+    String role;
+    String email;
 }

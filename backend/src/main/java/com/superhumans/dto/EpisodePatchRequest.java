@@ -4,12 +4,15 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class EpisodePatchRequest {
-    private UUID hospitalizationId;
-    private UUID departmentId;
-    private LocalDateTime dischargeDate;
+    UUID hospitalizationId;
+    UUID departmentId;
+    LocalDateTime dischargeDate;
     @NotNull
-    private Integer version;
+    Integer version;
 }

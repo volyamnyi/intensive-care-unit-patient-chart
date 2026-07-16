@@ -3,16 +3,19 @@ package com.superhumans.dto;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ScaleResultResponse {
-    private UUID id;
-    private UUID clinicalDayId;
-    private UUID scaleId;
-    private String scaleName;
-    private String result;
-    private LocalDateTime calculatedAt;
-    private UUID calculatedBy;
-    private LocalDateTime createdAt;
-    private Integer version;
+    UUID id;
+    UUID clinicalDayId;
+    UUID scaleId;
+    String scaleName;
+    String result;
+    LocalDateTime calculatedAt;
+    UUID calculatedBy;
+    LocalDateTime createdAt;
+    Integer version;
 }

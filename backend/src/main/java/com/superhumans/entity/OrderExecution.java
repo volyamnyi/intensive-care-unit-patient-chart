@@ -4,30 +4,33 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Entity
 @Table(name = "order_executions")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderExecution extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    private MedicalOrder order;
+    MedicalOrder order;
 
     @Column(name = "executed_by", nullable = false)
-    private UUID executedBy;
+    UUID executedBy;
 
     @Column(name = "executed_at", nullable = false)
-    private LocalDateTime executedAt;
+    LocalDateTime executedAt;
 
     @Column(name = "actual_dose", length = 100)
-    private String actualDose;
+    String actualDose;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private OrderExecutionStatus status;
+    OrderExecutionStatus status;
 
     @Column(columnDefinition = "TEXT")
-    private String comment;
+    String comment;
 
 }

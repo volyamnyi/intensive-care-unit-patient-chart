@@ -3,12 +3,15 @@ package com.superhumans.dto;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderExecutionPatchRequest {
-    private String actualDose;
-    private String comment;
+    String actualDose;
+    String comment;
     @NotNull
-    private Integer version;
-    private UUID executedBy;
+    Integer version;
+    UUID executedBy;
 }

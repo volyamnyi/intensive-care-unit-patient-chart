@@ -2,25 +2,28 @@ package com.superhumans.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Entity
 @Table(name = "fluid_balances")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class FluidBalance extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "clinical_day_id", nullable = false)
-    private ClinicalDay clinicalDay;
+    ClinicalDay clinicalDay;
 
     @Column(nullable = false)
-    private Integer hour;
+    Integer hour;
 
-    private Double intake;
+    Double intake;
 
-    private Double output;
+    Double output;
 
-    private Double balance;
+    Double balance;
 
     @Column(name = "cumulative_balance")
-    private Double cumulativeBalance;
+    Double cumulativeBalance;
 }

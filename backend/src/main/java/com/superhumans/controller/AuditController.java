@@ -12,13 +12,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api/audit")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuditController {
 
-    private final AuditService auditService;
+    AuditService auditService;
 
     @GetMapping
     public ResponseEntity<Page<AuditLogResponse>> getAuditLogs(

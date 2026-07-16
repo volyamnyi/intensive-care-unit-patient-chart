@@ -16,16 +16,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ClinicalDayService {
 
-    private final ClinicalDayRepository clinicalDayRepository;
-    private final EpisodeRepository episodeRepository;
-    private final HourlyRecordRepository hourlyRecordRepository;
-    private final SignatureService signatureService;
-    private final AuditService auditService;
+    ClinicalDayRepository clinicalDayRepository;
+    EpisodeRepository episodeRepository;
+    HourlyRecordRepository hourlyRecordRepository;
+    SignatureService signatureService;
+    AuditService auditService;
 
     public ClinicalDayResponse getClinicalDay(UUID id) {
         ClinicalDay day = clinicalDayRepository.findById(id)

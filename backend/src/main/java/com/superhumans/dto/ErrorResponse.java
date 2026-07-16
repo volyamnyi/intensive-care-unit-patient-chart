@@ -1,10 +1,13 @@
 package com.superhumans.dto;
 
 import lombok.*;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ErrorResponse {
-    private String code;
-    private String message;
-    private String correlationId;
+    String code;
+    String message;
+    String correlationId;
 }

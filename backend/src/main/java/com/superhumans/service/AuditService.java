@@ -13,12 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuditService {
 
-    private final AuditLogRepository auditLogRepository;
+    AuditLogRepository auditLogRepository;
 
     public AuditLogResponse getAuditLog(UUID id) {
         AuditLog log = auditLogRepository.findById(id)

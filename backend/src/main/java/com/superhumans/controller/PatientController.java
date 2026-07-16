@@ -8,13 +8,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api/patients")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PatientController {
 
-    private final MisService misService;
+    MisService misService;
 
     @GetMapping
     public ResponseEntity<List<PatientDTO>> searchPatients(

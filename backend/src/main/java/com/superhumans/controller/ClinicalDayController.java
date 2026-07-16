@@ -10,13 +10,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api/clinical-days")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ClinicalDayController {
 
-    private final ClinicalDayService clinicalDayService;
+    ClinicalDayService clinicalDayService;
 
     @GetMapping("/{id}")
     public ResponseEntity<ClinicalDayResponse> getClinicalDay(@PathVariable UUID id) {

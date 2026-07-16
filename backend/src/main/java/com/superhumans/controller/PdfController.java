@@ -9,13 +9,16 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PdfController {
 
-    private final PdfGeneratorService pdfGeneratorService;
+    PdfGeneratorService pdfGeneratorService;
 
     @GetMapping("/clinical-days/{clinicalDayId}/pdf")
     public ResponseEntity<PdfResponse> getPdf(@PathVariable UUID clinicalDayId) {

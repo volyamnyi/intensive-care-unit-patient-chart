@@ -13,13 +13,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class OrderExecutionController {
 
-    private final OrderExecutionService orderExecutionService;
+    OrderExecutionService orderExecutionService;
 
     @GetMapping("/orders/{orderId}/executions")
     public ResponseEntity<List<OrderExecutionResponse>> getExecutions(

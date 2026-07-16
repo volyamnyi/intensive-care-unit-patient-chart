@@ -17,16 +17,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ClinicalScaleService {
 
-    private final ScaleResultRepository scaleResultRepository;
-    private final ClinicalScaleRepository clinicalScaleRepository;
-    private final ClinicalDayRepository clinicalDayRepository;
-    private final HourlyRecordRepository hourlyRecordRepository;
-    private final AuditService auditService;
+    ScaleResultRepository scaleResultRepository;
+    ClinicalScaleRepository clinicalScaleRepository;
+    ClinicalDayRepository clinicalDayRepository;
+    HourlyRecordRepository hourlyRecordRepository;
+    AuditService auditService;
 
     public ScaleResultResponse getScaleResult(UUID id) {
         ScaleResult result = scaleResultRepository.findById(id)

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @SuppressWarnings("PMD.AbstractClassWithoutAbstractMethod")
 
@@ -14,26 +16,26 @@ public abstract class BaseEntity {
 
     @Id
     @Column(columnDefinition = "UUID", updatable = false, nullable = false)
-    private UUID id;
+    UUID id;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    LocalDateTime createdAt;
 
     @Column(name = "created_by", nullable = false, updatable = false)
-    private UUID createdBy;
+    UUID createdBy;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    LocalDateTime updatedAt;
 
     @Column(name = "updated_by", nullable = false)
-    private UUID updatedBy;
+    UUID updatedBy;
 
     @Version
     @Column(nullable = false)
-    private Integer version;
+    Integer version;
 
     @Column(name = "is_deleted")
-    private Boolean deleted = false;
+    Boolean deleted = false;
 
     @PrePersist
     protected void onCreate() {

@@ -19,14 +19,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class EpisodeService {
 
-    private final EpisodeRepository episodeRepository;
-    private final AuditService auditService;
-    private final MisService misService;
+    EpisodeRepository episodeRepository;
+    AuditService auditService;
+    MisService misService;
 
     public EpisodeResponse getEpisode(UUID id) {
         Episode episode = episodeRepository.findById(id)

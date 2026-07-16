@@ -9,13 +9,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FluidBalanceController {
 
-    private final FluidBalanceService fluidBalanceService;
+    FluidBalanceService fluidBalanceService;
 
     @GetMapping("/clinical-days/{clinicalDayId}/fluid-balance")
     public ResponseEntity<List<FluidBalanceResponse>> getFluidBalance(

@@ -3,14 +3,17 @@ package com.superhumans.dto;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class PdfResponse {
-    private UUID id;
-    private UUID clinicalDayId;
-    private String fileName;
-    private Integer fileVersion;
-    private LocalDateTime generatedAt;
-    private UUID generatedBy;
-    private String checksum;
+    UUID id;
+    UUID clinicalDayId;
+    String fileName;
+    Integer fileVersion;
+    LocalDateTime generatedAt;
+    UUID generatedBy;
+    String checksum;
 }
