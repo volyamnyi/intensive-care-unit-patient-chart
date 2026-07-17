@@ -8,6 +8,17 @@ const client = axios.create({
   withCredentials: true,
 });
 
+client.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('jwt');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
 client.interceptors.response.use(
   (res) => res,
   (err) => {

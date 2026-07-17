@@ -26,11 +26,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     const res = await authApi.login(data);
-    const { userId, login: userName, fullName, role, email } = res.data;
+    const { token, userId, login: userName, fullName, role, email } = res.data;
+    localStorage.setItem('jwt', token);
     setUser({ id: userId, login: userName, fullName, role: role as User['role'], email, specialityCode: '', specialityName: '', phone: '' });
   };
 
   const logout = () => {
+    localStorage.removeItem('jwt');
     authApi.logout().catch(() => {});
     setUser(null);
   };
