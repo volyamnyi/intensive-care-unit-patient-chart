@@ -1,0 +1,519 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TextField, Tooltip, useTheme, CircularProgress, Accordion, AccordionSummary,
+  AccordionDetails, List, ListItem, ListItemText, Button, Stack,
+  Dialog, DialogTitle, DialogContent, DialogActions, Grid,
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { useTranslation } from 'react-i18next';
+import type {
+  Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem,
+} from '../../types';
+import {
+  hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi,
+  ventilationApi, labResultApi, patientStateApi, medicalOrderApi,
+} from '../../api/endpoints';
+
+interface UserLike {
+  id: number;
+}
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+const VITAL_ROWS: { key: keyof HourlyRecord; label: string; numeric: boolean }[] = [
+  { key: 'systolicBP', label: 'АТсист', numeric: true },
+  { key: 'diastolicBP', label: 'АТдіас', numeric: true },
+  { key: 'heartRate', label: 'ЧСС', numeric: true },
+  { key: 'spo2', label: 'SpO₂', numeric: true },
+  { key: 'temperature', label: 'Темп', numeric: true },
+  { key: 'cvp', label: 'ЦВТ', numeric: true },
+  { key: 'respiratoryRate', label: 'ЧД', numeric: true },
+  { key: 'consciousness', label: 'Свідомість', numeric: false },
+];
+
+const LOSS_ROWS: { key: keyof HourlyRecord; label: string }[] = [
+  { key: 'urineOutput', label: 'Сеча' },
+  { key: 'drainOutput', label: 'Зонд' },
+  { key: 'stool', label: 'Випорожнення' },
+  { key: 'vomit', label: 'Дренаж' },
+];
+
+interface IntensiveCareCardProps {
+  episode: Episode;
+  selectedDay: ClinicalDay | null;
+  records: HourlyRecord[];
+  orders: MedicalOrder[];
+  balanceItems: FluidBalanceItem[];
+  isNurse: boolean;
+  isLocked: boolean;
+  user: UserLike | null;
+}
+
+export default function IntensiveCareCard({
+  episode, selectedDay, records, orders, balanceItems, isNurse, isLocked, user,
+}: IntensiveCareCardProps) {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const bd = `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`;
+  const [savingHour, setSavingHour] = useState<number | null>(null);
+  const [executing, setExecuting] = useState<string | null>(null);
+
+  // Sidebar section data (self-fetched so the card is fully self-contained)
+  const [notes, setNotes] = useState<{ id: string; text: string; authorId?: string }[]>([]);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
+  const addNote = async () => {
+    if (!selectedDay || isLocked || !noteDraft.trim()) return;
+    try {
+      setSavingNote(true);
+      await medicalNoteApi.create(selectedDay.id, {
+        text: noteDraft.trim(),
+        noteType: 'CLINICAL',
+        role: isNurse ? 'NURSE' : 'DOCTOR',
+      } as unknown as Record<string, unknown>);
+      setNoteDraft('');
+      const refreshed = await medicalNoteApi.getByClinicalDay(selectedDay.id);
+      setNotes(refreshed.data as unknown as { id: string; text: string; authorId?: string }[]);
+    } catch {
+      // silent
+    } finally {
+      setSavingNote(false);
+    }
+  };
+  const [scales, setScales] = useState<{ id: string; name?: string; result: string }[]>([]);
+  const [ventilation, setVentilation] = useState<{ id: string; mode?: string; [k: string]: unknown }[]>([]);
+  const [labs, setLabs] = useState<{ id: string; testName?: string; result?: string }[]>([]);
+  const [patientState, setPatientState] = useState<{ id: string; assessment?: string }[]>([]);
+  const [loadingSidebar, setLoadingSidebar] = useState(false);
+
+  const canEditSidebar = !isLocked;
+
+  const [orderDialog, setOrderDialog] = useState(false);
+  const [orderForm, setOrderForm] = useState({
+    drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '',
+  });
+  const [savingOrder, setSavingOrder] = useState(false);
+
+  const createOrder = async () => {
+    if (!selectedDay || isLocked) return;
+    try {
+      setSavingOrder(true);
+      await medicalOrderApi.create(selectedDay.id, {
+        category: 'MEDICATION',
+        drugName: orderForm.drugName,
+        dose: orderForm.dose,
+        unit: orderForm.unit,
+        route: orderForm.route,
+        frequency: orderForm.frequency,
+        startTime: orderForm.startTime || new Date().toISOString().slice(0, 16),
+      });
+      setOrderDialog(false);
+      setOrderForm({ drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '' });
+      // reload orders via parent by toggling a refetch is not available; reload page data
+      window.location.reload();
+    } catch {
+      // silent
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedDay) return;
+    let cancelled = false;
+    setLoadingSidebar(true);
+    Promise.all([
+      medicalNoteApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+      clinicalScaleApi.getResultsByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+      ventilationApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+      labResultApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+      patientStateApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+    ]).then(([n, s, v, l, p]) => {
+      if (cancelled) return;
+      setNotes(n as unknown as { id: string; text: string; authorId?: string }[]);
+      setScales(s as unknown as { id: string; name?: string; result: string }[]);
+      setVentilation(v as unknown as { id: string; mode?: string; [k: string]: unknown }[]);
+      setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
+      setPatientState(p as unknown as { id: string; assessment?: string }[]);
+      setLoadingSidebar(false);
+    });
+    return () => { cancelled = true; };
+  }, [selectedDay]);
+
+  const recByHour = useMemo(() => {
+    const map = new Map<number, HourlyRecord>();
+    for (const r of records) {
+      const h = Number(String(r.recordTime).substring(11, 13));
+      if (!Number.isNaN(h)) map.set(h, r);
+    }
+    return map;
+  }, [records]);
+
+  const realClockHour = new Date().getHours();
+
+  const boundValue = (hour: number, key: keyof HourlyRecord): string => {
+    const r = recByHour.get(hour);
+    const v = r ? r[key] : null;
+    if (v === null || v === undefined) return '';
+    return String(v);
+  };
+
+  const saveCell = async (hour: number, key: keyof HourlyRecord, raw: string) => {
+    if (!selectedDay || isLocked) return;
+    const numeric = key !== 'consciousness' && key !== 'stool' && key !== 'vomit';
+    const value = raw.trim() === '' ? null : numeric ? Number(raw) : raw;
+    const existing = recByHour.get(hour);
+    const recTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
+    try {
+      setSavingHour(hour);
+      if (existing) {
+        await hourlyRecordApi.update(existing.id, {
+          version: existing.version,
+          [key]: value,
+        } as Partial<HourlyRecord> & { version: number });
+      } else {
+        await hourlyRecordApi.create(selectedDay.id, {
+          recordTime: recTime,
+          [key]: value,
+        } as HourlyRecordCreateRequestLike);
+      }
+    } catch {
+      // silent
+    } finally {
+      setSavingHour(null);
+    }
+  };
+
+  const Cell = ({
+    hour, rowKey, numeric, label,
+  }: { hour: number; rowKey: keyof HourlyRecord; numeric: boolean; label: string }) => {
+    const readOnly = isLocked || (isNurse && !LOSS_ROWS.some(l => l.key === rowKey));
+    const value = boundValue(hour, rowKey);
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(value);
+    const isPast = hour < realClockHour;
+    const bg = isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit';
+
+    if (editing && !readOnly) {
+      return (
+        <TableCell sx={{ p: 0, bgcolor: bg, minWidth: 38 }}>
+          <TextField
+            autoFocus
+            size="small"
+            type={numeric ? 'number' : 'text'}
+            value={draft}
+            inputProps={{ 'aria-label': `${label} ${hour}:00`, style: { padding: 4, fontSize: 11, textAlign: 'center' } }}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => { setEditing(false); if (draft !== value) saveCell(hour, rowKey, draft); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+            sx={{ width: '100%', '& fieldset': { border: 'none' } }}
+          />
+        </TableCell>
+      );
+    }
+    return (
+      <TableCell
+        onClick={() => !readOnly && (setDraft(value), setEditing(true))}
+        sx={{
+          p: '2px 4px', bgcolor: bg, minWidth: 38, textAlign: 'center', fontSize: 11,
+          cursor: readOnly ? 'default' : 'cell',
+          color: value ? 'inherit' : '#B0B0B0',
+        }}
+      >
+        {savingHour === hour ? <CircularProgress size={10} /> : (value || '·')}
+      </TableCell>
+    );
+  };
+
+  const activeOrders = orders.filter(o => o.status === 'ACTIVE' || o.status === 'DRAFT');
+
+  const TherapyCell = ({ order, hour }: { order: MedicalOrder; hour: number }) => {
+    const canExecute = !isLocked && !!user;
+    const isPast = hour < realClockHour;
+    const bg = isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit';
+    const isExecuting = executing === `${order.id}-${hour}`;
+
+    const toggle = async () => {
+      if (!canExecute || isLocked || !selectedDay || !user) return;
+      const execTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
+      try {
+        setExecuting(`${order.id}-${hour}`);
+        await orderExecutionApi.create(order.id, {
+          executedBy: user.id,
+          executedAt: execTime,
+          actualDose: order.dose,
+        });
+      } catch {
+        // silent
+      } finally {
+        setExecuting(null);
+      }
+    };
+
+    return (
+      <TableCell
+        onClick={() => canExecute && !isPast && toggle()}
+        sx={{ p: '2px 4px', bgcolor: bg, minWidth: 38, textAlign: 'center', cursor: canExecute && !isPast ? 'pointer' : 'default' }}
+      >
+        {isExecuting ? <CircularProgress size={10} /> : (
+          <Tooltip title={order.drugName}>
+            <Box component="span" sx={{ fontSize: 11, color: isPast ? '#4CAF50' : 'inherit' }}>
+              {isPast ? '✓' : ''}
+            </Box>
+          </Tooltip>
+        )}
+      </TableCell>
+    );
+  };
+
+  const totalIntake = balanceItems.reduce((s, i) => s + (i.intake || 0), 0);
+  const totalOutput = balanceItems.reduce((s, i) => s + (i.output || 0), 0);
+  const dailyBalance = totalIntake - totalOutput;
+  const cumulativeBalance = balanceItems[balanceItems.length - 1]?.cumulativeBalance ?? 0;
+
+  return (
+    <Box>
+      <TableContainer sx={{ border: bd, borderRadius: 2, overflowX: 'auto', bgcolor: isDark ? '#141414' : '#fff' }}>
+        <Table size="small" sx={{ tableLayout: 'fixed', minWidth: 1100 }}>
+          <TableHead>
+            <TableRow sx={{ bgcolor: isDark ? '#1A1A1A' : '#F4F2ED' }}>
+              <TableCell sx={{ fontWeight: 700, minWidth: 120, borderRight: bd }}>Показник / година</TableCell>
+              {HOURS.map((h) => (
+                <TableCell key={h} sx={{ textAlign: 'center', fontWeight: 700, fontSize: 10, p: '2px', borderRight: h === 23 ? bd : 'none' }}>{h}</TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <GroupHeader label="Показники" nurseEditable={!isNurse} />
+            {VITAL_ROWS.map((row) => (
+              <TableRow key={String(row.key)}>
+                <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd, whiteSpace: 'nowrap' }}>{row.label}</TableCell>
+                {HOURS.map((h) => (
+                  <Cell key={h} hour={h} rowKey={row.key} numeric={row.numeric} label={row.label} />
+                ))}
+              </TableRow>
+            ))}
+
+            <GroupHeader label="Втрати (мл)" nurseEditable />
+            {LOSS_ROWS.map((row) => (
+              <TableRow key={String(row.key)}>
+                <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd }}>{row.label}</TableCell>
+                {HOURS.map((h) => (
+                  <Cell key={h} hour={h} rowKey={row.key} numeric label={row.label} />
+                ))}
+              </TableRow>
+            ))}
+
+            <TableRow sx={{ bgcolor: isDark ? '#202020' : '#EDEBE6' }}>
+              <TableCell colSpan={25} sx={{ fontWeight: 800, fontSize: 11, py: 0.5, borderRight: `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Терапія (призначення)</span>
+                {canEditSidebar && !isNurse && (
+                  <Button size="small" variant="outlined" onClick={() => setOrderDialog(true)} sx={{ fontSize: 10, py: 0, minHeight: 22 }}>
+                    + Нове призначення
+                  </Button>
+                )}
+              </TableCell>
+            </TableRow>
+            {activeOrders.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={25} sx={{ textAlign: 'center', color: 'text.secondary', py: 1 }}>
+                  {t('medicalOrders.empty')}
+                </TableCell>
+              </TableRow>
+            )}
+            {activeOrders.map((order) => (
+              <TableRow key={order.id}>
+                <TableCell sx={{ fontSize: 10, borderRight: bd, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {order.drugName} {order.dose}{order.unit}
+                </TableCell>
+                {HOURS.map((h) => (
+                  <TherapyCell key={h} order={order} hour={h} />
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Sidebar: patient info + balance + sections */}
+      <Box sx={{ display: 'flex', gap: 1.5, mt: 1.5, flexWrap: 'wrap' }}>
+        <Box sx={{ flex: 1, minWidth: 220, p: 1.5, border: bd, borderRadius: 2, bgcolor: isDark ? '#141414' : '#fff' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>Пацієнт</Typography>
+          <Typography sx={{ fontSize: 13 }}>{episode.patientName || '—'}</Typography>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>Діагноз: {episode.admissionDiagnosis || '—'}</Typography>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+            {[episode.ward, episode.bedNumber].filter(Boolean).join(' / ') || '—'}
+            {episode.heightCm ? ` · ${episode.heightCm} см` : ''}
+          </Typography>
+          {selectedDay?.weightKg && (
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>Вага: {selectedDay.weightKg} кг</Typography>
+          )}
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 220, p: 1.5, border: bd, borderRadius: 2, bgcolor: isDark ? '#141414' : '#fff' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>{t('fluidBalance.title')}</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span>{t('fluidBalance.intake')}</span><b>{totalIntake} {t('fluidBalance.unit')}</b>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span>{t('fluidBalance.output')}</span><b>{totalOutput} {t('fluidBalance.unit')}</b>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span>{t('fluidBalance.dailyBalance')}</span><b>{dailyBalance >= 0 ? '+' : ''}{dailyBalance}</b>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span>{t('fluidBalance.cumulativeBalance')}</span><b>{cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance}</b>
+          </Box>
+        </Box>
+      </Box>
+
+      {loadingSidebar && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}><CircularProgress size={16} /></Box>
+      )}
+
+      {/* Sidebar collapsible sections — all non-hourly data on one screen */}
+      <Stack spacing={1} sx={{ mt: 1.5 }}>
+        <SidebarSection title={t('medicalNotes.title')} count={notes.length}>
+          {notes.length === 0 ? (
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('medicalNotes.empty')}</Typography>
+          ) : (
+            <List dense sx={{ py: 0 }}>
+              {notes.map((n) => (
+                <ListItem key={n.id} sx={{ px: 0 }}>
+                  <ListItemText primary={n.text} primaryTypographyProps={{ fontSize: 12 }} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+          {canEditSidebar && (
+            <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+              <TextField
+                size="small"
+                label={t('medicalNotes.newNoteLabel')}
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                multiline
+                minRows={2}
+                inputProps={{ 'aria-label': t('medicalNotes.newNoteLabel') }}
+              />
+              <Button size="small" variant="outlined" onClick={addNote} disabled={savingNote || !noteDraft.trim()}>
+                {t('medicalNotes.addNoteButton')}
+              </Button>
+            </Stack>
+          )}
+        </SidebarSection>
+
+        <SidebarSection title={t('clinicalScales.title')} count={scales.length}>
+          {scales.length === 0 ? (
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('clinicalScales.empty')}</Typography>
+          ) : (
+            <List dense sx={{ py: 0 }}>
+              {scales.map((s) => (
+                <ListItem key={s.id} sx={{ px: 0 }}>
+                  <ListItemText primary={`${s.name ?? ''}: ${s.result}`} primaryTypographyProps={{ fontSize: 12 }} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </SidebarSection>
+
+        <SidebarSection title={t('ventilation.title')} count={ventilation.length}>
+          {ventilation.length === 0 ? (
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('ventilation.empty')}</Typography>
+          ) : (
+            <List dense sx={{ py: 0 }}>
+              {ventilation.map((v) => (
+                <ListItem key={v.id} sx={{ px: 0 }}>
+                  <ListItemText primary={String(v.mode ?? v.id)} primaryTypographyProps={{ fontSize: 12 }} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </SidebarSection>
+
+        <SidebarSection title={t('labResults.title')} count={labs.length}>
+          {labs.length === 0 ? (
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('labResults.empty')}</Typography>
+          ) : (
+            <List dense sx={{ py: 0 }}>
+              {labs.map((l) => (
+                <ListItem key={l.id} sx={{ px: 0 }}>
+                  <ListItemText primary={`${l.testName ?? ''}: ${l.result ?? ''}`} primaryTypographyProps={{ fontSize: 12 }} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </SidebarSection>
+
+        <SidebarSection title={t('patientState.title')} count={patientState.length}>
+          {patientState.length === 0 ? (
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('patientState.empty')}</Typography>
+          ) : (
+            <List dense sx={{ py: 0 }}>
+              {patientState.map((p) => (
+                <ListItem key={p.id} sx={{ px: 0 }}>
+                  <ListItemText primary={p.assessment ?? ''} primaryTypographyProps={{ fontSize: 12 }} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </SidebarSection>
+      </Stack>
+
+      <Dialog open={orderDialog} onClose={() => setOrderDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontSize: 14 }}>{t('medicalOrders.new') ?? 'Нове призначення'}</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={1} sx={{ mt: 0 }}>
+            <Grid item xs={12}><TextField fullWidth size="small" label="Препарат" value={orderForm.drugName} onChange={(e) => setOrderForm({ ...orderForm, drugName: e.target.value })} /></Grid>
+            <Grid item xs={6}><TextField fullWidth size="small" label="Доза" value={orderForm.dose} onChange={(e) => setOrderForm({ ...orderForm, dose: e.target.value })} /></Grid>
+            <Grid item xs={6}><TextField fullWidth size="small" label="Од." value={orderForm.unit} onChange={(e) => setOrderForm({ ...orderForm, unit: e.target.value })} /></Grid>
+            <Grid item xs={6}><TextField fullWidth size="small" label="Шлях" value={orderForm.route} onChange={(e) => setOrderForm({ ...orderForm, route: e.target.value })} /></Grid>
+            <Grid item xs={6}><TextField fullWidth size="small" label="Частота" value={orderForm.frequency} onChange={(e) => setOrderForm({ ...orderForm, frequency: e.target.value })} /></Grid>
+            <Grid item xs={12}><TextField fullWidth size="small" label="Початок" type="datetime-local" value={orderForm.startTime} onChange={(e) => setOrderForm({ ...orderForm, startTime: e.target.value })} InputLabelProps={{ shrink: true }} /></Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOrderDialog(false)}>Скасувати</Button>
+          <Button variant="contained" onClick={createOrder} disabled={savingOrder || !orderForm.drugName}>
+            {t('medicalOrders.create') ?? 'Створити'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
+function SidebarSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <Accordion disableGutters elevation={0} sx={{ border: `1px solid`, borderColor: 'divider', '&:before': { display: 'none' } }}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+        <Typography sx={{ fontWeight: 700, fontSize: 12 }}>{title} {count > 0 && <span style={{ color: 'text.secondary', fontWeight: 400 }}>({count})</span>}</Typography>
+      </AccordionSummary>
+      <AccordionDetails sx={{ py: 1 }}>
+        {children}
+      </AccordionDetails>
+    </Accordion>
+  );
+}
+
+function GroupHeader({ label, nurseEditable }: { label: string; nurseEditable?: boolean }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  return (
+    <TableRow sx={{ bgcolor: isDark ? '#202020' : '#EDEBE6' }}>
+      <TableCell colSpan={25} sx={{ fontWeight: 800, fontSize: 11, py: 0.5, borderRight: `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}` }}>
+        {label}
+        {nurseEditable === false && (
+          <Box component="span" sx={{ ml: 1, fontSize: 9, color: 'text.secondary' }}>(тільки лікар)</Box>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+type HourlyRecordCreateRequestLike = {
+  recordTime: string;
+  [key: string]: unknown;
+};

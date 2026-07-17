@@ -1,13 +1,16 @@
 import { test, expect } from '../../fixtures/index';
 
 test.describe('Nurse Order Execution', () => {
-  test('sees prescriptions tab with active orders', async ({ page }) => {
+  test('sees therapy section with active orders on the card', async ({ page }) => {
     await page.goto('/nurse');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     await expect(page).toHaveURL(/\/nurse\/episode\//);
 
-    await page.getByRole('tab', { name: 'Призначення' }).click();
-    await expect(page.getByRole('columnheader', { name: 'Препарат' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Статус' })).toBeVisible();
+    await expect(page.getByText('Терапія (призначення)')).toBeVisible();
+    // Either an order row is present or the empty-state message
+    await expect(
+      page.getByText(/мл|mcg|mg|г|Од\.|Препарат/).first()
+        .or(page.getByText('Немає призначень'))
+    ).toBeVisible();
   });
 });

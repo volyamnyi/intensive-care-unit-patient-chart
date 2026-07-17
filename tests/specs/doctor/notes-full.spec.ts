@@ -6,7 +6,7 @@ test.describe('Doctor Notes Full', () => {
   test('creates a note and shows author and timestamp', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByRole('tab', { name: 'Нотатки' }).click();
+    await page.getByText('Нотатки').first().click();
 
     const noteText = 'E2E тест: нотатка з перевіркою автора та часу';
     await page.getByLabel('Нова нотатка').fill(noteText);
@@ -21,7 +21,7 @@ test.describe('Doctor Notes Full', () => {
   test('shows error when adding empty note', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByRole('tab', { name: 'Нотатки' }).click();
+    await page.getByText('Нотатки').first().click();
 
     await page.getByRole('button', { name: 'Додати нотатку' }).click();
     await expect(page.getByLabel('Нова нотатка')).toBeVisible();
@@ -30,7 +30,7 @@ test.describe('Doctor Notes Full', () => {
   test('creates multiple notes and verifies list order', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByRole('tab', { name: 'Нотатки' }).click();
+    await page.getByText('Нотатки').first().click();
 
     const note1 = 'Перша тестова нотатка';
     const note2 = 'Друга тестова нотатка';

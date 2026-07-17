@@ -47,14 +47,13 @@ test.describe('HOD Dashboard', () => {
     await expect(page).toHaveURL(/\/doctor\/episode\//);
   });
 
-  test('can view prescriptions tab on episode page', async ({ page }) => {
+  test('can view prescriptions section on episode page', async ({ page }) => {
     await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
-    await page.getByRole('tab', { name: 'Призначення' }).click();
     await expect(page.getByRole('button', { name: '+ Нове призначення' })).toBeVisible();
   });
 
-  test('can view scales tab', async ({ page }) => {
+  test('can view scales section', async ({ page }) => {
     await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
-    await page.getByRole('tab', { name: 'Шкали' }).click();
+    await expect(page.getByText('Шкали').first()).toBeVisible();
   });
 });

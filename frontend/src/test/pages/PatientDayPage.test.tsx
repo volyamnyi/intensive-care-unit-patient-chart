@@ -54,6 +54,18 @@ vi.mock('../../api/endpoints', () => ({
     getResultsByClinicalDay: (...args: unknown[]) => mockGetScaleResults(...args),
     createResult: vi.fn(),
   },
+  ventilationApi: {
+    getByClinicalDay: vi.fn().mockResolvedValue({ data: [] }),
+    create: vi.fn(),
+  },
+  labResultApi: {
+    getByClinicalDay: vi.fn().mockResolvedValue({ data: [] }),
+    create: vi.fn(),
+  },
+  patientStateApi: {
+    getByClinicalDay: vi.fn().mockResolvedValue({ data: [] }),
+    create: vi.fn(),
+  },
   fluidBalanceApi: {
     getByClinicalDay: (...args: unknown[]) => mockGetBalanceItems(...args),
     recalculate: vi.fn(),
@@ -155,7 +167,7 @@ describe('PatientDayPage', () => {
   it('renders patient name and episode info after load', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
+      expect(screen.getAllByText('Петренко Іван').length).toBeGreaterThan(0);
     });
     await waitFor(() => {
       expect(screen.getByText(/Доба №1/)).toBeInTheDocument();
@@ -170,32 +182,30 @@ describe('PatientDayPage', () => {
     });
   });
 
-  it('renders all 5 tabs', async () => {
+  it('renders all sections on single screen', async () => {
     renderPage();
     await waitFor(() => {
-      const tabs = screen.getAllByRole('tab');
-      expect(tabs.map(t => t.textContent)).toEqual([
-        'Вітальні',
-        'Призначення',
-        'Шкали',
-        'Нотатки',
-        'Баланс',
-      ]);
+      // Single ICU card: vitals/losses grid header present
+      expect(screen.getByText(/Показник \/ година/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Втрати/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Призначення/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Баланс рідини/i).length).toBeGreaterThan(0);
     });
   });
 
-  it('switches tabs on click', async () => {
+  it('shows all section content simultaneously', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('Призначення')).toBeInTheDocument();
+      expect(screen.getByText(/Показник \/ година/i)).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByText('Призначення'));
     await waitFor(() => {
-      expect(screen.getByText('Немає призначень')).toBeInTheDocument();
+      const headings = screen.getAllByText(/Втрати/i);
+      expect(headings.length).toBeGreaterThan(0);
     });
-    await userEvent.click(screen.getByText('Нотатки'));
     await waitFor(() => {
-      expect(screen.getByText('Немає нотаток')).toBeInTheDocument();
+      // Verify all sections rendered without tabs (no role="tab" elements)
+      const tabs = screen.queryAllByRole('tab');
+      expect(tabs.length).toBe(0);
     });
   });
 

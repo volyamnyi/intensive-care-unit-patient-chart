@@ -34,7 +34,8 @@
     "username": "Username",
     "password": "Password",
     "submit": "Sign in",
-    "error": "Invalid username or password"
+    "error": "Invalid username or password",
+    "superhumansAlt": "Superhumans"
   },
   "doctor": {
     "dashboard": {
@@ -55,19 +56,26 @@
       "fullName": "Full name",
       "birthDate": "Date of birth",
       "sex": "Sex",
+      "male": "Male",
+      "female": "Female",
       "height": "Height (cm)",
       "weight": "Weight (kg)",
       "bloodGroup": "Blood type",
       "rhFactor": "Rh factor",
-      "medicalRecordNo": "Medical record #",
-      "createCard": "Create card"
+      "medicalCardNumber": "Medical record #",
+      "createButton": "Create card",
+      "cancelButton": "Cancel"
     },
     "patientDay": {
       "title": "ICU — Patient",
       "episodeNotFound": "Episode not found",
-      "dayNumber": "Day #{{dayNumber}}",
+      "patientFallback": "Patient",
+      "dayPrefix": "Day #",
       "dayLabel": "Day #{{dayNumber}}",
       "noOpenDay": "No open clinical day",
+      "backButton": "Back",
+      "signOffButton": "Sign off",
+      "reopenButton": "Reopen",
       "statusOpen": "Open",
       "statusNurseSigned": "Signed by nurse",
       "statusDoctorSigned": "Signed by doctor",
@@ -80,12 +88,20 @@
         "notes": "Notes",
         "balance": "Balance"
       },
-      "readingsTitle": "Readings — {{hour}}:00",
+      "vitalSignsTitle": "Readings — {{hour}}:00",
+      "episodeChipPrefix": "№ {{id}}",
       "reopenDialog": {
         "title": "Reopen day #{{dayNumber}}",
-        "confirmation": "Are you sure you want to reopen this day? Signatures will be revoked.",
-        "reason": "Reason for reopening"
+        "text": "Are you sure you want to reopen this day? Signatures will be revoked.",
+        "reasonLabel": "Reason for reopening",
+        "cancelButton": "Cancel",
+        "reopenButton": "Reopen"
       }
+    },
+    "layout": {
+      "patientsLink": "Patients",
+      "roleHod": "Head of Department",
+      "roleDoctor": "Doctor"
     }
   },
   "nurse": {
@@ -95,27 +111,40 @@
       "searchPlaceholder": "Search patient by full name...",
       "noResults": "No patients found for this query",
       "empty": "No active patients"
+    },
+    "layout": {
+      "role": "Nurse"
     }
   },
   "admin": {
     "title": "ICU — Administrator",
     "heading": "System users",
-    "doctors": "Doctors",
-    "nurses": "Nurses",
-    "table": {
+    "roleDoctor": "Doctor",
+    "roleNurse": "Nurse",
+    "roleHod": "Head of Department",
+    "roleAdmin": "Administrator",
+    "tableHeaders": {
       "fullName": "Full name",
       "login": "Login",
       "role": "Role",
       "email": "Email"
     },
-    "roles": {
-      "doctor": "Doctor",
-      "nurse": "Nurse",
-      "hod": "Head of Department",
-      "administrator": "Administrator"
-    }
+    "noData": "No data",
+    "sectionDoctors": "Doctors",
+    "sectionNurses": "Nurses"
   },
-  "vitals": {
+  "signDialog": {
+    "title": "Signing day #{{dayNumber}}",
+    "text": "After signing, the day becomes read-only for {{role}}.",
+    "roleNurse": "nurse",
+    "roleDoctor": "doctor",
+    "nurseInfo": "The nurse's signature will be saved. After the doctor signs, a PDF will be generated.",
+    "doctorInfo": "A PDF will be generated and sent to the MIS.",
+    "cancelButton": "Cancel",
+    "signingButton": "Signing...",
+    "signButton": "Sign"
+  },
+  "vitalSigns": {
     "systolicBP": "BP systolic (mmHg)",
     "diastolicBP": "BP diastolic (mmHg)",
     "heartRate": "HR (bpm)",
@@ -130,54 +159,66 @@
     "drainOutput": "Drain output (ml)",
     "painScore": "Pain (0-10)",
     "notes": "Notes",
-    "rangeWarning": "{{label}}: value is out of normal range ({{min}}-{{max}}{{unit}})",
-    "table": {
-      "hour": "Hour",
-      "bpSys": "BP sys",
-      "bpDias": "BP dias",
-      "hr": "HR",
-      "spo2": "SpO2",
-      "temp": "Temp",
-      "cvp": "CVP",
-      "rr": "RR"
-    }
+    "validationWarning": "{{label}}: value is out of normal range ({{min}}-{{max}}{{unit}})",
+    "saveButton": "Save readings",
+    "savingButton": "Saving..."
   },
   "patientSearch": {
-    "placeholder": "Full name, phone or medical record #",
+    "defaultLabel": "Full name, phone or medical record #",
     "minChars": "Enter at least 2 characters",
-    "noResults": "No patients found"
+    "notFound": "No patients found"
   },
-  "orders": {
-    "newOrder": "New order",
-    "category": "Category",
-    "medication": "Medication",
-    "dose": "Dose",
-    "unit": "Unit",
-    "route": "Route",
-    "frequency": "Frequency",
-    "start": "Start",
-    "end": "End",
-    "status": "Status",
-    "actions": "Actions",
-    "noOrders": "No orders",
-    "cancel": "Cancel",
+  "hourlyRecordTable": {
+    "columns": {
+      "hour": "Hour",
+      "systolicBP": "BP sys",
+      "diastolicBP": "BP dias",
+      "heartRate": "HR",
+      "spo2": "SpO2",
+      "temperature": "Temp",
+      "cvp": "CVP",
+      "respiratoryRate": "RR"
+    },
+    "emptyValue": "-"
+  },
+  "medicalOrders": {
     "statusDraft": "Draft",
     "statusActive": "Active",
     "statusCompleted": "Completed",
     "statusCancelled": "Cancelled",
-    "addNewOrder": "+ New order"
+    "formTitle": "New order",
+    "category": "Category",
+    "drugName": "Medication",
+    "dose": "Dose",
+    "unit": "Unit",
+    "route": "Route",
+    "frequency": "Frequency",
+    "startTime": "Start",
+    "endTime": "End",
+    "createButton": "Create",
+    "cancelButton": "Cancel",
+    "newOrderButton": "+ New order",
+    "tableHeaders": {
+      "drugName": "Medication",
+      "dose": "Dose",
+      "route": "Route",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "empty": "No orders",
+    "cancelOrderButton": "Cancel"
   },
-  "notes": {
-    "newNote": "New note",
-    "addNote": "Add note",
-    "noNotes": "No notes"
+  "medicalNotes": {
+    "newNoteLabel": "New note",
+    "addNoteButton": "Add note",
+    "empty": "No notes"
   },
-  "scales": {
-    "scale": "Scale",
-    "result": "Result",
-    "add": "Add",
-    "noData": "No scale data",
-    "resultLabel": "Result:",
+  "scaleResults": {
+    "scaleLabel": "Scale",
+    "resultLabel": "Result",
+    "addButton": "Add",
+    "empty": "No scale data",
+    "resultText": "Result: {{result}} ({{date}})",
     "notFilled": "Not filled"
   },
   "fluidBalance": {
@@ -186,41 +227,45 @@
     "output": "Output:",
     "dailyBalance": "Daily balance:",
     "cumulativeBalance": "Cumulative balance:",
-    "recalculate": "Recalculate"
+    "unit": "ml",
+    "recalculateButton": "Recalculate",
+    "calculatingButton": "Calculating..."
   },
   "episodeTable": {
-    "loading": "Loading...",
-    "noEpisodes": "No episodes",
-    "patient": "Patient",
-    "admissionDate": "Admission date",
-    "dischargeDate": "Discharge date",
-    "status": "Status",
-    "actions": "Actions",
-    "open": "Open",
     "statusDraft": "Draft",
     "statusActive": "Active",
     "statusCompleted": "Completed",
-    "statusArchived": "Archived"
+    "statusArchived": "Archived",
+    "loading": "Loading...",
+    "empty": "No episodes",
+    "tableHeaders": {
+      "patient": "Patient",
+      "admissionDate": "Admission date",
+      "dischargeDate": "Discharge date",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "openAction": "Open",
+    "dischargeDateEmpty": "-"
   },
   "clinicalDayTimeline": {
-    "noDays": "No clinical days",
-    "day": "Day {{dayNumber}}"
+    "empty": "No clinical days",
+    "dayLabel": "Day {{dayNumber}}"
   },
   "auditLog": {
+    "title": "Audit Log",
+    "view": "View Audit Log",
+    "hide": "Hide",
+    "filterByEntity": "Filter by Entity",
     "loading": "Loading...",
-    "noEntries": "No audit log entries",
-    "time": "Time",
-    "user": "User",
-    "entity": "Entity",
-    "action": "Action",
-    "changes": "Changes"
-  },
-  "signDialog": {
-    "title": "Signing day #{{dayNumber}}",
-    "readOnlyNurse": "After signing, the day becomes read-only for the nurse.",
-    "readOnlyDoctor": "After signing, the day becomes read-only for the doctor.",
-    "nurseInfo": "The nurse's signature will be saved. After the doctor signs, a PDF will be generated.",
-    "doctorInfo": "A PDF will be generated and sent to the MIS."
+    "empty": "No audit log entries",
+    "tableHeaders": {
+      "timestamp": "Time",
+      "user": "User",
+      "entity": "Entity",
+      "action": "Action",
+      "changes": "Changes"
+    }
   },
   "clinicalRanges": {
     "temperature": "Temperature",
@@ -228,13 +273,21 @@
     "respiratoryRate": "Respiratory rate",
     "systolicBP": "BP systolic",
     "diastolicBP": "BP diastolic",
-    "spo2": "SpO2"
+    "spo2": "SpO2",
+    "units": {
+      "celsius": "°C",
+      "bpm": "bpm",
+      "perMin": "/min",
+      "mmhg": "mmHg",
+      "percent": "%"
+    }
   },
   "layout": {
     "patients": "Patients",
     "nurse": "Nurse",
     "doctor": "Doctor",
     "hod": "Head of Department",
-    "userMenu": "User menu"
+    "userMenu": "User menu",
+    "icu": "ICU"
   }
 }

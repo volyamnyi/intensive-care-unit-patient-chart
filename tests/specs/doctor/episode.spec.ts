@@ -1,29 +1,26 @@
 import { test, expect } from '../../fixtures/index';
 
 test.describe('Episode Page', () => {
-  test('shows all 5 tabs on the episode page', async ({ page }) => {
+  test('shows all sections on a single screen', async ({ page }) => {
     await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
-    await expect(page.getByRole('tab', { name: 'Вітальні' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Призначення' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Шкали' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Нотатки' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Баланс' })).toBeVisible();
+    // Single ICU card: vitals/losses grid + therapy
+    await expect(page.getByText('Показник / година')).toBeVisible();
+    await expect(page.getByText('Терапія (призначення)')).toBeVisible();
+
+    // Sidebar collapsible sections (all non-hourly data on one screen)
+    await expect(page.getByText('Нотатки')).toBeVisible();
+    await expect(page.getByText('Шкали')).toBeVisible();
+    await expect(page.getByText('Баланс рідини')).toBeVisible();
   });
 
-  test('switching tabs shows different content', async ({ page }) => {
+  test('single screen has no tab navigation', async ({ page }) => {
     await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
-    await page.getByRole('tab', { name: 'Призначення' }).click();
-    await expect(page.getByRole('button', { name: '+ Нове призначення' })).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Нотатки' }).click();
-    await expect(page.getByLabel('Нова нотатка')).toBeVisible();
-
-    await page.getByRole('tab', { name: 'Баланс' }).click();
-    await expect(page.getByRole('heading', { name: 'Баланс рідини' })).toBeVisible();
+    await expect(page.getByText('Показник / година')).toBeVisible();
+    await expect(page.queryAllByRole('tab')).toHaveLength(0);
   });
 
   test('back button returns to doctor dashboard', async ({ page }) => {

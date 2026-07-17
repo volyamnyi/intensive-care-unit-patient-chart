@@ -7,8 +7,6 @@ test.describe('Prescription Cancel', () => {
   test('creates prescription via UI and shows active status', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByRole('tab', { name: 'Призначення' }).click();
-
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
     await page.getByLabel('Препарат').fill('Lidocaine');
@@ -26,7 +24,6 @@ test.describe('Prescription Cancel', () => {
   test('prescription form has cancel button to close form', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByRole('tab', { name: 'Призначення' }).click();
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
     await expect(page.getByText('Нове призначення')).toBeVisible();

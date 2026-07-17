@@ -14,7 +14,19 @@
     "noResults": "Немає результатів",
     "create": "Створити",
     "add": "Додати",
-    "open": "Відкрити"
+    "open": "Відкрити",
+    "saveReadings": "Зберегти показники",
+    "saving": "Збереження...",
+    "calculating": "Розрахунок...",
+    "sign": "Підписати",
+    "signing": "Підписання...",
+    "reopen": "Перевідкрити",
+    "male": "Чоловік",
+    "female": "Жінка",
+    "signOffDay": "Підписати добу",
+    "reopenDay": "Перевідкрити добу",
+    "confirm": "Підтвердити",
+    "close": "Закрити"
   },
   "login": {
     "title": "ВАІТ — Вхід",
@@ -197,8 +209,10 @@
     "cancelOrderButton": "Скасувати"
   },
   "medicalNotes": {
+    "title": "Нотатки",
     "newNoteLabel": "Нова нотатка",
     "addNoteButton": "Додати нотатку",
+    "add": "Додати нотатку",
     "empty": "Немає нотаток"
   },
   "scaleResults": {
@@ -208,6 +222,10 @@
     "empty": "Немає даних шкал",
     "resultText": "Результат: {{result}} ({{date}})",
     "notFilled": "Не заповнено"
+  },
+  "clinicalScales": {
+    "title": "Шкали",
+    "empty": "Немає даних шкал"
   },
   "fluidBalance": {
     "title": "Баланс рідини",
@@ -241,6 +259,10 @@
     "dayLabel": "Доба {{dayNumber}}"
   },
   "auditLog": {
+    "title": "Журнал аудиту",
+    "view": "Переглянути журнал аудиту",
+    "hide": "Сховати",
+    "filterByEntity": "Фільтр за сутністю",
     "loading": "Завантаження...",
     "empty": "Немає записів аудиту",
     "tableHeaders": {
@@ -250,6 +272,14 @@
       "action": "Дія",
       "changes": "Зміни"
     }
+  },
+  "layout": {
+    "patients": "Пацієнти",
+    "nurse": "Медсестра",
+    "doctor": "Лікар",
+    "hod": "Завідувач відділення",
+    "userMenu": "Меню користувача",
+    "icu": "ВАІТ"
   },
   "clinicalRanges": {
     "temperature": "Температура",
@@ -265,5 +295,72 @@
       "mmhg": "мм рт.ст.",
       "percent": "%"
     }
+  },
+  "labResults": {
+    "title": "Лабораторні результати",
+    "testLabel": "Аналіз",
+    "resultLabel": "Результат",
+    "refRange": "Реф: {{min}}–{{max}} {{unit}}",
+    "addButton": "Додати",
+    "allTestsEntered": "Усі аналізи внесено",
+    "noResults": "Лабораторних результатів не внесено",
+    "testColumn": "Аналіз",
+    "resultColumn": "Результат",
+    "unitColumn": "Од.",
+    "refRangeColumn": "Референсний діапазон",
+    "flagColumn": "Позначка",
+    "abnormal": "Відхилення"
+  },
+  "ventilation": {
+    "title": "ШВЛ",
+    "mode": "Режим",
+    "fio2": "FiO₂ (%)",
+    "peep": "PEEP",
+    "tv": "Дихальний об'єм (мл)",
+    "minuteVolume": "Хвилинний об'єм",
+    "pinsp": "Pinsp",
+    "psupport": "Psupport",
+    "triggerType": "Тригер",
+    "ieRatio": "I:E",
+    "respiratoryRate": "ЧД",
+    "plateauPressure": "Плато (см H2O)",
+    "meanAirwayPressure": "Середній тиск (см H2O)",
+    "addButton": "Додати",
+    "tableHeaders": {
+      "hour": "Година",
+      "mode": "Режим",
+      "fio2": "FiO₂",
+      "peep": "PEEP",
+      "tv": "ДО"
+    }
+  },
+  "patientState": {
+    "title": "Стан пацієнта",
+    "consciousness": "Свідомість",
+    "skin": "Шкіра",
+    "edema": "Набряк",
+    "mucousMembranes": "Слизова",
+    "peripheralCirculation": "Периферійний кровообіг",
+    "bowelSounds": "Перистальтика",
+    "generalCondition": "Загальний стан",
+    "additionalNotes": "Додаткові нотатки",
+    "addButton": "Додати",
+    "tableHeaders": {
+      "hour": "Година",
+      "consciousness": "Свідомість",
+      "condition": "Стан",
+      "skin": "Шкіра",
+      "edema": "Набряк"
+    }
+  },
+  "infusion": {
+    "title": "Інфузійна терапія",
+    "newButton": "Нова інфузія",
+    "newInfusionTitle": "Нова інфузія",
+    "newOrderButton": "Створити призначення",
+    "empty": "Немає інфузійних призначень",
+    "activeCount": "Активних інфузій",
+    "executeButton": "Виконати",
+    "cancelButton": "Скасувати"
   }
 }
