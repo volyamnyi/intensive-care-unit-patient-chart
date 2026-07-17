@@ -11,6 +11,9 @@ import type {
   OrderExecutionCreateRequest,
   MedicalNoteCreateRequest,
   ScaleResultCreateRequest,
+  LabResult, LabResultCreateRequest,
+  VentilationSettings, VentilationCreateRequest,
+  PatientStateAssessment, PatientStateCreateRequest,
 } from '../types';
 
 export const authApi = {
@@ -123,6 +126,33 @@ export const userApi = {
   getMe: () => client.get<User>('/users/me'),
   getDoctors: () => client.get<User[]>('/users/doctors'),
   getNurses: () => client.get<User[]>('/users/nurses'),
+};
+
+export const patientStateApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<PatientStateAssessment[]>(`/clinical-days/${clinicalDayId}/patient-state`),
+  create: (clinicalDayId: string, data: PatientStateCreateRequest) =>
+    client.post<PatientStateAssessment>(`/clinical-days/${clinicalDayId}/patient-state`, data),
+  update: (id: string, data: Partial<PatientStateCreateRequest> & { version: number }) =>
+    client.patch<PatientStateAssessment>(`/patient-state/${id}`, data),
+};
+
+export const ventilationApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<VentilationSettings[]>(`/clinical-days/${clinicalDayId}/ventilation`),
+  create: (clinicalDayId: string, data: VentilationCreateRequest) =>
+    client.post<VentilationSettings>(`/clinical-days/${clinicalDayId}/ventilation`, data),
+  update: (id: string, data: Partial<VentilationCreateRequest> & { version: number }) =>
+    client.patch<VentilationSettings>(`/ventilation/${id}`, data),
+};
+
+export const labResultApi = {
+  getByClinicalDay: (clinicalDayId: string) =>
+    client.get<LabResult[]>(`/clinical-days/${clinicalDayId}/lab-results`),
+  create: (clinicalDayId: string, data: LabResultCreateRequest) =>
+    client.post<LabResult>(`/clinical-days/${clinicalDayId}/lab-results`, data),
+  update: (id: string, data: { result?: string; version: number }) =>
+    client.patch<LabResult>(`/lab-results/${id}`, data),
 };
 
 export const auditApi = {

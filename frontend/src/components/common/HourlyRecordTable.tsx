@@ -12,8 +12,10 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const getRec = (hour: number) => {
-    const h = hour < 10 ? `0${hour}:00` : `${hour}:00`;
-    return records.find((r) => r.recordTime.includes(h));
+    return records.find((r) => {
+      const h = Number(String(r.recordTime).substring(11, 13));
+      return h === hour;
+    });
   };
 
   return (

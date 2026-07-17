@@ -30,12 +30,20 @@ export interface EpisodeCreateRequest {
   hospitalizationId?: string;
   departmentId?: string;
   admissionDate: string;
+  heightCm?: number;
+  ward?: string;
+  bedNumber?: string;
+  admissionDiagnosis?: string;
 }
 
 export interface EpisodePatchRequest {
   hospitalizationId?: string;
   departmentId?: string;
   dischargeDate?: string;
+  heightCm?: number;
+  ward?: string;
+  bedNumber?: string;
+  admissionDiagnosis?: string;
   version: number;
 }
 
@@ -48,10 +56,12 @@ export interface ClinicalDayCreateRequest {
   episodeId: string;
   startDateTime: string;
   endDateTime: string;
+  weightKg?: number;
 }
 
 export interface ClinicalDayPatchRequest {
   endDateTime?: string;
+  weightKg?: number;
   version: number;
 }
 
@@ -104,6 +114,93 @@ export interface ScaleResultCreateRequest {
   result: string;
 }
 
+export interface LabResult {
+  id: string;
+  clinicalDayId: string;
+  testCode: string;
+  testName: string;
+  result: string;
+  unit: string;
+  referenceMin: number | null;
+  referenceMax: number | null;
+  isAbnormal: boolean;
+  measuredAt: string;
+  createdAt: string;
+  version: number;
+}
+
+export interface LabResultCreateRequest {
+  testCode: string;
+  testName: string;
+  result: string;
+  unit: string;
+  referenceMin: number | null;
+  referenceMax: number | null;
+  measuredAt: string;
+}
+
+export interface VentilationSettings {
+  id: string;
+  clinicalDayId: string;
+  recordHour: number;
+  mode: string;
+  fio2: number | null;
+  peep: number | null;
+  tidalVolume: number | null;
+  minuteVolume: number | null;
+  pinsp: number | null;
+  psupport: number | null;
+  triggerType: string;
+  ieRatio: string;
+  respiratoryRate: number | null;
+  plateauPressure: number | null;
+  meanAirwayPressure: number | null;
+  version: number;
+}
+
+export interface PatientStateAssessment {
+  id: string;
+  clinicalDayId: string;
+  recordHour: number;
+  consciousness: string;
+  skin: string;
+  edema: string;
+  mucousMembranes: string;
+  peripheralCirculation: string;
+  bowelSounds: string;
+  generalCondition: string;
+  additionalNotes: string;
+  version: number;
+}
+
+export interface PatientStateCreateRequest {
+  recordHour: number;
+  consciousness?: string;
+  skin?: string;
+  edema?: string;
+  mucousMembranes?: string;
+  peripheralCirculation?: string;
+  bowelSounds?: string;
+  generalCondition?: string;
+  additionalNotes?: string;
+}
+
+export interface VentilationCreateRequest {
+  recordHour: number;
+  mode?: string;
+  fio2?: number;
+  peep?: number;
+  tidalVolume?: number;
+  minuteVolume?: number;
+  pinsp?: number;
+  psupport?: number;
+  triggerType?: string;
+  ieRatio?: string;
+  respiratoryRate?: number;
+  plateauPressure?: number;
+  meanAirwayPressure?: number;
+}
+
 export interface SignRequest {
   userId: number;
   hash?: string;
@@ -132,6 +229,10 @@ export interface Episode {
   admissionDate: string;
   dischargeDate: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  heightCm: number | null;
+  ward: string | null;
+  bedNumber: string | null;
+  admissionDiagnosis: string | null;
   createdBy: number;
   createdAt: string;
   updatedBy: number;
@@ -149,6 +250,8 @@ export interface ClinicalDay {
   doctorSigned: boolean | null;
   nurseSigned: boolean | null;
   closedAt: string | null;
+  weightKg: number | null;
+  bmi: number | null;
   createdBy: number;
   createdAt: string;
   updatedBy: number;
@@ -264,6 +367,8 @@ export interface FluidBalanceItem {
   balance: number | null;
   cumulativeBalance: number | null;
   version: number;
+  intakeByCategory?: Record<string, number>;
+  outputByCategory?: Record<string, number>;
 }
 
 export interface Signature {

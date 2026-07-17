@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Button, Alert, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, useTheme } from '@mui/material';
 import { ArrowBack, LockOpen, Download } from '@mui/icons-material';
-import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi, labResultApi, ventilationApi, patientStateApi } from '../../api/endpoints';
+import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
 import { useTranslation } from 'react-i18next';
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard';
 import NurseDashboard from '../../components/monitoring/NurseDashboard';
 import SignDialog from '../../components/common/SignDialog';
-import type { Episode, ClinicalDay, HourlyRecord, HourlyRecordCreateRequest, MedicalOrder, MedicalNote, ScaleResult, ClinicalScale, FluidBalanceItem, LabResult, VentilationSettings, MedicalOrderCreateRequest, PatientStateAssessment } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
 
 export default function PatientDayPage() {
   const { t } = useTranslation();
@@ -22,21 +22,11 @@ export default function PatientDayPage() {
   const [selectedDay, setSelectedDay] = useState<ClinicalDay | null>(null);
   const [records, setRecords] = useState<HourlyRecord[]>([]);
   const [orders, setOrders] = useState<MedicalOrder[]>([]);
-  const [notes, setNotes] = useState<MedicalNote[]>([]);
-  const [scaleResults, setScaleResults] = useState<ScaleResult[]>([]);
-  const [availableScales, setAvailableScales] = useState<ClinicalScale[]>([]);
   const [balanceItems, setFluidBalanceItems] = useState<FluidBalanceItem[]>([]);
-  const [labResults, setLabResults] = useState<LabResult[]>([]);
-  const [ventilationSettings, setVentilationSettings] = useState<VentilationSettings[]>([]);
-  const [patientStateAssessments, setPatientStateAssessments] = useState<PatientStateAssessment[]>([]);
-  const [currentHour, setCurrentHour] = useState(new Date().getHours());
-  const [vitalForm, setVitalForm] = useState<HourlyRecordCreateRequest>({ recordTime: '' });
   const [signDialogOpen, setSignDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
   const [loading, setLoading] = useState(true);
-  const [autoSaving, setAutoSaving] = useState(false);
-  const lastManualSave = useRef(0);
 
   useEffect(() => {
     if (!episodeId) return;
@@ -56,24 +46,14 @@ export default function PatientDayPage() {
 
   const loadDayData = useCallback(async (day: ClinicalDay) => {
     try {
-      const [recRes, ordRes, noteRes, scaleRes, balRes, labRes, ventRes, psRes] = await Promise.all([
+      const [recRes, ordRes, balRes] = await Promise.all([
         hourlyRecordApi.getByClinicalDay(day.id),
         medicalOrderApi.getByClinicalDay(day.id),
-        medicalNoteApi.getByClinicalDay(day.id),
-        clinicalScaleApi.getResultsByClinicalDay(day.id),
         fluidBalanceApi.getByClinicalDay(day.id),
-        labResultApi.getByClinicalDay(day.id),
-        ventilationApi.getByClinicalDay(day.id),
-        patientStateApi.getByClinicalDay(day.id),
       ]);
       setRecords(recRes.data);
       setOrders(ordRes.data);
-      setNotes(noteRes.data);
-      setScaleResults(scaleRes.data);
       setFluidBalanceItems(balRes.data);
-      setLabResults(labRes.data);
-      setVentilationSettings(ventRes.data);
-      setPatientStateAssessments(psRes.data);
     } catch {
       // data stays stale on error
     }
@@ -86,188 +66,8 @@ export default function PatientDayPage() {
   }, [selectedDay?.id]);
 
   useEffect(() => {
-    clinicalScaleApi.getAvailable().then(res => setAvailableScales(res.data)).catch(() => {});
-  }, []);
-
-  useEffect(() => {
     document.title = episode ? `ICU — ${episode.patientName}` : 'ICU — Patient';
   }, [episode]);
-
-  useEffect(() => {
-    const hasData = vitalForm.systolicBP || vitalForm.diastolicBP || vitalForm.heartRate
-      || vitalForm.spo2 || vitalForm.temperature || vitalForm.consciousness;
-    if (!selectedDay || !hasData) return;
-    if (Date.now() - lastManualSave.current < 5000) return;
-    const timer = setTimeout(async () => {
-      try {
-        setAutoSaving(true);
-        const recTime = `${new Date().toISOString().split('T')[0]}T${String(currentHour).padStart(2, '0')}:00:00`;
-        await hourlyRecordApi.create(selectedDay.id, { ...vitalForm, recordTime: recTime });
-        const res = await hourlyRecordApi.getByClinicalDay(selectedDay.id);
-        setRecords(res.data);
-      } catch {
-        // auto-save failed silently
-      } finally {
-        setAutoSaving(false);
-      }
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [vitalForm, selectedDay, currentHour]);
-
-  const handleSaveVitals = async () => {
-    if (!selectedDay) return;
-    lastManualSave.current = Date.now();
-    try {
-      const recTime = `${new Date().toISOString().split('T')[0]}T${String(currentHour).padStart(2, '0')}:00:00`;
-      await hourlyRecordApi.create(selectedDay.id, { ...vitalForm, recordTime: recTime });
-      const res = await hourlyRecordApi.getByClinicalDay(selectedDay.id);
-      setRecords(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleCreateOrder = async (order: MedicalOrderCreateRequest) => {
-    if (!selectedDay) return;
-    try {
-      await medicalOrderApi.create(selectedDay.id, order);
-      const res = await medicalOrderApi.getByClinicalDay(selectedDay.id);
-      setOrders(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleCancelOrder = async (orderId: string) => {
-    const order = orders.find(o => o.id === orderId);
-    if (!order || !selectedDay) return;
-    try {
-      await medicalOrderApi.cancel(orderId, { version: order.version });
-      const res = await medicalOrderApi.getByClinicalDay(selectedDay.id);
-      setOrders(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleExecuteOrder = async (orderId: string) => {
-    if (!selectedDay || !user) return;
-    try {
-      await orderExecutionApi.create(orderId, {
-        executedBy: user.id,
-        executedAt: new Date().toISOString(),
-        actualDose: '',
-      });
-      const res = await medicalOrderApi.getByClinicalDay(selectedDay.id);
-      setOrders(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleCreateNote = async (text: string, noteType: string) => {
-    if (!selectedDay) return;
-    try {
-      await medicalNoteApi.create(selectedDay.id, { text, noteType });
-      const res = await medicalNoteApi.getByClinicalDay(selectedDay.id);
-      setNotes(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleSaveVentilation = async (data: { recordHour: number; mode: string; fio2: string; peep: string; tidalVolume: string; minuteVolume: string; pinsp: string; psupport: string; triggerType: string; ieRatio: string; respiratoryRate: string; plateauPressure: string; meanAirwayPressure: string }) => {
-    if (!selectedDay) return;
-    try {
-      await ventilationApi.create(selectedDay.id, {
-        recordHour: data.recordHour,
-        mode: data.mode || undefined,
-        fio2: data.fio2 ? Number(data.fio2) : undefined,
-        peep: data.peep ? Number(data.peep) : undefined,
-        tidalVolume: data.tidalVolume ? Number(data.tidalVolume) : undefined,
-        minuteVolume: data.minuteVolume ? Number(data.minuteVolume) : undefined,
-        pinsp: data.pinsp ? Number(data.pinsp) : undefined,
-        psupport: data.psupport ? Number(data.psupport) : undefined,
-        triggerType: data.triggerType || undefined,
-        ieRatio: data.ieRatio || undefined,
-        respiratoryRate: data.respiratoryRate ? Number(data.respiratoryRate) : undefined,
-        plateauPressure: data.plateauPressure ? Number(data.plateauPressure) : undefined,
-        meanAirwayPressure: data.meanAirwayPressure ? Number(data.meanAirwayPressure) : undefined,
-      });
-      const res = await ventilationApi.getByClinicalDay(selectedDay.id);
-      setVentilationSettings(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleCreateLabResult = async (data: { testCode: string; testName: string; result: string; unit: string; referenceMin: number | null; referenceMax: number | null; measuredAt: string }) => {
-    if (!selectedDay) return;
-    try {
-      await labResultApi.create(selectedDay.id, data);
-      const res = await labResultApi.getByClinicalDay(selectedDay.id);
-      setLabResults(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleSavePatientState = async (data: { recordHour: number; consciousness: string; skin: string; edema: string; mucousMembranes: string; peripheralCirculation: string; bowelSounds: string; generalCondition: string; additionalNotes: string }) => {
-    if (!selectedDay) return;
-    try {
-      const existing = patientStateAssessments.find(a => a.recordHour === data.recordHour);
-      if (existing) {
-        await patientStateApi.update(existing.id, {
-          consciousness: data.consciousness || undefined,
-          skin: data.skin || undefined,
-          edema: data.edema || undefined,
-          mucousMembranes: data.mucousMembranes || undefined,
-          peripheralCirculation: data.peripheralCirculation || undefined,
-          bowelSounds: data.bowelSounds || undefined,
-          generalCondition: data.generalCondition || undefined,
-          additionalNotes: data.additionalNotes || undefined,
-          version: existing.version,
-        });
-      } else {
-        await patientStateApi.create(selectedDay.id, {
-          recordHour: data.recordHour,
-          consciousness: data.consciousness || undefined,
-          skin: data.skin || undefined,
-          edema: data.edema || undefined,
-          mucousMembranes: data.mucousMembranes || undefined,
-          peripheralCirculation: data.peripheralCirculation || undefined,
-          bowelSounds: data.bowelSounds || undefined,
-          generalCondition: data.generalCondition || undefined,
-          additionalNotes: data.additionalNotes || undefined,
-        });
-      }
-      const res = await patientStateApi.getByClinicalDay(selectedDay.id);
-      setPatientStateAssessments(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleCreateScaleResult = async (scaleId: string, result: string) => {
-    if (!selectedDay) return;
-    try {
-      await clinicalScaleApi.createResult(selectedDay.id, { scaleId, result });
-      const res = await clinicalScaleApi.getResultsByClinicalDay(selectedDay.id);
-      setScaleResults(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
-
-  const handleRecalculateBalance = async () => {
-    if (!selectedDay) return;
-    try {
-      const res = await fluidBalanceApi.recalculate(selectedDay.id);
-      setFluidBalanceItems(res.data);
-    } catch {
-      // error handled silently
-    }
-  };
 
   const handleSignOff = async () => {
     if (!selectedDay || !user) return;
@@ -305,7 +105,7 @@ export default function PatientDayPage() {
   const handleGeneratePDF = async () => {
     if (!selectedDay) return;
     try {
-      await clinicalDayApi.generatePdf(selectedDay.id);
+      await pdfApi.generate(selectedDay.id);
     } catch {
       // error handled silently
     }
@@ -371,22 +171,9 @@ export default function PatientDayPage() {
             onSelectDay={setSelectedDay}
             records={records}
             orders={orders}
-            notes={notes}
-            scaleResults={scaleResults}
-            availableScales={availableScales}
             balanceItems={balanceItems}
-            currentHour={currentHour}
-            onSetCurrentHour={setCurrentHour}
-            vitalForm={vitalForm}
-            onVitalFormChange={setVitalForm}
-            onSaveVitals={handleSaveVitals}
-            autoSaving={autoSaving}
-            onExecuteOrder={handleExecuteOrder}
-            onCreateNote={handleCreateNote}
-            onRecalculateBalance={handleRecalculateBalance}
             isLocked={isLocked}
             isNurse={isNurse}
-            isDoctor={isDoctor}
             user={user}
           />
         ) : (
@@ -397,30 +184,9 @@ export default function PatientDayPage() {
             onSelectDay={setSelectedDay}
             records={records}
             orders={orders}
-            notes={notes}
-            scaleResults={scaleResults}
-            availableScales={availableScales}
             balanceItems={balanceItems}
-            currentHour={currentHour}
-            onSetCurrentHour={setCurrentHour}
-            vitalForm={vitalForm}
-            onVitalFormChange={setVitalForm}
-            onSaveVitals={handleSaveVitals}
-            autoSaving={autoSaving}
-            onCreateOrder={handleCreateOrder}
-            onCancelOrder={handleCancelOrder}
-            onCreateNote={handleCreateNote}
-            labResults={labResults}
-            ventilationSettings={ventilationSettings}
-            patientStateAssessments={patientStateAssessments}
-            onCreateLabResult={handleCreateLabResult}
-            onSaveVentilation={handleSaveVentilation}
-            onSavePatientState={handleSavePatientState}
-            onCreateScaleResult={handleCreateScaleResult}
-            onRecalculateBalance={handleRecalculateBalance}
             isLocked={isLocked}
             isNurse={isNurse}
-            isDoctor={isDoctor}
             user={user}
           />
         )

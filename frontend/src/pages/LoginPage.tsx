@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Box, Card, CardContent, TextField, Button, Typography, Alert } from '@mui/material';
+import { Box, Card, CardContent, TextField, Button, Typography, Alert, InputAdornment, IconButton } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../services/AuthContext';
 import { useThemeMode } from '../styles/ThemeContext';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const isDark = mode === 'dark';
   const [loginField, setLoginField] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,9 +78,21 @@ export default function LoginPage() {
               sx={{ mb: 2 }} required
             />
             <TextField
-              fullWidth label={t('login.password')} type="password" value={password}
+              fullWidth label={t('login.password')}
+              type={showPassword ? 'text' : 'password'} value={password}
               onChange={(e) => setPassword(e.target.value)}
               sx={{ mb: 3.5 }} required
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowPassword((p) => !p)} edge="end" tabIndex={-1}>
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
             <Button
               fullWidth variant="contained" size="large" type="submit"

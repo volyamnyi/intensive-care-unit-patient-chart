@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Grid, Paper, Typography, TextField, Button, MenuItem, Box, useTheme } from '@mui/material';
+import { Grid, Paper, Typography, TextField, Button, MenuItem, Box, Chip, useTheme } from '@mui/material';
 import type { ScaleResult, ClinicalScale } from '../../types';
 
 interface ScaleResultsPanelProps {
@@ -22,6 +22,8 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
     setSelectedScaleId('');
     setResultValue('');
   };
+
+  const isAutoScale = (name: string) => /GCS|RASS|glasgow|richmond/i.test(name);
 
   const getResultForScale = (scaleId: string) => results.find((r) => r.scaleId === scaleId);
 
@@ -62,6 +64,9 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
                 <Paper sx={{ p: 2, border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)' }}>
                   <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 600 }}>
                     {scale.name}
+                    {isAutoScale(scale.name) && (
+                      <Chip label="Auto" size="small" color="info" sx={{ ml: 1, fontSize: 9, fontWeight: 700, height: 18 }} />
+                    )}
                   </Typography>
                   {result ? (
                     <Typography variant="body1" sx={{ mt: 0.5 }}>

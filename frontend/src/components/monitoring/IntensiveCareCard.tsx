@@ -3,12 +3,13 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Tooltip, useTheme, CircularProgress, Accordion, AccordionSummary,
   AccordionDetails, List, ListItem, ListItemText, Button, Stack,
-  Dialog, DialogTitle, DialogContent, DialogActions, Grid,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import type {
   Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem,
+  HourlyRecordCreateRequest, MedicalNoteCreateRequest,
 } from '../../types';
 import {
   hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi,
@@ -73,7 +74,7 @@ export default function IntensiveCareCard({
         text: noteDraft.trim(),
         noteType: 'CLINICAL',
         role: isNurse ? 'NURSE' : 'DOCTOR',
-      } as unknown as Record<string, unknown>);
+      } as unknown as MedicalNoteCreateRequest);
       setNoteDraft('');
       const refreshed = await medicalNoteApi.getByClinicalDay(selectedDay.id);
       setNotes(refreshed.data as unknown as { id: string; text: string; authorId?: string }[]);
@@ -170,15 +171,18 @@ export default function IntensiveCareCard({
     try {
       setSavingHour(hour);
       if (existing) {
-        await hourlyRecordApi.update(existing.id, {
-          version: existing.version,
-          [key]: value,
-        } as Partial<HourlyRecord> & { version: number });
+        const patch: Partial<HourlyRecordCreateRequest> & { version: number } = { version: existing.version };
+        if (value !== null) {
+          (patch as Record<string, unknown>)[key] = value;
+        }
+        await hourlyRecordApi.update(existing.id, patch);
       } else {
-        await hourlyRecordApi.create(selectedDay.id, {
-          recordTime: recTime,
-          [key]: value,
-        } as HourlyRecordCreateRequestLike);
+        if (value !== null) {
+          await hourlyRecordApi.create(selectedDay.id, {
+            recordTime: recTime,
+            [key]: value,
+          } as HourlyRecordCreateRequest);
+        }
       }
     } catch {
       // silent
@@ -205,7 +209,7 @@ export default function IntensiveCareCard({
             size="small"
             type={numeric ? 'number' : 'text'}
             value={draft}
-            inputProps={{ 'aria-label': `${label} ${hour}:00`, style: { padding: 4, fontSize: 11, textAlign: 'center' } }}
+            slotProps={{ input: { 'aria-label': `${label} ${hour}:00`, style: { padding: 4, fontSize: 11, textAlign: 'center' } } }}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => { setEditing(false); if (draft !== value) saveCell(hour, rowKey, draft); }}
             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
@@ -382,7 +386,7 @@ export default function IntensiveCareCard({
             <List dense sx={{ py: 0 }}>
               {notes.map((n) => (
                 <ListItem key={n.id} sx={{ px: 0 }}>
-                  <ListItemText primary={n.text} primaryTypographyProps={{ fontSize: 12 }} />
+                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{n.text}</Typography>} />
                 </ListItem>
               ))}
             </List>
@@ -396,7 +400,7 @@ export default function IntensiveCareCard({
                 onChange={(e) => setNoteDraft(e.target.value)}
                 multiline
                 minRows={2}
-                inputProps={{ 'aria-label': t('medicalNotes.newNoteLabel') }}
+                slotProps={{ input: { 'aria-label': t('medicalNotes.newNoteLabel') } }}
               />
               <Button size="small" variant="outlined" onClick={addNote} disabled={savingNote || !noteDraft.trim()}>
                 {t('medicalNotes.addNoteButton')}
@@ -412,7 +416,7 @@ export default function IntensiveCareCard({
             <List dense sx={{ py: 0 }}>
               {scales.map((s) => (
                 <ListItem key={s.id} sx={{ px: 0 }}>
-                  <ListItemText primary={`${s.name ?? ''}: ${s.result}`} primaryTypographyProps={{ fontSize: 12 }} />
+                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>`${s.name ?? ''}: ${s.result}`</Typography>} />
                 </ListItem>
               ))}
             </List>
@@ -426,7 +430,7 @@ export default function IntensiveCareCard({
             <List dense sx={{ py: 0 }}>
               {ventilation.map((v) => (
                 <ListItem key={v.id} sx={{ px: 0 }}>
-                  <ListItemText primary={String(v.mode ?? v.id)} primaryTypographyProps={{ fontSize: 12 }} />
+                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{String(v.mode ?? v.id)}</Typography>} />
                 </ListItem>
               ))}
             </List>
@@ -440,7 +444,7 @@ export default function IntensiveCareCard({
             <List dense sx={{ py: 0 }}>
               {labs.map((l) => (
                 <ListItem key={l.id} sx={{ px: 0 }}>
-                  <ListItemText primary={`${l.testName ?? ''}: ${l.result ?? ''}`} primaryTypographyProps={{ fontSize: 12 }} />
+                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>`${l.testName ?? ''}: ${l.result ?? ''}`</Typography>} />
                 </ListItem>
               ))}
             </List>
@@ -454,7 +458,7 @@ export default function IntensiveCareCard({
             <List dense sx={{ py: 0 }}>
               {patientState.map((p) => (
                 <ListItem key={p.id} sx={{ px: 0 }}>
-                  <ListItemText primary={p.assessment ?? ''} primaryTypographyProps={{ fontSize: 12 }} />
+                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{p.assessment ?? ''}</Typography>} />
                 </ListItem>
               ))}
             </List>
@@ -465,14 +469,14 @@ export default function IntensiveCareCard({
       <Dialog open={orderDialog} onClose={() => setOrderDialog(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: 14 }}>{t('medicalOrders.new') ?? 'Нове призначення'}</DialogTitle>
         <DialogContent>
-          <Grid container spacing={1} sx={{ mt: 0 }}>
-            <Grid item xs={12}><TextField fullWidth size="small" label="Препарат" value={orderForm.drugName} onChange={(e) => setOrderForm({ ...orderForm, drugName: e.target.value })} /></Grid>
-            <Grid item xs={6}><TextField fullWidth size="small" label="Доза" value={orderForm.dose} onChange={(e) => setOrderForm({ ...orderForm, dose: e.target.value })} /></Grid>
-            <Grid item xs={6}><TextField fullWidth size="small" label="Од." value={orderForm.unit} onChange={(e) => setOrderForm({ ...orderForm, unit: e.target.value })} /></Grid>
-            <Grid item xs={6}><TextField fullWidth size="small" label="Шлях" value={orderForm.route} onChange={(e) => setOrderForm({ ...orderForm, route: e.target.value })} /></Grid>
-            <Grid item xs={6}><TextField fullWidth size="small" label="Частота" value={orderForm.frequency} onChange={(e) => setOrderForm({ ...orderForm, frequency: e.target.value })} /></Grid>
-            <Grid item xs={12}><TextField fullWidth size="small" label="Початок" type="datetime-local" value={orderForm.startTime} onChange={(e) => setOrderForm({ ...orderForm, startTime: e.target.value })} InputLabelProps={{ shrink: true }} /></Grid>
-          </Grid>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0 }}>
+            <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Препарат" value={orderForm.drugName} onChange={(e) => setOrderForm({ ...orderForm, drugName: e.target.value })} /></Box>
+            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Доза" value={orderForm.dose} onChange={(e) => setOrderForm({ ...orderForm, dose: e.target.value })} /></Box>
+            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Од." value={orderForm.unit} onChange={(e) => setOrderForm({ ...orderForm, unit: e.target.value })} /></Box>
+            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Шлях" value={orderForm.route} onChange={(e) => setOrderForm({ ...orderForm, route: e.target.value })} /></Box>
+            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Частота" value={orderForm.frequency} onChange={(e) => setOrderForm({ ...orderForm, frequency: e.target.value })} /></Box>
+            <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Початок" type="datetime-local" value={orderForm.startTime} onChange={(e) => setOrderForm({ ...orderForm, startTime: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} /></Box>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOrderDialog(false)}>Скасувати</Button>
@@ -512,8 +516,3 @@ function GroupHeader({ label, nurseEditable }: { label: string; nurseEditable?: 
     </TableRow>
   );
 }
-
-type HourlyRecordCreateRequestLike = {
-  recordTime: string;
-  [key: string]: unknown;
-};
