@@ -109,6 +109,6 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/pdf", HttpMethod.POST, entity,
                 String.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

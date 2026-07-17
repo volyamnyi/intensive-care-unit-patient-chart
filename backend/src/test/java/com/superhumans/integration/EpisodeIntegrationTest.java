@@ -97,7 +97,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
                 "/api/episodes", HttpMethod.POST, entity,
                 String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
