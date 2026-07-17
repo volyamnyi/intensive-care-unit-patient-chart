@@ -26,7 +26,7 @@ vi.mock('../../api/endpoints', () => ({
 
 vi.mock('../../services/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 'admin-1', login: 'admin', fullName: 'Адмін', role: 'ADMINISTRATOR', email: 'admin@test.com' },
+    user: { id: 0, login: 'admin', fullName: 'Адмін', role: 'ADMINISTRATOR', email: 'admin@test.com' },
     token: 'mock-token',
     isAuthenticated: true,
     logout: mockLogout,
@@ -35,12 +35,12 @@ vi.mock('../../services/AuthContext', () => ({
 }));
 
 const mockDoctors: User[] = [
-  { id: 'd1', login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR', email: 'doctor1@test.com', specialityCode: '001', specialityName: 'Хірург', phone: '123' },
-  { id: 'd2', login: 'head1', fullName: 'Завідувач Петро', role: 'HEAD_OF_DEPARTMENT', email: 'head1@test.com', specialityCode: '002', specialityName: 'Завідувач', phone: '456' },
+  { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR', email: 'doctor1@test.com', specialityCode: '001', specialityName: 'Хірург', phone: '123' },
+  { id: 2, login: 'head1', fullName: 'Завідувач Петро', role: 'HEAD_OF_DEPARTMENT', email: 'head1@test.com', specialityCode: '002', specialityName: 'Завідувач', phone: '456' },
 ];
 
 const mockNurses: User[] = [
-  { id: 'n1', login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE', email: 'nurse1@test.com', specialityCode: '010', specialityName: 'Медсестра', phone: '789' },
+  { id: 3, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE', email: 'nurse1@test.com', specialityCode: '010', specialityName: 'Медсестра', phone: '789' },
 ];
 
 function renderPage() {

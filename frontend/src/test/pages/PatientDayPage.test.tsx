@@ -62,7 +62,7 @@ vi.mock('../../api/endpoints', () => ({
 
 vi.mock('../../services/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 'doc-1', login: 'doctor1', fullName: 'Доктор', role: 'DOCTOR', email: '' },
+    user: { id: 1, login: 'doctor1', fullName: 'Доктор', role: 'DOCTOR', email: '' },
     token: 'mock-token',
     isAuthenticated: true,
     hasRole: (...roles: string[]) => roles.includes('DOCTOR'),
@@ -78,9 +78,9 @@ const mockEpisode: Episode = {
   admissionDate: '2025-06-01T10:00:00Z',
   dischargeDate: null,
   status: 'ACTIVE',
-  createdBy: 'doc-1',
+  createdBy: 1,
   createdAt: '2025-06-01T10:00:00Z',
-  updatedBy: 'doc-1',
+  updatedBy: 1,
   updatedAt: '2025-06-01T10:00:00Z',
   version: 1,
 };
@@ -96,9 +96,9 @@ const mockDays: ClinicalDay[] = [
     doctorSigned: false,
     nurseSigned: true,
     closedAt: null,
-    createdBy: 'nurse-1',
+    createdBy: 1,
     createdAt: '2025-06-01T08:00:00Z',
-    updatedBy: 'nurse-1',
+    updatedBy: 1,
     updatedAt: '2025-06-01T08:00:00Z',
     version: 1,
   },
@@ -112,16 +112,16 @@ const mockDays: ClinicalDay[] = [
     doctorSigned: false,
     nurseSigned: false,
     closedAt: null,
-    createdBy: 'nurse-1',
+    createdBy: 1,
     createdAt: '2025-06-02T08:00:00Z',
-    updatedBy: 'nurse-1',
+    updatedBy: 1,
     updatedAt: '2025-06-02T08:00:00Z',
     version: 1,
   },
 ];
 
 const mockScales: ClinicalScale[] = [
-  { id: 'scale-1', name: 'APACHE II', description: null, isAutomatic: false, status: 'ACTIVE', createdBy: 'admin', createdAt: '', updatedBy: '', updatedAt: '', version: 1 },
+  { id: 'scale-1', name: 'APACHE II', description: null, isAutomatic: false, status: 'ACTIVE', createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1 },
 ];
 
 function renderPage() {
@@ -221,7 +221,7 @@ describe('PatientDayPage', () => {
     });
     await userEvent.click(screen.getByText('Підписати'));
     await waitFor(() => {
-      expect(mockSignDoctor).toHaveBeenCalledWith('day-1', { userId: 'doc-1' });
+      expect(mockSignDoctor).toHaveBeenCalledWith('day-1', { userId: 1 });
     });
   });
 

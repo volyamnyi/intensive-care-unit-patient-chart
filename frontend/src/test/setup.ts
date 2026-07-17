@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 
 vi.mock('react-i18next', () => {
@@ -41,7 +42,7 @@ vi.mock('react-i18next', () => {
   return {
     useTranslation: () => ({ t, i18n: { language: 'uk', changeLanguage: () => {} } }),
     initReactI18next,
-    Trans: ({ i18nKey, children }: { i18nKey?: string; children?: React.ReactNode }) => children ?? null,
+    Trans: ({ children }: { i18nKey?: string; children?: React.ReactNode }) => children ?? null,
     I18nextProvider: ({ children }: { children?: React.ReactNode }) => children,
   };
 });

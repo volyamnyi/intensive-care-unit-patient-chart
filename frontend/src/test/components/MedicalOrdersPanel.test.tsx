@@ -16,9 +16,9 @@ const mockOrder: MedicalOrder = {
   startTime: '2025-06-01T10:00:00Z',
   endTime: null,
   status: 'ACTIVE',
-  createdBy: 'doc-1',
+  createdBy: 1,
   createdAt: '2025-06-01T10:00:00Z',
-  updatedBy: 'doc-1',
+  updatedBy: 1,
   updatedAt: '2025-06-01T10:00:00Z',
   version: 1,
 };

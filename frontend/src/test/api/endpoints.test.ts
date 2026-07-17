@@ -65,8 +65,8 @@ describe('clinicalDayApi', () => {
   });
 
   it('signNurse posts to /clinical-days/:id/sign/nurse', () => {
-    clinicalDayApi.signNurse('cd-1', { userId: 'user-1' });
-    expect(mockClient.post).toHaveBeenCalledWith('/clinical-days/cd-1/sign/nurse', { userId: 'user-1' });
+    clinicalDayApi.signNurse('cd-1', { userId: 1 });
+    expect(mockClient.post).toHaveBeenCalledWith('/clinical-days/cd-1/sign/nurse', { userId: 1 });
   });
 });
 
@@ -86,8 +86,8 @@ describe('medicalOrderApi', () => {
 
 describe('orderExecutionApi', () => {
   it('create posts to /orders/:id/execute', () => {
-    orderExecutionApi.create('ord-1', { executedBy: 'nurse-1', executedAt: '2024-01-01T00:00:00Z', actualDose: '5mg' });
-    expect(mockClient.post).toHaveBeenCalledWith('/orders/ord-1/execute', { executedBy: 'nurse-1', executedAt: '2024-01-01T00:00:00Z', actualDose: '5mg' });
+    orderExecutionApi.create('ord-1', { executedBy: 1, executedAt: '2024-01-01T00:00:00Z', actualDose: '5mg' });
+    expect(mockClient.post).toHaveBeenCalledWith('/orders/ord-1/execute', { executedBy: 1, executedAt: '2024-01-01T00:00:00Z', actualDose: '5mg' });
   });
 });
 

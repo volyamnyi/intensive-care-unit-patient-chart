@@ -7,7 +7,7 @@ import type { MedicalNote } from '../../types';
 const mockNote: MedicalNote = {
   id: 'note-1',
   clinicalDayId: 'day-1',
-  authorId: 'doc-1',
+  authorId: 1,
   role: 'DOCTOR',
   noteType: 'DOCTOR_NOTE',
   text: 'Стан стабільний, динаміка позитивна.',

@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { Box, useTheme } from '@mui/material';
 
 interface HourSelectorProps {

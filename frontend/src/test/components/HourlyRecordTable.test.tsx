@@ -14,7 +14,7 @@ const mockRecords: HourlyRecord[] = [
     consciousness: null, meanArterialPressure: null, etco2: null, fio2: null,
     urineOutput: null, drainOutput: null, stool: null, vomit: null,
     painScore: null, notes: null,
-    createdBy: 'nurse-1', createdAt: '', updatedBy: '', updatedAt: '', version: 1,
+    createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1,
   },
   {
     id: 'r2', clinicalDayId: 'day-1', recordTime: '2025-06-01T10:00:00',
@@ -23,7 +23,7 @@ const mockRecords: HourlyRecord[] = [
     consciousness: null, meanArterialPressure: null, etco2: null, fio2: null,
     urineOutput: null, drainOutput: null, stool: null, vomit: null,
     painScore: null, notes: null,
-    createdBy: 'nurse-1', createdAt: '', updatedBy: '', updatedAt: '', version: 1,
+    createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1,
   },
 ];
 

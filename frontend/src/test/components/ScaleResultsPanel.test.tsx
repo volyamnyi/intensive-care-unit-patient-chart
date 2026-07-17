@@ -5,8 +5,8 @@ import ScaleResultsPanel from '../../components/common/ScaleResultsPanel';
 import type { ScaleResult, ClinicalScale } from '../../types';
 
 const mockScales: ClinicalScale[] = [
-  { id: 'scale-1', name: 'APACHE II', description: null, isAutomatic: false, status: 'ACTIVE', createdBy: 'admin', createdAt: '', updatedBy: '', updatedAt: '', version: 1 },
-  { id: 'scale-2', name: 'SOFA', description: null, isAutomatic: false, status: 'ACTIVE', createdBy: 'admin', createdAt: '', updatedBy: '', updatedAt: '', version: 1 },
+  { id: 'scale-1', name: 'APACHE II', description: null, isAutomatic: false, status: 'ACTIVE', createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1 },
+  { id: 'scale-2', name: 'SOFA', description: null, isAutomatic: false, status: 'ACTIVE', createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1 },
 ];
 
 const mockResult: ScaleResult = {
@@ -16,7 +16,7 @@ const mockResult: ScaleResult = {
   scaleName: 'APACHE II',
   result: '15',
   calculatedAt: '2025-06-01T12:00:00Z',
-  calculatedBy: 'doc-1',
+  calculatedBy: 1,
   createdAt: '2025-06-01T12:00:00Z',
   version: 1,
 };
