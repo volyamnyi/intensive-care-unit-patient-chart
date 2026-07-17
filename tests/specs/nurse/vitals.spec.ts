@@ -19,15 +19,15 @@ test.describe('Nurse Vitals Entry', () => {
 
     const sysField = page.getByLabel('АТ сист (мм.рт.ст)');
     await expect(sysField).toHaveAttribute('type', 'number');
-    await expect(sysField).toHaveAttribute('min', '60');
-    await expect(sysField).toHaveAttribute('max', '300');
+    await expect(sysField).toHaveAttribute('min', '50');
+    await expect(sysField).toHaveAttribute('max', '250');
 
     const hrField = page.getByLabel('ЧСС (в 1 хв)');
-    await expect(hrField).toHaveAttribute('min', '20');
+    await expect(hrField).toHaveAttribute('min', '0');
     await expect(hrField).toHaveAttribute('max', '300');
 
     const tempField = page.getByLabel('Темп. тіла (°С)');
-    await expect(tempField).toHaveAttribute('min', '30');
-    await expect(tempField).toHaveAttribute('max', '45');
+    await expect(tempField).toHaveAttribute('min', '34');
+    await expect(tempField).toHaveAttribute('max', '42');
   });
 });
