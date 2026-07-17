@@ -370,7 +370,7 @@ icu-patient-chart/
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (149) |
+| `mvn test` | Run unit tests (151) |
 | `mvn test -Pintegration-test` | Run integration tests (79) — requires Docker |
 
 #### Frontend
@@ -397,7 +397,7 @@ icu-patient-chart/
 
 | Test type | CI job | Trigger |
 |---|---|---|
-| Backend unit (149) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend unit (151) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
 | Frontend Vitest (144) | `test` → `npm test` | Same |
 | Playwright E2E (79) | `test` → `npx playwright test` | Same |
@@ -406,7 +406,7 @@ icu-patient-chart/
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
 
 ### Testing Summary
-- **Backend unit tests**: 149 tests (14 classes) — `mvn test`
+- **Backend unit tests**: 151 tests (14 classes) — `mvn test`
 - **Backend integration tests**: 79 tests via Testcontainers (13 classes) — `mvn test -Pintegration-test`
 - **Frontend Vitest tests**: 144 tests (18 files)
 - **E2E Playwright tests**: 79 tests (28 spec files, 7 projects)

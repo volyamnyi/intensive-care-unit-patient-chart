@@ -22,7 +22,7 @@ tests/     (Playwright 1.61)
 
 | Test type | CI job | Trigger |
 |---|---|---|
-| Backend unit (149) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend unit (151) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
 | Frontend Vitest (144) | `test` → `npm test` | Same |
 | Playwright E2E (79) | `test` → `npx playwright test` | Same |
@@ -38,7 +38,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run 149 unit tests (excludes integration) |
+| `mvn test` | Run 151 unit tests (excludes integration) |
 | `mvn test -Pintegration-test` | Run 79 integration tests (requires Docker/PostgreSQL) |
 | `mvn verify` | Run all + JaCoCo coverage check + Checkstyle |
 
@@ -60,7 +60,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 
 ## Testing
 
-- **Backend**: 149 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Backend**: 151 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: 144 Vitest tests (18 files — pages, components, AuthContext, endpoints). Run with `npm t`.
 - **E2E**: 79 Playwright tests in 28 spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
