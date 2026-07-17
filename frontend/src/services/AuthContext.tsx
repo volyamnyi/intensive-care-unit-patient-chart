@@ -18,6 +18,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (window.location.pathname === '/login') {
+      setLoading(false);
+      return;
+    }
     userApi.getMe()
       .then((res) => setUser(res.data))
       .catch(() => setUser(null))

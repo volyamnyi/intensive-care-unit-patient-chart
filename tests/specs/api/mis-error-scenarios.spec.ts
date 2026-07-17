@@ -78,8 +78,8 @@ test.describe('MIS Error Scenarios', () => {
     expect(body.length).toBeGreaterThanOrEqual(3);
   });
 
-  test('mis error mode without auth returns 403', async ({ request }) => {
+  test('mis error mode without auth returns 401', async ({ request }) => {
     const res = await request.post(`${API}/mis/error-mode?mode=none`);
-    expect(res.status()).toBe(403);
+    expect(res.status()).toBe(401);
   });
 });

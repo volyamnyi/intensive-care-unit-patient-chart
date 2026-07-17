@@ -58,6 +58,6 @@ test.describe.serial('PDF Generation', () => {
 
   test('denies PDF generation without auth', async ({ request }) => {
     const genRes = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/pdf`);
-    expect(genRes.status()).toBe(403);
+    expect(genRes.status()).toBe(401);
   });
 });

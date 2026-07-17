@@ -81,15 +81,15 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void accessSecuredEndpoint_withoutToken_returnsForbidden() {
+    void accessSecuredEndpoint_withoutToken_returnsUnauthorized() {
         var res = restTemplate.getForEntity(
                 "/api/episodes", String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
-    void accessSecuredEndpoint_withInvalidToken_returnsForbidden() {
+    void accessSecuredEndpoint_withInvalidToken_returnsUnauthorized() {
         var headers = authHeaders("invalid-token");
         var entity = authGet("invalid-token");
 
@@ -97,7 +97,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
                 "/api/episodes", HttpMethod.GET,
                 entity, String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
@@ -154,18 +154,18 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void accessSecuredEndpoint_withMissingCookie_returnsForbidden() {
+    void accessSecuredEndpoint_withMissingCookie_returnsUnauthorized() {
         var res = restTemplate.getForEntity("/api/users/me", String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
-    void accessSecuredEndpoint_withInvalidJwtCookie_returnsForbidden() {
+    void accessSecuredEndpoint_withInvalidJwtCookie_returnsUnauthorized() {
         var res = restTemplate.exchange(
                 "/api/users/me", HttpMethod.GET, cookieGet("invalid-jwt-value"), String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test

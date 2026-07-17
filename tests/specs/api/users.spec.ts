@@ -52,9 +52,9 @@ test.describe('MIS Users API', () => {
     expect(res.status()).toBe(404);
   });
 
-  test('get user without auth returns 403', async ({ request }) => {
+  test('get user without auth returns 401', async ({ request }) => {
     const res = await request.get(`${API}/users/00000000-0000-0000-0000-000000000011`);
-    expect(res.status()).toBe(403);
+    expect(res.status()).toBe(401);
   });
 
   test('get current user via /me still works', async ({ request }) => {
