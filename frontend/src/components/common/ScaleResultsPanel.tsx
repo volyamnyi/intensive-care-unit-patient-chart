@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Grid, Paper, Typography, TextField, Button, MenuItem, Box, useTheme } from '@mui/material';
 import type { ScaleResult, ClinicalScale } from '../../types';
 
@@ -10,6 +11,7 @@ interface ScaleResultsPanelProps {
 
 export default function ScaleResultsPanel({ results, availableScales, onCreateResult }: ScaleResultsPanelProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.palette.mode === 'dark';
   const [selectedScaleId, setSelectedScaleId] = useState('');
   const [resultValue, setResultValue] = useState('');
@@ -28,7 +30,7 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
       {onCreateResult && availableScales.length > 0 && (
         <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
           <TextField
-            select size="small" label="Шкала" value={selectedScaleId}
+            select size="small" label={t('scaleResults.scaleLabel')} value={selectedScaleId}
             onChange={(e) => setSelectedScaleId(e.target.value)}
             sx={{ minWidth: 200 }}
           >
@@ -37,12 +39,12 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
             ))}
           </TextField>
           <TextField
-            size="small" label="Результат" value={resultValue}
+            size="small" label={t('scaleResults.resultLabel')} value={resultValue}
             onChange={(e) => setResultValue(e.target.value)}
           />
           <Button variant="contained" size="small" onClick={handleCreate}
             sx={{ mt: 0.5 }}>
-            Додати
+            {t('scaleResults.addButton')}
           </Button>
         </Box>
       )}
@@ -50,7 +52,7 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
       <Grid container spacing={2}>
         {availableScales.length === 0 && results.length === 0 ? (
           <Grid size={12}>
-            <Typography color="text.secondary">Немає даних шкал</Typography>
+            <Typography color="text.secondary">{t('scaleResults.empty')}</Typography>
           </Grid>
         ) : (
           availableScales.map((scale) => {
@@ -63,12 +65,11 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
                   </Typography>
                   {result ? (
                     <Typography variant="body1" sx={{ mt: 0.5 }}>
-                      Результат: <strong>{result.result}</strong>
-                      &nbsp;({new Date(result.calculatedAt).toLocaleString('uk-UA')})
+                      {t('scaleResults.resultText', { result: result.result, date: new Date(result.calculatedAt).toLocaleString('uk-UA') })}
                     </Typography>
                   ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Не заповнено
+                      {t('scaleResults.notFilled')}
                     </Typography>
                   )}
                 </Paper>

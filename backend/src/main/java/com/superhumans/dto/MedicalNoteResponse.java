@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 public class MedicalNoteResponse {
     UUID id;
     UUID clinicalDayId;
-    UUID authorId;
+    Long authorId;
     String role;
     String noteType;
     String text;

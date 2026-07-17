@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Paper, Typography, Grid, TextField, Button, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Chip, IconButton, useTheme,
@@ -15,13 +16,6 @@ interface MedicalOrdersPanelProps {
   canExecute?: boolean;
 }
 
-const statusLabels: Record<string, string> = {
-  DRAFT: 'Чернетка',
-  ACTIVE: 'Активне',
-  COMPLETED: 'Виконано',
-  CANCELLED: 'Скасовано',
-};
-
 const emptyOrder: MedicalOrderCreateRequest = {
   category: 'MEDICATION',
   drugName: '',
@@ -37,6 +31,13 @@ export default function MedicalOrdersPanel({
   orders, onCreateOrder, onExecuteOrder, onCancelOrder, canCreate, canExecute,
 }: MedicalOrdersPanelProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
+  const statusLabels: Record<string, string> = {
+    DRAFT: t('medicalOrders.statusDraft'),
+    ACTIVE: t('medicalOrders.statusActive'),
+    COMPLETED: t('medicalOrders.statusCompleted'),
+    CANCELLED: t('medicalOrders.statusCancelled'),
+  };
   const [newOrder, setNewOrder] = useState<MedicalOrderCreateRequest>(emptyOrder);
   const [showForm, setShowForm] = useState(false);
   const showActions = canExecute || !!onCancelOrder;
@@ -55,64 +56,64 @@ export default function MedicalOrdersPanel({
           {showForm ? (
             <Paper sx={{ p: 2, mb: 2 }}>
               <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1 }}>
-                Нове призначення
+                {t('medicalOrders.formTitle')}
               </Typography>
               <Grid container spacing={1} sx={{ alignItems: 'center' }}>
                 <Grid size={3}>
-                  <TextField fullWidth size="small" label="Категорія"
+                  <TextField fullWidth size="small" label={t('medicalOrders.category')}
                     value={newOrder.category}
                     onChange={(e) => setNewOrder({ ...newOrder, category: e.target.value })} />
                 </Grid>
                 <Grid size={3}>
-                  <TextField fullWidth size="small" label="Препарат"
+                  <TextField fullWidth size="small" label={t('medicalOrders.drugName')}
                     value={newOrder.drugName}
                     onChange={(e) => setNewOrder({ ...newOrder, drugName: e.target.value })} />
                 </Grid>
                 <Grid size={2}>
-                  <TextField fullWidth size="small" label="Доза"
+                  <TextField fullWidth size="small" label={t('medicalOrders.dose')}
                     value={newOrder.dose}
                     onChange={(e) => setNewOrder({ ...newOrder, dose: e.target.value })} />
                 </Grid>
                 <Grid size={2}>
-                  <TextField fullWidth size="small" label="Од."
+                  <TextField fullWidth size="small" label={t('medicalOrders.unit')}
                     value={newOrder.unit}
                     onChange={(e) => setNewOrder({ ...newOrder, unit: e.target.value })} />
                 </Grid>
                 <Grid size={2}>
-                  <TextField fullWidth size="small" label="Шлях"
+                  <TextField fullWidth size="small" label={t('medicalOrders.route')}
                     value={newOrder.route}
                     onChange={(e) => setNewOrder({ ...newOrder, route: e.target.value })} />
                 </Grid>
                 <Grid size={3}>
-                  <TextField fullWidth size="small" label="Частота"
+                  <TextField fullWidth size="small" label={t('medicalOrders.frequency')}
                     value={newOrder.frequency}
                     onChange={(e) => setNewOrder({ ...newOrder, frequency: e.target.value })} />
                 </Grid>
                 <Grid size={3}>
-                  <TextField fullWidth size="small" type="datetime-local" label="Початок"
+                  <TextField fullWidth size="small" type="datetime-local" label={t('medicalOrders.startTime')}
                     value={newOrder.startTime}
                     onChange={(e) => setNewOrder({ ...newOrder, startTime: e.target.value })}
                     slotProps={{ inputLabel: { shrink: true } }} />
                 </Grid>
                 <Grid size={3}>
-                  <TextField fullWidth size="small" type="datetime-local" label="Кінець"
+                  <TextField fullWidth size="small" type="datetime-local" label={t('medicalOrders.endTime')}
                     value={newOrder.endTime}
                     onChange={(e) => setNewOrder({ ...newOrder, endTime: e.target.value })}
                     slotProps={{ inputLabel: { shrink: true } }} />
                 </Grid>
                 <Grid size={3}>
                   <Button variant="contained" size="small" onClick={handleCreate}>
-                    Створити
+                    {t('medicalOrders.createButton')}
                   </Button>
                   <Button size="small" sx={{ ml: 1 }} onClick={() => setShowForm(false)}>
-                    Скасувати
+                    {t('medicalOrders.cancelButton')}
                   </Button>
                 </Grid>
               </Grid>
             </Paper>
           ) : (
             <Button variant="outlined" size="small" onClick={() => setShowForm(true)}>
-              + Нове призначення
+              {t('medicalOrders.newOrderButton')}
             </Button>
           )}
         </Box>
@@ -122,18 +123,18 @@ export default function MedicalOrdersPanel({
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Препарат</TableCell>
-              <TableCell>Доза</TableCell>
-              <TableCell>Шлях</TableCell>
-              <TableCell>Статус</TableCell>
-              {showActions && <TableCell>Дії</TableCell>}
+              <TableCell>{t('medicalOrders.tableHeaders.drugName')}</TableCell>
+              <TableCell>{t('medicalOrders.tableHeaders.dose')}</TableCell>
+              <TableCell>{t('medicalOrders.tableHeaders.route')}</TableCell>
+              <TableCell>{t('medicalOrders.tableHeaders.status')}</TableCell>
+              {showActions && <TableCell>{t('medicalOrders.tableHeaders.actions')}</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={showActions ? 5 : 4} align="center" sx={{ py: 3, color: theme.palette.text.secondary }}>
-                  Немає призначень
+                  {t('medicalOrders.empty')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -161,7 +162,7 @@ export default function MedicalOrdersPanel({
                       )}
                       {order.status === 'ACTIVE' && !canExecute && onCancelOrder && (
                         <Button size="small" color="error" onClick={() => onCancelOrder(order.id)}>
-                          Скасувати
+                          {t('medicalOrders.cancelOrderButton')}
                         </Button>
                       )}
                     </TableCell>

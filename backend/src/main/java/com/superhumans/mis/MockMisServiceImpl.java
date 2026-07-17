@@ -31,9 +31,9 @@ public class MockMisServiceImpl implements MisService {
 
     final Map<Long, PatientDTO> patients = new LinkedHashMap<>();
     final Set<UUID> knownHospitalizationIds = new HashSet<>();
-    final Map<UUID, UserMisDTO> users = new LinkedHashMap<>();
-    final Map<UUID, DepartmentDTO> departments = new LinkedHashMap<>();
-    final Map<UUID, List<UserMisDTO>> departmentUsers = new LinkedHashMap<>();
+    final Map<Long, UserMisDTO> users = new LinkedHashMap<>();
+    final Map<Long, DepartmentDTO> departments = new LinkedHashMap<>();
+    final Map<Long, List<UserMisDTO>> departmentUsers = new LinkedHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -43,8 +43,8 @@ public class MockMisServiceImpl implements MisService {
     }
 
     void initPatients() {
-        knownHospitalizationIds.add(toUuid(1001));
-        knownHospitalizationIds.add(toUuid(1002));
+        knownHospitalizationIds.add(UUID.fromString("00000000-0000-0000-0000-000000001001"));
+        knownHospitalizationIds.add(UUID.fromString("00000000-0000-0000-0000-000000001002"));
         addPatient(1001L, "Петренко Іван Сергійович", LocalDate.of(1978, 3, 15), "M",
                 "м. Київ, вул. Хрещатик, 15", "380501234567", "ivan.petrenko@mail.com",
                 "МК-001234", "301020251234", 178, 82, "A(II)", "Rh+");
@@ -75,21 +75,21 @@ public class MockMisServiceImpl implements MisService {
     }
 
     void initUsers() {
-        addUser(toUuid(11), "doctor1", "Олександр Мельник", "Мельник О.",
+        addUser(11L, "doctor1", "Олександр Мельник", "Мельник О.",
                 "101", "Лікар-анестезіолог", "melnyk@hospital.ua", "380501111111");
-        addUser(toUuid(12), "doctor2", "Наталія Бойко", "Бойко Н.",
+        addUser(12L, "doctor2", "Наталія Бойко", "Бойко Н.",
                 "101", "Лікар-анестезіолог", "boyko@hospital.ua", "380502222222");
-        addUser(toUuid(13), "nurse1", "Олена Ткаченко", "Ткаченко О.",
+        addUser(13L, "nurse1", "Олена Ткаченко", "Ткаченко О.",
                 "201", "Медична сестра ВАІТ", "tkachenko@hospital.ua", "380503333333");
-        addUser(toUuid(14), "nurse2", "Марія Кравчук", "Кравчук М.",
+        addUser(14L, "nurse2", "Марія Кравчук", "Кравчук М.",
                 "201", "Медична сестра ВАІТ", "kravchuk@hospital.ua", "380504444444");
-        addUser(toUuid(15), "head1", "Василь Гончарук", "Гончарук В.",
+        addUser(15L, "head1", "Василь Гончарук", "Гончарук В.",
                 "301", "Завідувач ВАІТ", "goncharuk@hospital.ua", "380505555555");
-        addUser(toUuid(16), "admin", "Адмін Системи", "Адмін",
+        addUser(16L, "admin", "Адмін Системи", "Адмін",
                 "999", "Адміністратор", "admin@hospital.ua", "380506666666");
     }
 
-    void addUser(UUID id, String login, String name, String shortName,
+    void addUser(Long id, String login, String name, String shortName,
                          String specCode, String specName, String email, String phone) {
         users.put(id, UserMisDTO.builder()
                 .id(id).login(login).fullName(name).shortName(shortName)
@@ -100,27 +100,23 @@ public class MockMisServiceImpl implements MisService {
 
     void initDepartments() {
         DepartmentDTO icu = DepartmentDTO.builder()
-                .id(toUuid(1)).name("Відділення анестезіології та інтенсивної терапії").code("VAIT").build();
+                .id(1L).name("Відділення анестезіології та інтенсивної терапії").code("VAIT").build();
         departments.put(icu.getId(), icu);
         DepartmentDTO surgery = DepartmentDTO.builder()
-                .id(toUuid(2)).name("Хірургічне відділення").code("SURG").build();
+                .id(2L).name("Хірургічне відділення").code("SURG").build();
         departments.put(surgery.getId(), surgery);
 
         departmentUsers.put(icu.getId(), List.of(
-                users.get(toUuid(11)), users.get(toUuid(12)),
-                users.get(toUuid(13)), users.get(toUuid(14)),
-                users.get(toUuid(15))));
+                users.get(11L), users.get(12L),
+                users.get(13L), users.get(14L),
+                users.get(15L)));
         departmentUsers.put(surgery.getId(), List.of(
-                users.get(toUuid(11)), users.get(toUuid(15))));
+                users.get(11L), users.get(15L)));
     }
 
-    UUID toUuid(long num) {
-        return UUID.fromString(String.format("00000000-0000-0000-0000-%012d", num));
-    }
-
-    UUID getCurrentUserId() {
+    Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getCredentials() instanceof UUID id) {
+        if (auth != null && auth.getCredentials() instanceof Long id) {
             return id;
         }
         return null;
@@ -177,7 +173,7 @@ public class MockMisServiceImpl implements MisService {
     }
 
     @Override
-    public Optional<UserMisDTO> getUser(UUID userId) {
+    public Optional<UserMisDTO> getUser(Long userId) {
         checkErrors();
         Optional<UserMisDTO> result = Optional.ofNullable(users.get(userId));
         auditService.logAction("MIS", null, "GET_USER", getCurrentUserId());
@@ -185,7 +181,7 @@ public class MockMisServiceImpl implements MisService {
     }
 
     @Override
-    public List<UserMisDTO> getDepartmentUsers(UUID departmentId) {
+    public List<UserMisDTO> getDepartmentUsers(Long departmentId) {
         checkErrors();
         List<UserMisDTO> result = departmentUsers.getOrDefault(departmentId, List.of());
         auditService.logAction("MIS", null, "GET_DEPARTMENT_USERS", getCurrentUserId());

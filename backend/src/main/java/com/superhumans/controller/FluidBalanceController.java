@@ -30,7 +30,7 @@ public class FluidBalanceController {
     public ResponseEntity<List<FluidBalanceResponse>> recalculateFluidBalance(
             @PathVariable UUID clinicalDayId,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.ok(fluidBalanceService.recalculate(clinicalDayId, userId));
     }
 }

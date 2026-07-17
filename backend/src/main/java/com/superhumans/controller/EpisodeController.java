@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -50,7 +51,7 @@ public class EpisodeController {
     public ResponseEntity<EpisodeResponse> createEpisode(
             @Valid @RequestBody EpisodeCreateRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(episodeService.createEpisode(request, userId));
     }
@@ -60,7 +61,7 @@ public class EpisodeController {
             @PathVariable UUID id,
             @Valid @RequestBody EpisodePatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         episodeService.updateEpisode(id, request, userId);
         return ResponseEntity.noContent().build();
     }
@@ -70,7 +71,7 @@ public class EpisodeController {
             @PathVariable UUID id,
             @Valid @RequestBody EpisodeCloseRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         episodeService.closeEpisode(id, request, userId);
         return ResponseEntity.noContent().build();
     }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, Button, Paper, useTheme } from '@mui/material';
 import type { FluidBalanceItem } from '../../types';
 
@@ -9,6 +10,7 @@ interface FluidBalancePanelProps {
 
 export default function FluidBalancePanel({ items, onRecalculate, loading }: FluidBalancePanelProps) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.palette.mode === 'dark';
   const totalIntake = items.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = items.reduce((s, i) => s + (i.output || 0), 0);
@@ -22,31 +24,31 @@ export default function FluidBalancePanel({ items, onRecalculate, loading }: Flu
       border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)',
     }}>
       <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>
-        Баланс рідини
+        {t('fluidBalance.title')}
       </Typography>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography color="text.secondary">Надійшло:</Typography>
-        <Typography sx={{ fontWeight: 700 }}>{totalIntake} мл</Typography>
+        <Typography color="text.secondary">{t('fluidBalance.intake')}</Typography>
+        <Typography sx={{ fontWeight: 700 }}>{totalIntake} {t('fluidBalance.unit')}</Typography>
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography color="text.secondary">Виділено:</Typography>
-        <Typography sx={{ fontWeight: 700 }}>{totalOutput} мл</Typography>
+        <Typography color="text.secondary">{t('fluidBalance.output')}</Typography>
+        <Typography sx={{ fontWeight: 700 }}>{totalOutput} {t('fluidBalance.unit')}</Typography>
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography color="text.secondary">Добовий баланс:</Typography>
+        <Typography color="text.secondary">{t('fluidBalance.dailyBalance')}</Typography>
         <Typography sx={{ fontWeight: 700 }} color={dailyBalance < 0 ? '#FF5252' : '#4CAF50'}>
-          {dailyBalance} мл
+          {dailyBalance} {t('fluidBalance.unit')}
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography color="text.secondary">Кумулятивний баланс:</Typography>
+        <Typography color="text.secondary">{t('fluidBalance.cumulativeBalance')}</Typography>
         <Typography sx={{ fontWeight: 700 }} color={cumulativeBalance < 0 ? '#FF5252' : '#4CAF50'}>
-          {cumulativeBalance} мл
+          {cumulativeBalance} {t('fluidBalance.unit')}
         </Typography>
       </Box>
       {onRecalculate && (
         <Button size="small" variant="outlined" onClick={onRecalculate} disabled={loading}>
-          {loading ? 'Розрахунок...' : 'Перерахувати'}
+          {loading ? t('fluidBalance.calculatingButton') : t('fluidBalance.recalculateButton')}
         </Button>
       )}
     </Paper>

@@ -35,7 +35,7 @@ public class MedicalOrderController {
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody MedicalOrderCreateRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(medicalOrderService.createOrder(clinicalDayId, request, userId));
     }
@@ -45,7 +45,7 @@ public class MedicalOrderController {
             @PathVariable UUID id,
             @Valid @RequestBody MedicalOrderPatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         medicalOrderService.updateOrder(id, request, userId);
         return ResponseEntity.noContent().build();
     }
@@ -55,7 +55,7 @@ public class MedicalOrderController {
             @PathVariable UUID id,
             @Valid @RequestBody MedicalOrderPatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         medicalOrderService.cancelOrder(id, request.getVersion(), userId);
         return ResponseEntity.noContent().build();
     }

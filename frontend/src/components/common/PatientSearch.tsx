@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Autocomplete, TextField, Box, Typography, CircularProgress } from '@mui/material';
 import { patientApi } from '../../api/endpoints';
 import type { PatientDto } from '../../types';
@@ -8,7 +9,9 @@ interface PatientSearchProps {
   label?: string;
 }
 
-export default function PatientSearch({ onSelect, label = 'ПІБ, телефон або № медкарти' }: PatientSearchProps) {
+export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t('patientSearch.defaultLabel');
   const [search, setSearch] = useState('');
   const [patients, setPatients] = useState<PatientDto[]>([]);
   const [selected, setSelected] = useState<PatientDto | null>(null);
@@ -59,7 +62,7 @@ export default function PatientSearch({ onSelect, label = 'ПІБ, телефо�
       isOptionEqualToValue={(o, v) => o.id === v.id}
       filterOptions={(x) => x}
       loading={loading}
-      noOptionsText={search.length < 2 ? 'Введіть мінімум 2 символи' : 'Пацієнтів не знайдено'}
+      noOptionsText={search.length < 2 ? t('patientSearch.minChars') : t('patientSearch.notFound')}
       renderOption={(props, p) => {
         const { key, ...rest } = props;
         return (
@@ -76,7 +79,7 @@ export default function PatientSearch({ onSelect, label = 'ПІБ, телефо�
       renderInput={(params) => (
         <TextField
           {...params}
-          label={label}
+          label={resolvedLabel}
           slotProps={{
             ...params.slotProps,
             input: {

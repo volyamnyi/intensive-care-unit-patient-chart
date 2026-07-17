@@ -4,10 +4,10 @@ import { authApi, userApi } from '../api/endpoints';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   login: (data: LoginRequest) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
   hasRole: (...roles: string[]) => boolean;
 }
 
@@ -15,29 +15,23 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem('token')
-  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      userApi.getMe()
-        .then((res) => setUser(res.data))
-        .catch(() => { localStorage.removeItem('token'); setToken(null); });
-    }
-  }, [token]);
+    userApi.getMe()
+      .then((res) => setUser(res.data))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
+  }, []);
 
   const login = async (data: LoginRequest) => {
     const res = await authApi.login(data);
-    const { token: newToken, userId, login: userName, fullName, role, email } = res.data;
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
+    const { userId, login: userName, fullName, role, email } = res.data;
     setUser({ id: userId, login: userName, fullName, role: role as User['role'], email, specialityCode: '', specialityName: '', phone: '' });
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
+    authApi.logout().catch(() => {});
     setUser(null);
   };
 
@@ -46,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, hasRole }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

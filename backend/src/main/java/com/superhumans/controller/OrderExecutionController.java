@@ -35,7 +35,7 @@ public class OrderExecutionController {
             @PathVariable UUID orderId,
             @Valid @RequestBody OrderExecutionCreateRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(orderExecutionService.createExecution(orderId, request, userId));
     }
@@ -45,7 +45,7 @@ public class OrderExecutionController {
             @PathVariable UUID id,
             @Valid @RequestBody OrderExecutionPatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         orderExecutionService.updateExecution(id, request, userId);
         return ResponseEntity.noContent().build();
     }

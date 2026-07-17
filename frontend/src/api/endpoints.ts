@@ -16,6 +16,8 @@ import type {
 export const authApi = {
   login: (data: LoginRequest) =>
     client.post<LoginResponse>('/auth/login', data),
+  logout: () =>
+    client.post('/auth/logout'),
 };
 
 export const patientApi = {

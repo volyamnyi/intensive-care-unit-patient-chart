@@ -4,36 +4,21 @@ import com.superhumans.dto.ClinicalDayCreateRequest;
 import com.superhumans.dto.ClinicalDayResponse;
 import com.superhumans.entity.ClinicalDay;
 import com.superhumans.entity.ClinicalDayStatus;
+import com.superhumans.entity.ClinicalDayStatus;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-public class ClinicalDayMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        imports = ClinicalDayStatus.class)
+public interface ClinicalDayMapper {
 
-    public static ClinicalDayResponse toResponse(ClinicalDay entity) {
-        return ClinicalDayResponse.builder()
-                .id(entity.getId())
-                .episodeId(entity.getEpisode().getId())
-                .dayNumber(entity.getDayNumber())
-                .startDateTime(entity.getStartDateTime())
-                .endDateTime(entity.getEndDateTime())
-                .status(entity.getStatus())
-                .doctorSigned(entity.getDoctorSigned())
-                .nurseSigned(entity.getNurseSigned())
-                .closedAt(entity.getClosedAt())
-                .createdBy(entity.getCreatedBy())
-                .createdAt(entity.getCreatedAt())
-                .updatedBy(entity.getUpdatedBy())
-                .updatedAt(entity.getUpdatedAt())
-                .version(entity.getVersion())
-                .build();
-    }
+    @Mapping(target = "episodeId", source = "episode.id")
+    ClinicalDayResponse toResponse(ClinicalDay entity);
 
-    public static ClinicalDay toEntity(ClinicalDayCreateRequest request) {
-        return ClinicalDay.builder()
-                .dayNumber(1)
-                .startDateTime(request.getStartDateTime())
-                .endDateTime(request.getEndDateTime())
-                .status(ClinicalDayStatus.OPEN)
-                .doctorSigned(false)
-                .nurseSigned(false)
-                .build();
-    }
+    @Mapping(target = "dayNumber", constant = "1")
+    @Mapping(target = "status", expression = "java(ClinicalDayStatus.OPEN)")
+    @Mapping(target = "doctorSigned", constant = "false")
+    @Mapping(target = "nurseSigned", constant = "false")
+    ClinicalDay toEntity(ClinicalDayCreateRequest request);
 }

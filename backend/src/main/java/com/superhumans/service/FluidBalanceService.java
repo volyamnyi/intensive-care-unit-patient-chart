@@ -25,14 +25,15 @@ public class FluidBalanceService {
     OrderExecutionRepository orderExecutionRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    FluidBalanceMapper fluidBalanceMapper;
 
     public List<FluidBalanceResponse> getBalances(UUID clinicalDayId) {
         return fluidBalanceRepository.findByClinicalDayIdOrderByHourAsc(clinicalDayId)
-                .stream().map(FluidBalanceMapper::toResponse).collect(Collectors.toList());
+                .stream().map(fluidBalanceMapper::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public List<FluidBalanceResponse> recalculate(UUID clinicalDayId, UUID userId) {
+    public List<FluidBalanceResponse> recalculate(UUID clinicalDayId, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new RuntimeException("Clinical day not found: " + clinicalDayId));
 
@@ -97,7 +98,7 @@ public class FluidBalanceService {
         if (userId != null) {
             auditService.logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
         }
-        return results.stream().map(FluidBalanceMapper::toResponse).collect(Collectors.toList());
+        return results.stream().map(fluidBalanceMapper::toResponse).collect(Collectors.toList());
     }
 
     private double parseDose(String actualDose) {

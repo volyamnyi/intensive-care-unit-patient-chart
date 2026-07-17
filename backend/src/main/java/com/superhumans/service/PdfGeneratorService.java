@@ -56,7 +56,7 @@ public class PdfGeneratorService {
     }
 
     @Transactional
-    public PdfResponse generatePdf(UUID clinicalDayId, UUID userId) {
+    public PdfResponse generatePdf(UUID clinicalDayId, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + clinicalDayId));
 
@@ -88,7 +88,7 @@ public class PdfGeneratorService {
         return toResponse(pdf);
     }
 
-    private byte[] buildPdfContent(ClinicalDay day, int version, UUID userId) {
+    private byte[] buildPdfContent(ClinicalDay day, int version, Long userId) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
@@ -116,7 +116,7 @@ public class PdfGeneratorService {
         }
     }
 
-    private void addHeader(Document doc, PdfFont font, PdfFont boldFont, int version, UUID userId) {
+    private void addHeader(Document doc, PdfFont font, PdfFont boldFont, int version, Long userId) {
         doc.add(new Paragraph("ICU PATIENT CHART")
                 .setFont(boldFont).setFontSize(18).setHorizontalAlignment(HorizontalAlignment.CENTER));
         doc.add(new Paragraph("Clinical Day Report")
@@ -241,11 +241,11 @@ public class PdfGeneratorService {
                     Table execTable = new Table(UnitValue.createPercentArray(new float[]{16, 20, 20, 20, 24}))
                             .useAllAvailableWidth();
                     addTableHeader(execTable, font, "Executed At", "By", "Dose", "Status", "Comment");
-                    Map<UUID, String> userNames = getUserNames(executions);
+                    Map<Long, String> userNames = getUserNames(executions);
                     for (OrderExecution exec : executions) {
                         addTableRow(execTable, font,
                                 exec.getExecutedAt().format(DateTimeFormatter.ofPattern("HH:mm")),
-                                userNames.getOrDefault(exec.getExecutedBy(), exec.getExecutedBy().toString().substring(0, 8)),
+                                userNames.getOrDefault(exec.getExecutedBy(), String.valueOf(exec.getExecutedBy())),
                                 exec.getActualDose() != null ? exec.getActualDose() : "",
                                 exec.getStatus().name(),
                                 exec.getComment() != null ? exec.getComment() : "");
@@ -267,10 +267,10 @@ public class PdfGeneratorService {
         if (notes.isEmpty()) {
             doc.add(new Paragraph("  No notes.").setFont(font));
         } else {
-            Map<UUID, String> authorNames = getAuthorNames(notes);
+            Map<Long, String> authorNames = getAuthorNames(notes);
             for (MedicalNote note : notes) {
                 String author = authorNames.getOrDefault(note.getAuthorId(),
-                        note.getAuthorId().toString().substring(0, 8));
+                        String.valueOf(note.getAuthorId()));
                 doc.add(new Paragraph("  [" + note.getNoteType() + "] " + author + " (" + note.getRole() + "):")
                         .setFont(font).setBold());
                 doc.add(new Paragraph("    " + note.getText()).setFont(font));
@@ -293,14 +293,14 @@ public class PdfGeneratorService {
             Table table = new Table(UnitValue.createPercentArray(new float[]{30, 20, 25, 25}))
                     .useAllAvailableWidth();
             addTableHeader(table, font, "Scale", "Result", "Calculated At", "By");
-            Map<UUID, String> userNames = getScaleUserNames(scales);
+            Map<Long, String> userNames = getScaleUserNames(scales);
             for (ScaleResult sr : scales) {
                 addTableRow(table, font,
                         sr.getScale().getName(),
                         sr.getResult(),
                         sr.getCalculatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                         userNames.getOrDefault(sr.getCalculatedBy(),
-                                sr.getCalculatedBy().toString().substring(0, 8)));
+                                String.valueOf(sr.getCalculatedBy())));
             }
             doc.add(table);
         }
@@ -318,12 +318,12 @@ public class PdfGeneratorService {
             Table table = new Table(UnitValue.createPercentArray(new float[]{16, 20, 20, 22, 22}))
                     .useAllAvailableWidth();
             addTableHeader(table, font, "Role", "User", "Signed At", "Status", "Hash");
-            Map<UUID, String> userNames = getSignatureUserNames(signatures);
+            Map<Long, String> userNames = getSignatureUserNames(signatures);
             for (Signature sig : signatures) {
                 addTableRow(table, font,
                         sig.getRole(),
                         userNames.getOrDefault(sig.getUserId(),
-                                sig.getUserId().toString().substring(0, 8)),
+                                String.valueOf(sig.getUserId())),
                         sig.getSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
                         sig.getStatus(),
                         sig.getHash() != null ? sig.getHash().substring(0, Math.min(16, sig.getHash().length())) : "");
@@ -333,7 +333,7 @@ public class PdfGeneratorService {
         doc.add(new Paragraph(" "));
     }
 
-    private void addFooter(Document doc, PdfFont font, int version, UUID userId) {
+    private void addFooter(Document doc, PdfFont font, int version, Long userId) {
         doc.add(new Paragraph("— End of Document —")
                 .setFont(font).setFontSize(10).setHorizontalAlignment(HorizontalAlignment.CENTER));
         doc.add(new Paragraph("Document v" + version + " | Generated by: " + userId
@@ -377,8 +377,8 @@ public class PdfGeneratorService {
         return (d >= 0 ? "+" : "") + String.format("%.1f", d);
     }
 
-    private Map<UUID, String> getUserNames(List<OrderExecution> executions) {
-        Map<UUID, String> names = new HashMap<>();
+    private Map<Long, String> getUserNames(List<OrderExecution> executions) {
+        Map<Long, String> names = new HashMap<>();
         for (OrderExecution exec : executions) {
             if (!names.containsKey(exec.getExecutedBy())) {
                 names.put(exec.getExecutedBy(), lookupUserName(exec.getExecutedBy()));
@@ -387,8 +387,8 @@ public class PdfGeneratorService {
         return names;
     }
 
-    private Map<UUID, String> getAuthorNames(List<MedicalNote> notes) {
-        Map<UUID, String> names = new HashMap<>();
+    private Map<Long, String> getAuthorNames(List<MedicalNote> notes) {
+        Map<Long, String> names = new HashMap<>();
         for (MedicalNote note : notes) {
             if (!names.containsKey(note.getAuthorId())) {
                 names.put(note.getAuthorId(), lookupUserName(note.getAuthorId()));
@@ -397,8 +397,8 @@ public class PdfGeneratorService {
         return names;
     }
 
-    private Map<UUID, String> getScaleUserNames(List<ScaleResult> scales) {
-        Map<UUID, String> names = new HashMap<>();
+    private Map<Long, String> getScaleUserNames(List<ScaleResult> scales) {
+        Map<Long, String> names = new HashMap<>();
         for (ScaleResult sr : scales) {
             if (!names.containsKey(sr.getCalculatedBy())) {
                 names.put(sr.getCalculatedBy(), lookupUserName(sr.getCalculatedBy()));
@@ -407,8 +407,8 @@ public class PdfGeneratorService {
         return names;
     }
 
-    private Map<UUID, String> getSignatureUserNames(List<Signature> signatures) {
-        Map<UUID, String> names = new HashMap<>();
+    private Map<Long, String> getSignatureUserNames(List<Signature> signatures) {
+        Map<Long, String> names = new HashMap<>();
         for (Signature sig : signatures) {
             if (!names.containsKey(sig.getUserId())) {
                 names.put(sig.getUserId(), lookupUserName(sig.getUserId()));
@@ -417,7 +417,7 @@ public class PdfGeneratorService {
         return names;
     }
 
-    private String lookupUserName(UUID userId) {
+    private String lookupUserName(Long userId) {
         try {
             return userRepository.findById(userId)
                     .map(User::getFullName)

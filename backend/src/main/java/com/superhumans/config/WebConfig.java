@@ -2,6 +2,7 @@ package com.superhumans.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -10,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Configuration
+@EnableAsync
 public class WebConfig implements WebMvcConfigurer {
 
     // Ensures JSON responses declare a UTF-8 charset so that non-browser

@@ -5,8 +5,10 @@ import { Add, Search as SearchIcon } from '@mui/icons-material';
 import { episodeApi } from '../../api/endpoints';
 import EpisodeTable from '../../components/common/EpisodeTable';
 import type { Episode } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useTheme();
   const [episodes, setEpisodes] = useState<Episode[]>([]);
@@ -20,7 +22,7 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { document.title = 'ВАІТ — Лікар'; }, []);
+  useEffect(() => { document.title = t('doctor.dashboard.title'); }, []);
 
   const filteredEpisodes = episodes.filter((ep) =>
     (ep.patientName ?? '').toLowerCase().includes(search.toLowerCase())
@@ -33,10 +35,10 @@ export default function DashboardPage() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary }}>
-            Активні пацієнти
+            {t('doctor.dashboard.heading')}
           </Typography>
           <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
-            Відділення анестезіології та інтенсивної терапії
+            {t('doctor.dashboard.subtitle')}
           </Typography>
         </Box>
         <Button
@@ -44,12 +46,12 @@ export default function DashboardPage() {
           onClick={() => navigate('/doctor/create-card')}
           startIcon={<Add />}
         >
-          Нова карта
+          {t('doctor.dashboard.newCard')}
         </Button>
       </Box>
       <TextField
         fullWidth
-        placeholder="Пошук пацієнта за ПІБ..."
+        placeholder={t('doctor.dashboard.searchPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         sx={{ mb: 3 }}
@@ -65,7 +67,7 @@ export default function DashboardPage() {
       />
       {filteredEpisodes.length === 0 && !loading ? (
         <Alert severity="info">
-          {search ? 'Немає пацієнтів за запитом' : 'Немає активних пацієнтів'}
+          {search ? t('doctor.dashboard.noResults') : t('doctor.dashboard.empty')}
         </Alert>
       ) : (
         <EpisodeTable

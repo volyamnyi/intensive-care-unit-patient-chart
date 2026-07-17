@@ -31,36 +31,37 @@ public class MedicalOrderService {
     MedicalOrderRepository medicalOrderRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    MedicalOrderMapper medicalOrderMapper;
 
     public MedicalOrderResponse getOrder(UUID id) {
         MedicalOrder order = medicalOrderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Medical order not found: " + id));
-        return MedicalOrderMapper.toResponse(order);
+        return medicalOrderMapper.toResponse(order);
     }
 
     public List<MedicalOrderResponse> getOrdersByClinicalDay(UUID clinicalDayId) {
         return medicalOrderRepository.findByClinicalDayIdOrderByStartTimeAsc(clinicalDayId)
-                .stream().map(MedicalOrderMapper::toResponse).collect(Collectors.toList());
+                .stream().map(medicalOrderMapper::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public MedicalOrderResponse createOrder(UUID clinicalDayId, MedicalOrderCreateRequest request, UUID userId) {
+    public MedicalOrderResponse createOrder(UUID clinicalDayId, MedicalOrderCreateRequest request, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + clinicalDayId));
         assertNotLocked(day);
 
-        MedicalOrder order = MedicalOrderMapper.toEntity(request);
+        MedicalOrder order = medicalOrderMapper.toEntity(request);
         order.setClinicalDay(day);
         order.setStatus(MedicalOrderStatus.ACTIVE);
         order.setCreatedBy(userId);
         order.setUpdatedBy(userId);
         order = medicalOrderRepository.save(order);
         auditService.logCreate("MedicalOrder", order.getId(), userId);
-        return MedicalOrderMapper.toResponse(order);
+        return medicalOrderMapper.toResponse(order);
     }
 
     @Transactional
-    public MedicalOrderResponse updateOrder(UUID id, MedicalOrderPatchRequest request, UUID userId) {
+    public MedicalOrderResponse updateOrder(UUID id, MedicalOrderPatchRequest request, Long userId) {
         MedicalOrder order = medicalOrderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Medical order not found: " + id));
 
@@ -76,11 +77,11 @@ public class MedicalOrderService {
         order.setUpdatedBy(userId);
         order = medicalOrderRepository.save(order);
         auditService.logUpdate("MedicalOrder", id, userId, null, "Updated order fields");
-        return MedicalOrderMapper.toResponse(order);
+        return medicalOrderMapper.toResponse(order);
     }
 
     @Transactional
-    public MedicalOrderResponse cancelOrder(UUID id, Integer version, UUID userId) {
+    public MedicalOrderResponse cancelOrder(UUID id, Integer version, Long userId) {
         MedicalOrder order = medicalOrderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Medical order not found: " + id));
 
@@ -99,11 +100,12 @@ public class MedicalOrderService {
         order.setUpdatedBy(userId);
         order = medicalOrderRepository.save(order);
         auditService.logAction("MedicalOrder", id, "CANCEL", userId);
-        return MedicalOrderMapper.toResponse(order);
+        return medicalOrderMapper.toResponse(order);
     }
 
     private void assertNotLocked(ClinicalDay day) {
-        if (day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
+        if (day.getStatus() == ClinicalDayStatus.NURSE_SIGNED
+                || day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
                 || day.getStatus() == ClinicalDayStatus.CLOSED) {
             throw new DocumentLockedException("Clinical day is signed and cannot be modified");
         }

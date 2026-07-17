@@ -22,13 +22,13 @@ public abstract class BaseEntity {
     LocalDateTime createdAt;
 
     @Column(name = "created_by", nullable = false, updatable = false)
-    UUID createdBy;
+    Long createdBy;
 
     @Column(name = "updated_at", nullable = false)
     LocalDateTime updatedAt;
 
     @Column(name = "updated_by", nullable = false)
-    UUID updatedBy;
+    Long updatedBy;
 
     @Version
     @Column(nullable = false)

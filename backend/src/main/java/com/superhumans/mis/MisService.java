@@ -11,9 +11,9 @@ public interface MisService {
 
     Optional<HospitalizationDTO> getHospitalization(UUID hospitalizationId);
 
-    Optional<UserMisDTO> getUser(UUID userId);
+    Optional<UserMisDTO> getUser(Long userId);
 
-    List<UserMisDTO> getDepartmentUsers(UUID departmentId);
+    List<UserMisDTO> getDepartmentUsers(Long departmentId);
 
     List<DepartmentDTO> getDepartments();
 

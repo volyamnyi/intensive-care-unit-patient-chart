@@ -2,20 +2,12 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.MedicalNoteResponse;
 import com.superhumans.entity.MedicalNote;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class MedicalNoteMapper {
+@Mapper(componentModel = "spring")
+public interface MedicalNoteMapper {
 
-    public static MedicalNoteResponse toResponse(MedicalNote entity) {
-        return MedicalNoteResponse.builder()
-                .id(entity.getId())
-                .clinicalDayId(entity.getClinicalDay().getId())
-                .authorId(entity.getAuthorId())
-                .role(entity.getRole())
-                .noteType(entity.getNoteType())
-                .text(entity.getText())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
-                .version(entity.getVersion())
-                .build();
-    }
+    @Mapping(target = "clinicalDayId", source = "clinicalDay.id")
+    MedicalNoteResponse toResponse(MedicalNote entity);
 }

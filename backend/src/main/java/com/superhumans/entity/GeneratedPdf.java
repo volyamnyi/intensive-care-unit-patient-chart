@@ -3,7 +3,7 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -27,7 +27,7 @@ public class GeneratedPdf extends BaseEntity {
     LocalDateTime generatedAt;
 
     @Column(name = "generated_by", nullable = false)
-    UUID generatedBy;
+    Long generatedBy;
 
     @Column(length = 256)
     String checksum;

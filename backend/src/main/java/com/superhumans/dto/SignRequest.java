@@ -2,7 +2,7 @@ package com.superhumans.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -10,6 +10,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SignRequest {
     @NotNull
-    UUID userId;
+    Long userId;
     String hash;
 }

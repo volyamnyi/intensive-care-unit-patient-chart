@@ -35,7 +35,7 @@ public class MedicalNoteController {
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody MedicalNoteCreateRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(medicalNoteService.createNote(clinicalDayId, request, userId));
     }
@@ -45,7 +45,7 @@ public class MedicalNoteController {
             @PathVariable UUID id,
             @Valid @RequestBody MedicalNotePatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         medicalNoteService.updateNote(id, request, userId);
         return ResponseEntity.noContent().build();
     }

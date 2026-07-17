@@ -30,13 +30,14 @@ public class EpisodeService {
     EpisodeRepository episodeRepository;
     AuditService auditService;
     MisService misService;
+    EpisodeMapper episodeMapper;
 
     public EpisodeResponse getEpisode(UUID id) {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
         String patientName = misService.getPatient(episode.getPatientId())
                 .map(p -> p.getFullName()).orElse(null);
-        return EpisodeMapper.toResponse(episode, patientName);
+        return episodeMapper.toResponse(episode, patientName);
     }
 
     public List<EpisodeResponse> searchEpisodes(Long patientId, EpisodeStatus status) {
@@ -53,27 +54,27 @@ public class EpisodeService {
         return episodes.stream().map(ep -> {
             String name = misService.getPatient(ep.getPatientId())
                     .map(p -> p.getFullName()).orElse(null);
-            return EpisodeMapper.toResponse(ep, name);
+            return episodeMapper.toResponse(ep, name);
         }).collect(Collectors.toList());
     }
 
     @Transactional
-    public EpisodeResponse createEpisode(EpisodeCreateRequest request, UUID userId) {
+    public EpisodeResponse createEpisode(EpisodeCreateRequest request, Long userId) {
         episodeRepository.findByPatientIdAndStatus(request.getPatientId(), EpisodeStatus.ACTIVE)
                 .ifPresent(e -> { throw new EpisodeAlreadyActiveException(
                         "Active episode already exists for patient: " + request.getPatientId()); });
 
-        Episode episode = EpisodeMapper.toEntity(request);
+        Episode episode = episodeMapper.toEntity(request);
         episode.setStatus(EpisodeStatus.ACTIVE);
         episode.setCreatedBy(userId);
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
         auditService.logCreate("Episode", episode.getId(), userId);
-        return EpisodeMapper.toResponse(episode);
+        return episodeMapper.toResponse(episode);
     }
 
     @Transactional
-    public EpisodeResponse updateEpisode(UUID id, EpisodePatchRequest request, UUID userId) {
+    public EpisodeResponse updateEpisode(UUID id, EpisodePatchRequest request, Long userId) {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
 
@@ -93,11 +94,11 @@ public class EpisodeService {
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
         auditService.logUpdate("Episode", id, userId, null, "Updated episode fields");
-        return EpisodeMapper.toResponse(episode);
+        return episodeMapper.toResponse(episode);
     }
 
     @Transactional
-    public EpisodeResponse closeEpisode(UUID id, EpisodeCloseRequest request, UUID userId) {
+    public EpisodeResponse closeEpisode(UUID id, EpisodeCloseRequest request, Long userId) {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
 
@@ -110,7 +111,7 @@ public class EpisodeService {
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
         auditService.logAction("Episode", id, "CLOSE", userId);
-        return EpisodeMapper.toResponse(episode);
+        return episodeMapper.toResponse(episode);
     }
 
     @Transactional

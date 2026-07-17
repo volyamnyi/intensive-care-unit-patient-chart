@@ -1,5 +1,5 @@
 export interface User {
-  id: string;
+  id: number;
   login: string;
   fullName: string;
   role: 'DOCTOR' | 'NURSE' | 'HEAD_OF_DEPARTMENT' | 'ADMINISTRATOR';
@@ -88,7 +88,7 @@ export interface MedicalOrderCreateRequest {
 }
 
 export interface OrderExecutionCreateRequest {
-  executedBy: string;
+  executedBy: number;
   executedAt: string;
   actualDose: string;
   comment?: string;
@@ -105,7 +105,7 @@ export interface ScaleResultCreateRequest {
 }
 
 export interface SignRequest {
-  userId: string;
+  userId: number;
   hash?: string;
 }
 
@@ -132,9 +132,9 @@ export interface Episode {
   admissionDate: string;
   dischargeDate: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
-  createdBy: string;
+  createdBy: number;
   createdAt: string;
-  updatedBy: string;
+  updatedBy: number;
   updatedAt: string;
   version: number;
 }
@@ -149,9 +149,9 @@ export interface ClinicalDay {
   doctorSigned: boolean | null;
   nurseSigned: boolean | null;
   closedAt: string | null;
-  createdBy: string;
+  createdBy: number;
   createdAt: string;
-  updatedBy: string;
+  updatedBy: number;
   updatedAt: string;
   version: number;
 }
@@ -177,9 +177,9 @@ export interface HourlyRecord {
   vomit: string | null;
   painScore: number | null;
   notes: string | null;
-  createdBy: string;
+  createdBy: number;
   createdAt: string;
-  updatedBy: string;
+  updatedBy: number;
   updatedAt: string;
   version: number;
 }
@@ -196,9 +196,9 @@ export interface MedicalOrder {
   startTime: string;
   endTime: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
-  createdBy: string;
+  createdBy: number;
   createdAt: string;
-  updatedBy: string;
+  updatedBy: number;
   updatedAt: string;
   version: number;
 }
@@ -206,14 +206,14 @@ export interface MedicalOrder {
 export interface OrderExecution {
   id: string;
   orderId: string;
-  executedBy: string;
+  executedBy: number;
   executedAt: string;
   actualDose: string;
   status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'PARTIALLY_COMPLETED' | 'CANCELLED';
   comment: string | null;
-  createdBy: string;
+  createdBy: number;
   createdAt: string;
-  updatedBy: string;
+  updatedBy: number;
   updatedAt: string;
   version: number;
 }
@@ -221,7 +221,7 @@ export interface OrderExecution {
 export interface MedicalNote {
   id: string;
   clinicalDayId: string;
-  authorId: string;
+  authorId: number;
   role: string;
   noteType: string;
   text: string;
@@ -236,9 +236,9 @@ export interface ClinicalScale {
   description: string | null;
   isAutomatic: boolean | null;
   status: string;
-  createdBy: string;
+  createdBy: number;
   createdAt: string;
-  updatedBy: string;
+  updatedBy: number;
   updatedAt: string;
   version: number;
 }
@@ -250,7 +250,7 @@ export interface ScaleResult {
   scaleName: string;
   result: string;
   calculatedAt: string;
-  calculatedBy: string;
+  calculatedBy: number;
   createdAt: string;
   version: number;
 }
@@ -269,14 +269,14 @@ export interface FluidBalanceItem {
 export interface Signature {
   id: string;
   clinicalDayId: string;
-  userId: string;
+  userId: number;
   role: string;
   signedAt: string;
   hash: string | null;
   status: string;
-  createdBy: string;
+  createdBy: number;
   createdAt: string;
-  updatedBy: string;
+  updatedBy: number;
   updatedAt: string;
   version: number;
 }
@@ -287,14 +287,14 @@ export interface PdfResponse {
   fileName: string;
   fileVersion: number;
   generatedAt: string;
-  generatedBy: string;
+  generatedBy: number;
   checksum: string | null;
 }
 
 export interface AuditLog {
   id: string;
   timestamp: string;
-  userId: string | null;
+  userId: number | null;
   entity: string;
   entityId: string | null;
   action: string;
@@ -312,7 +312,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
-  userId: string;
+  userId: number;
   login: string;
   fullName: string;
   role: string;

@@ -41,7 +41,7 @@ public class ClinicalScaleController {
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody ScaleResultCreateRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(clinicalScaleService.createScaleResult(clinicalDayId, request, userId));
     }
@@ -51,7 +51,7 @@ public class ClinicalScaleController {
             @PathVariable UUID id,
             @Valid @RequestBody ScaleResultPatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         clinicalScaleService.updateScaleResult(id, request, userId);
         return ResponseEntity.noContent().build();
     }

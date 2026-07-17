@@ -4,38 +4,20 @@ import com.superhumans.dto.EpisodeCreateRequest;
 import com.superhumans.dto.EpisodeResponse;
 import com.superhumans.entity.Episode;
 import com.superhumans.entity.EpisodeStatus;
+import com.superhumans.entity.EpisodeStatus;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-public class EpisodeMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        imports = EpisodeStatus.class)
+public interface EpisodeMapper {
 
-    public static EpisodeResponse toResponse(Episode entity) {
-        return toResponse(entity, null);
-    }
+    EpisodeResponse toResponse(Episode entity);
 
-    public static EpisodeResponse toResponse(Episode entity, String patientName) {
-        return EpisodeResponse.builder()
-                .id(entity.getId())
-                .patientId(entity.getPatientId())
-                .patientName(patientName)
-                .hospitalizationId(entity.getHospitalizationId())
-                .departmentId(entity.getDepartmentId())
-                .admissionDate(entity.getAdmissionDate())
-                .dischargeDate(entity.getDischargeDate())
-                .status(entity.getStatus())
-                .createdBy(entity.getCreatedBy())
-                .createdAt(entity.getCreatedAt())
-                .updatedBy(entity.getUpdatedBy())
-                .updatedAt(entity.getUpdatedAt())
-                .version(entity.getVersion())
-                .build();
-    }
+    @Mapping(target = "patientName", source = "patientName")
+    EpisodeResponse toResponse(Episode entity, String patientName);
 
-    public static Episode toEntity(EpisodeCreateRequest request) {
-        return Episode.builder()
-                .patientId(request.getPatientId())
-                .hospitalizationId(request.getHospitalizationId())
-                .departmentId(request.getDepartmentId())
-                .admissionDate(request.getAdmissionDate())
-                .status(EpisodeStatus.DRAFT)
-                .build();
-    }
+    @Mapping(target = "status", expression = "java(EpisodeStatus.DRAFT)")
+    Episode toEntity(EpisodeCreateRequest request);
 }

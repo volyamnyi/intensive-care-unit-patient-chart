@@ -4,41 +4,18 @@ import com.superhumans.dto.MedicalOrderCreateRequest;
 import com.superhumans.dto.MedicalOrderResponse;
 import com.superhumans.entity.MedicalOrder;
 import com.superhumans.entity.MedicalOrderStatus;
+import com.superhumans.entity.MedicalOrderStatus;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-public class MedicalOrderMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        imports = MedicalOrderStatus.class)
+public interface MedicalOrderMapper {
 
-    public static MedicalOrderResponse toResponse(MedicalOrder entity) {
-        return MedicalOrderResponse.builder()
-                .id(entity.getId())
-                .clinicalDayId(entity.getClinicalDay().getId())
-                .category(entity.getCategory())
-                .drugName(entity.getDrugName())
-                .dose(entity.getDose())
-                .unit(entity.getUnit())
-                .route(entity.getRoute())
-                .frequency(entity.getFrequency())
-                .startTime(entity.getStartTime())
-                .endTime(entity.getEndTime())
-                .status(entity.getStatus())
-                .createdBy(entity.getCreatedBy())
-                .createdAt(entity.getCreatedAt())
-                .updatedBy(entity.getUpdatedBy())
-                .updatedAt(entity.getUpdatedAt())
-                .version(entity.getVersion())
-                .build();
-    }
+    @Mapping(target = "clinicalDayId", source = "clinicalDay.id")
+    MedicalOrderResponse toResponse(MedicalOrder entity);
 
-    public static MedicalOrder toEntity(MedicalOrderCreateRequest request) {
-        return MedicalOrder.builder()
-                .category(request.getCategory())
-                .drugName(request.getDrugName())
-                .dose(request.getDose())
-                .unit(request.getUnit())
-                .route(request.getRoute())
-                .frequency(request.getFrequency())
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
-                .status(MedicalOrderStatus.DRAFT)
-                .build();
-    }
+    @Mapping(target = "status", expression = "java(MedicalOrderStatus.DRAFT)")
+    MedicalOrder toEntity(MedicalOrderCreateRequest request);
 }

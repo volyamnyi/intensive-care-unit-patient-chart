@@ -3,7 +3,7 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -18,7 +18,7 @@ public class Signature extends BaseEntity {
     ClinicalDay clinicalDay;
 
     @Column(name = "user_id", nullable = false)
-    UUID userId;
+    Long userId;
 
     @Column(nullable = false, length = 20)
     String role;

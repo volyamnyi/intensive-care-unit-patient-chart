@@ -35,7 +35,7 @@ public class HourlyRecordController {
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody HourlyRecordCreateRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(hourlyRecordService.createHourlyRecord(clinicalDayId, request, userId));
     }
@@ -45,7 +45,7 @@ public class HourlyRecordController {
             @PathVariable UUID id,
             @Valid @RequestBody HourlyRecordPatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         hourlyRecordService.updateHourlyRecord(id, request, userId);
         return ResponseEntity.noContent().build();
     }

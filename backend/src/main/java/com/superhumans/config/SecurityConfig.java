@@ -59,7 +59,7 @@ public class SecurityConfig {
                         // Order executions (PATCH)
                         .requestMatchers("/api/executions/**").hasAnyRole(CLINICAL_ROLES)
                         // Audit - admins and auditors
-                        .requestMatchers("/api/audit/**").hasAnyRole("ADMINISTRATOR")
+                        .requestMatchers("/api/audit/**").hasAnyRole("ADMINISTRATOR", "AUDITOR")
                         // Patient search from MIS
                         .requestMatchers("/api/patients/**").hasAnyRole(CLINICAL_ROLES)
                         // Users

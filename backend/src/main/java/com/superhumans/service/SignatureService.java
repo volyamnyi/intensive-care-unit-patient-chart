@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -23,7 +24,7 @@ public class SignatureService {
     SignatureRepository signatureRepository;
 
     @Transactional
-    public Signature createSignature(ClinicalDay day, UUID userId, String role, String hash) {
+    public Signature createSignature(ClinicalDay day, Long userId, String role, String hash) {
         Signature signature = Signature.builder()
                 .clinicalDay(day)
                 .userId(userId)

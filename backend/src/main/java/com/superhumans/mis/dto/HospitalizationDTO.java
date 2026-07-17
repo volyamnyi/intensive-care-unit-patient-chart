@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 public class HospitalizationDTO {
     UUID id;
     Long patientId;
-    UUID departmentId;
+    Long departmentId;
     LocalDateTime admissionDate;
     String diagnosis;
     String departmentName;

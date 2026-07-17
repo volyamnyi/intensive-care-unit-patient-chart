@@ -81,7 +81,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = orderRes.getBody().getId();
         OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                UUID.randomUUID(), LocalDateTime.now().withHour(14), "500", "");
+                13L, LocalDateTime.now().withHour(14), "500", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,
@@ -143,7 +143,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = orderRes.getBody().getId();
         OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                UUID.randomUUID(), LocalDateTime.now().withHour(9), "500", "");
+                13L, LocalDateTime.now().withHour(9), "500", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,

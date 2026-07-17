@@ -2,22 +2,10 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.entity.AuditLog;
+import org.mapstruct.Mapper;
 
-public class AuditLogMapper {
+@Mapper(componentModel = "spring")
+public interface AuditLogMapper {
 
-    public static AuditLogResponse toResponse(AuditLog entity) {
-        return AuditLogResponse.builder()
-                .id(entity.getId())
-                .timestamp(entity.getTimestamp())
-                .userId(entity.getUserId())
-                .entity(entity.getEntity())
-                .entityId(entity.getEntityId())
-                .action(entity.getAction())
-                .oldValue(entity.getOldValue())
-                .newValue(entity.getNewValue())
-                .correlationId(entity.getCorrelationId())
-                .ipAddress(entity.getIpAddress())
-                .userRole(entity.getUserRole())
-                .build();
-    }
+    AuditLogResponse toResponse(AuditLog entity);
 }

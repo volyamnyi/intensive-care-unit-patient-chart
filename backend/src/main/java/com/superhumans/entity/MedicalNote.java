@@ -2,7 +2,7 @@ package com.superhumans.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -17,7 +17,7 @@ public class MedicalNote extends BaseEntity {
     ClinicalDay clinicalDay;
 
     @Column(name = "author_id", nullable = false)
-    UUID authorId;
+    Long authorId;
 
     @Column(nullable = false, length = 20)
     String role;

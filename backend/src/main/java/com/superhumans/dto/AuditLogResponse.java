@@ -8,7 +8,7 @@ import java.util.UUID;
 public class AuditLogResponse {
     private UUID id;
     private LocalDateTime timestamp;
-    private UUID userId;
+    private Long userId;
     private String entity;
     private UUID entityId;
     private String action;

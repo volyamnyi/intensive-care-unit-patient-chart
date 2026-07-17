@@ -23,7 +23,7 @@ public class AuditLog {
     LocalDateTime timestamp;
 
     @Column(name = "user_id")
-    UUID userId;
+    Long userId;
 
     @Column(nullable = false, length = 100)
     String entity;

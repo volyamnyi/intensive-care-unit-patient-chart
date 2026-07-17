@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,11 +38,11 @@ class AuthServiceTest {
     private AuthService authService;
 
     private User testUser;
-    private UUID userId;
+    private Long userId;
 
     @BeforeEach
     void setUp() {
-        userId = UUID.randomUUID();
+        userId = 11L;
         testUser = User.builder()
                 .login("doctor1")
                 .passwordHash("encodedPass")

@@ -33,20 +33,21 @@ public class MedicalNoteService {
     ClinicalDayRepository clinicalDayRepository;
     UserRepository userRepository;
     AuditService auditService;
+    MedicalNoteMapper medicalNoteMapper;
 
     public MedicalNoteResponse getNote(UUID id) {
         MedicalNote note = medicalNoteRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Medical note not found: " + id));
-        return MedicalNoteMapper.toResponse(note);
+        return medicalNoteMapper.toResponse(note);
     }
 
     public List<MedicalNoteResponse> getNotesByClinicalDay(UUID clinicalDayId) {
         return medicalNoteRepository.findByClinicalDayIdOrderByCreatedAtAsc(clinicalDayId)
-                .stream().map(MedicalNoteMapper::toResponse).collect(Collectors.toList());
+                .stream().map(medicalNoteMapper::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public MedicalNoteResponse createNote(UUID clinicalDayId, MedicalNoteCreateRequest request, UUID userId) {
+    public MedicalNoteResponse createNote(UUID clinicalDayId, MedicalNoteCreateRequest request, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + clinicalDayId));
         assertNotLocked(day);
@@ -65,11 +66,11 @@ public class MedicalNoteService {
         note.setUpdatedBy(userId);
         note = medicalNoteRepository.save(note);
         auditService.logCreate("MedicalNote", note.getId(), userId);
-        return MedicalNoteMapper.toResponse(note);
+        return medicalNoteMapper.toResponse(note);
     }
 
     @Transactional
-    public MedicalNoteResponse updateNote(UUID id, MedicalNotePatchRequest request, UUID userId) {
+    public MedicalNoteResponse updateNote(UUID id, MedicalNotePatchRequest request, Long userId) {
         MedicalNote note = medicalNoteRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Medical note not found: " + id));
 
@@ -82,7 +83,7 @@ public class MedicalNoteService {
         note.setUpdatedBy(userId);
         note = medicalNoteRepository.save(note);
         auditService.logUpdate("MedicalNote", id, userId, null, "Updated note text");
-        return MedicalNoteMapper.toResponse(note);
+        return medicalNoteMapper.toResponse(note);
     }
 
     private void assertNotLocked(ClinicalDay day) {

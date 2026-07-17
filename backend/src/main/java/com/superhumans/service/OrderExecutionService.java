@@ -36,20 +36,21 @@ public class OrderExecutionService {
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
     FluidBalanceService fluidBalanceService;
+    OrderExecutionMapper orderExecutionMapper;
 
     public OrderExecutionResponse getExecution(UUID id) {
         OrderExecution execution = orderExecutionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order execution not found: " + id));
-        return OrderExecutionMapper.toResponse(execution);
+        return orderExecutionMapper.toResponse(execution);
     }
 
     public List<OrderExecutionResponse> getExecutionsByOrder(UUID orderId) {
         return orderExecutionRepository.findByOrderId(orderId)
-                .stream().map(OrderExecutionMapper::toResponse).collect(Collectors.toList());
+                .stream().map(orderExecutionMapper::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public OrderExecutionResponse createExecution(UUID orderId, OrderExecutionCreateRequest request, UUID userId) {
+    public OrderExecutionResponse createExecution(UUID orderId, OrderExecutionCreateRequest request, Long userId) {
         MedicalOrder order = medicalOrderRepository.findById(orderId)
                 .orElseThrow(() -> new NotFoundException("Medical order not found: " + orderId));
 
@@ -58,12 +59,13 @@ public class OrderExecutionService {
         }
 
         ClinicalDay day = order.getClinicalDay();
-        if (day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
+        if (day.getStatus() == ClinicalDayStatus.NURSE_SIGNED
+                || day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
                 || day.getStatus() == ClinicalDayStatus.CLOSED) {
             throw new DocumentLockedException("Clinical day is signed and cannot be modified");
         }
 
-        OrderExecution execution = OrderExecutionMapper.toEntity(request);
+        OrderExecution execution = orderExecutionMapper.toEntity(request);
         execution.setOrder(order);
         execution.setExecutedBy(userId);
         execution.setCreatedBy(userId);
@@ -71,11 +73,11 @@ public class OrderExecutionService {
         execution = orderExecutionRepository.save(execution);
         auditService.logAction("OrderExecution", execution.getId(), "EXECUTE", userId);
         fluidBalanceService.recalculate(order.getClinicalDay().getId(), userId);
-        return OrderExecutionMapper.toResponse(execution);
+        return orderExecutionMapper.toResponse(execution);
     }
 
     @Transactional
-    public OrderExecutionResponse updateExecution(UUID id, OrderExecutionPatchRequest request, UUID userId) {
+    public OrderExecutionResponse updateExecution(UUID id, OrderExecutionPatchRequest request, Long userId) {
         OrderExecution execution = orderExecutionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order execution not found: " + id));
 
@@ -85,7 +87,8 @@ public class OrderExecutionService {
 
         MedicalOrder order = execution.getOrder();
         ClinicalDay day = order.getClinicalDay();
-        if (day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
+        if (day.getStatus() == ClinicalDayStatus.NURSE_SIGNED
+                || day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
                 || day.getStatus() == ClinicalDayStatus.CLOSED) {
             throw new DocumentLockedException("Clinical day is signed and cannot be modified");
         }
@@ -96,6 +99,6 @@ public class OrderExecutionService {
         execution.setUpdatedBy(userId);
         execution = orderExecutionRepository.save(execution);
         auditService.logUpdate("OrderExecution", id, userId, null, "Updated execution");
-        return OrderExecutionMapper.toResponse(execution);
+        return orderExecutionMapper.toResponse(execution);
     }
 }

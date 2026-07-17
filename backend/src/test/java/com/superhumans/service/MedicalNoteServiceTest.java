@@ -7,6 +7,7 @@ import com.superhumans.entity.*;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
+import com.superhumans.mapper.MedicalNoteMapper;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.MedicalNoteRepository;
 import com.superhumans.repository.UserRepository;
@@ -43,6 +44,9 @@ class MedicalNoteServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private MedicalNoteMapper medicalNoteMapper;
+
     @InjectMocks
     private MedicalNoteService medicalNoteService;
 
@@ -51,7 +55,7 @@ class MedicalNoteServiceTest {
 
     private UUID noteId;
     private UUID clinicalDayId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay clinicalDay;
     private User user;
 
@@ -59,7 +63,7 @@ class MedicalNoteServiceTest {
     void setUp() {
         noteId = UUID.randomUUID();
         clinicalDayId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         clinicalDay = ClinicalDay.builder()
                 .status(ClinicalDayStatus.OPEN)
                 .build();
@@ -80,6 +84,12 @@ class MedicalNoteServiceTest {
         note.setId(noteId);
         note.setClinicalDay(clinicalDay);
         when(medicalNoteRepository.findById(noteId)).thenReturn(Optional.of(note));
+
+        MedicalNoteResponse expected = MedicalNoteResponse.builder()
+                .id(noteId)
+                .text("Test note")
+                .build();
+        when(medicalNoteMapper.toResponse(note)).thenReturn(expected);
 
         MedicalNoteResponse res = medicalNoteService.getNote(noteId);
 

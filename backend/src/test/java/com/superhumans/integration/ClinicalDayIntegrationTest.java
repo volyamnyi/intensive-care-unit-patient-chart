@@ -113,7 +113,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void signNurse_marksDayAsNurseSigned() {
-        SignRequest req = new SignRequest(UUID.randomUUID(), "nurse-hash");
+        SignRequest req = new SignRequest(13L, "nurse-hash");
 
         var entity = authEntity(req, getNurseToken());
 
@@ -128,7 +128,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
     void signDoctor_whenNurseNotSigned_returnsBadRequest() {
         // Use a fresh day from seed that hasn't been nurse-signed yet
         UUID freshDayId = UUID.fromString("b2222222-2222-2222-2222-222222222222");
-        SignRequest req = new SignRequest(UUID.randomUUID(), "doctor-hash");
+        SignRequest req = new SignRequest(15L, "doctor-hash");
 
         var entity = authEntity(req, getHodToken());
 
@@ -144,13 +144,13 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
         UUID freshEpisodeId = UUID.fromString("a3333333-3333-3333-3333-333333333333");
         UUID freshDayId = UUID.fromString("b3333333-3333-3333-3333-333333333333");
 
-        SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "nurse-hash");
+        SignRequest nurseReq = new SignRequest(13L, "nurse-hash");
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
                 Void.class, freshDayId);
 
-        SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "doctor-hash");
+        SignRequest doctorReq = new SignRequest(15L, "doctor-hash");
         var doctorEntity = authEntity(doctorReq, getHodToken());
 
         var res = restTemplate.exchange(
@@ -166,13 +166,13 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
         UUID episodeId = UUID.fromString("a2222222-2222-2222-2222-222222222222");
         UUID dayId = UUID.fromString("b2222222-2222-2222-2222-222222222222");
 
-        SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "hash-n");
+        SignRequest nurseReq = new SignRequest(13L, "hash-n");
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
                 Void.class, dayId);
 
-        SignRequest doctorReq = new SignRequest(UUID.randomUUID(), "hash-d");
+        SignRequest doctorReq = new SignRequest(15L, "hash-d");
         var doctorEntity = authEntity(doctorReq, getHodToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,

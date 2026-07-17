@@ -7,6 +7,7 @@ import com.superhumans.entity.*;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
+import com.superhumans.mapper.OrderExecutionMapper;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.MedicalOrderRepository;
 import com.superhumans.repository.OrderExecutionRepository;
@@ -47,6 +48,9 @@ class OrderExecutionServiceTest {
     @Mock
     private FluidBalanceService fluidBalanceService;
 
+    @Mock
+    private OrderExecutionMapper orderExecutionMapper;
+
     @InjectMocks
     private OrderExecutionService orderExecutionService;
 
@@ -55,7 +59,7 @@ class OrderExecutionServiceTest {
 
     private UUID executionId;
     private UUID orderId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay clinicalDay;
     private MedicalOrder medicalOrder;
 
@@ -63,7 +67,7 @@ class OrderExecutionServiceTest {
     void setUp() {
         executionId = UUID.randomUUID();
         orderId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         clinicalDay = ClinicalDay.builder()
                 .status(ClinicalDayStatus.OPEN)
                 .build();
@@ -82,6 +86,11 @@ class OrderExecutionServiceTest {
         exec.setId(executionId);
         exec.setOrder(medicalOrder);
         when(orderExecutionRepository.findById(executionId)).thenReturn(Optional.of(exec));
+
+        OrderExecutionResponse expected = OrderExecutionResponse.builder()
+                .id(executionId)
+                .build();
+        when(orderExecutionMapper.toResponse(exec)).thenReturn(expected);
 
         OrderExecutionResponse res = orderExecutionService.getExecution(executionId);
 
@@ -115,6 +124,15 @@ class OrderExecutionServiceTest {
         saved.setOrder(medicalOrder);
         saved.setVersion(0);
         when(orderExecutionRepository.save(any(OrderExecution.class))).thenReturn(saved);
+
+        OrderExecution execEntity = new OrderExecution();
+        execEntity.setExecutedBy(userId);
+        execEntity.setActualDose("10");
+        OrderExecutionResponse expected = OrderExecutionResponse.builder()
+                .id(executionId)
+                .build();
+        when(orderExecutionMapper.toEntity(req)).thenReturn(execEntity);
+        when(orderExecutionMapper.toResponse(any(OrderExecution.class))).thenReturn(expected);
 
         OrderExecutionResponse res = orderExecutionService.createExecution(orderId, req, userId);
 

@@ -30,7 +30,7 @@ public class ClinicalDayController {
     public ResponseEntity<ClinicalDayResponse> createClinicalDay(
             @Valid @RequestBody ClinicalDayCreateRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(clinicalDayService.createClinicalDay(request, userId));
     }
@@ -40,7 +40,7 @@ public class ClinicalDayController {
             @PathVariable UUID id,
             @Valid @RequestBody ClinicalDayPatchRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         clinicalDayService.updateClinicalDay(id, request, userId);
         return ResponseEntity.noContent().build();
     }
@@ -50,7 +50,7 @@ public class ClinicalDayController {
             @PathVariable UUID id,
             @Valid @RequestBody SignRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         clinicalDayService.signNurse(id, request, userId);
         return ResponseEntity.noContent().build();
     }
@@ -60,7 +60,7 @@ public class ClinicalDayController {
             @PathVariable UUID id,
             @Valid @RequestBody SignRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         clinicalDayService.signDoctor(id, request, userId);
         return ResponseEntity.noContent().build();
     }
@@ -70,7 +70,7 @@ public class ClinicalDayController {
             @PathVariable UUID id,
             @Valid @RequestBody ReopenRequest request,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         clinicalDayService.reopenClinicalDay(id, request, userId);
         return ResponseEntity.noContent().build();
     }

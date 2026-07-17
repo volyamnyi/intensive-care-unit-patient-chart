@@ -23,14 +23,14 @@ class MockMisServiceTest {
     @InjectMocks
     private MockMisServiceImpl misService;
 
-    private UUID knownUserId;
-    private UUID unknownId;
+    private Long knownUserId;
+    private Long unknownId;
 
     @BeforeEach
     void setUp() {
         misService.init();
-        knownUserId = UUID.fromString("00000000-0000-0000-0000-000000000011");
-        unknownId = UUID.fromString("00000000-0000-0000-0000-000000009999");
+        knownUserId = 11L;
+        unknownId = 9999L;
     }
 
     @Test
@@ -55,7 +55,7 @@ class MockMisServiceTest {
 
     @Test
     void getHospitalization_whenNotFound_returnsEmpty() {
-        var result = misService.getHospitalization(unknownId);
+        var result = misService.getHospitalization(UUID.fromString("00000000-0000-0000-0000-000000009999"));
         assertThat(result).isEmpty();
     }
 
@@ -74,7 +74,7 @@ class MockMisServiceTest {
 
     @Test
     void getDepartmentUsers_returnsUsers() {
-        UUID deptId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        Long deptId = 1L;
         var result = misService.getDepartmentUsers(deptId);
         assertThat(result).isNotEmpty();
         assertThat(result.size()).isGreaterThanOrEqualTo(5);

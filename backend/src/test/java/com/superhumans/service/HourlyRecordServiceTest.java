@@ -9,6 +9,7 @@ import com.superhumans.entity.HourlyRecord;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
+import com.superhumans.mapper.HourlyRecordMapper;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.HourlyRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,9 @@ class HourlyRecordServiceTest {
     @Mock
     private FluidBalanceService fluidBalanceService;
 
+    @Mock
+    private HourlyRecordMapper hourlyRecordMapper;
+
     @InjectMocks
     private HourlyRecordService hourlyRecordService;
 
@@ -53,14 +57,14 @@ class HourlyRecordServiceTest {
 
     private UUID recordId;
     private UUID clinicalDayId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay clinicalDay;
 
     @BeforeEach
     void setUp() {
         recordId = UUID.randomUUID();
         clinicalDayId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         clinicalDay = ClinicalDay.builder()
                 .status(ClinicalDayStatus.OPEN)
                 .build();
@@ -74,6 +78,11 @@ class HourlyRecordServiceTest {
         record.setId(recordId);
         record.setClinicalDay(clinicalDay);
         when(hourlyRecordRepository.findById(recordId)).thenReturn(Optional.of(record));
+
+        HourlyRecordResponse expected = HourlyRecordResponse.builder()
+                .id(recordId)
+                .build();
+        when(hourlyRecordMapper.toResponse(record)).thenReturn(expected);
 
         HourlyRecordResponse res = hourlyRecordService.getHourlyRecord(recordId);
 
@@ -114,6 +123,15 @@ class HourlyRecordServiceTest {
         saved.setClinicalDay(clinicalDay);
         saved.setVersion(0);
         when(hourlyRecordRepository.save(any(HourlyRecord.class))).thenReturn(saved);
+
+        HourlyRecord hourRec = new HourlyRecord();
+        hourRec.setHeartRate(80);
+        hourRec.setSystolicBP(120);
+        HourlyRecordResponse expectedRes = HourlyRecordResponse.builder()
+                .id(recordId)
+                .build();
+        when(hourlyRecordMapper.toEntity(req)).thenReturn(hourRec);
+        when(hourlyRecordMapper.toResponse(any(HourlyRecord.class))).thenReturn(expectedRes);
 
         HourlyRecordResponse res = hourlyRecordService.createHourlyRecord(clinicalDayId, req, userId);
 

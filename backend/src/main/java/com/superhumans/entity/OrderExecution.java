@@ -3,7 +3,7 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -18,7 +18,7 @@ public class OrderExecution extends BaseEntity {
     MedicalOrder order;
 
     @Column(name = "executed_by", nullable = false)
-    UUID executedBy;
+    Long executedBy;
 
     @Column(name = "executed_at", nullable = false)
     LocalDateTime executedAt;

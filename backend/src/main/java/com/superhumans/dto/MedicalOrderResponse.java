@@ -21,9 +21,9 @@ public class MedicalOrderResponse {
     LocalDateTime startTime;
     LocalDateTime endTime;
     MedicalOrderStatus status;
-    UUID createdBy;
+    Long createdBy;
     LocalDateTime createdAt;
-    UUID updatedBy;
+    Long updatedBy;
     LocalDateTime updatedAt;
     Integer version;
 }

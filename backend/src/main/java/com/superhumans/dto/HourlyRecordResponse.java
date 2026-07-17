@@ -29,9 +29,9 @@ public class HourlyRecordResponse {
     String vomit;
     Integer painScore;
     String notes;
-    UUID createdBy;
+    Long createdBy;
     LocalDateTime createdAt;
-    UUID updatedBy;
+    Long updatedBy;
     LocalDateTime updatedAt;
     Integer version;
 }

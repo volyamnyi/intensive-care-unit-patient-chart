@@ -366,7 +366,7 @@ All endpoints prefixed with `/api`.
 - **Routing**: `/doctor/*` for DOCTOR/HOD, `/nurse/*` for NURSE, `/admin/*` for ADMINISTRATOR
 - **DB**: `ddl-auto: update` — never write manual DDL; schema auto-created by Hibernate from entity annotations
 - **Data seeding**: Only via `data.sql` (`spring.sql.init.mode: always`)
-- **Stale test data**: `data.sql` uses `ON CONFLICT (id) DO NOTHING`, so modified data persists across backend restarts. After running signing/reopen tests, reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
+- **Test seed data**: Integration tests use `data-test.sql` (in `src/test/resources/`) with plain INSERTs on a fresh Testcontainers PostgreSQL database. The production `data.sql` keeps `ON CONFLICT (id) DO NOTHING` for local dev resilience but modified data may persist across restarts. Reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 
 ## Project Files (kept in repo)
 

@@ -2,8 +2,10 @@ package com.superhumans.auth;
 
 import com.superhumans.entity.AuditLog;
 import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.service.AuditService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -27,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     JwtTokenProvider jwtTokenProvider;
     AuditLogRepository auditLogRepository;
+    AuditService auditService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -36,20 +40,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && jwtTokenProvider.validateToken(token)) {
             String login = jwtTokenProvider.getLoginFromToken(token);
             String role = jwtTokenProvider.getRoleFromToken(token);
+            Long userId = jwtTokenProvider.getUserIdFromToken(token);
             var auth = new UsernamePasswordAuthenticationToken(
-                    login, jwtTokenProvider.getUserIdFromToken(token),
+                    login, userId,
                     List.of(new SimpleGrantedAuthority("ROLE_" + role)));
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-            AuditLog auditLog = new AuditLog();
-            auditLog.setUserId(jwtTokenProvider.getUserIdFromToken(token));
-            auditLog.setEntity("AUTH");
-            auditLog.setAction("LOGIN");
-            auditLog.setDetails("User logged in: " + login);
-            auditLog.setTimestamp(LocalDateTime.now());
-            auditLog.setIpAddress(request.getRemoteAddr());
-            auditLog.setUserRole(role);
-            auditLogRepository.save(auditLog);
+            String method = request.getMethod();
+            if (!"GET".equals(method) && !"HEAD".equals(method)) {
+                AuditLog auditLog = new AuditLog();
+                auditLog.setUserId(userId);
+                auditLog.setEntity(request.getRequestURI());
+                String action = "API_" + method;
+                auditLog.setAction(action);
+                auditLog.setDetails("Authenticated " + action + " by: " + login);
+                auditLog.setTimestamp(LocalDateTime.now());
+                auditLog.setIpAddress(request.getRemoteAddr());
+                auditLog.setUserRole(role);
+                auditService.logAsync(auditLog);
+            }
         }
         filterChain.doFilter(request, response);
     }
@@ -58,6 +67,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String bearer = request.getHeader("Authorization");
         if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
             return bearer.substring(7);
+        }
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("jwt".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
         }
         return null;
     }

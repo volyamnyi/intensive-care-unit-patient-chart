@@ -29,7 +29,7 @@ public class PdfController {
     public ResponseEntity<PdfResponse> generatePdf(
             @PathVariable UUID clinicalDayId,
             Authentication auth) {
-        UUID userId = (UUID) auth.getCredentials();
+        Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(pdfGeneratorService.generatePdf(clinicalDayId, userId));
     }

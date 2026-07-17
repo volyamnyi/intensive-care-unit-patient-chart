@@ -7,6 +7,7 @@ import com.superhumans.entity.*;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
+import com.superhumans.mapper.MedicalOrderMapper;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.MedicalOrderRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,9 @@ class MedicalOrderServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private MedicalOrderMapper medicalOrderMapper;
+
     @InjectMocks
     private MedicalOrderService medicalOrderService;
 
@@ -48,7 +52,7 @@ class MedicalOrderServiceTest {
 
     private UUID orderId;
     private UUID clinicalDayId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay clinicalDay;
     private MedicalOrder testOrder;
 
@@ -56,7 +60,7 @@ class MedicalOrderServiceTest {
     void setUp() {
         orderId = UUID.randomUUID();
         clinicalDayId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         clinicalDay = ClinicalDay.builder()
                 .status(ClinicalDayStatus.OPEN)
                 .build();
@@ -76,6 +80,12 @@ class MedicalOrderServiceTest {
     @Test
     void getOrder_whenFound_returnsResponse() {
         when(medicalOrderRepository.findById(orderId)).thenReturn(Optional.of(testOrder));
+
+        MedicalOrderResponse expected = MedicalOrderResponse.builder()
+                .id(orderId)
+                .drugName("Test Drug")
+                .build();
+        when(medicalOrderMapper.toResponse(testOrder)).thenReturn(expected);
 
         MedicalOrderResponse res = medicalOrderService.getOrder(orderId);
 
@@ -117,6 +127,12 @@ class MedicalOrderServiceTest {
         saved.setId(orderId);
         saved.setClinicalDay(clinicalDay);
         when(medicalOrderRepository.save(any(MedicalOrder.class))).thenReturn(saved);
+
+        MedicalOrderResponse expected = MedicalOrderResponse.builder()
+                .id(orderId)
+                .build();
+        when(medicalOrderMapper.toEntity(req)).thenReturn(new MedicalOrder());
+        when(medicalOrderMapper.toResponse(any(MedicalOrder.class))).thenReturn(expected);
 
         MedicalOrderResponse res = medicalOrderService.createOrder(clinicalDayId, req, userId);
 

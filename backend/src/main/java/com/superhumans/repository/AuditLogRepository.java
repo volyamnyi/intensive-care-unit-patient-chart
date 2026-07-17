@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-
 public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
     @Override
@@ -37,7 +36,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     }
 
     Page<AuditLog> findByEntityAndEntityIdOrderByTimestampDesc(String entity, UUID entityId, Pageable pageable);
-    Page<AuditLog> findByUserIdOrderByTimestampDesc(UUID userId, Pageable pageable);
+    Page<AuditLog> findByUserIdOrderByTimestampDesc(Long userId, Pageable pageable);
     Page<AuditLog> findByEntityOrderByTimestampDesc(String entity, Pageable pageable);
     Page<AuditLog> findByActionOrderByTimestampDesc(String action, Pageable pageable);
     Page<AuditLog> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime start, LocalDateTime end, Pageable pageable);

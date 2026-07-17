@@ -3,7 +3,7 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
+
 
 @Entity
 @Table(name = "scale_results")
@@ -25,5 +25,5 @@ public class ScaleResult extends BaseEntity {
     private LocalDateTime calculatedAt;
 
     @Column(name = "calculated_by", nullable = false)
-    private UUID calculatedBy;
+    private Long calculatedBy;
 }

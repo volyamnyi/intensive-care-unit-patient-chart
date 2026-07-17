@@ -4,9 +4,11 @@ import { Box, Paper, Typography, Button, Grid, TextField, Alert, useTheme } from
 import { episodeApi } from '../../api/endpoints';
 import PatientSearch from '../../components/common/PatientSearch';
 import type { PatientDto } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 export default function CreateCardPage() {
-  useEffect(() => { document.title = 'ВАІТ — Нова карта'; }, []);
+  const { t } = useTranslation();
+  useEffect(() => { document.title = t('doctor.createCard.title'); }, []);
   const navigate = useNavigate();
   const theme = useTheme();
   const [selectedPatient, setSelectedPatient] = useState<PatientDto | null>(null);
@@ -21,51 +23,51 @@ export default function CreateCardPage() {
       });
       navigate('/doctor/episode/' + res.data.id);
     } catch {
-      setError('Помилка створення карти');
+      setError(t('doctor.createCard.error'));
     }
   };
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto' }}>
       <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary, mb: 3 }}>
-        Нова карта інтенсивної терапії
+        {t('doctor.createCard.heading')}
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2, color: theme.palette.text.primary }}>
-          Пошук пацієнта
+          {t('doctor.createCard.patientSearch')}
         </Typography>
         <PatientSearch onSelect={setSelectedPatient} />
       </Paper>
       {selectedPatient && (
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2, color: theme.palette.text.primary }}>
-            Дані пацієнта (з МІС)
+            {t('doctor.createCard.patientData')}
           </Typography>
           <Grid container spacing={2}>
             <Grid size={6}>
-              <TextField fullWidth label="ПІП" value={selectedPatient.fullName} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.fullName')} value={selectedPatient.fullName} slotProps={{ input: { readOnly: true } }} />
             </Grid>
             <Grid size={3}>
-              <TextField fullWidth label="Дата народження" value={selectedPatient.birthDate} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.birthDate')} value={selectedPatient.birthDate} slotProps={{ input: { readOnly: true } }} />
             </Grid>
             <Grid size={3}>
-              <TextField fullWidth label="Стать" value={selectedPatient.sexCode === 'M' ? 'Чол' : 'Жін'} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.sex')} value={selectedPatient.sexCode === 'M' ? t('doctor.createCard.male') : t('doctor.createCard.female')} slotProps={{ input: { readOnly: true } }} />
             </Grid>
             <Grid size={3}>
-              <TextField fullWidth label="Зріст (см)" value={selectedPatient.height ?? ''} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.height')} value={selectedPatient.height ?? ''} slotProps={{ input: { readOnly: true } }} />
             </Grid>
             <Grid size={3}>
-              <TextField fullWidth label="Маса (кг)" value={selectedPatient.weight ?? ''} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.weight')} value={selectedPatient.weight ?? ''} slotProps={{ input: { readOnly: true } }} />
             </Grid>
             <Grid size={3}>
-              <TextField fullWidth label="Група крові" value={selectedPatient.bloodGroup} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.bloodGroup')} value={selectedPatient.bloodGroup} slotProps={{ input: { readOnly: true } }} />
             </Grid>
             <Grid size={3}>
-              <TextField fullWidth label="Rezus" value={selectedPatient.rhFactor} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.rhFactor')} value={selectedPatient.rhFactor} slotProps={{ input: { readOnly: true } }} />
             </Grid>
             <Grid size={6}>
-              <TextField fullWidth label="№ медкарти" value={selectedPatient.externalId1} slotProps={{ input: { readOnly: true } }} />
+              <TextField fullWidth label={t('doctor.createCard.medicalCardNumber')} value={selectedPatient.externalId1} slotProps={{ input: { readOnly: true } }} />
             </Grid>
           </Grid>
         </Paper>
@@ -73,10 +75,10 @@ export default function CreateCardPage() {
       {selectedPatient && (
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button variant="contained" size="large" onClick={handleCreate}>
-            Створити карту
+            {t('doctor.createCard.createButton')}
           </Button>
           <Button variant="outlined" size="large" onClick={() => navigate('/doctor')}>
-            Скасувати
+            {t('doctor.createCard.cancelButton')}
           </Button>
         </Box>
       )}

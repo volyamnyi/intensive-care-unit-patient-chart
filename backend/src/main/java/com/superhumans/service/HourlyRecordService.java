@@ -32,20 +32,21 @@ public class HourlyRecordService {
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
     FluidBalanceService fluidBalanceService;
+    HourlyRecordMapper hourlyRecordMapper;
 
     public HourlyRecordResponse getHourlyRecord(UUID id) {
         HourlyRecord record = hourlyRecordRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Hourly record not found: " + id));
-        return HourlyRecordMapper.toResponse(record);
+        return hourlyRecordMapper.toResponse(record);
     }
 
     public List<HourlyRecordResponse> getHourlyRecordsByClinicalDay(UUID clinicalDayId) {
         return hourlyRecordRepository.findByClinicalDayIdOrderByRecordTimeAsc(clinicalDayId)
-                .stream().map(HourlyRecordMapper::toResponse).collect(Collectors.toList());
+                .stream().map(hourlyRecordMapper::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public HourlyRecordResponse createHourlyRecord(UUID clinicalDayId, HourlyRecordCreateRequest request, UUID userId) {
+    public HourlyRecordResponse createHourlyRecord(UUID clinicalDayId, HourlyRecordCreateRequest request, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + clinicalDayId));
         assertNotLocked(day);
@@ -55,18 +56,18 @@ public class HourlyRecordService {
             throw new DuplicateHourlyRecordException(clinicalDayId, recordHour);
         }
 
-        HourlyRecord record = HourlyRecordMapper.toEntity(request);
+        HourlyRecord record = hourlyRecordMapper.toEntity(request);
         record.setClinicalDay(day);
         record.setCreatedBy(userId);
         record.setUpdatedBy(userId);
         record = hourlyRecordRepository.save(record);
         auditService.logCreate("HourlyRecord", record.getId(), userId);
         fluidBalanceService.recalculate(clinicalDayId, userId);
-        return HourlyRecordMapper.toResponse(record);
+        return hourlyRecordMapper.toResponse(record);
     }
 
     @Transactional
-    public HourlyRecordResponse updateHourlyRecord(UUID id, HourlyRecordPatchRequest request, UUID userId) {
+    public HourlyRecordResponse updateHourlyRecord(UUID id, HourlyRecordPatchRequest request, Long userId) {
         HourlyRecord record = hourlyRecordRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Hourly record not found: " + id));
 
@@ -96,11 +97,12 @@ public class HourlyRecordService {
         record = hourlyRecordRepository.save(record);
         auditService.logUpdate("HourlyRecord", id, userId, null, "Updated hourly record");
         fluidBalanceService.recalculate(record.getClinicalDay().getId(), userId);
-        return HourlyRecordMapper.toResponse(record);
+        return hourlyRecordMapper.toResponse(record);
     }
 
     private void assertNotLocked(ClinicalDay day) {
-        if (day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
+        if (day.getStatus() == ClinicalDayStatus.NURSE_SIGNED
+                || day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
                 || day.getStatus() == ClinicalDayStatus.CLOSED) {
             throw new DocumentLockedException("Clinical day is signed and cannot be modified");
         }

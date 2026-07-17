@@ -14,6 +14,6 @@ public class PdfResponse {
     String fileName;
     Integer fileVersion;
     LocalDateTime generatedAt;
-    UUID generatedBy;
+    Long generatedBy;
     String checksum;
 }

@@ -2,12 +2,14 @@ import { Outlet, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, Menu, MenuItem, useTheme } from '@mui/material';
 import { AccountCircle, DarkMode, LightMode } from '@mui/icons-material';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../services/AuthContext';
 import { useThemeMode } from '../styles/ThemeContext';
 
-function roleLabel(role?: string) {
-  if (role === 'HEAD_OF_DEPARTMENT') return 'Завідувач відділення';
-  if (role === 'DOCTOR') return 'Лікар';
+function roleLabel(role?: string, t?: (key: string) => string) {
+  const translator = t ?? ((s: string) => s);
+  if (role === 'HEAD_OF_DEPARTMENT') return translator('doctor.layout.roleHod');
+  if (role === 'DOCTOR') return translator('doctor.layout.roleDoctor');
   return role ?? '';
 }
 
@@ -17,6 +19,7 @@ export default function DoctorLayout() {
   const theme = useTheme();
   const { toggleTheme, mode } = useThemeMode();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const { t } = useTranslation();
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -33,10 +36,10 @@ export default function DoctorLayout() {
             />
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <Typography sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, fontSize: 18, color: theme.palette.text.primary, lineHeight: 1.2, letterSpacing: '-0.5px' }}>
-                ВАІТ
+                {t('common.appTitle')}
               </Typography>
               <Typography sx={{ fontFamily: '"Mulish", sans-serif', fontSize: 10, color: theme.palette.text.secondary, lineHeight: 1, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                Карта інтенсивної терапії
+                {t('common.appSubtitle')}
               </Typography>
             </Box>
           </Box>
@@ -45,23 +48,23 @@ export default function DoctorLayout() {
             component={RouterLink} to="/doctor"
             sx={{ color: theme.palette.text.secondary, mr: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 600, fontSize: 13, borderRadius: 50, px: 2, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }}
           >
-            Пацієнти
+            {t('doctor.layout.patientsLink')}
           </Button>
 
           <IconButton
-            aria-label="Переключити тему"
+            aria-label={t('common.themeToggle')}
             onClick={toggleTheme}
             sx={{ color: theme.palette.text.secondary, mr: 0.5, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.1)' } }}
           >
             {mode === 'dark' ? <LightMode /> : <DarkMode />}
           </IconButton>
-          <IconButton aria-label="Меню користувача" sx={{ color: theme.palette.text.secondary, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }} onClick={(e) => setAnchorEl(e.currentTarget)}>
+          <IconButton aria-label={t('common.userMenu')} sx={{ color: theme.palette.text.secondary, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }} onClick={(e) => setAnchorEl(e.currentTarget)}>
             <AccountCircle />
           </IconButton>
           <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
             <MenuItem disabled sx={{ fontFamily: '"Rubik", sans-serif' }}>{user?.fullName}</MenuItem>
-            <MenuItem disabled sx={{ fontFamily: '"Rubik", sans-serif', color: 'text.secondary' }}>{roleLabel(user?.role)}</MenuItem>
-            <MenuItem onClick={handleLogout}>Вийти</MenuItem>
+            <MenuItem disabled sx={{ fontFamily: '"Rubik", sans-serif', color: 'text.secondary' }}>{roleLabel(user?.role, t)}</MenuItem>
+            <MenuItem onClick={handleLogout}>{t('common.logout')}</MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>

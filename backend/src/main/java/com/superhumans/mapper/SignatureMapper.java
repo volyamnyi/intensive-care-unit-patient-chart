@@ -2,17 +2,13 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.SignResponse;
 import com.superhumans.entity.Signature;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class SignatureMapper {
+@Mapper(componentModel = "spring")
+public interface SignatureMapper {
 
-    public static SignResponse toResponse(Signature entity) {
-        return SignResponse.builder()
-                .signatureId(entity.getId())
-                .clinicalDayId(entity.getClinicalDay().getId())
-                .role(entity.getRole())
-                .signedAt(entity.getSignedAt())
-                .hash(entity.getHash())
-                .version(entity.getVersion())
-                .build();
-    }
+    @Mapping(target = "signatureId", source = "id")
+    @Mapping(target = "clinicalDayId", source = "clinicalDay.id")
+    SignResponse toResponse(Signature entity);
 }

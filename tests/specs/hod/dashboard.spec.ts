@@ -48,15 +48,13 @@ test.describe('HOD Dashboard', () => {
   });
 
   test('can view prescriptions tab on episode page', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
     await page.getByRole('tab', { name: 'Призначення' }).click();
     await expect(page.getByRole('button', { name: '+ Нове призначення' })).toBeVisible();
   });
 
   test('can view scales tab', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
     await page.getByRole('tab', { name: 'Шкали' }).click();
   });
 });

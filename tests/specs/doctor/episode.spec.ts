@@ -2,8 +2,7 @@ import { test, expect } from '../../fixtures/index';
 
 test.describe('Episode Page', () => {
   test('shows all 5 tabs on the episode page', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
     await expect(page.getByRole('tab', { name: 'Вітальні' })).toBeVisible();
@@ -14,8 +13,7 @@ test.describe('Episode Page', () => {
   });
 
   test('switching tabs shows different content', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
     await page.getByRole('tab', { name: 'Призначення' }).click();
@@ -29,8 +27,7 @@ test.describe('Episode Page', () => {
   });
 
   test('back button returns to doctor dashboard', async ({ page }) => {
-    await page.goto('/doctor');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
     await page.getByRole('button', { name: 'Назад' }).click();

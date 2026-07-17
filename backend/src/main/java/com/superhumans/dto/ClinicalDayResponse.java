@@ -19,9 +19,9 @@ public class ClinicalDayResponse {
     Boolean doctorSigned;
     Boolean nurseSigned;
     LocalDateTime closedAt;
-    UUID createdBy;
+    Long createdBy;
     LocalDateTime createdAt;
-    UUID updatedBy;
+    Long updatedBy;
     LocalDateTime updatedAt;
     Integer version;
 }

@@ -15,7 +15,7 @@ public class ScaleResultResponse {
     String scaleName;
     String result;
     LocalDateTime calculatedAt;
-    UUID calculatedBy;
+    Long calculatedBy;
     LocalDateTime createdAt;
     Integer version;
 }

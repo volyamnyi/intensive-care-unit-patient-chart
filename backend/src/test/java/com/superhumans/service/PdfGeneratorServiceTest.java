@@ -74,12 +74,12 @@ class PdfGeneratorServiceTest {
     private UUID clinicalDayId;
     private ClinicalDay clinicalDay;
     private Episode episode;
-    private UUID userId;
+    private Long userId;
 
     @BeforeEach
     void setUp() {
         clinicalDayId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         episode = new Episode();
         episode.setId(UUID.randomUUID());
         episode.setAdmissionDate(LocalDateTime.now());

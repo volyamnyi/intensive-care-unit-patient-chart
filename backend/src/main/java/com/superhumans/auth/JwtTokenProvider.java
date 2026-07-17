@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -26,7 +26,7 @@ public class JwtTokenProvider {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(String login, String role, UUID userId) {
+    public String generateToken(String login, String role, Long userId) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(login)
@@ -46,9 +46,9 @@ public class JwtTokenProvider {
         return parseClaims(token).get("role", String.class);
     }
 
-    public UUID getUserIdFromToken(String token) {
+    public Long getUserIdFromToken(String token) {
         String userId = parseClaims(token).get("userId", String.class);
-        return userId != null ? UUID.fromString(userId) : null;
+        return userId != null ? Long.valueOf(userId) : null;
     }
 
     public boolean validateToken(String token) {

@@ -12,14 +12,14 @@ import lombok.experimental.FieldDefaults;
 public class OrderExecutionResponse {
     UUID id;
     UUID orderId;
-    UUID executedBy;
+    Long executedBy;
     LocalDateTime executedAt;
     String actualDose;
     OrderExecutionStatus status;
     String comment;
-    UUID createdBy;
+    Long createdBy;
     LocalDateTime createdAt;
-    UUID updatedBy;
+    Long updatedBy;
     LocalDateTime updatedAt;
     Integer version;
 }

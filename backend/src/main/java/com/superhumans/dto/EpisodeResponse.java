@@ -18,9 +18,9 @@ public class EpisodeResponse {
     LocalDateTime admissionDate;
     LocalDateTime dischargeDate;
     EpisodeStatus status;
-    UUID createdBy;
+    Long createdBy;
     LocalDateTime createdAt;
-    UUID updatedBy;
+    Long updatedBy;
     LocalDateTime updatedAt;
     Integer version;
 }

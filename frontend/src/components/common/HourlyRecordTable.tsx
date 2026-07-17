@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, useTheme } from '@mui/material';
 import type { HourlyRecord } from '../../types';
 
@@ -7,6 +8,7 @@ interface HourlyRecordTableProps {
 }
 
 export default function HourlyRecordTable({ records, hours }: HourlyRecordTableProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const getRec = (hour: number) => {
@@ -19,14 +21,14 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Година</TableCell>
-            <TableCell>АТ сист</TableCell>
-            <TableCell>АТ діас</TableCell>
-            <TableCell>ЧСС</TableCell>
-            <TableCell>SpO2</TableCell>
-            <TableCell>Темп</TableCell>
-            <TableCell>ЦВТ</TableCell>
-            <TableCell>ЧД</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.hour')}</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.systolicBP')}</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.diastolicBP')}</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.heartRate')}</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.spo2')}</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.temperature')}</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.cvp')}</TableCell>
+            <TableCell>{t('hourlyRecordTable.columns.respiratoryRate')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -44,13 +46,13 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
             return (
               <TableRow key={h} sx={{ bgcolor: bg }}>
                 <TableCell sx={{ fontWeight: 600 }}>{h}:00</TableCell>
-                <TableCell>{r?.systolicBP ?? '-'}</TableCell>
-                <TableCell>{r?.diastolicBP ?? '-'}</TableCell>
-                <TableCell>{r?.heartRate ?? '-'}</TableCell>
-                <TableCell>{r?.spo2 ?? '-'}</TableCell>
-                <TableCell>{r?.temperature ?? '-'}</TableCell>
-                <TableCell>{r?.cvp ?? '-'}</TableCell>
-                <TableCell>{r?.respiratoryRate ?? '-'}</TableCell>
+                <TableCell>{r?.systolicBP ?? t('hourlyRecordTable.emptyValue')}</TableCell>
+                <TableCell>{r?.diastolicBP ?? t('hourlyRecordTable.emptyValue')}</TableCell>
+                <TableCell>{r?.heartRate ?? t('hourlyRecordTable.emptyValue')}</TableCell>
+                <TableCell>{r?.spo2 ?? t('hourlyRecordTable.emptyValue')}</TableCell>
+                <TableCell>{r?.temperature ?? t('hourlyRecordTable.emptyValue')}</TableCell>
+                <TableCell>{r?.cvp ?? t('hourlyRecordTable.emptyValue')}</TableCell>
+                <TableCell>{r?.respiratoryRate ?? t('hourlyRecordTable.emptyValue')}</TableCell>
               </TableRow>
             );
           })}

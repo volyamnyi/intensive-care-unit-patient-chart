@@ -90,7 +90,7 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void auditLogCreated_afterSignAction() throws Exception {
-        SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "audit-nurse-hash");
+        SignRequest nurseReq = new SignRequest(13L, "audit-nurse-hash");
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,

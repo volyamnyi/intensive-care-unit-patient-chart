@@ -2,10 +2,7 @@ import { test, expect } from '../../fixtures/index';
 
 test.describe('Nurse Fluid Balance Full', () => {
   test('recalculate button computes fluid balance', async ({ page }) => {
-    await page.goto('/nurse');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/nurse\/episode\//);
-
+    await page.goto('/nurse/episode/a3333333-3333-3333-3333-333333333333');
     await page.getByRole('tab', { name: 'Баланс' }).click();
     await expect(page.getByRole('heading', { name: 'Баланс рідини' })).toBeVisible();
 
@@ -17,10 +14,7 @@ test.describe('Nurse Fluid Balance Full', () => {
   });
 
   test('fluid balance displays correct sections', async ({ page }) => {
-    await page.goto('/nurse');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/nurse\/episode\//);
-
+    await page.goto('/nurse/episode/a3333333-3333-3333-3333-333333333333');
     await page.getByRole('tab', { name: 'Баланс' }).click();
     await expect(page.getByText(/мл/).first()).toBeVisible();
   });

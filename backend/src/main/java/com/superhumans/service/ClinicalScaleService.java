@@ -30,16 +30,17 @@ public class ClinicalScaleService {
     ClinicalDayRepository clinicalDayRepository;
     HourlyRecordRepository hourlyRecordRepository;
     AuditService auditService;
+    ScaleResultMapper scaleResultMapper;
 
     public ScaleResultResponse getScaleResult(UUID id) {
         ScaleResult result = scaleResultRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Scale result not found: " + id));
-        return ScaleResultMapper.toResponse(result);
+        return scaleResultMapper.toResponse(result);
     }
 
     public List<ScaleResultResponse> getScaleResultsByClinicalDay(UUID clinicalDayId) {
         return scaleResultRepository.findByClinicalDayId(clinicalDayId)
-                .stream().map(ScaleResultMapper::toResponse).collect(Collectors.toList());
+                .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());
     }
 
     public List<ClinicalScale> getAvailableScales() {
@@ -47,7 +48,7 @@ public class ClinicalScaleService {
     }
 
     @Transactional
-    public ScaleResultResponse createScaleResult(UUID clinicalDayId, ScaleResultCreateRequest request, UUID userId) {
+    public ScaleResultResponse createScaleResult(UUID clinicalDayId, ScaleResultCreateRequest request, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + clinicalDayId));
         assertNotLocked(day);
@@ -70,11 +71,11 @@ public class ClinicalScaleService {
         sr.setUpdatedBy(userId);
         sr = scaleResultRepository.save(sr);
         auditService.logCreate("ScaleResult", sr.getId(), userId);
-        return ScaleResultMapper.toResponse(sr);
+        return scaleResultMapper.toResponse(sr);
     }
 
     @Transactional
-    public ScaleResultResponse updateScaleResult(UUID id, ScaleResultPatchRequest request, UUID userId) {
+    public ScaleResultResponse updateScaleResult(UUID id, ScaleResultPatchRequest request, Long userId) {
         ScaleResult result = scaleResultRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Scale result not found: " + id));
 
@@ -87,7 +88,7 @@ public class ClinicalScaleService {
         result.setUpdatedBy(userId);
         result = scaleResultRepository.save(result);
         auditService.logUpdate("ScaleResult", id, userId, null, "Updated result");
-        return ScaleResultMapper.toResponse(result);
+        return scaleResultMapper.toResponse(result);
     }
 
     private String calculateAutomatic(ClinicalScale scale, UUID clinicalDayId, String fallback) {
@@ -176,7 +177,8 @@ public class ClinicalScaleService {
     }
 
     private void assertNotLocked(ClinicalDay day) {
-        if (day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
+        if (day.getStatus() == ClinicalDayStatus.NURSE_SIGNED
+                || day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
                 || day.getStatus() == ClinicalDayStatus.CLOSED) {
             throw new DocumentLockedException("Clinical day is signed and cannot be modified");
         }

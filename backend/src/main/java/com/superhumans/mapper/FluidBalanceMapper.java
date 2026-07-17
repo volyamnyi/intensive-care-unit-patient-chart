@@ -2,19 +2,12 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.entity.FluidBalance;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-public class FluidBalanceMapper {
+@Mapper(componentModel = "spring")
+public interface FluidBalanceMapper {
 
-    public static FluidBalanceResponse toResponse(FluidBalance entity) {
-        return FluidBalanceResponse.builder()
-                .id(entity.getId())
-                .clinicalDayId(entity.getClinicalDay().getId())
-                .hour(entity.getHour())
-                .intake(entity.getIntake())
-                .output(entity.getOutput())
-                .balance(entity.getBalance())
-                .cumulativeBalance(entity.getCumulativeBalance())
-                .version(entity.getVersion())
-                .build();
-    }
+    @Mapping(target = "clinicalDayId", source = "clinicalDay.id")
+    FluidBalanceResponse toResponse(FluidBalance entity);
 }

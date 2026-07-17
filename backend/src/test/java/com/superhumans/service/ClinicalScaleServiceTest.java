@@ -7,6 +7,7 @@ import com.superhumans.entity.*;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
+import com.superhumans.mapper.ScaleResultMapper;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.ClinicalScaleRepository;
 import com.superhumans.repository.HourlyRecordRepository;
@@ -48,6 +49,9 @@ class ClinicalScaleServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private ScaleResultMapper scaleResultMapper;
+
     @InjectMocks
     private ClinicalScaleService clinicalScaleService;
 
@@ -57,7 +61,7 @@ class ClinicalScaleServiceTest {
     private UUID resultId;
     private UUID clinicalDayId;
     private UUID scaleId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay clinicalDay;
     private ClinicalScale clinicalScale;
 
@@ -66,7 +70,7 @@ class ClinicalScaleServiceTest {
         resultId = UUID.randomUUID();
         clinicalDayId = UUID.randomUUID();
         scaleId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         clinicalDay = ClinicalDay.builder()
                 .status(ClinicalDayStatus.OPEN)
                 .build();
@@ -99,6 +103,12 @@ class ClinicalScaleServiceTest {
         sr.setClinicalDay(clinicalDay);
         sr.setScale(clinicalScale);
         when(scaleResultRepository.findById(resultId)).thenReturn(Optional.of(sr));
+
+        ScaleResultResponse expected = ScaleResultResponse.builder()
+                .id(resultId)
+                .result("15")
+                .build();
+        when(scaleResultMapper.toResponse(sr)).thenReturn(expected);
 
         ScaleResultResponse res = clinicalScaleService.getScaleResult(resultId);
 

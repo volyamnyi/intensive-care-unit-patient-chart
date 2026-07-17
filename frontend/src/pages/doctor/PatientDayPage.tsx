@@ -4,6 +4,7 @@ import { Box, Typography, Tabs, Tab, Button, Chip, Grid, Alert, CircularProgress
 import { ArrowBack, LockOpen } from '@mui/icons-material';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
+import { useTranslation } from 'react-i18next';
 import ClinicalDayTimeline from '../../components/common/ClinicalDayTimeline';
 import HourlyRecordTable from '../../components/common/HourlyRecordTable';
 import VitalSignsForm from '../../components/common/VitalSignsForm';
@@ -18,6 +19,7 @@ import type { Episode, ClinicalDay, HourlyRecord, HourlyRecordCreateRequest, Med
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 1, 2, 3, 4, 5, 6, 7];
 
 export default function PatientDayPage() {
+  const { t } = useTranslation();
   const { episodeId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -84,11 +86,11 @@ export default function PatientDayPage() {
   }, [selectedDay?.id]);
 
   useEffect(() => {
-    clinicalScaleApi.getAvailable().then(res => setAvailableScales(res.data)).catch(() => {});
+    clinicalScaleApi.getAvailable().then(res => setAvailableScales(res.data)).catch(err => console.error('Failed to load scales', err));
   }, []);
 
   useEffect(() => {
-    document.title = episode ? `ВАІТ — ${episode.patientName}` : 'ВАІТ — Пацієнт';
+    document.title = episode ? `ВАІТ — ${episode.patientName}` : t('doctor.patientDay.title');
   }, [episode]);
 
   useEffect(() => {
@@ -214,7 +216,7 @@ export default function PatientDayPage() {
   };
 
   if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
-  if (!episode) return <Alert severity="error">Епізод не знайдено</Alert>;
+  if (!episode) return <Alert severity="error">{t('doctor.patientDay.episodeNotFound')}</Alert>;
 
   const filledHours = records.map(r => {
     const match = r.recordTime.match(/(\d{2}):00/);
@@ -224,6 +226,7 @@ export default function PatientDayPage() {
   const isNurse = user?.role === 'NURSE';
   const isDoctor = user?.role === 'DOCTOR' || user?.role === 'HEAD_OF_DEPARTMENT';
   const isHod = user?.role === 'HEAD_OF_DEPARTMENT';
+  const isLocked = selectedDay ? selectedDay.status !== 'OPEN' && selectedDay.status !== 'REOPENED' : true;
   const canSign = selectedDay && (
     (isNurse && selectedDay.status === 'OPEN') ||
     (isDoctor && selectedDay.status === 'NURSE_SIGNED')
@@ -237,31 +240,31 @@ export default function PatientDayPage() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Box>
           <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary }}>
-            {episode.patientName || 'Пацієнт'}
+            {episode.patientName || t('doctor.patientDay.patientFallback')}
           </Typography>
           <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
-            {selectedDay ? `Доба №${selectedDay.dayNumber}` : 'Немає відкритої доби'}
+            {selectedDay ? t('doctor.patientDay.dayLabel', { dayNumber: selectedDay.dayNumber }) : t('doctor.patientDay.noOpenDay')}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(isNurse ? '/nurse' : '/doctor')}>
-            Назад
+            {t('doctor.patientDay.backButton')}
           </Button>
           {canSign && (
             <Button variant="contained" onClick={() => setSignDialogOpen(true)}>
-              Підписати добу
+              {t('doctor.patientDay.signOffButton')}
             </Button>
           )}
           {canReopen && (
             <Button variant="outlined" color="warning" startIcon={<LockOpen />} onClick={() => setReopenDialogOpen(true)}>
-              Перевідкрити
+              {t('doctor.patientDay.reopenButton')}
             </Button>
           )}
         </Box>
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
-        <Chip label={`${selectedDay?.status === 'OPEN' ? 'Відкрита' : selectedDay?.status === 'NURSE_SIGNED' ? 'Підписана медсестрою' : selectedDay?.status === 'DOCTOR_SIGNED' ? 'Підписана' : selectedDay?.status === 'REOPENED' ? 'Перевідкрита' : 'Закрита'}`}
+        <Chip label={`${selectedDay?.status === 'OPEN' ? t('doctor.patientDay.statusOpen') : selectedDay?.status === 'NURSE_SIGNED' ? t('doctor.patientDay.statusNurseSigned') : selectedDay?.status === 'DOCTOR_SIGNED' ? t('doctor.patientDay.statusDoctorSigned') : selectedDay?.status === 'REOPENED' ? t('doctor.patientDay.statusReopened') : t('doctor.patientDay.statusClosed')}`}
           color={selectedDay?.status === 'OPEN' ? 'warning' : selectedDay?.status === 'NURSE_SIGNED' ? 'info' : selectedDay?.status === 'DOCTOR_SIGNED' ? 'success' : 'warning'} size="small" />
         <Chip label={`№ ${episode.id?.slice(0, 8)}`} variant="outlined" size="small" />
       </Box>
@@ -277,11 +280,11 @@ export default function PatientDayPage() {
       {selectedDay && (
         <>
           <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, mt: 0 }}>
-            <Tab label="Вітальні" />
-            <Tab label="Призначення" />
-            <Tab label="Шкали" />
-            <Tab label="Нотатки" />
-            <Tab label="Баланс" />
+            <Tab label={t('doctor.patientDay.tabs.vitals')} />
+            <Tab label={t('doctor.patientDay.tabs.orders')} />
+            <Tab label={t('doctor.patientDay.tabs.scales')} />
+            <Tab label={t('doctor.patientDay.tabs.notes')} />
+            <Tab label={t('doctor.patientDay.tabs.balance')} />
           </Tabs>
 
           {tab === 0 && (
@@ -298,7 +301,8 @@ export default function PatientDayPage() {
                   onChange={setVitalForm}
                   onSave={handleSaveVitals}
                   saving={autoSaving}
-                  title={`Показники — ${currentHour}:00`}
+                  disabled={isLocked}
+                  title={t('doctor.patientDay.vitalSignsTitle', { hour: currentHour })}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 5 }}>
@@ -310,10 +314,10 @@ export default function PatientDayPage() {
           {tab === 1 && (
             <MedicalOrdersPanel
               orders={orders}
-              onCreateOrder={isDoctor ? handleCreateOrder : undefined}
-              onCancelOrder={isDoctor ? handleCancelOrder : undefined}
-              canCreate={isDoctor}
-              canExecute={isNurse}
+              onCreateOrder={isDoctor && !isLocked ? handleCreateOrder : undefined}
+              onCancelOrder={isDoctor && !isLocked ? handleCancelOrder : undefined}
+              canCreate={isDoctor && !isLocked}
+              canExecute={isNurse && !isLocked}
             />
           )}
 
@@ -321,35 +325,35 @@ export default function PatientDayPage() {
             <ScaleResultsPanel
               results={scaleResults}
               availableScales={availableScales}
-              onCreateResult={isNurse ? undefined : handleCreateScaleResult}
+              onCreateResult={isNurse ? undefined : (!isLocked ? handleCreateScaleResult : undefined)}
             />
           )}
 
           {tab === 3 && (
             <MedicalNotesPanel
               notes={notes}
-              onCreateNote={handleCreateNote}
+              onCreateNote={!isLocked ? handleCreateNote : undefined}
             />
           )}
 
           {tab === 4 && (
             <FluidBalancePanel
               items={balanceItems}
-              onRecalculate={handleRecalculateBalance}
+              onRecalculate={!isLocked ? handleRecalculateBalance : undefined}
             />
           )}
         </>
       )}
 
       <Dialog open={reopenDialogOpen} onClose={() => setReopenDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Перевідкрити добу №{selectedDay?.dayNumber}</DialogTitle>
+        <DialogTitle>{t('doctor.patientDay.reopenDialog.title', { dayNumber: selectedDay?.dayNumber })}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            Ви впевнені, що хочете перевідкрити цю добу? Підписи будуть скасовані.
+            {t('doctor.patientDay.reopenDialog.text')}
           </Typography>
           <TextField
             autoFocus
-            label="Причина перевідкриття"
+            label={t('doctor.patientDay.reopenDialog.reasonLabel')}
             fullWidth
             multiline
             rows={3}
@@ -358,9 +362,9 @@ export default function PatientDayPage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReopenDialogOpen(false)}>Скасувати</Button>
+          <Button onClick={() => setReopenDialogOpen(false)}>{t('doctor.patientDay.reopenDialog.cancelButton')}</Button>
           <Button onClick={handleReopen} variant="contained" color="warning" disabled={!reopenReason.trim()}>
-            Перевідкрити
+            {t('doctor.patientDay.reopenDialog.reopenButton')}
           </Button>
         </DialogActions>
       </Dialog>

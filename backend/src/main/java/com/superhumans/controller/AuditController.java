@@ -25,7 +25,7 @@ public class AuditController {
 
     @GetMapping
     public ResponseEntity<Page<AuditLogResponse>> getAuditLogs(
-            @RequestParam(required = false) UUID userId,
+            @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String entity,
             @RequestParam(required = false) UUID entityId,
             @RequestParam(required = false) String action,

@@ -159,7 +159,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         UUID orderId = createRes.getBody().getId();
 
         OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                UUID.randomUUID(), LocalDateTime.now(), "5000", "Виконано");
+                13L, LocalDateTime.now(), "5000", "Виконано");
         var execEntity = authEntity(execReq, getNurseToken());
 
         var execRes = restTemplate.exchange(
@@ -188,7 +188,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         UUID orderId = createRes.getBody().getId();
 
         OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                UUID.randomUUID(), LocalDateTime.now(), "10 мл", "");
+                13L, LocalDateTime.now(), "10 мл", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,

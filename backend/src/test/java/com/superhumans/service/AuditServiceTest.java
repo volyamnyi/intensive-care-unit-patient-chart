@@ -13,6 +13,7 @@ import java.util.UUID;
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.entity.AuditLog;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.mapper.AuditLogMapper;
 import com.superhumans.repository.AuditLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,9 @@ class AuditServiceTest {
     @Mock
     private AuditLogRepository auditLogRepository;
 
+    @Mock
+    private AuditLogMapper auditLogMapper;
+
     @InjectMocks
     private AuditService auditService;
 
@@ -41,13 +45,13 @@ class AuditServiceTest {
 
     private UUID logId;
     private UUID entityId;
-    private UUID userId;
+    private Long userId;
 
     @BeforeEach
     void setUp() {
         logId = UUID.randomUUID();
         entityId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
     }
 
     @Test
@@ -60,6 +64,13 @@ class AuditServiceTest {
                 .userId(userId)
                 .build();
         when(auditLogRepository.findById(logId)).thenReturn(Optional.of(log));
+
+        AuditLogResponse expected = AuditLogResponse.builder()
+                .id(logId)
+                .entity("Episode")
+                .action("CREATE")
+                .build();
+        when(auditLogMapper.toResponse(log)).thenReturn(expected);
 
         AuditLogResponse result = auditService.getAuditLog(logId);
 

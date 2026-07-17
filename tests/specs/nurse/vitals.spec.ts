@@ -2,10 +2,7 @@ import { test, expect } from '../../fixtures/index';
 
 test.describe('Nurse Vitals Entry', () => {
   test('enters vitals for a patient hour and saves', async ({ page }) => {
-    await page.goto('/nurse');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/nurse\/episode\//);
- 
+    await page.goto('/nurse/episode/a3333333-3333-3333-3333-333333333333');
     await expect(page.getByRole('tab', { name: 'Вітальні' })).toBeVisible();
 
     await page.getByLabel('АТ сист (мм.рт.ст)').fill('120');
@@ -18,8 +15,7 @@ test.describe('Nurse Vitals Entry', () => {
   });
 
   test('vitals fields have HTML5 validation attributes', async ({ page }) => {
-    await page.goto('/nurse');
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await page.goto('/nurse/episode/a3333333-3333-3333-3333-333333333333');
 
     const sysField = page.getByLabel('АТ сист (мм.рт.ст)');
     await expect(sysField).toHaveAttribute('type', 'number');

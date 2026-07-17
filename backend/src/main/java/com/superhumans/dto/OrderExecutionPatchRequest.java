@@ -2,7 +2,7 @@ package com.superhumans.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -13,5 +13,5 @@ public class OrderExecutionPatchRequest {
     String comment;
     @NotNull
     Integer version;
-    UUID executedBy;
+    Long executedBy;
 }

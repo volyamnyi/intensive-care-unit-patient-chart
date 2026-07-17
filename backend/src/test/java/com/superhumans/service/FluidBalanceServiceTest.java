@@ -3,6 +3,7 @@ package com.superhumans.service;
 import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.entity.*;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.mapper.FluidBalanceMapper;
 import com.superhumans.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,9 @@ class FluidBalanceServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private FluidBalanceMapper fluidBalanceMapper;
+
     @InjectMocks
     private FluidBalanceService fluidBalanceService;
 
@@ -51,13 +55,13 @@ class FluidBalanceServiceTest {
     private ArgumentCaptor<List<FluidBalance>> batchCaptor;
 
     private UUID clinicalDayId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay clinicalDay;
 
     @BeforeEach
     void setUp() {
         clinicalDayId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         clinicalDay = ClinicalDay.builder()
                 .status(ClinicalDayStatus.OPEN)
                 .build();
@@ -77,6 +81,15 @@ class FluidBalanceServiceTest {
 
         when(fluidBalanceRepository.findByClinicalDayIdOrderByHourAsc(clinicalDayId))
                 .thenReturn(List.of(fb));
+
+        FluidBalanceResponse expected = FluidBalanceResponse.builder()
+                .hour(8)
+                .intake(500.0)
+                .output(300.0)
+                .balance(200.0)
+                .cumulativeBalance(200.0)
+                .build();
+        when(fluidBalanceMapper.toResponse(fb)).thenReturn(expected);
 
         List<FluidBalanceResponse> results = fluidBalanceService.getBalances(clinicalDayId);
 

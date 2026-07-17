@@ -14,19 +14,19 @@ import NurseDashboardPage from './pages/nurse/NurseDashboardPage';
 import AdminPage from './pages/admin/AdminPage';
 
 function Guard({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
-  const { isAuthenticated, hasRole, user } = useAuth();
+  const { isAuthenticated, hasRole, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirected = useRef(false);
 
   useEffect(() => {
     if (redirected.current) return;
+    if (loading) return;
     if (!isAuthenticated && location.pathname !== '/login') {
       redirected.current = true;
       navigate('/login', { replace: true });
       return;
     }
-    // Wait for user fetch to complete before deciding role redirects
     if (roles && user === null) return;
     if (roles && !hasRole(...roles) && location.pathname !== '/') {
       redirected.current = true;
@@ -34,26 +34,29 @@ function Guard({ children, roles }: { children: React.ReactNode; roles?: string[
     }
   });
 
+  if (loading) return null;
   if (!isAuthenticated) return null;
-  if (roles && user === null) return null; // still loading user
+  if (roles && user === null) return null;
   if (roles && !hasRole(...roles)) return null;
   return <>{children}</>;
 }
 
 function LoginRoute() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirected = useRef(false);
 
   useEffect(() => {
     if (redirected.current) return;
+    if (loading) return;
     if (isAuthenticated && location.pathname === '/login') {
       redirected.current = true;
       navigate('/', { replace: true });
     }
   });
 
+  if (loading) return null;
   if (isAuthenticated) return null;
   return <LoginPage />;
 }

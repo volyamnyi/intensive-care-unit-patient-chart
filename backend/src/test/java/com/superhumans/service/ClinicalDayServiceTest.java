@@ -3,6 +3,8 @@ package com.superhumans.service;
 import com.superhumans.dto.*;
 import com.superhumans.entity.*;
 import com.superhumans.exception.*;
+import com.superhumans.mapper.ClinicalDayMapper;
+import com.superhumans.mapper.SignatureMapper;
 import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.EpisodeRepository;
 import com.superhumans.repository.HourlyRecordRepository;
@@ -42,6 +44,12 @@ class ClinicalDayServiceTest {
     @Mock
     private HourlyRecordRepository hourlyRecordRepository;
 
+    @Mock
+    private ClinicalDayMapper clinicalDayMapper;
+
+    @Mock
+    private SignatureMapper signatureMapper;
+
     @InjectMocks
     private ClinicalDayService clinicalDayService;
 
@@ -50,7 +58,7 @@ class ClinicalDayServiceTest {
 
     private UUID dayId;
     private UUID episodeId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay testDay;
     private Episode testEpisode;
 
@@ -58,7 +66,7 @@ class ClinicalDayServiceTest {
     void setUp() {
         dayId = UUID.randomUUID();
         episodeId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         testEpisode = new Episode();
         testEpisode.setId(episodeId);
         testEpisode.setPatientId(1001L);
@@ -78,6 +86,13 @@ class ClinicalDayServiceTest {
     @Test
     void getClinicalDay_whenFound_returnsResponse() {
         when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+
+        ClinicalDayResponse expected = ClinicalDayResponse.builder()
+                .id(dayId)
+                .dayNumber(1)
+                .status(ClinicalDayStatus.OPEN)
+                .build();
+        when(clinicalDayMapper.toResponse(testDay)).thenReturn(expected);
 
         ClinicalDayResponse res = clinicalDayService.getClinicalDay(dayId);
 
@@ -104,11 +119,20 @@ class ClinicalDayServiceTest {
                 .thenReturn(Optional.empty());
         when(clinicalDayRepository.findFirstByEpisodeIdOrderByDayNumberDesc(episodeId))
                 .thenReturn(Optional.empty());
+        ClinicalDay entity = new ClinicalDay();
+        when(clinicalDayMapper.toEntity(req)).thenReturn(entity);
+
         ClinicalDay saved = new ClinicalDay();
         saved.setId(dayId);
         saved.setDayNumber(1);
         saved.setEpisode(testEpisode);
         when(clinicalDayRepository.save(any(ClinicalDay.class))).thenReturn(saved);
+
+        ClinicalDayResponse expected = ClinicalDayResponse.builder()
+                .id(dayId)
+                .dayNumber(1)
+                .build();
+        when(clinicalDayMapper.toResponse(any(ClinicalDay.class))).thenReturn(expected);
 
         ClinicalDayResponse res = clinicalDayService.createClinicalDay(req, userId);
 

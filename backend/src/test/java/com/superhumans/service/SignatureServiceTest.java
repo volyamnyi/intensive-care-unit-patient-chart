@@ -35,13 +35,13 @@ class SignatureServiceTest {
     private ArgumentCaptor<Signature> sigCaptor;
 
     private UUID clinicalDayId;
-    private UUID userId;
+    private Long userId;
     private ClinicalDay clinicalDay;
 
     @BeforeEach
     void setUp() {
         clinicalDayId = UUID.randomUUID();
-        userId = UUID.randomUUID();
+        userId = 11L;
         clinicalDay = new ClinicalDay();
         clinicalDay.setId(clinicalDayId);
     }

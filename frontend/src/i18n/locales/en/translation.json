@@ -1,0 +1,240 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "noData": "No data",
+    "cancel": "Cancel",
+    "save": "Save",
+    "back": "Back",
+    "search": "Search",
+    "logout": "Log out",
+    "userMenu": "User menu",
+    "appTitle": "ICU",
+    "appSubtitle": "Intensive Care Patient Chart",
+    "themeToggle": "Toggle theme",
+    "noResults": "No results",
+    "open": "Open",
+    "create": "Create",
+    "add": "Add",
+    "saveReadings": "Save readings",
+    "saving": "Saving...",
+    "calculating": "Calculating...",
+    "sign": "Sign",
+    "signing": "Signing...",
+    "reopen": "Reopen",
+    "male": "Male",
+    "female": "Female",
+    "signOffDay": "Sign off day",
+    "reopenDay": "Reopen day",
+    "confirm": "Confirm",
+    "close": "Close"
+  },
+  "login": {
+    "title": "ICU — Login",
+    "heading": "Login",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "error": "Invalid username or password"
+  },
+  "doctor": {
+    "dashboard": {
+      "title": "ICU — Doctor",
+      "heading": "Active patients",
+      "subtitle": "Department of Anesthesiology and Intensive Care",
+      "newCard": "New card",
+      "searchPlaceholder": "Search patient by full name...",
+      "noResults": "No patients found for this query",
+      "empty": "No active patients"
+    },
+    "createCard": {
+      "title": "ICU — New card",
+      "heading": "New Intensive Care Card",
+      "error": "Error creating card",
+      "patientSearch": "Patient search",
+      "patientData": "Patient data (from MIS)",
+      "fullName": "Full name",
+      "birthDate": "Date of birth",
+      "sex": "Sex",
+      "height": "Height (cm)",
+      "weight": "Weight (kg)",
+      "bloodGroup": "Blood type",
+      "rhFactor": "Rh factor",
+      "medicalRecordNo": "Medical record #",
+      "createCard": "Create card"
+    },
+    "patientDay": {
+      "title": "ICU — Patient",
+      "episodeNotFound": "Episode not found",
+      "dayNumber": "Day #{{dayNumber}}",
+      "dayLabel": "Day #{{dayNumber}}",
+      "noOpenDay": "No open clinical day",
+      "statusOpen": "Open",
+      "statusNurseSigned": "Signed by nurse",
+      "statusDoctorSigned": "Signed by doctor",
+      "statusReopened": "Reopened",
+      "statusClosed": "Closed",
+      "tabs": {
+        "vitals": "Vital signs",
+        "orders": "Orders",
+        "scales": "Scales",
+        "notes": "Notes",
+        "balance": "Balance"
+      },
+      "readingsTitle": "Readings — {{hour}}:00",
+      "reopenDialog": {
+        "title": "Reopen day #{{dayNumber}}",
+        "confirmation": "Are you sure you want to reopen this day? Signatures will be revoked.",
+        "reason": "Reason for reopening"
+      }
+    }
+  },
+  "nurse": {
+    "dashboard": {
+      "title": "ICU — Nurse",
+      "heading": "Active patients",
+      "searchPlaceholder": "Search patient by full name...",
+      "noResults": "No patients found for this query",
+      "empty": "No active patients"
+    }
+  },
+  "admin": {
+    "title": "ICU — Administrator",
+    "heading": "System users",
+    "doctors": "Doctors",
+    "nurses": "Nurses",
+    "table": {
+      "fullName": "Full name",
+      "login": "Login",
+      "role": "Role",
+      "email": "Email"
+    },
+    "roles": {
+      "doctor": "Doctor",
+      "nurse": "Nurse",
+      "hod": "Head of Department",
+      "administrator": "Administrator"
+    }
+  },
+  "vitals": {
+    "systolicBP": "BP systolic (mmHg)",
+    "diastolicBP": "BP diastolic (mmHg)",
+    "heartRate": "HR (bpm)",
+    "spo2": "SpO2 (%)",
+    "temperature": "Body temp (°C)",
+    "cvp": "CVP (mmH2O)",
+    "respiratoryRate": "RR (per min)",
+    "consciousness": "Consciousness",
+    "etco2": "etCO2 (mmHg)",
+    "fio2": "FiO2 (%)",
+    "urineOutput": "Urine output (ml/h)",
+    "drainOutput": "Drain output (ml)",
+    "painScore": "Pain (0-10)",
+    "notes": "Notes",
+    "rangeWarning": "{{label}}: value is out of normal range ({{min}}-{{max}}{{unit}})",
+    "table": {
+      "hour": "Hour",
+      "bpSys": "BP sys",
+      "bpDias": "BP dias",
+      "hr": "HR",
+      "spo2": "SpO2",
+      "temp": "Temp",
+      "cvp": "CVP",
+      "rr": "RR"
+    }
+  },
+  "patientSearch": {
+    "placeholder": "Full name, phone or medical record #",
+    "minChars": "Enter at least 2 characters",
+    "noResults": "No patients found"
+  },
+  "orders": {
+    "newOrder": "New order",
+    "category": "Category",
+    "medication": "Medication",
+    "dose": "Dose",
+    "unit": "Unit",
+    "route": "Route",
+    "frequency": "Frequency",
+    "start": "Start",
+    "end": "End",
+    "status": "Status",
+    "actions": "Actions",
+    "noOrders": "No orders",
+    "cancel": "Cancel",
+    "statusDraft": "Draft",
+    "statusActive": "Active",
+    "statusCompleted": "Completed",
+    "statusCancelled": "Cancelled",
+    "addNewOrder": "+ New order"
+  },
+  "notes": {
+    "newNote": "New note",
+    "addNote": "Add note",
+    "noNotes": "No notes"
+  },
+  "scales": {
+    "scale": "Scale",
+    "result": "Result",
+    "add": "Add",
+    "noData": "No scale data",
+    "resultLabel": "Result:",
+    "notFilled": "Not filled"
+  },
+  "fluidBalance": {
+    "title": "Fluid balance",
+    "intake": "Intake:",
+    "output": "Output:",
+    "dailyBalance": "Daily balance:",
+    "cumulativeBalance": "Cumulative balance:",
+    "recalculate": "Recalculate"
+  },
+  "episodeTable": {
+    "loading": "Loading...",
+    "noEpisodes": "No episodes",
+    "patient": "Patient",
+    "admissionDate": "Admission date",
+    "dischargeDate": "Discharge date",
+    "status": "Status",
+    "actions": "Actions",
+    "open": "Open",
+    "statusDraft": "Draft",
+    "statusActive": "Active",
+    "statusCompleted": "Completed",
+    "statusArchived": "Archived"
+  },
+  "clinicalDayTimeline": {
+    "noDays": "No clinical days",
+    "day": "Day {{dayNumber}}"
+  },
+  "auditLog": {
+    "loading": "Loading...",
+    "noEntries": "No audit log entries",
+    "time": "Time",
+    "user": "User",
+    "entity": "Entity",
+    "action": "Action",
+    "changes": "Changes"
+  },
+  "signDialog": {
+    "title": "Signing day #{{dayNumber}}",
+    "readOnlyNurse": "After signing, the day becomes read-only for the nurse.",
+    "readOnlyDoctor": "After signing, the day becomes read-only for the doctor.",
+    "nurseInfo": "The nurse's signature will be saved. After the doctor signs, a PDF will be generated.",
+    "doctorInfo": "A PDF will be generated and sent to the MIS."
+  },
+  "clinicalRanges": {
+    "temperature": "Temperature",
+    "heartRate": "Heart rate",
+    "respiratoryRate": "Respiratory rate",
+    "systolicBP": "BP systolic",
+    "diastolicBP": "BP diastolic",
+    "spo2": "SpO2"
+  },
+  "layout": {
+    "patients": "Patients",
+    "nurse": "Nurse",
+    "doctor": "Doctor",
+    "hod": "Head of Department",
+    "userMenu": "User menu"
+  }
+}

@@ -3,6 +3,9 @@ backend/target/
 backend/*.log
 frontend/dist/
 *.log
+.env
+.env.local
+.env.*.local
 test-results/
 playwright-report/
 tests/.auth/
@@ -21,3 +24,10 @@ Thumbs.db
 *.jar
 *.war
 *.zip
+.playwright-mcp/
+playwright-report-exploratory/
+tests/exploratory/
+tests/playwright-exploratory.config.ts
+tests/specs/**/exploratory.spec.ts
+ImprovementPlan.md
+exploratory-test-plan.md

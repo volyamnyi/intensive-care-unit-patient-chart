@@ -9,6 +9,7 @@ import com.superhumans.entity.EpisodeStatus;
 import com.superhumans.exception.EpisodeAlreadyActiveException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
+import com.superhumans.mapper.EpisodeMapper;
 import com.superhumans.mis.MisService;
 import com.superhumans.repository.EpisodeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,9 @@ class EpisodeServiceTest {
     @Mock
     private MisService misService;
 
+    @Mock
+    private EpisodeMapper episodeMapper;
+
     @InjectMocks
     private EpisodeService episodeService;
 
@@ -50,14 +54,14 @@ class EpisodeServiceTest {
 
     private UUID episodeId;
     private Long patientId;
-    private UUID userId;
+    private Long userId;
     private Episode testEpisode;
 
     @BeforeEach
     void setUp() {
         episodeId = UUID.randomUUID();
         patientId = 1001L;
-        userId = UUID.randomUUID();
+        userId = 11L;
         testEpisode = Episode.builder()
                 .patientId(patientId)
                 .admissionDate(LocalDateTime.now())
@@ -70,6 +74,13 @@ class EpisodeServiceTest {
     @Test
     void getEpisode_whenFound_returnsResponse() {
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+
+        EpisodeResponse expected = EpisodeResponse.builder()
+                .id(episodeId)
+                .patientId(patientId)
+                .status(EpisodeStatus.ACTIVE)
+                .build();
+        when(episodeMapper.toResponse(any(Episode.class), any())).thenReturn(expected);
 
         EpisodeResponse res = episodeService.getEpisode(episodeId);
 
@@ -128,10 +139,19 @@ class EpisodeServiceTest {
         EpisodeCreateRequest req = new EpisodeCreateRequest(patientId, null, null, LocalDateTime.now());
         when(episodeRepository.findByPatientIdAndStatus(patientId, EpisodeStatus.ACTIVE))
                 .thenReturn(Optional.empty());
+        Episode entity = Episode.builder().patientId(patientId).build();
+        when(episodeMapper.toEntity(req)).thenReturn(entity);
         Episode saved = Episode.builder().patientId(patientId).status(EpisodeStatus.ACTIVE).build();
         saved.setId(episodeId);
         saved.setVersion(0);
         when(episodeRepository.save(any(Episode.class))).thenReturn(saved);
+
+        EpisodeResponse expected = EpisodeResponse.builder()
+                .id(episodeId)
+                .patientId(patientId)
+                .status(EpisodeStatus.ACTIVE)
+                .build();
+        when(episodeMapper.toResponse(any(Episode.class))).thenReturn(expected);
 
         EpisodeResponse res = episodeService.createEpisode(req, userId);
 
@@ -170,6 +190,9 @@ class EpisodeServiceTest {
 
         EpisodePatchRequest req = new EpisodePatchRequest(
                 UUID.randomUUID(), UUID.randomUUID(), LocalDateTime.now(), 0);
+
+        when(episodeMapper.toResponse(any(Episode.class))).thenReturn(
+                EpisodeResponse.builder().id(episodeId).build());
 
         EpisodeResponse res = episodeService.updateEpisode(episodeId, req, userId);
 

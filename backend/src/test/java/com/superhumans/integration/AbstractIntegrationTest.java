@@ -12,22 +12,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.context.jdbc.Sql;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.UUID;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data.sql")
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+    "spring.sql.init.mode=never"
+})
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test.sql")
 public abstract class AbstractIntegrationTest {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("testdb")
-            .withUsername("test")
-            .withPassword("test");
 
     @LocalServerPort
     protected int port;
@@ -38,13 +30,13 @@ public abstract class AbstractIntegrationTest {
     protected String baseUrl;
 
     protected String doctorToken;
-    protected UUID doctorUserId;
+    protected Long doctorUserId;
     protected String nurseToken;
-    protected UUID nurseUserId;
+    protected Long nurseUserId;
     protected String hodToken;
-    protected UUID hodUserId;
+    protected Long hodUserId;
     protected String adminToken;
-    protected UUID adminUserId;
+    protected Long adminUserId;
 
     @BeforeEach
     void setUpAuth() {
@@ -67,7 +59,7 @@ public abstract class AbstractIntegrationTest {
         return null;
     }
 
-    protected UUID loginUserId(String login, String password) {
+    protected Long loginUserId(String login, String password) {
         LoginRequest req = new LoginRequest(login, password);
         ResponseEntity<LoginResponse> res = restTemplate.postForEntity(
                 "/api/auth/login", req, LoginResponse.class);

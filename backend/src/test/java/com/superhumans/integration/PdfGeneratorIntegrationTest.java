@@ -44,7 +44,7 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
     void generatePdf_afterDoctorSign_succeeds() {
         UUID dayId = NURSE_SIGNED_DAY_ID;
 
-        SignRequest signReq = new SignRequest(UUID.randomUUID(), "pdf-doctor-hash");
+        SignRequest signReq = new SignRequest(15L, "pdf-doctor-hash");
         var signEntity = authEntity(signReq, getHodToken());
 
         var signRes = restTemplate.exchange(
@@ -71,13 +71,13 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
     void getLatestPdf_afterGeneration_returnsPdf() {
         UUID dayId = UUID.fromString("b2222222-2222-2222-2222-222222222222");
 
-        SignRequest nurseReq = new SignRequest(UUID.randomUUID(), "pdf-nurse-hash");
+        SignRequest nurseReq = new SignRequest(13L, "pdf-nurse-hash");
         var nurseEntity = authEntity(nurseReq, getNurseToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
                 Void.class, dayId);
 
-        SignRequest docReq = new SignRequest(UUID.randomUUID(), "pdf-doctor-hash-2");
+        SignRequest docReq = new SignRequest(15L, "pdf-doctor-hash-2");
         var docEntity = authEntity(docReq, getHodToken());
         restTemplate.exchange(
                 "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, docEntity,

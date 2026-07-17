@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Typography, Box } from '@mui/material';
 import type { Episode } from '../../types';
 
@@ -7,13 +8,6 @@ interface EpisodeTableProps {
   loading?: boolean;
 }
 
-const statusLabels: Record<string, string> = {
-  DRAFT: 'Чернетка',
-  ACTIVE: 'Активний',
-  COMPLETED: 'Завершений',
-  ARCHIVED: 'Архівний',
-};
-
 const statusColors: Record<string, 'default' | 'success' | 'info' | 'warning'> = {
   DRAFT: 'default',
   ACTIVE: 'success',
@@ -22,12 +16,20 @@ const statusColors: Record<string, 'default' | 'success' | 'info' | 'warning'> =
 };
 
 export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTableProps) {
+  const { t } = useTranslation();
+  const statusLabels: Record<string, string> = {
+    DRAFT: t('episodeTable.statusDraft'),
+    ACTIVE: t('episodeTable.statusActive'),
+    COMPLETED: t('episodeTable.statusCompleted'),
+    ARCHIVED: t('episodeTable.statusArchived'),
+  };
+
   if (loading) {
-    return <Typography color="text.secondary">Завантаження...</Typography>;
+    return <Typography color="text.secondary">{t('episodeTable.loading')}</Typography>;
   }
 
   if (episodes.length === 0) {
-    return <Typography color="text.secondary">Немає епізодів</Typography>;
+    return <Typography color="text.secondary">{t('episodeTable.empty')}</Typography>;
   }
 
   return (
@@ -35,11 +37,11 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>Пацієнт</TableCell>
-            <TableCell>Дата госпіталізації</TableCell>
-            <TableCell>Дата виписки</TableCell>
-            <TableCell>Статус</TableCell>
-            <TableCell>Дії</TableCell>
+            <TableCell>{t('episodeTable.tableHeaders.patient')}</TableCell>
+            <TableCell>{t('episodeTable.tableHeaders.admissionDate')}</TableCell>
+            <TableCell>{t('episodeTable.tableHeaders.dischargeDate')}</TableCell>
+            <TableCell>{t('episodeTable.tableHeaders.status')}</TableCell>
+            <TableCell>{t('episodeTable.tableHeaders.actions')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -75,7 +77,7 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
                     onClick={(e) => { e.stopPropagation(); onSelect(ep); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onSelect(ep); } }}
                   >
-                    Відкрити
+                    {t('episodeTable.openAction')}
                   </Box>
                 )}
               </TableCell>

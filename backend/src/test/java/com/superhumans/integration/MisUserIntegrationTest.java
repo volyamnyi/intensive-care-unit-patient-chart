@@ -4,8 +4,6 @@ import com.superhumans.mis.dto.UserMisDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
 
-import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 class MisUserIntegrationTest extends AbstractIntegrationTest {
@@ -13,7 +11,7 @@ class MisUserIntegrationTest extends AbstractIntegrationTest {
     @Test
     void getUser_returnsDoctorUser() {
         var entity = authGet(getDoctorToken());
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000011");
+        Long userId = 11L;
 
         var res = restTemplate.exchange(
                 "/api/users/{id}", HttpMethod.GET, entity,
@@ -27,7 +25,7 @@ class MisUserIntegrationTest extends AbstractIntegrationTest {
     @Test
     void getUser_returnsNurseUser() {
         var entity = authGet(getNurseToken());
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000013");
+        Long userId = 13L;
 
         var res = restTemplate.exchange(
                 "/api/users/{id}", HttpMethod.GET, entity,
@@ -41,7 +39,7 @@ class MisUserIntegrationTest extends AbstractIntegrationTest {
     @Test
     void getUser_whenNotFound_returns404() {
         var entity = authGet(getDoctorToken());
-        UUID unknownId = UUID.fromString("00000000-0000-0000-0000-000000009999");
+        Long unknownId = 9999L;
 
         var res = restTemplate.exchange(
                 "/api/users/{id}", HttpMethod.GET, entity,
@@ -53,7 +51,7 @@ class MisUserIntegrationTest extends AbstractIntegrationTest {
     @Test
     void getUser_returnsHodUser() {
         var entity = authGet(getHodToken());
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000015");
+        Long userId = 15L;
 
         var res = restTemplate.exchange(
                 "/api/users/{id}", HttpMethod.GET, entity,

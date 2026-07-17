@@ -11,7 +11,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -42,7 +41,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserMisDTO> getMisUser(@PathVariable UUID id) {
+    public ResponseEntity<UserMisDTO> getMisUser(@PathVariable Long id) {
         return misService.getUser(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

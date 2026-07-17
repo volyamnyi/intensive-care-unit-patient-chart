@@ -8,11 +8,13 @@ import com.superhumans.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -22,14 +24,15 @@ import lombok.experimental.FieldDefaults;
 public class AuditService {
 
     AuditLogRepository auditLogRepository;
+    AuditLogMapper auditLogMapper;
 
     public AuditLogResponse getAuditLog(UUID id) {
         AuditLog log = auditLogRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Audit log not found: " + id));
-        return AuditLogMapper.toResponse(log);
+        return auditLogMapper.toResponse(log);
     }
 
-    public Page<AuditLogResponse> getAuditLogs(UUID userId, String entity, UUID entityId, String action,
+    public Page<AuditLogResponse> getAuditLogs(Long userId, String entity, UUID entityId, String action,
                                                 LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
         Page<AuditLog> logs;
         if (userId != null) {
@@ -45,17 +48,17 @@ public class AuditService {
         } else {
             logs = auditLogRepository.findAllByOrderByTimestampDesc(pageable);
         }
-        return logs.map(AuditLogMapper::toResponse);
+        return logs.map(auditLogMapper::toResponse);
     }
 
     @Transactional
-    public AuditLog logEvent(String entity, UUID entityId, String action, UUID userId,
+    public AuditLog logEvent(String entity, UUID entityId, String action, Long userId,
                              String oldValue, String newValue) {
         return logEvent(entity, entityId, action, userId, oldValue, newValue, null);
     }
 
     @Transactional
-    public AuditLog logEvent(String entity, UUID entityId, String action, UUID userId,
+    public AuditLog logEvent(String entity, UUID entityId, String action, Long userId,
                              String oldValue, String newValue, String correlationId) {
         AuditLog log = AuditLog.builder()
                 .entity(entity)
@@ -70,22 +73,27 @@ public class AuditService {
     }
 
     @Transactional
-    public void logCreate(String entity, UUID entityId, UUID userId) {
+    public void logCreate(String entity, UUID entityId, Long userId) {
         logEvent(entity, entityId, "CREATE", userId, null, null);
     }
 
     @Transactional
-    public void logUpdate(String entity, UUID entityId, UUID userId, String oldValue, String newValue) {
+    public void logUpdate(String entity, UUID entityId, Long userId, String oldValue, String newValue) {
         logEvent(entity, entityId, "UPDATE", userId, oldValue, newValue);
     }
 
     @Transactional
-    public void logDelete(String entity, UUID entityId, UUID userId) {
+    public void logDelete(String entity, UUID entityId, Long userId) {
         logEvent(entity, entityId, "DELETE", userId, null, null);
     }
 
     @Transactional
-    public void logAction(String entity, UUID entityId, String action, UUID userId) {
+    public void logAction(String entity, UUID entityId, String action, Long userId) {
         logEvent(entity, entityId, action, userId, null, null);
+    }
+
+    @Async
+    public void logAsync(AuditLog auditLog) {
+        auditLogRepository.save(auditLog);
     }
 }
