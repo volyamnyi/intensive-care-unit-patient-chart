@@ -3,8 +3,13 @@ package com.superhumans.integration;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -89,9 +94,90 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         var entity = authGet("invalid-token");
 
         var res = restTemplate.exchange(
-                "/api/episodes", org.springframework.http.HttpMethod.GET,
+                "/api/episodes", HttpMethod.GET,
                 entity, String.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void login_setsHttpOnlyJwtCookie() {
+        LoginRequest req = new LoginRequest("doctor1", "doctor123");
+
+        ResponseEntity<LoginResponse> res = restTemplate.postForEntity(
+                "/api/auth/login", req, LoginResponse.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String cookie = extractJwtCookie(res);
+        assertThat(cookie).isNotEmpty();
+        assertThat(cookie).doesNotContain(";");
+
+        List<String> setCookieHeaders = res.getHeaders().get(HttpHeaders.SET_COOKIE);
+        assertThat(setCookieHeaders).isNotEmpty();
+        String rawCookie = setCookieHeaders.get(0);
+        assertThat(rawCookie).contains("jwt=");
+        assertThat(rawCookie).contains("HttpOnly");
+        assertThat(rawCookie).contains("Path=/");
+        assertThat(rawCookie).contains("SameSite=Lax");
+    }
+
+    @Test
+    void accessUsersMe_withValidJwtCookie_returnsOk() {
+        ResponseEntity<LoginResponse> loginRes = restTemplate.postForEntity(
+                "/api/auth/login", new LoginRequest("doctor1", "doctor123"), LoginResponse.class);
+        String cookie = extractJwtCookie(loginRes);
+        assertThat(cookie).isNotEmpty();
+
+        var res = restTemplate.exchange(
+                "/api/users/me", HttpMethod.GET, cookieGet(cookie), String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void loginAndAccessUsersMe_withJwtCookie_returnsCurrentUser() {
+        ResponseEntity<LoginResponse> loginRes = restTemplate.postForEntity(
+                "/api/auth/login", new LoginRequest("nurse1", "nurse123"), LoginResponse.class);
+        String cookie = extractJwtCookie(loginRes);
+        assertThat(cookie).isNotEmpty();
+        assertThat(loginRes.getBody()).isNotNull();
+        assertThat(loginRes.getBody().getRole()).isEqualTo("NURSE");
+
+        @SuppressWarnings("unchecked")
+        var res = restTemplate.exchange(
+                "/api/users/me", HttpMethod.GET, cookieGet(cookie), Map.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat((String) res.getBody().get("login")).isEqualTo("nurse1");
+        assertThat((String) res.getBody().get("role")).isEqualTo("NURSE");
+    }
+
+    @Test
+    void accessSecuredEndpoint_withMissingCookie_returnsForbidden() {
+        var res = restTemplate.getForEntity("/api/users/me", String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void accessSecuredEndpoint_withInvalidJwtCookie_returnsForbidden() {
+        var res = restTemplate.exchange(
+                "/api/users/me", HttpMethod.GET, cookieGet("invalid-jwt-value"), String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void logout_clearsJwtCookie() {
+        ResponseEntity<Void> res = restTemplate.postForEntity(
+                "/api/auth/logout", null, Void.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<String> setCookieHeaders = res.getHeaders().get(HttpHeaders.SET_COOKIE);
+        assertThat(setCookieHeaders).isNotEmpty();
+        String rawCookie = setCookieHeaders.get(0);
+        assertThat(rawCookie).contains("jwt=");
+        assertThat(rawCookie).contains("Max-Age=0");
     }
 }

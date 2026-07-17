@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.context.jdbc.Sql;
+import java.util.List;
 
 
 
@@ -114,5 +115,28 @@ public abstract class AbstractIntegrationTest {
 
     protected <T> HttpEntity<T> authGet(String token) {
         return new HttpEntity<>(null, authHeaders(token));
+    }
+
+    protected String extractJwtCookie(ResponseEntity<?> response) {
+        List<String> cookies = response.getHeaders().get(HttpHeaders.SET_COOKIE);
+        if (cookies != null) {
+            for (String cookie : cookies) {
+                if (cookie.startsWith("jwt=")) {
+                    return cookie.substring(4).split(";")[0];
+                }
+            }
+        }
+        return null;
+    }
+
+    protected HttpHeaders cookieHeaders(String cookieValue) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.COOKIE, "jwt=" + cookieValue);
+        headers.set("Content-Type", "application/json");
+        return headers;
+    }
+
+    protected <T> HttpEntity<T> cookieGet(String cookieValue) {
+        return new HttpEntity<>(null, cookieHeaders(cookieValue));
     }
 }
