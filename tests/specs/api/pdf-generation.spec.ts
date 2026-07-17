@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 const API = 'http://localhost:8085/api';
 /** An OPEN clinical day that no other E2E test modifies */
 const OPEN_DAY_ID = 'b2222222-2222-2222-2222-222222222222';
-const DOCTOR1_ID = '11111111-1111-1111-1111-111111111111';
-const NURSE1_ID = '33333333-3333-3333-3333-333333333333';
+const DOCTOR1_ID = 11;
+const NURSE1_ID = 13;
 
 async function getToken(request: any, login: string, password: string) {
   const res = await request.post(`${API}/auth/login`, { data: { login, password } });

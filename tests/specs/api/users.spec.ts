@@ -19,7 +19,7 @@ test.describe('MIS Users API', () => {
   });
 
   test('get user by ID returns doctor', async ({ request }) => {
-    const res = await request.get(`${API}/users/00000000-0000-0000-0000-000000000011`, {
+    const res = await request.get(`${API}/users/11`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.ok()).toBeTruthy();
@@ -28,7 +28,7 @@ test.describe('MIS Users API', () => {
   });
 
   test('get user by ID returns nurse', async ({ request }) => {
-    const res = await request.get(`${API}/users/00000000-0000-0000-0000-000000000013`, {
+    const res = await request.get(`${API}/users/13`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.ok()).toBeTruthy();
@@ -37,7 +37,7 @@ test.describe('MIS Users API', () => {
   });
 
   test('get user by ID returns HOD', async ({ request }) => {
-    const res = await request.get(`${API}/users/00000000-0000-0000-0000-000000000015`, {
+    const res = await request.get(`${API}/users/15`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.ok()).toBeTruthy();
@@ -46,7 +46,7 @@ test.describe('MIS Users API', () => {
   });
 
   test('get user with unknown ID returns 404', async ({ request }) => {
-    const res = await request.get(`${API}/users/00000000-0000-0000-0000-000000009999`, {
+    const res = await request.get(`${API}/users/99999`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.status()).toBe(404);
