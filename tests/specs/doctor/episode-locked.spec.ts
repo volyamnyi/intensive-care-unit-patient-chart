@@ -9,7 +9,7 @@ test.describe('Clinical day locking (vitals editability)', () => {
     await page.getByText('Доба 2').click();
 
     // All vital cells should be disabled on a locked day
-    const hrCell = page.getByLabel('ЧСС 1:00');
+    const hrCell = page.getByLabel('ЧСС 1:00').locator('input');
     await expect(hrCell).toBeDisabled({ timeout: 10000 });
   });
 
