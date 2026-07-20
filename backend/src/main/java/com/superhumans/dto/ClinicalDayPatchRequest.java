@@ -10,6 +10,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ClinicalDayPatchRequest {
     LocalDateTime endDateTime;
+    Double weightKg;
     @NotNull
     Integer version;
 }

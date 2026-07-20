@@ -124,10 +124,10 @@ describe('CreateCardPage', () => {
     await waitFor(() => expect(screen.getByText('Створити карту')).toBeInTheDocument());
     await userEvent.click(screen.getByText('Створити карту'));
     await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledWith({
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
         patientId: 1001,
         admissionDate: expect.any(String),
-      });
+      }));
       expect(mockNavigate).toHaveBeenCalledWith('/doctor/episode/ep-1');
     });
   });

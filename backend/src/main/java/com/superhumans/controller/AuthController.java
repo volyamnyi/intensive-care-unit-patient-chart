@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -22,7 +24,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req, HttpServletRequest request) {
-        ResponseEntity<LoginResponse> response = authService.login(req);
+        ResponseEntity<LoginResponse> response = authService.login(req, request.getRemoteAddr());
         if (response.getBody() == null || response.getBody().getToken() == null) {
             return response;
         }
@@ -39,7 +41,15 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest request) {
+        if (authentication != null && authentication.getCredentials() instanceof Long userId) {
+            String role = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .findFirst()
+                    .map(a -> a.startsWith("ROLE_") ? a.substring(5) : a)
+                    .orElse(null);
+            authService.logout(userId, role, request.getRemoteAddr());
+        }
         ResponseCookie clearCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
                 .path("/")

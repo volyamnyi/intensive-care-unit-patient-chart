@@ -16,4 +16,6 @@ public class ClinicalDayCreateRequest {
     LocalDateTime startDateTime;
     @NotNull
     LocalDateTime endDateTime;
+
+    Double weightKg;
 }

@@ -11,7 +11,7 @@ async function getDoctorToken(request: any) {
 }
 
 test.describe('Scales Full', () => {
-  test('scales tab shows empty state and backend returns scale list', async ({ page, request }) => {
+  test('scales section shows empty state and backend returns scale list', async ({ page, request }) => {
     const token = await getDoctorToken(request);
     const res = await request.get(`${API}/scales`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -24,16 +24,18 @@ test.describe('Scales Full', () => {
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
-    await page.getByRole('tab', { name: 'Шкали' }).click();
+    await page.getByText('Шкали').first().click();
     await expect(page.getByText('Немає даних шкал').or(page.getByText('Не заповнено'))).toBeVisible();
   });
 
-  test('scales tab is accessible from episode page', async ({ page }) => {
+  test('scales section is accessible from episode page', async ({ page }) => {
     await page.goto('/doctor');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
-    await page.getByRole('tab', { name: 'Шкали' }).click();
-    await expect(page.getByRole('tab', { name: 'Шкали' })).toHaveAttribute('aria-selected', 'true');
+    const scalesSection = page.getByText('Шкали').first();
+    await expect(scalesSection).toBeVisible();
+    await scalesSection.click();
+    await expect(page.getByText('Немає даних шкал').or(page.getByText('Не заповнено'))).toBeVisible();
   });
 });

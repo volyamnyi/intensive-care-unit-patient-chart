@@ -44,13 +44,13 @@ describe('FluidBalancePanel', () => {
 
   it('shows intake and output totals', () => {
     renderPanel({ items: mockItems });
-    expect(screen.getByText('750 мл')).toBeInTheDocument();
-    expect(screen.getByText('700 мл')).toBeInTheDocument();
+    expect(screen.getByText(/750\s*ml/)).toBeInTheDocument();
+    expect(screen.getByText(/700\s*ml/)).toBeInTheDocument();
   });
 
   it('shows daily balance and cumulative balance', () => {
     renderPanel({ items: mockItems });
-    const balances = screen.getAllByText('50 мл');
+    const balances = screen.getAllByText(/\+?50\s*мл/);
     expect(balances).toHaveLength(2);
   });
 
@@ -68,13 +68,13 @@ describe('FluidBalancePanel', () => {
       },
     ];
     renderPanel({ items: negativeItems });
-    const allBalances = screen.getAllByText('-400 мл');
+    const allBalances = screen.getAllByText(/-400\s*мл/);
     expect(allBalances).toHaveLength(2);
   });
 
   it('colors positive daily balance green', () => {
     renderPanel({ items: mockItems });
-    const allBalances = screen.getAllByText('50 мл');
+    const allBalances = screen.getAllByText(/\+?50\s*мл/);
     expect(allBalances).toHaveLength(2);
   });
 
@@ -104,7 +104,7 @@ describe('FluidBalancePanel', () => {
 
   it('shows 0 values for empty items', () => {
     renderPanel({ items: [] });
-    const zeros = screen.getAllByText('0 мл');
+    const zeros = screen.getAllByText(/0\s*(ml|мл)/);
     expect(zeros).toHaveLength(4);
   });
 });

@@ -12,6 +12,9 @@ export default function CreateCardPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const [selectedPatient, setSelectedPatient] = useState<PatientDto | null>(null);
+  const [ward, setWard] = useState('');
+  const [bedNumber, setBedNumber] = useState('');
+  const [admissionDiagnosis, setAdmissionDiagnosis] = useState('');
   const [error, setError] = useState('');
 
   const handleCreate = async () => {
@@ -20,6 +23,10 @@ export default function CreateCardPage() {
       const res = await episodeApi.create({
         patientId: selectedPatient.id,
         admissionDate: new Date().toISOString(),
+        heightCm: selectedPatient.height ?? undefined,
+        ward: ward || undefined,
+        bedNumber: bedNumber || undefined,
+        admissionDiagnosis: admissionDiagnosis || undefined,
       });
       navigate('/doctor/episode/' + res.data.id);
     } catch {
@@ -68,6 +75,25 @@ export default function CreateCardPage() {
             </Grid>
             <Grid size={6}>
               <TextField fullWidth label={t('doctor.createCard.medicalCardNumber')} value={selectedPatient.externalId1} slotProps={{ input: { readOnly: true } }} />
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
+      {selectedPatient && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2, color: theme.palette.text.primary }}>
+            Hospitalization Details
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid size={4}>
+              <TextField fullWidth label="Ward" value={ward} onChange={e => setWard(e.target.value)} placeholder="e.g. ICU-1" />
+            </Grid>
+            <Grid size={2}>
+              <TextField fullWidth label="Bed" value={bedNumber} onChange={e => setBedNumber(e.target.value)} placeholder="e.g. 101A" />
+            </Grid>
+            <Grid size={6}>
+              <TextField fullWidth label="Admission Diagnosis" value={admissionDiagnosis} onChange={e => setAdmissionDiagnosis(e.target.value)}
+                placeholder="e.g. Community-acquired pneumonia" />
             </Grid>
           </Grid>
         </Paper>

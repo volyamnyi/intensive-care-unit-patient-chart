@@ -35,6 +35,6 @@ test.describe('Access Control', () => {
 
     await page.goto(episodeUrl);
     await expect(page).toHaveURL(/\/nurse\/episode\//);
-    await expect(page.getByRole('tab', { name: 'Вітальні показники' })).toBeVisible();
+    await expect(page.getByText('Показник / година')).toBeVisible();
   });
 });

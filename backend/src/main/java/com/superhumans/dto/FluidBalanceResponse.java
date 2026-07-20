@@ -1,6 +1,7 @@
 package com.superhumans.dto;
 
 import lombok.*;
+import java.util.Map;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -16,4 +17,6 @@ public class FluidBalanceResponse {
     Double balance;
     Double cumulativeBalance;
     Integer version;
+    Map<String, Double> intakeByCategory;
+    Map<String, Double> outputByCategory;
 }

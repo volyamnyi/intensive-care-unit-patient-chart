@@ -92,6 +92,19 @@ public class AuditService {
         logEvent(entity, entityId, action, userId, null, null);
     }
 
+    @Transactional
+    public void logAuth(String action, Long userId, String userRole, String ipAddress, String details) {
+        AuditLog log = AuditLog.builder()
+                .entity("AUTH")
+                .action(action)
+                .userId(userId)
+                .userRole(userRole)
+                .ipAddress(ipAddress)
+                .details(details)
+                .build();
+        auditLogRepository.save(log);
+    }
+
     @Async
     public void logAsync(AuditLog auditLog) {
         auditLogRepository.save(auditLog);

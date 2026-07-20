@@ -90,6 +90,9 @@ public class ClinicalDayService {
         if (request.getEndDateTime() != null) {
             day.setEndDateTime(request.getEndDateTime());
         }
+        if (request.getWeightKg() != null) {
+            day.setWeightKg(request.getWeightKg());
+        }
         day.setUpdatedBy(userId);
         day = clinicalDayRepository.save(day);
         return clinicalDayMapper.toResponse(day);

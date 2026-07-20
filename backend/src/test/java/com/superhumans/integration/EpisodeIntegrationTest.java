@@ -72,7 +72,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createEpisode_asDoctor_succeeds() {
         EpisodeCreateRequest req = new EpisodeCreateRequest(
-                1006L, null, null, LocalDateTime.now());
+                1006L, null, null, LocalDateTime.now(), null, null, null, null);
 
         var entity = authEntity(req, getDoctorToken());
 
@@ -89,7 +89,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createEpisode_asNurse_returnsForbidden() {
         EpisodeCreateRequest req = new EpisodeCreateRequest(
-                1007L, null, null, LocalDateTime.now());
+                1007L, null, null, LocalDateTime.now(), null, null, null, null);
 
         var entity = authEntity(req, getNurseToken());
 
@@ -109,7 +109,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
         int currentVersion = getRes.getBody().getVersion();
 
         EpisodePatchRequest req = new EpisodePatchRequest(
-                null, null, LocalDateTime.now().plusDays(5), currentVersion);
+                null, null, LocalDateTime.now().plusDays(5), null, null, null, null, currentVersion);
 
         var entity = authEntity(req, getDoctorToken());
 
@@ -123,7 +123,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void updateEpisode_withVersionMismatch_returnsConflict() {
         EpisodePatchRequest req = new EpisodePatchRequest(
-                null, null, null, 999);
+                null, null, null, null, null, null, null, 999);
 
         var entity = authEntity(req, getDoctorToken());
 
@@ -137,7 +137,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void closeEpisode_closesSuccessfully() {
         EpisodeCreateRequest createReq = new EpisodeCreateRequest(
-                1008L, null, null, LocalDateTime.now());
+                1008L, null, null, LocalDateTime.now(), null, null, null, null);
 
         var createEntity = authEntity(createReq, getDoctorToken());
 
@@ -162,7 +162,7 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void closeEpisode_withWrongVersion_returnsConflict() {
         EpisodeCreateRequest createReq = new EpisodeCreateRequest(
-                1009L, null, null, LocalDateTime.now());
+                1009L, null, null, LocalDateTime.now(), null, null, null, null);
 
         var createEntity = authEntity(createReq, getDoctorToken());
         var createRes = restTemplate.exchange(

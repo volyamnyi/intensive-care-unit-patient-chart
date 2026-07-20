@@ -5,7 +5,6 @@ const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
 test.describe('Doctor Prescriptions', () => {
   test('creates a prescription and shows it in the list', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
-    await page.getByRole('tab', { name: 'Призначення' }).click();
 
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
@@ -23,7 +22,6 @@ test.describe('Doctor Prescriptions', () => {
 
   test('prescription status shows active after creation', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
-    await page.getByRole('tab', { name: 'Призначення' }).click();
 
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 

@@ -24,8 +24,8 @@ tests/     (Playwright 1.61)
 |---|---|---|
 | Backend unit (151) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
-| Frontend Vitest (144) | `test` → `npm test` | Same |
-| Playwright E2E (79) | `test` → `npx playwright test` | Same |
+| Frontend Vitest (~190) | `test` → `npm test` | Same |
+| Playwright E2E (35 spec files) | `test` → `npx playwright test` | Same |
 | Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
 
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
@@ -49,20 +49,20 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run 144 Vitest tests |
+| `npm t` or `npx vitest run` | Run Vitest tests (~190 across 20 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all 79 E2E tests |
+| `npx playwright test` | Run all E2E tests (35 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
-- **Backend**: 151 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 144 Vitest tests (18 files — pages, components, AuthContext, endpoints). Run with `npm t`.
-- **E2E**: 79 Playwright tests in 28 spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
+- **Backend**: 151 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL) = 35 test files total. JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: ~190 Vitest tests across 20 files (pages, components, AuthContext, endpoints). Run with `npm t`.
+- **E2E**: 35 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
 

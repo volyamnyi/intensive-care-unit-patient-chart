@@ -20,6 +20,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,6 +36,9 @@ class AuthServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AuditService auditService;
 
     @InjectMocks
     private AuthService authService;
@@ -94,5 +100,48 @@ class AuthServiceTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getBody()).isNull();
+    }
+
+    @Test
+    void login_withValidCredentials_writesLoginAudit() {
+        LoginRequest req = new LoginRequest("doctor1", "password123");
+
+        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("password123", "encodedPass")).thenReturn(true);
+        when(jwtTokenProvider.generateToken("doctor1", "DOCTOR", userId)).thenReturn("jwt-token");
+
+        authService.login(req, "10.0.0.1");
+
+        verify(auditService).logAuth(eq("LOGIN"), eq(userId), eq("DOCTOR"), eq("10.0.0.1"), any());
+    }
+
+    @Test
+    void login_withWrongPassword_writesLoginFailedAudit() {
+        LoginRequest req = new LoginRequest("doctor1", "wrongpass");
+
+        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("wrongpass", "encodedPass")).thenReturn(false);
+
+        authService.login(req, "10.0.0.1");
+
+        verify(auditService).logAuth(eq("LOGIN_FAILED"), eq(userId), eq("DOCTOR"), eq("10.0.0.1"), any());
+    }
+
+    @Test
+    void login_withUnknownUser_writesLoginFailedAuditWithNullUser() {
+        LoginRequest req = new LoginRequest("unknown", "pass");
+
+        when(userRepository.findByLogin("unknown")).thenReturn(Optional.empty());
+
+        authService.login(req, "10.0.0.1");
+
+        verify(auditService).logAuth(eq("LOGIN_FAILED"), isNull(), isNull(), eq("10.0.0.1"), any());
+    }
+
+    @Test
+    void logout_writesLogoutAudit() {
+        authService.logout(userId, "DOCTOR", "10.0.0.1");
+
+        verify(auditService).logAuth(eq("LOGOUT"), eq(userId), eq("DOCTOR"), eq("10.0.0.1"), any());
     }
 }

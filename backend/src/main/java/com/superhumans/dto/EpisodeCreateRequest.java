@@ -16,4 +16,9 @@ public class EpisodeCreateRequest {
     UUID departmentId;
     @NotNull
     LocalDateTime admissionDate;
+
+    Double heightCm;
+    String ward;
+    String bedNumber;
+    String admissionDiagnosis;
 }

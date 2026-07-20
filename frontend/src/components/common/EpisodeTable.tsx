@@ -38,6 +38,8 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
         <TableHead>
           <TableRow>
             <TableCell>{t('episodeTable.tableHeaders.patient')}</TableCell>
+            <TableCell>Ward/Bed</TableCell>
+            <TableCell>Diagnosis</TableCell>
             <TableCell>{t('episodeTable.tableHeaders.admissionDate')}</TableCell>
             <TableCell>{t('episodeTable.tableHeaders.dischargeDate')}</TableCell>
             <TableCell>{t('episodeTable.tableHeaders.status')}</TableCell>
@@ -54,6 +56,12 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
             >
               <TableCell sx={{ fontWeight: 600 }}>
                 {ep.patientName || ep.patientId}
+              </TableCell>
+              <TableCell sx={{ fontSize: 12 }}>
+                {[ep.ward, ep.bedNumber].filter(Boolean).join(' / ') || '—'}
+              </TableCell>
+              <TableCell sx={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {ep.admissionDiagnosis || '—'}
               </TableCell>
               <TableCell>
                 {new Date(ep.admissionDate).toLocaleDateString('uk-UA')}
