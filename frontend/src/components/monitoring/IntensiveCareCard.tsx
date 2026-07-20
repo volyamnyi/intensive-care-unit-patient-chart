@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Tooltip, useTheme, CircularProgress, Accordion, AccordionSummary,
@@ -45,6 +45,141 @@ const LOSS_ROWS: { key: keyof HourlyRecord; label: string }[] = [
   { key: 'vomit', label: 'Дренаж' },
 ];
 
+interface CellProps {
+  hour: number;
+  rowKey: keyof HourlyRecord;
+  numeric: boolean;
+  label: string;
+  value: string;
+  isLocked: boolean;
+  isNurse: boolean;
+  isLossRow: boolean;
+  isDark: boolean;
+  isPast: boolean;
+  onSave: (hour: number, key: keyof HourlyRecord, raw: string) => void;
+}
+
+const Cell = React.memo(function Cell({
+  hour, rowKey, numeric, label, value, isLocked, isNurse, isLossRow, isDark, isPast, onSave,
+}: CellProps) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { setDraft(value); }, [value]);
+  const readOnly = isLocked || (isNurse && !isLossRow);
+  const bg = isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit';
+
+  return (
+    <TableCell sx={{ p: 0, bgcolor: bg, minWidth: 38 }}>
+      <TextField
+        fullWidth
+        size="small"
+        type={numeric ? 'number' : 'text'}
+        disabled={readOnly}
+        value={draft}
+        aria-label={`${label} ${hour}:00`}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => { if (draft !== value) onSave(hour, rowKey, draft); }}
+        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        sx={{
+          width: '100%',
+          '& fieldset': { border: 'none' },
+          '& input': { padding: '2px 4px', fontSize: 11, textAlign: 'center' },
+          '& input:disabled': { color: value ? 'inherit' : '#B0B0B0', WebkitTextFillColor: value ? 'inherit' : '#B0B0B0' },
+        }}
+      />
+    </TableCell>
+  );
+});
+
+interface TherapyCellProps {
+  order: MedicalOrder;
+  hour: number;
+  isDark: boolean;
+  isPast: boolean;
+  canExecute: boolean;
+  isExecuting: boolean;
+  onToggle: (orderId: string, hour: number) => void;
+}
+
+const TherapyCell = React.memo(function TherapyCell({
+  order, hour, isDark, isPast, canExecute, isExecuting, onToggle,
+}: TherapyCellProps) {
+  const bg = isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit';
+
+  return (
+    <TableCell
+      onClick={() => canExecute && !isPast && onToggle(order.id, hour)}
+      sx={{ p: '2px 4px', bgcolor: bg, minWidth: 38, textAlign: 'center', cursor: canExecute && !isPast ? 'pointer' : 'default' }}
+    >
+      {isExecuting ? <CircularProgress size={10} /> : (
+        <Tooltip title={order.drugName}>
+          <Box component="span" sx={{ fontSize: 11, color: isPast ? '#4CAF50' : 'inherit' }}>
+            {isPast ? '✓' : ''}
+          </Box>
+        </Tooltip>
+      )}
+    </TableCell>
+  );
+});
+
+interface OrderCreateDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+  selectedDay: ClinicalDay | null;
+  isLocked: boolean;
+}
+
+function OrderCreateDialog({ open, onClose, onCreated, selectedDay, isLocked }: OrderCreateDialogProps) {
+  const { t } = useTranslation();
+  const [form, setForm] = useState({ drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '' });
+  const [saving, setSaving] = useState(false);
+
+  const handleCreate = async () => {
+    if (!selectedDay || isLocked) return;
+    try {
+      setSaving(true);
+      await medicalOrderApi.create(selectedDay.id, {
+        category: 'MEDICATION',
+        drugName: form.drugName,
+        dose: form.dose,
+        unit: form.unit,
+        route: form.route,
+        frequency: form.frequency,
+        startTime: form.startTime || new Date().toISOString().slice(0, 16),
+      });
+      setForm({ drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '' });
+      onClose();
+      onCreated();
+    } catch {
+      // silent
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ fontSize: 14 }}>{t('medicalOrders.formTitle') ?? 'Нове призначення'}</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0 }}>
+          <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Препарат" value={form.drugName} onChange={(e) => setForm({ ...form, drugName: e.target.value })} /></Box>
+          <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Доза" value={form.dose} onChange={(e) => setForm({ ...form, dose: e.target.value })} /></Box>
+          <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Од." value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></Box>
+          <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Шлях" value={form.route} onChange={(e) => setForm({ ...form, route: e.target.value })} /></Box>
+          <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Частота" value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value })} /></Box>
+          <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Початок" type="datetime-local" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} /></Box>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('medicalOrders.cancelButton') ?? 'Скасувати'}</Button>
+        <Button variant="contained" onClick={handleCreate} disabled={saving || !form.drugName}>
+          {t('medicalOrders.createButton') ?? 'Створити'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 interface IntensiveCareCardProps {
   episode: Episode;
   selectedDay: ClinicalDay | null;
@@ -54,10 +189,11 @@ interface IntensiveCareCardProps {
   isNurse: boolean;
   isLocked: boolean;
   user: UserLike | null;
+  onRefresh?: () => void;
 }
 
 export default function IntensiveCareCard({
-  episode, selectedDay, records, orders, balanceItems, isNurse, isLocked, user,
+  episode, selectedDay, records, orders, balanceItems, isNurse, isLocked, user, onRefresh,
 }: IntensiveCareCardProps) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -137,35 +273,7 @@ export default function IntensiveCareCard({
     await refreshSidebar();
   };
 
-  const [orderDialog, setOrderDialog] = useState(false);
-  const [orderForm, setOrderForm] = useState({
-    drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '',
-  });
-  const [savingOrder, setSavingOrder] = useState(false);
-
-  const createOrder = async () => {
-    if (!selectedDay || isLocked) return;
-    try {
-      setSavingOrder(true);
-      await medicalOrderApi.create(selectedDay.id, {
-        category: 'MEDICATION',
-        drugName: orderForm.drugName,
-        dose: orderForm.dose,
-        unit: orderForm.unit,
-        route: orderForm.route,
-        frequency: orderForm.frequency,
-        startTime: orderForm.startTime || new Date().toISOString().slice(0, 16),
-      });
-      setOrderDialog(false);
-      setOrderForm({ drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '' });
-      // reload orders via parent by toggling a refetch is not available; reload page data
-      window.location.reload();
-    } catch {
-      // silent
-    } finally {
-      setSavingOrder(false);
-    }
-  };
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedDay) return;
@@ -191,7 +299,7 @@ export default function IntensiveCareCard({
     return String(v);
   };
 
-  const saveCell = async (hour: number, key: keyof HourlyRecord, raw: string) => {
+  const saveCell = useCallback(async (hour: number, key: keyof HourlyRecord, raw: string) => {
     if (!selectedDay || isLocked) return;
     const numeric = key !== 'consciousness' && key !== 'stool' && key !== 'vomit';
     const value = raw.trim() === '' ? null : numeric ? Number(raw) : raw;
@@ -212,85 +320,30 @@ export default function IntensiveCareCard({
           } as HourlyRecordCreateRequest);
         }
       }
+      onRefresh?.();
     } catch {
       // silent
     }
-  };
-
-  const Cell = ({
-    hour, rowKey, numeric, label,
-  }: { hour: number; rowKey: keyof HourlyRecord; numeric: boolean; label: string }) => {
-    const readOnly = isLocked || (isNurse && !LOSS_ROWS.some(l => l.key === rowKey));
-    const value = boundValue(hour, rowKey);
-    const [draft, setDraft] = useState(value);
-    const isPast = hour < realClockHour;
-    const bg = isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit';
-
-    useEffect(() => { setDraft(value); }, [value]);
-
-    return (
-      <TableCell sx={{ p: 0, bgcolor: bg, minWidth: 38 }}>
-        <TextField
-          fullWidth
-          size="small"
-          type={numeric ? 'number' : 'text'}
-          disabled={readOnly}
-          value={draft}
-          aria-label={`${label} ${hour}:00`}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => { if (draft !== value) saveCell(hour, rowKey, draft); }}
-          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-          sx={{
-            width: '100%',
-            '& fieldset': { border: 'none' },
-            '& input': { padding: '2px 4px', fontSize: 11, textAlign: 'center' },
-            '& input:disabled': { color: value ? 'inherit' : '#B0B0B0', WebkitTextFillColor: value ? 'inherit' : '#B0B0B0' },
-          }}
-        />
-      </TableCell>
-    );
-  };
+  }, [selectedDay, isLocked, recByHour, onRefresh]);
 
   const activeOrders = orders.filter(o => o.status === 'ACTIVE' || o.status === 'DRAFT');
 
-  const TherapyCell = ({ order, hour }: { order: MedicalOrder; hour: number }) => {
-    const canExecute = !isLocked && !!user;
-    const isPast = hour < realClockHour;
-    const bg = isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit';
-    const isExecuting = executing === `${order.id}-${hour}`;
-
-    const toggle = async () => {
-      if (!canExecute || isLocked || !selectedDay || !user) return;
-      const execTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
-      try {
-        setExecuting(`${order.id}-${hour}`);
-        await orderExecutionApi.create(order.id, {
-          executedBy: user.id,
-          executedAt: execTime,
-          actualDose: order.dose,
-        });
-      } catch {
-        // silent
-      } finally {
-        setExecuting(null);
-      }
-    };
-
-    return (
-      <TableCell
-        onClick={() => canExecute && !isPast && toggle()}
-        sx={{ p: '2px 4px', bgcolor: bg, minWidth: 38, textAlign: 'center', cursor: canExecute && !isPast ? 'pointer' : 'default' }}
-      >
-        {isExecuting ? <CircularProgress size={10} /> : (
-          <Tooltip title={order.drugName}>
-            <Box component="span" sx={{ fontSize: 11, color: isPast ? '#4CAF50' : 'inherit' }}>
-              {isPast ? '✓' : ''}
-            </Box>
-          </Tooltip>
-        )}
-      </TableCell>
-    );
-  };
+  const toggleOrder = useCallback(async (orderId: string, hour: number) => {
+    if (!user || !selectedDay) return;
+    const execTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
+    try {
+      setExecuting(`${orderId}-${hour}`);
+      await orderExecutionApi.create(orderId, {
+        executedBy: user.id,
+        executedAt: execTime,
+        actualDose: '',
+      });
+    } catch {
+      // silent
+    } finally {
+      setExecuting(null);
+    }
+  }, [user, selectedDay]);
 
   const totalIntake = balanceItems.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = balanceItems.reduce((s, i) => s + (i.output || 0), 0);
@@ -315,7 +368,20 @@ export default function IntensiveCareCard({
               <TableRow key={String(row.key)}>
                 <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd, whiteSpace: 'nowrap' }}>{row.label}</TableCell>
                 {HOURS.map((h) => (
-                  <Cell key={h} hour={h} rowKey={row.key} numeric={row.numeric} label={row.label} />
+                  <Cell
+                    key={h}
+                    hour={h}
+                    rowKey={row.key}
+                    numeric={row.numeric}
+                    label={row.label}
+                    value={boundValue(h, row.key)}
+                    isLocked={isLocked}
+                    isNurse={isNurse}
+                    isLossRow={false}
+                    isDark={isDark}
+                    isPast={h < realClockHour}
+                    onSave={saveCell}
+                  />
                 ))}
               </TableRow>
             ))}
@@ -325,7 +391,20 @@ export default function IntensiveCareCard({
               <TableRow key={String(row.key)}>
                 <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd }}>{row.label}</TableCell>
                 {HOURS.map((h) => (
-                  <Cell key={h} hour={h} rowKey={row.key} numeric label={row.label} />
+                  <Cell
+                    key={h}
+                    hour={h}
+                    rowKey={row.key}
+                    numeric
+                    label={row.label}
+                    value={boundValue(h, row.key)}
+                    isLocked={isLocked}
+                    isNurse={isNurse}
+                    isLossRow
+                    isDark={isDark}
+                    isPast={h < realClockHour}
+                    onSave={saveCell}
+                  />
                 ))}
               </TableRow>
             ))}
@@ -334,7 +413,7 @@ export default function IntensiveCareCard({
               <TableCell colSpan={25} sx={{ fontWeight: 800, fontSize: 11, py: 0.5, borderRight: `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Терапія (призначення)</span>
                 {canEditSidebar && !isNurse && (
-                  <Button size="small" variant="outlined" onClick={() => setOrderDialog(true)} sx={{ fontSize: 10, py: 0, minHeight: 22 }}>
+                  <Button size="small" variant="outlined" onClick={() => setOrderDialogOpen(true)} sx={{ fontSize: 10, py: 0, minHeight: 22 }}>
                     + Нове призначення
                   </Button>
                 )}
@@ -356,7 +435,16 @@ export default function IntensiveCareCard({
                   </Box>
                 </TableCell>
                 {HOURS.map((h) => (
-                  <TherapyCell key={h} order={order} hour={h} />
+                  <TherapyCell
+                    key={h}
+                    order={order}
+                    hour={h}
+                    isDark={isDark}
+                    isPast={h < realClockHour}
+                    canExecute={!isLocked && !!user}
+                    isExecuting={executing === `${order.id}-${h}`}
+                    onToggle={toggleOrder}
+                  />
                 ))}
               </TableRow>
             ))}
@@ -482,25 +570,13 @@ export default function IntensiveCareCard({
         </SidebarSection>
       </Stack>
 
-      <Dialog open={orderDialog} onClose={() => setOrderDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontSize: 14 }}>{t('medicalOrders.formTitle') ?? 'Нове призначення'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0 }}>
-            <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Препарат" value={orderForm.drugName} onChange={(e) => setOrderForm({ ...orderForm, drugName: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Доза" value={orderForm.dose} onChange={(e) => setOrderForm({ ...orderForm, dose: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Од." value={orderForm.unit} onChange={(e) => setOrderForm({ ...orderForm, unit: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Шлях" value={orderForm.route} onChange={(e) => setOrderForm({ ...orderForm, route: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Частота" value={orderForm.frequency} onChange={(e) => setOrderForm({ ...orderForm, frequency: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Початок" type="datetime-local" value={orderForm.startTime} onChange={(e) => setOrderForm({ ...orderForm, startTime: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} /></Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOrderDialog(false)}>{t('medicalOrders.cancelButton') ?? 'Скасувати'}</Button>
-          <Button variant="contained" onClick={createOrder} disabled={savingOrder || !orderForm.drugName}>
-            {t('medicalOrders.createButton') ?? 'Створити'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <OrderCreateDialog
+        open={orderDialogOpen}
+        onClose={() => setOrderDialogOpen(false)}
+        onCreated={onRefresh ?? (() => {})}
+        selectedDay={selectedDay}
+        isLocked={isLocked}
+      />
     </Box>
   );
 }

@@ -157,6 +157,34 @@ class AuditServiceTest {
     }
 
     @Test
+    void list_returnsPageWithContentAndPageable() {
+        Pageable pageable = PageRequest.of(0, 10);
+        List<AuditLog> content = List.of(AuditLog.builder()
+                .id(logId)
+                .entity("Episode")
+                .action("CREATE")
+                .userId(userId)
+                .build());
+        when(auditLogRepository.findAllByOrderByTimestampDesc(pageable))
+                .thenReturn(new PageImpl<>(content, pageable, content.size()));
+
+        AuditLogResponse mapped = AuditLogResponse.builder()
+                .id(logId)
+                .entity("Episode")
+                .action("CREATE")
+                .build();
+        when(auditLogMapper.toResponse(any(AuditLog.class))).thenReturn(mapped);
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(null, null, null, null, null, null, pageable);
+
+        assertThat(result).isInstanceOf(Page.class);
+        assertThat(result.getContent()).isInstanceOf(List.class);
+        assertThat(result.getTotalElements()).isGreaterThanOrEqualTo(0);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getId()).isEqualTo(logId);
+    }
+
+    @Test
     void logCreate_savesEntry() {
         auditService.logCreate("Episode", entityId, userId);
 

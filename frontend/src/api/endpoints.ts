@@ -2,7 +2,7 @@ import client from './client';
 import type {
   User, PatientDto, Episode, ClinicalDay, HourlyRecord, MedicalOrder,
   OrderExecution, MedicalNote, ClinicalScale, ScaleResult, FluidBalanceItem,
-  PdfResponse, AuditLog, LoginRequest, LoginResponse,
+  PdfResponse, AuditLog, LoginRequest, LoginResponse, PageResponse,
   SignRequest, SignResponse, ReopenRequest,
   EpisodeCreateRequest, EpisodePatchRequest, EpisodeCloseRequest,
   ClinicalDayCreateRequest, ClinicalDayPatchRequest,
@@ -157,7 +157,7 @@ export const labResultApi = {
 
 export const auditApi = {
   list: (params?: { page?: number; size?: number; action?: string; dateFrom?: string; dateTo?: string }) =>
-    client.get<AuditLog[]>('/audit', { params }),
+    client.get<PageResponse<AuditLog>>('/audit', { params }),
   getById: (id: string) =>
     client.get<AuditLog>(`/audit/${id}`),
 };

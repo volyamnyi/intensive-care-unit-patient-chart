@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -343,5 +344,43 @@ class ClinicalDayServiceTest {
         boolean result = clinicalDayService.canAdvanceToNextDay(episodeId);
 
         assertThat(result).isTrue();
+    }
+
+    @Test
+    void isLocked_trueForSignedAndClosedStatuses() {
+        ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(null, null, 0);
+
+        for (ClinicalDayStatus lockedStatus : List.of(
+                ClinicalDayStatus.NURSE_SIGNED,
+                ClinicalDayStatus.DOCTOR_SIGNED,
+                ClinicalDayStatus.CLOSED)) {
+            testDay.setStatus(lockedStatus);
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+
+            assertThatThrownBy(() -> clinicalDayService.updateClinicalDay(dayId, req, userId))
+                    .isInstanceOf(DocumentLockedException.class);
+        }
+    }
+
+    @Test
+    void isLocked_falseForOpenAndReopened() {
+        ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(null, null, 0);
+        ClinicalDayResponse expected = ClinicalDayResponse.builder()
+                .id(dayId)
+                .status(ClinicalDayStatus.OPEN)
+                .build();
+        when(clinicalDayMapper.toResponse(any(ClinicalDay.class))).thenReturn(expected);
+
+        for (ClinicalDayStatus editableStatus : List.of(
+                ClinicalDayStatus.OPEN,
+                ClinicalDayStatus.REOPENED)) {
+            testDay.setStatus(editableStatus);
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+            when(clinicalDayRepository.save(any(ClinicalDay.class))).thenReturn(testDay);
+
+            ClinicalDayResponse res = clinicalDayService.updateClinicalDay(dayId, req, userId);
+
+            assertThat(res.getId()).isEqualTo(dayId);
+        }
     }
 }

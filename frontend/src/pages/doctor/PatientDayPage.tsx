@@ -59,6 +59,12 @@ export default function PatientDayPage() {
     }
   }, []);
 
+  const handleRefresh = useCallback(() => {
+    if (selectedDay) {
+      loadDayData(selectedDay);
+    }
+  }, [selectedDay, loadDayData]);
+
   useEffect(() => {
     if (selectedDay) {
       loadDayData(selectedDay);
@@ -175,6 +181,7 @@ export default function PatientDayPage() {
             isLocked={isLocked}
             isNurse={isNurse}
             user={user}
+            onRefresh={handleRefresh}
           />
         ) : (
           <DoctorDashboard
@@ -188,6 +195,7 @@ export default function PatientDayPage() {
             isLocked={isLocked}
             isNurse={isNurse}
             user={user}
+            onRefresh={handleRefresh}
           />
         )
       )}

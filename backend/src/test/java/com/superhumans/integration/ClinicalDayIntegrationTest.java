@@ -201,4 +201,36 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
                 ClinicalDayResponse.class, dayId);
         assertThat(verifyRes.getBody().getStatus()).isEqualTo(ClinicalDayStatus.REOPENED);
     }
+
+    @Test
+    void reopenClinicalDay_withoutReason_returnsBadRequest() {
+        UUID dayId = UUID.fromString("b2222222-2222-2222-2222-222222222222");
+
+        SignRequest nurseReq = new SignRequest(13L, "hash-n");
+        var nurseEntity = authEntity(nurseReq, getNurseToken());
+        restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/nurse", HttpMethod.POST, nurseEntity,
+                Void.class, dayId);
+
+        SignRequest doctorReq = new SignRequest(15L, "hash-d");
+        var doctorEntity = authEntity(doctorReq, getHodToken());
+        restTemplate.exchange(
+                "/api/clinical-days/{id}/sign/doctor", HttpMethod.POST, doctorEntity,
+                Void.class, dayId);
+
+        var getEntity = authGet(getHodToken());
+        var getRes = restTemplate.exchange(
+                "/api/clinical-days/{id}", HttpMethod.GET, getEntity,
+                ClinicalDayResponse.class, dayId);
+        int currentVersion = getRes.getBody().getVersion();
+
+        ReopenRequest reopenReq = new ReopenRequest("", currentVersion);
+        var reopenEntity = authEntity(reopenReq, getHodToken());
+
+        var res = restTemplate.exchange(
+                "/api/clinical-days/{id}/reopen", HttpMethod.POST, reopenEntity,
+                String.class, dayId);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
 }

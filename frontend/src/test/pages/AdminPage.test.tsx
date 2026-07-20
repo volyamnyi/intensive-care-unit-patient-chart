@@ -11,6 +11,7 @@ const mockNavigate = vi.fn();
 const mockLogout = vi.fn();
 const mockGetDoctors = vi.fn();
 const mockGetNurses = vi.fn();
+const mockAuditList = vi.fn();
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -21,6 +22,9 @@ vi.mock('../../api/endpoints', () => ({
   userApi: {
     getDoctors: (...args: unknown[]) => mockGetDoctors(...args),
     getNurses: (...args: unknown[]) => mockGetNurses(...args),
+  },
+  auditApi: {
+    list: (...args: unknown[]) => mockAuditList(...args),
   },
 }));
 
@@ -130,6 +134,39 @@ describe('AdminPage', () => {
     await waitFor(() => {
       const emptyCells = screen.getAllByText('Немає даних');
       expect(emptyCells.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it('renders audit log rows from paginated response (content array) without crashing', async () => {
+    mockAuditList.mockResolvedValue({
+      data: {
+        content: [
+          { id: '1', timestamp: '2026-07-20T10:00:00', userId: 11, entity: 'AUTH', entityId: null, action: 'LOGIN', oldValue: null, newValue: null, correlationId: null, ipAddress: '0:0:0:0:0:0:0:1', userRole: 'DOCTOR' },
+          { id: '2', timestamp: '2026-07-20T09:00:00', userId: 16, entity: 'EPISODE', entityId: 'a1111111-1111-1111-1111-111111111111', action: 'CREATE', oldValue: null, newValue: '{}', correlationId: null, ipAddress: '0:0:0:0:0:0:0:1', userRole: 'ADMINISTRATOR' },
+        ],
+        totalElements: 2,
+        totalPages: 1,
+        number: 0,
+        size: 10,
+      },
+    });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Переглянути журнал аудиту' }));
+    await waitFor(() => {
+      expect(screen.getByText('AUTH')).toBeInTheDocument();
+      expect(screen.getByText('EPISODE')).toBeInTheDocument();
+    });
+    expect(mockAuditList).toHaveBeenCalled();
+  });
+
+  it('handles empty audit log content without crashing', async () => {
+    mockAuditList.mockResolvedValue({
+      data: { content: [], totalElements: 0, totalPages: 0, number: 0, size: 10 },
+    });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: /журнал/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Немає записів аудиту')).toBeInTheDocument();
     });
   });
 });

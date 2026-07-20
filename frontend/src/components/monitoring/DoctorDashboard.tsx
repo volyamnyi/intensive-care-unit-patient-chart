@@ -8,7 +8,7 @@ export default function DoctorDashboard(props: DashboardProps) {
   const {
     episode, clinicalDays, selectedDay, onSelectDay,
     records, orders, balanceItems,
-    isLocked, isNurse, user,
+    isLocked, isNurse, user, onRefresh,
   } = props;
 
   const theme = useTheme();
@@ -82,6 +82,7 @@ export default function DoctorDashboard(props: DashboardProps) {
         isNurse={isNurse}
         isLocked={isLocked}
         user={user ?? null}
+        onRefresh={onRefresh}
       />
     </Box>
   );
