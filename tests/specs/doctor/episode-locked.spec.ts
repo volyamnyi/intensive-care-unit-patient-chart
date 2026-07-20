@@ -9,7 +9,7 @@ test.describe('Clinical day locking (vitals editability)', () => {
     await page.getByText('Доба 2').click();
 
     // All vital cells should be disabled on a locked day
-    const hrCell = page.getByRole('textbox', { name: 'ЧСС 1:00' });
+    const hrCell = page.getByLabel('ЧСС 1:00');
     await expect(hrCell).toBeDisabled({ timeout: 10000 });
   });
 
@@ -18,7 +18,7 @@ test.describe('Clinical day locking (vitals editability)', () => {
     await nursePage.goto('/nurse/episode/a3333333-3333-3333-3333-333333333333');
 
     // Loss-row cells are editable by nurse on OPEN day
-    const urineCell = nursePage.getByRole('textbox', { name: 'Сеча 1:00' });
+    const urineCell = nursePage.getByLabel('Сеча 1:00');
     await expect(urineCell).toBeEnabled({ timeout: 10000 });
   });
 });

@@ -3,7 +3,13 @@ package com.superhumans.integration;
 import com.superhumans.dto.HourlyRecordCreateRequest;
 import com.superhumans.dto.HourlyRecordPatchRequest;
 import com.superhumans.dto.HourlyRecordResponse;
+import com.superhumans.dto.SignRequest;
+import com.superhumans.entity.ClinicalDay;
+import com.superhumans.entity.HourlyRecord;
+import com.superhumans.repository.ClinicalDayRepository;
+import com.superhumans.repository.HourlyRecordRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 
@@ -14,6 +20,11 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
+
+    @Autowired
+    HourlyRecordRepository hourlyRecordRepository;
+    @Autowired
+    ClinicalDayRepository clinicalDayRepository;
 
     private static final UUID SEED_DAY_ID =
             UUID.fromString("b1111111-1111-1111-1111-111111111111");
@@ -109,28 +120,28 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void updateHourlyRecord_onSignedDay_returnsConflictOrLocked() {
-        UUID signedDayId = UUID.fromString("b1111112-1111-1111-1111-111111111112");
+        UUID signedDayId = UUID.fromString("b1111112-1111-1111-1111-111111111111");
 
-        HourlyRecordCreateRequest createReq = new HourlyRecordCreateRequest();
-        createReq.setRecordTime(LocalDateTime.now().withHour(12));
-        createReq.setHeartRate(72);
+        // Initialize auth fields before accessing nurseUserId
+        getNurseToken();
 
-        var createEntity = authEntity(createReq, getNurseToken());
-        var createRes = restTemplate.exchange(
-                "/api/clinical-days/{dayId}/hourly-records", HttpMethod.POST, createEntity,
-                HourlyRecordResponse.class, signedDayId);
-
-        UUID recordId = createRes.getBody().getId();
-        Integer version = createRes.getBody().getVersion();
+        ClinicalDay day = clinicalDayRepository.findById(signedDayId).orElseThrow();
+        HourlyRecord record = new HourlyRecord();
+        record.setClinicalDay(day);
+        record.setRecordTime(LocalDateTime.now().withHour(12));
+        record.setHeartRate(72);
+        record.setCreatedBy(nurseUserId);
+        record.setUpdatedBy(nurseUserId);
+        record = hourlyRecordRepository.saveAndFlush(record);
 
         HourlyRecordPatchRequest patchReq = new HourlyRecordPatchRequest();
         patchReq.setHeartRate(95);
-        patchReq.setVersion(version);
+        patchReq.setVersion(record.getVersion());
 
         var patchEntity = authEntity(patchReq, getNurseToken());
         var patchRes = restTemplate.exchange(
                 "/api/hourly-records/{id}", HttpMethod.PATCH, patchEntity,
-                String.class, recordId);
+                String.class, record.getId());
 
         assertThat(patchRes.getStatusCode()).isIn(
                 java.util.Set.of(HttpStatus.LOCKED, HttpStatus.UNPROCESSABLE_ENTITY, HttpStatus.CONFLICT));
