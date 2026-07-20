@@ -18,4 +18,5 @@ export interface DashboardProps {
   balanceItems: FluidBalanceItem[];
   isLocked: boolean;
   isNurse: boolean;
+  onRefresh?: () => void;
 }
