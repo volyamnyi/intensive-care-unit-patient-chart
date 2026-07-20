@@ -9,11 +9,10 @@ test.describe('Episode Page — error observability (F3)', () => {
     await page.route('**/api/episodes/**', (route) => route.abort());
 
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
-    await page.waitForLoadState('domcontentloaded');
 
     // The app root must still contain rendered content (not a blank crash).
-    const rootHtml = await page.locator('#root').innerHTML();
-    expect(rootHtml.length).toBeGreaterThan(0);
+    // Uses auto-waiting to give React time to mount (fixes CI flakiness).
+    await expect(page.locator('#root')).not.toBeEmpty();
     // URL is preserved (router did not bail out).
     expect(page.url()).toContain('/doctor/episode/');
   });
