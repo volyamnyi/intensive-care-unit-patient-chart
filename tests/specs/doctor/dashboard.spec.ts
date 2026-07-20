@@ -32,4 +32,20 @@ test.describe('Doctor Dashboard', () => {
     await page.goto('/doctor');
     await expect(page).toHaveTitle('ВАІТ — Лікар');
   });
+
+  test('theme toggle persists across navigation (UC-25)', async ({ page }) => {
+    await page.goto('/doctor');
+    const initial = await page.evaluate(() => localStorage.getItem('themeMode') || 'light');
+
+    await page.getByRole('button', { name: 'Переключити тему' }).click();
+
+    const flipped = await page.evaluate(() => localStorage.getItem('themeMode'));
+    expect(flipped).not.toBe(initial);
+
+    // Navigate away and back — theme must remain persisted.
+    await page.goto('/doctor/create-card');
+    await page.goto('/doctor');
+    const afterNav = await page.evaluate(() => localStorage.getItem('themeMode'));
+    expect(afterNav).toBe(flipped);
+  });
 });

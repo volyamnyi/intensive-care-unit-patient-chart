@@ -41,7 +41,7 @@ export default function AdminPage() {
       const params: Record<string, string> = {};
       if (auditFilterEntity) params.entity = auditFilterEntity;
       const res = await auditApi.list(params);
-      setAuditLogs(res.data);
+      setAuditLogs(res.data.content ?? []);
     } finally {
       setAuditLoading(false);
     }

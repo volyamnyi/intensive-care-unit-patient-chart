@@ -135,6 +135,17 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void getEpisode_withShortNonUuidId_returnsBadRequest() {
+        var entity = authGet(getDoctorToken());
+
+        var res = restTemplate.exchange(
+                "/api/episodes/{id}", HttpMethod.GET, entity,
+                String.class, "a1111111");
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void closeEpisode_closesSuccessfully() {
         EpisodeCreateRequest createReq = new EpisodeCreateRequest(
                 1008L, null, null, LocalDateTime.now(), null, null, null, null);

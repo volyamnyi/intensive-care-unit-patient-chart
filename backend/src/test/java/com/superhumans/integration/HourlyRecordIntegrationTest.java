@@ -108,6 +108,35 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void updateHourlyRecord_onSignedDay_returnsConflictOrLocked() {
+        UUID signedDayId = UUID.fromString("b1111112-1111-1111-1111-111111111112");
+
+        HourlyRecordCreateRequest createReq = new HourlyRecordCreateRequest();
+        createReq.setRecordTime(LocalDateTime.now().withHour(12));
+        createReq.setHeartRate(72);
+
+        var createEntity = authEntity(createReq, getNurseToken());
+        var createRes = restTemplate.exchange(
+                "/api/clinical-days/{dayId}/hourly-records", HttpMethod.POST, createEntity,
+                HourlyRecordResponse.class, signedDayId);
+
+        UUID recordId = createRes.getBody().getId();
+        Integer version = createRes.getBody().getVersion();
+
+        HourlyRecordPatchRequest patchReq = new HourlyRecordPatchRequest();
+        patchReq.setHeartRate(95);
+        patchReq.setVersion(version);
+
+        var patchEntity = authEntity(patchReq, getNurseToken());
+        var patchRes = restTemplate.exchange(
+                "/api/hourly-records/{id}", HttpMethod.PATCH, patchEntity,
+                String.class, recordId);
+
+        assertThat(patchRes.getStatusCode()).isIn(
+                java.util.Set.of(HttpStatus.LOCKED, HttpStatus.UNPROCESSABLE_ENTITY, HttpStatus.CONFLICT));
+    }
+
+    @Test
     void updateHourlyRecord_withVersionMismatch_returnsConflict() {
         HourlyRecordCreateRequest createReq = new HourlyRecordCreateRequest();
         createReq.setRecordTime(LocalDateTime.now().withHour(11));
