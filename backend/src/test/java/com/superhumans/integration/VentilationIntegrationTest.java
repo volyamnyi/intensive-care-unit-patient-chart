@@ -4,6 +4,7 @@ import com.superhumans.dto.VentilationCreateRequest;
 import com.superhumans.dto.VentilationPatchRequest;
 import com.superhumans.dto.VentilationResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 
@@ -20,6 +21,7 @@ class VentilationIntegrationTest extends AbstractIntegrationTest {
             UUID.fromString("b1111112-1111-1111-1111-111111111112");
 
     @Test
+    @Sql(statements = "DELETE FROM ventilation_settings WHERE clinical_day_id = 'b1111111-1111-1111-1111-111111111111'")
     void getVentilationSettings_returnsEmptyListInitially() {
         var entity = authGet(getNurseToken());
 
