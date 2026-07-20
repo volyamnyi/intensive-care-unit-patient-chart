@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Tooltip, useTheme, CircularProgress, Accordion, AccordionSummary,
@@ -58,24 +58,28 @@ export default function IntensiveCareCard({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const bd = `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`;
-  const [savingHour, setSavingHour] = useState<number | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
 
   // Sidebar section data (self-fetched so the card is fully self-contained)
-  const [notes, setNotes] = useState<{ id: string; text: string; authorId?: string }[]>([]);
-  const [noteDraft, setNoteDraft] = useState('');
+  const [notes, setNotes] = useState<{ id: string; text: string; authorId?: string | null; role?: string | null; createdAt?: string | null }[]>([]);
+  const noteInputRef = useRef<HTMLInputElement | null>(null);
   const [savingNote, setSavingNote] = useState(false);
 
+  useEffect(() => {
+    if (noteInputRef.current) noteInputRef.current.value = '';
+  }, [selectedDay?.id]);
+
   const addNote = async () => {
-    if (!selectedDay || isLocked || !noteDraft.trim()) return;
+    const text = noteInputRef.current?.value?.trim() ?? '';
+    if (!selectedDay || isLocked || !text) return;
     try {
       setSavingNote(true);
       await medicalNoteApi.create(selectedDay.id, {
-        text: noteDraft.trim(),
+        text,
         noteType: 'CLINICAL',
         role: isNurse ? 'NURSE' : 'DOCTOR',
       } as unknown as MedicalNoteCreateRequest);
-      setNoteDraft('');
+      if (noteInputRef.current) noteInputRef.current.value = '';
       const refreshed = await medicalNoteApi.getByClinicalDay(selectedDay.id);
       setNotes(refreshed.data as unknown as { id: string; text: string; authorId?: string }[]);
     } catch {
@@ -134,7 +138,7 @@ export default function IntensiveCareCard({
       patientStateApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
     ]).then(([n, s, v, l, p]) => {
       if (cancelled) return;
-      setNotes(n as unknown as { id: string; text: string; authorId?: string }[]);
+       setNotes(n as unknown as { id: string; text: string; authorId?: string | null; role?: string | null; createdAt?: string | null }[]);
       setScales(s as unknown as { id: string; name?: string; result: string }[]);
       setVentilation(v as unknown as { id: string; mode?: string; [k: string]: unknown }[]);
       setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
@@ -169,7 +173,6 @@ export default function IntensiveCareCard({
     const existing = recByHour.get(hour);
     const recTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
     try {
-      setSavingHour(hour);
       if (existing) {
         const patch: Partial<HourlyRecordCreateRequest> & { version: number } = { version: existing.version };
         if (value !== null) {
@@ -186,8 +189,6 @@ export default function IntensiveCareCard({
       }
     } catch {
       // silent
-    } finally {
-      setSavingHour(null);
     }
   };
 
@@ -196,38 +197,31 @@ export default function IntensiveCareCard({
   }: { hour: number; rowKey: keyof HourlyRecord; numeric: boolean; label: string }) => {
     const readOnly = isLocked || (isNurse && !LOSS_ROWS.some(l => l.key === rowKey));
     const value = boundValue(hour, rowKey);
-    const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value);
     const isPast = hour < realClockHour;
     const bg = isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit';
 
-    if (editing && !readOnly) {
-      return (
-        <TableCell sx={{ p: 0, bgcolor: bg, minWidth: 38 }}>
-          <TextField
-            autoFocus
-            size="small"
-            type={numeric ? 'number' : 'text'}
-            value={draft}
-            slotProps={{ input: { 'aria-label': `${label} ${hour}:00`, style: { padding: 4, fontSize: 11, textAlign: 'center' } } }}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={() => { setEditing(false); if (draft !== value) saveCell(hour, rowKey, draft); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            sx={{ width: '100%', '& fieldset': { border: 'none' } }}
-          />
-        </TableCell>
-      );
-    }
+    useEffect(() => { setDraft(value); }, [value]);
+
     return (
-      <TableCell
-        onClick={() => !readOnly && (setDraft(value), setEditing(true))}
-        sx={{
-          p: '2px 4px', bgcolor: bg, minWidth: 38, textAlign: 'center', fontSize: 11,
-          cursor: readOnly ? 'default' : 'cell',
-          color: value ? 'inherit' : '#B0B0B0',
-        }}
-      >
-        {savingHour === hour ? <CircularProgress size={10} /> : (value || '·')}
+      <TableCell sx={{ p: 0, bgcolor: bg, minWidth: 38 }}>
+        <TextField
+          fullWidth
+          size="small"
+          type={numeric ? 'number' : 'text'}
+          disabled={readOnly}
+          value={draft}
+          aria-label={`${label} ${hour}:00`}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => { if (draft !== value) saveCell(hour, rowKey, draft); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          sx={{
+            width: '100%',
+            '& fieldset': { border: 'none' },
+            '& input': { padding: '2px 4px', fontSize: 11, textAlign: 'center' },
+            '& input:disabled': { color: value ? 'inherit' : '#B0B0B0', WebkitTextFillColor: value ? 'inherit' : '#B0B0B0' },
+          }}
+        />
       </TableCell>
     );
   };
@@ -286,7 +280,7 @@ export default function IntensiveCareCard({
             <TableRow sx={{ bgcolor: isDark ? '#1A1A1A' : '#F4F2ED' }}>
               <TableCell sx={{ fontWeight: 700, minWidth: 120, borderRight: bd }}>Показник / година</TableCell>
               {HOURS.map((h) => (
-                <TableCell key={h} sx={{ textAlign: 'center', fontWeight: 700, fontSize: 10, p: '2px', borderRight: h === 23 ? bd : 'none' }}>{h}</TableCell>
+                <TableCell key={h} sx={{ textAlign: 'center', fontWeight: 700, fontSize: 10, p: '2px', borderRight: h === 23 ? bd : 'none' }}>{h}:00</TableCell>
               ))}
             </TableRow>
           </TableHead>
@@ -332,6 +326,9 @@ export default function IntensiveCareCard({
               <TableRow key={order.id}>
                 <TableCell sx={{ fontSize: 10, borderRight: bd, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {order.drugName} {order.dose}{order.unit}
+                  <Box component="span" sx={{ ml: 0.5, color: 'text.secondary' }}>
+                    {t(`medicalOrders.status${order.status.charAt(0) + order.status.slice(1).toLowerCase()}`)}
+                  </Box>
                 </TableCell>
                 {HOURS.map((h) => (
                   <TherapyCell key={h} order={order} hour={h} />
@@ -382,11 +379,20 @@ export default function IntensiveCareCard({
         <SidebarSection title={t('medicalNotes.title')} count={notes.length}>
           {notes.length === 0 ? (
             <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('medicalNotes.empty')}</Typography>
-          ) : (
+           ) : (
             <List dense sx={{ py: 0 }}>
               {notes.map((n) => (
-                <ListItem key={n.id} sx={{ px: 0 }}>
-                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{n.text}</Typography>} />
+                <ListItem key={n.id} sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <ListItemText
+                    primary={<Typography component="span" sx={{ fontSize: 12 }}>{n.text}</Typography>}
+                    secondary={
+                      <Typography component="span" sx={{ fontSize: 10, color: 'text.secondary' }}>
+                        {[n.role, n.createdAt ? new Date(n.createdAt).toLocaleString('uk-UA') : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Typography>
+                    }
+                  />
                 </ListItem>
               ))}
             </List>
@@ -396,13 +402,13 @@ export default function IntensiveCareCard({
               <TextField
                 size="small"
                 label={t('medicalNotes.newNoteLabel')}
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
+                defaultValue=""
+                inputRef={noteInputRef}
                 multiline
                 minRows={2}
                 slotProps={{ input: { 'aria-label': t('medicalNotes.newNoteLabel') } }}
               />
-              <Button size="small" variant="outlined" onClick={addNote} disabled={savingNote || !noteDraft.trim()}>
+              <Button size="small" variant="outlined" onClick={addNote} disabled={savingNote}>
                 {t('medicalNotes.addNoteButton')}
               </Button>
             </Stack>
@@ -467,7 +473,7 @@ export default function IntensiveCareCard({
       </Stack>
 
       <Dialog open={orderDialog} onClose={() => setOrderDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontSize: 14 }}>{t('medicalOrders.new') ?? 'Нове призначення'}</DialogTitle>
+        <DialogTitle sx={{ fontSize: 14 }}>{t('medicalOrders.formTitle') ?? 'Нове призначення'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0 }}>
             <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Препарат" value={orderForm.drugName} onChange={(e) => setOrderForm({ ...orderForm, drugName: e.target.value })} /></Box>
@@ -479,9 +485,9 @@ export default function IntensiveCareCard({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOrderDialog(false)}>Скасувати</Button>
+          <Button onClick={() => setOrderDialog(false)}>{t('medicalOrders.cancelButton') ?? 'Скасувати'}</Button>
           <Button variant="contained" onClick={createOrder} disabled={savingOrder || !orderForm.drugName}>
-            {t('medicalOrders.create') ?? 'Створити'}
+            {t('medicalOrders.createButton') ?? 'Створити'}
           </Button>
         </DialogActions>
       </Dialog>

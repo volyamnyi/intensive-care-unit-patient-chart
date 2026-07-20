@@ -31,4 +31,16 @@ public class Episode extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     EpisodeStatus status;
+
+    @Column(name = "height_cm")
+    Double heightCm;
+
+    @Column(name = "ward", length = 50)
+    String ward;
+
+    @Column(name = "bed_number", length = 20)
+    String bedNumber;
+
+    @Column(name = "admission_diagnosis", length = 500)
+    String admissionDiagnosis;
 }

@@ -13,6 +13,10 @@ public class EpisodePatchRequest {
     UUID hospitalizationId;
     UUID departmentId;
     LocalDateTime dischargeDate;
+    Double heightCm;
+    String ward;
+    String bedNumber;
+    String admissionDiagnosis;
     @NotNull
     Integer version;
 }

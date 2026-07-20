@@ -11,7 +11,7 @@ spring:
       connection-init-sql: SET client_encoding = 'UTF8'
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:

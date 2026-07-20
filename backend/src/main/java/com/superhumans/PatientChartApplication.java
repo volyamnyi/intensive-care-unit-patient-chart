@@ -2,9 +2,10 @@ package com.superhumans;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = LiquibaseAutoConfiguration.class)
 @EnableScheduling
 public class PatientChartApplication {
 

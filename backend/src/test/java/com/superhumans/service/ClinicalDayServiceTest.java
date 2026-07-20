@@ -112,7 +112,7 @@ class ClinicalDayServiceTest {
     @Test
     void createClinicalDay_createsSuccessfully() {
         ClinicalDayCreateRequest req = new ClinicalDayCreateRequest(
-                episodeId, LocalDateTime.now(), LocalDateTime.now().plusHours(24));
+                episodeId, LocalDateTime.now(), LocalDateTime.now().plusHours(24), null);
 
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
         when(clinicalDayRepository.findByEpisodeIdAndStatus(episodeId, ClinicalDayStatus.OPEN))
@@ -145,7 +145,7 @@ class ClinicalDayServiceTest {
     void createClinicalDay_whenEpisodeNotActive_throws() {
         testEpisode.setStatus(EpisodeStatus.COMPLETED);
         ClinicalDayCreateRequest req = new ClinicalDayCreateRequest(
-                episodeId, LocalDateTime.now(), LocalDateTime.now().plusHours(24));
+                episodeId, LocalDateTime.now(), LocalDateTime.now().plusHours(24), null);
 
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
 
@@ -156,7 +156,7 @@ class ClinicalDayServiceTest {
     @Test
     void createClinicalDay_whenOpenDayExists_throws() {
         ClinicalDayCreateRequest req = new ClinicalDayCreateRequest(
-                episodeId, LocalDateTime.now(), LocalDateTime.now().plusHours(24));
+                episodeId, LocalDateTime.now(), LocalDateTime.now().plusHours(24), null);
 
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
         when(clinicalDayRepository.findByEpisodeIdAndStatus(episodeId, ClinicalDayStatus.OPEN))
@@ -168,7 +168,7 @@ class ClinicalDayServiceTest {
 
     @Test
     void updateClinicalDay_withVersionMismatch_throws() {
-        ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(null, 999);
+        ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(null, null, 999);
         when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
 
         assertThatThrownBy(() -> clinicalDayService.updateClinicalDay(dayId, req, userId))
@@ -178,7 +178,7 @@ class ClinicalDayServiceTest {
     @Test
     void updateClinicalDay_whenSigned_throws() {
         testDay.setStatus(ClinicalDayStatus.DOCTOR_SIGNED);
-        ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(null, 0);
+        ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(null, null, 0);
         when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
 
         assertThatThrownBy(() -> clinicalDayService.updateClinicalDay(dayId, req, userId))

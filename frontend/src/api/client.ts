@@ -11,8 +11,8 @@ const client = axios.create({
 client.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
-      window.location.href = '/login';
+    if (err.response?.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
     return Promise.reject(err);
   }

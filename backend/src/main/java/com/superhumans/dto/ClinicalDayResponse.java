@@ -19,6 +19,8 @@ public class ClinicalDayResponse {
     Boolean doctorSigned;
     Boolean nurseSigned;
     LocalDateTime closedAt;
+    Double weightKg;
+    Double bmi;
     Long createdBy;
     LocalDateTime createdAt;
     Long updatedBy;

@@ -18,6 +18,10 @@ public class EpisodeResponse {
     LocalDateTime admissionDate;
     LocalDateTime dischargeDate;
     EpisodeStatus status;
+    Double heightCm;
+    String ward;
+    String bedNumber;
+    String admissionDiagnosis;
     Long createdBy;
     LocalDateTime createdAt;
     Long updatedBy;

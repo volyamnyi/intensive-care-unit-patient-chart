@@ -154,6 +154,13 @@ class FluidBalanceServiceTest {
 
         when(fluidBalanceRepository.saveAll(anyList())).thenReturn(List.of(fb1, fb2));
 
+        FluidBalanceResponse resp1 = FluidBalanceResponse.builder()
+                .hour(8).intake(500.0).output(500.0).balance(0.0).build();
+        FluidBalanceResponse resp2 = FluidBalanceResponse.builder()
+                .hour(10).intake(0.0).output(600.0).balance(-600.0).build();
+        when(fluidBalanceMapper.toResponse(fb1)).thenReturn(resp1);
+        when(fluidBalanceMapper.toResponse(fb2)).thenReturn(resp2);
+
         List<FluidBalanceResponse> results = fluidBalanceService.recalculate(clinicalDayId, userId);
 
         verify(fluidBalanceRepository).deleteByClinicalDayId(clinicalDayId);

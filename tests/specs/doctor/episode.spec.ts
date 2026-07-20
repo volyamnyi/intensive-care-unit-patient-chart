@@ -20,7 +20,7 @@ test.describe('Episode Page', () => {
     await expect(page).toHaveURL(/\/doctor\/episode\//);
 
     await expect(page.getByText('Показник / година')).toBeVisible();
-    await expect(page.queryAllByRole('tab')).toHaveLength(0);
+    await expect(page.getByRole('tab')).toHaveCount(0);
   });
 
   test('back button returns to doctor dashboard', async ({ page }) => {

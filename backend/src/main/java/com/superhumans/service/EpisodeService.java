@@ -40,6 +40,12 @@ public class EpisodeService {
         return episodeMapper.toResponse(episode, patientName);
     }
 
+    public static Double calculateBmi(Double weightKg, Double heightCm) {
+        if (weightKg == null || heightCm == null || heightCm <= 0) return null;
+        double heightM = heightCm / 100.0;
+        return Math.round(weightKg / (heightM * heightM) * 10.0) / 10.0;
+    }
+
     public List<EpisodeResponse> searchEpisodes(Long patientId, EpisodeStatus status) {
         List<Episode> episodes;
         if (patientId != null && status != null) {
@@ -90,6 +96,9 @@ public class EpisodeService {
         }
         if (request.getDischargeDate() != null) {
             episode.setDischargeDate(request.getDischargeDate());
+        }
+        if (request.getHeightCm() != null) {
+            episode.setHeightCm(request.getHeightCm());
         }
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);

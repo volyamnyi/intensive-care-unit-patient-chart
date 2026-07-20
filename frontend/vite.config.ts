@@ -12,6 +12,15 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    host: '0.0.0.0',
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8085',
+        changeOrigin: true,
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

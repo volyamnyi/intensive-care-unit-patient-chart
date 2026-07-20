@@ -37,4 +37,7 @@ public class ClinicalDay extends BaseEntity {
 
     @Column(name = "closed_at")
     LocalDateTime closedAt;
+
+    @Column(name = "weight_kg")
+    Double weightKg;
 }

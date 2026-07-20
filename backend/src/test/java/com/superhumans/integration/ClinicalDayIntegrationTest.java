@@ -46,13 +46,13 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createClinicalDay_createsSuccessfully() {
         EpisodeCreateRequest epReq = new EpisodeCreateRequest(
-                1020L, null, null, LocalDateTime.now());
+                1020L, null, null, LocalDateTime.now(), null, null, null, null);
         var epEntity = authEntity(epReq, getDoctorToken());
         var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
         UUID newEpisodeId = epRes.getBody().getId();
 
         ClinicalDayCreateRequest req = new ClinicalDayCreateRequest(
-                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
+                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1), null);
 
         var entity = authEntity(req, getDoctorToken());
 
@@ -68,18 +68,18 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createClinicalDay_whenOpenDayExists_returnsConflict() {
         EpisodeCreateRequest epReq = new EpisodeCreateRequest(
-                1021L, null, null, LocalDateTime.now());
+                1021L, null, null, LocalDateTime.now(), null, null, null, null);
         var epEntity = authEntity(epReq, getDoctorToken());
         var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
         UUID newEpisodeId = epRes.getBody().getId();
 
         ClinicalDayCreateRequest firstDay = new ClinicalDayCreateRequest(
-                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
+                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1), null);
         var firstEntity = authEntity(firstDay, getDoctorToken());
         restTemplate.exchange("/api/clinical-days", HttpMethod.POST, firstEntity, ClinicalDayResponse.class);
 
         ClinicalDayCreateRequest secondDay = new ClinicalDayCreateRequest(
-                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1));
+                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1), null);
 
         var entity = authEntity(secondDay, getDoctorToken());
 
@@ -100,7 +100,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
         int currentVersion = getRes.getBody().getVersion();
 
         ClinicalDayPatchRequest req = new ClinicalDayPatchRequest(
-                LocalDateTime.now().plusHours(36), currentVersion);
+                LocalDateTime.now().plusHours(36), null, currentVersion);
 
         var entity = authEntity(req, getDoctorToken());
 
