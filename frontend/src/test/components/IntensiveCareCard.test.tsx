@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup, fireEvent, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material';
 import IntensiveCareCard from '../../components/monitoring/IntensiveCareCard';
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
