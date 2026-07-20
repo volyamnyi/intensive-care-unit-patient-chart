@@ -136,10 +136,7 @@ describe('AdminPage', () => {
       expect(emptyCells.length).toBeGreaterThanOrEqual(2);
     });
   });
-<<<<<<< HEAD
 
-=======
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
   it('renders audit log rows from paginated response (content array) without crashing', async () => {
     mockAuditList.mockResolvedValue({
       data: {
@@ -154,11 +151,7 @@ describe('AdminPage', () => {
       },
     });
     renderPage();
-<<<<<<< HEAD
-    await userEvent.click(await screen.findByRole('button', { name: 'Переглянути журнал аудиту' }));
-=======
     await userEvent.click(await screen.findByRole('button', { name: 'Переглянути' }));
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
     await waitFor(() => {
       expect(screen.getByText('AUTH')).toBeInTheDocument();
       expect(screen.getByText('EPISODE')).toBeInTheDocument();
@@ -171,11 +164,7 @@ describe('AdminPage', () => {
       data: { content: [], totalElements: 0, totalPages: 0, number: 0, size: 10 },
     });
     renderPage();
-<<<<<<< HEAD
-    await userEvent.click(await screen.findByRole('button', { name: /журнал/i }));
-=======
     await userEvent.click(await screen.findByRole('button', { name: 'Переглянути' }));
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
     await waitFor(() => {
       expect(screen.getByText('Немає записів аудиту')).toBeInTheDocument();
     });

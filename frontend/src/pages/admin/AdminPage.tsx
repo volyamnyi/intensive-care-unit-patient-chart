@@ -39,11 +39,7 @@ export default function AdminPage() {
       const params: Record<string, string> = {};
       if (auditFilterEntity) params.entity = auditFilterEntity;
       const res = await auditApi.list(params);
-<<<<<<< HEAD
-      setAuditLogs(res.data.content ?? []);
-=======
       setAuditLogs(res.data.content ?? res.data);
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
     } finally {
       setAuditLoading(false);
     }

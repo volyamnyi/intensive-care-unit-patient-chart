@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-=======
-import React, { useEffect, useMemo, useRef, useState } from 'react';
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Tooltip, useTheme, CircularProgress, Accordion, AccordionSummary,
@@ -48,10 +44,8 @@ const LOSS_ROWS: { key: keyof HourlyRecord; label: string }[] = [
   { key: 'vomit', label: 'Дренаж' },
 ];
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
+
 interface CellProps {
   hour: number;
   rowKey: keyof HourlyRecord;
@@ -137,10 +131,6 @@ interface OrderCreateDialogProps {
 }
 
 function OrderCreateDialog({ open, onClose, onCreated, selectedDay, isLocked }: OrderCreateDialogProps) {
-<<<<<<< HEAD
-  const { t } = useTranslation();
-=======
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
   const [form, setForm] = useState({ drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '' });
   const [saving, setSaving] = useState(false);
 
@@ -169,11 +159,7 @@ function OrderCreateDialog({ open, onClose, onCreated, selectedDay, isLocked }: 
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-<<<<<<< HEAD
-      <DialogTitle sx={{ fontSize: 14 }}>{t('medicalOrders.formTitle') ?? 'Нове призначення'}</DialogTitle>
-=======
       <DialogTitle sx={{ fontSize: 14 }}>{'Нове призначення'}</DialogTitle>
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
       <DialogContent>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0 }}>
           <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Препарат" value={form.drugName} onChange={(e) => setForm({ ...form, drugName: e.target.value })} /></Box>
@@ -185,15 +171,9 @@ function OrderCreateDialog({ open, onClose, onCreated, selectedDay, isLocked }: 
         </Box>
       </DialogContent>
       <DialogActions>
-<<<<<<< HEAD
-        <Button onClick={onClose}>{t('medicalOrders.cancelButton') ?? 'Скасувати'}</Button>
-        <Button variant="contained" onClick={handleCreate} disabled={saving || !form.drugName}>
-          {t('medicalOrders.createButton') ?? 'Створити'}
-=======
         <Button onClick={onClose}>{'Скасувати'}</Button>
         <Button variant="contained" onClick={handleCreate} disabled={saving || !form.drugName}>
           {'Створити'}
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
         </Button>
       </DialogActions>
     </Dialog>
@@ -586,7 +566,6 @@ export default function IntensiveCareCard({
         </SidebarSection>
       </Stack>
 
-<<<<<<< HEAD
       <OrderCreateDialog
         open={orderDialogOpen}
         onClose={() => setOrderDialogOpen(false)}
@@ -594,27 +573,6 @@ export default function IntensiveCareCard({
         selectedDay={selectedDay}
         isLocked={isLocked}
       />
-=======
-      <Dialog open={orderDialog} onClose={() => setOrderDialog(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontSize: 14 }}>{'Нове призначення'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0 }}>
-            <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Препарат" value={orderForm.drugName} onChange={(e) => setOrderForm({ ...orderForm, drugName: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Доза" value={orderForm.dose} onChange={(e) => setOrderForm({ ...orderForm, dose: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Од." value={orderForm.unit} onChange={(e) => setOrderForm({ ...orderForm, unit: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Шлях" value={orderForm.route} onChange={(e) => setOrderForm({ ...orderForm, route: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: 'calc(50% - 4px)' }}><TextField fullWidth size="small" label="Частота" value={orderForm.frequency} onChange={(e) => setOrderForm({ ...orderForm, frequency: e.target.value })} /></Box>
-            <Box sx={{ flexBasis: '100%' }}><TextField fullWidth size="small" label="Початок" type="datetime-local" value={orderForm.startTime} onChange={(e) => setOrderForm({ ...orderForm, startTime: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} /></Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOrderDialog(false)}>{'Скасувати'}</Button>
-          <Button variant="contained" onClick={createOrder} disabled={savingOrder || !orderForm.drugName}>
-            {'Створити'}
-          </Button>
-        </DialogActions>
-      </Dialog>
->>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
     </Box>
   );
 }
