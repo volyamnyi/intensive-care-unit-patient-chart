@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, TextField, Button, MenuItem, Stack, Paper,
 } from '@mui/material';
@@ -12,7 +11,13 @@ const MUCOSA = ['normal', 'dry', 'moist', 'pale', 'cyanotic'];
 const CIRCULATION = ['normal', 'weak', 'bound', 'cold'];
 const BOWEL = ['normal', 'hypoactive', 'absent', 'hyperactive'];
 
-const tkey = (ns: string, v: string) => `${ns}.${v}`;
+const optionLabels: Record<string, string> = {
+  alert: 'Ясна', drowsy: 'Сонливість', sopor: 'Сопор', coma: 'Кома', sedation: 'Седація',
+  normal: 'Норма', dry: 'Суха', cyanotic: 'Ціаноз', jaundiced: 'Жовтяниця', pale: 'Бліда', rash: 'Висип', marbling: 'Мармуровість',
+  none: 'Немає', mild: 'Легкий', moderate: 'Помірний', severe: 'Тяжкий',
+  moist: 'Волога', weak: 'Слабкий', bound: 'Напружений', cold: 'Холодна',
+  hypoactive: 'Гіпоактивна', absent: 'Відсутня', hyperactive: 'Гіперактивна',
+};
 
 interface PatientStatePanelProps {
   clinicalDayId: string;
@@ -24,7 +29,6 @@ interface PatientStatePanelProps {
 export default function PatientStatePanel({
   assessments, isLocked, onCreate,
 }: PatientStatePanelProps) {
-  const { t } = useTranslation();
   const [form, setForm] = useState({
     recordHour: new Date().getHours(),
     consciousness: 'alert',
@@ -64,7 +68,7 @@ export default function PatientStatePanel({
   const SelectField = ({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (v: string) => void }) => (
     <TextField fullWidth size="small" select label={label} value={value} onChange={(e) => onChange(e.target.value)} sx={{ mb: 1 }}>
       {options.map((opt) => (
-        <MenuItem key={opt} value={opt}>{t(tkey('patientState', opt))}</MenuItem>
+        <MenuItem key={opt} value={opt}>{optionLabels[opt] || opt}</MenuItem>
       ))}
     </TextField>
   );
@@ -73,24 +77,24 @@ export default function PatientStatePanel({
     <Box>
       {!isLocked && (
         <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
-          <TextField fullWidth size="small" type="number" label={t('patientState.hourLabel')} value={form.recordHour}
+          <TextField fullWidth size="small" type="number" label={'Година'} value={form.recordHour}
             onChange={(e) => set('recordHour', e.target.value)} sx={{ mb: 1 }} />
-          <SelectField label={t('patientState.consciousnessLabel')} options={CONSCIOUSNESS} value={form.consciousness} onChange={(v) => set('consciousness', v)} />
-          <SelectField label={t('patientState.skinLabel')} options={SKIN} value={form.skin} onChange={(v) => set('skin', v)} />
-          <SelectField label={t('patientState.edemaLabel')} options={EDEMA} value={form.edema} onChange={(v) => set('edema', v)} />
-          <SelectField label={t('patientState.mucousLabel')} options={MUCOSA} value={form.mucousMembranes} onChange={(v) => set('mucousMembranes', v)} />
-          <SelectField label={t('patientState.circulationLabel')} options={CIRCULATION} value={form.peripheralCirculation} onChange={(v) => set('peripheralCirculation', v)} />
-          <SelectField label={t('patientState.bowelLabel')} options={BOWEL} value={form.bowelSounds} onChange={(v) => set('bowelSounds', v)} />
-          <TextField fullWidth size="small" label={t('patientState.generalLabel')} value={form.generalCondition}
+          <SelectField label={'Свідомість'} options={CONSCIOUSNESS} value={form.consciousness} onChange={(v) => set('consciousness', v)} />
+          <SelectField label={'Шкіра'} options={SKIN} value={form.skin} onChange={(v) => set('skin', v)} />
+          <SelectField label={'Набряки'} options={EDEMA} value={form.edema} onChange={(v) => set('edema', v)} />
+          <SelectField label={'Слизові'} options={MUCOSA} value={form.mucousMembranes} onChange={(v) => set('mucousMembranes', v)} />
+          <SelectField label={'Периферійний кровообіг'} options={CIRCULATION} value={form.peripheralCirculation} onChange={(v) => set('peripheralCirculation', v)} />
+          <SelectField label={'Перистальтика'} options={BOWEL} value={form.bowelSounds} onChange={(v) => set('bowelSounds', v)} />
+          <TextField fullWidth size="small" label={'Загальний стан'} value={form.generalCondition}
             onChange={(e) => set('generalCondition', e.target.value)} sx={{ mb: 1 }} />
-          <TextField fullWidth size="small" label={t('patientState.notesLabel')} value={form.additionalNotes}
+          <TextField fullWidth size="small" label={'Примітки'} value={form.additionalNotes}
             onChange={(e) => set('additionalNotes', e.target.value)} sx={{ mb: 1 }} multiline minRows={2} />
-          <Button variant="contained" size="small" onClick={handleAdd} disabled={saving}>{t('patientState.addButton')}</Button>
+          <Button variant="contained" size="small" onClick={handleAdd} disabled={saving}>{'Додати'}</Button>
         </Paper>
       )}
 
       {assessments.length === 0 ? (
-        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('patientState.empty')}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає оцінок'}</Typography>
       ) : (
         <Stack spacing={0.75}>
           {assessments.map((a) => (
@@ -99,9 +103,9 @@ export default function PatientStatePanel({
                 <Typography sx={{ fontWeight: 600 }}>{a.recordHour}:00</Typography>
                 <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
                   {[
-                    `${t('patientState.consciousnessLabel')}: ${t(tkey('patientState', a.consciousness))}`,
-                    `${t('patientState.skinLabel')}: ${t(tkey('patientState', a.skin))}`,
-                    `${t('patientState.edemaLabel')}: ${t(tkey('patientState', a.edema))}`,
+                    `Свідомість: ${optionLabels[a.consciousness] || a.consciousness}`,
+                    `Шкіра: ${optionLabels[a.skin] || a.skin}`,
+                    `Набряки: ${optionLabels[a.edema] || a.edema}`,
                   ].join(' · ')}
                   {a.generalCondition ? ` · ${a.generalCondition}` : ''}
                 </Typography>

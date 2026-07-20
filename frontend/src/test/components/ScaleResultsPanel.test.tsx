@@ -64,7 +64,7 @@ describe('ScaleResultsPanel', () => {
 
   it('shows "Немає даних шкал" when no scales and no results', () => {
     renderPanel({ availableScales: [], results: [] });
-    expect(screen.getByText('Немає даних шкал')).toBeInTheDocument();
+    expect(screen.getByText('Немає результатів')).toBeInTheDocument();
   });
 
   it('can add a new scale result', async () => {

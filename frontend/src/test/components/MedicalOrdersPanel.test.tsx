@@ -87,7 +87,7 @@ describe('MedicalOrdersPanel', () => {
     expect(screen.getByText('Дофамін')).toBeInTheDocument();
     expect(screen.getByText('5 мкг/кг/хв')).toBeInTheDocument();
     expect(screen.getByText('в/в')).toBeInTheDocument();
-    expect(screen.getByText('Активне')).toBeInTheDocument();
+    expect(screen.getByText('Активний')).toBeInTheDocument();
   });
 
   it('shows "Немає призначень" empty state', () => {

@@ -178,15 +178,15 @@ describe('PatientDayPage', () => {
       expect(screen.getAllByText('Петренко Іван').length).toBeGreaterThan(0);
     });
     await waitFor(() => {
-      expect(screen.getByText(/Доба №1/)).toBeInTheDocument();
+      expect(screen.getAllByText(/День 1/).length).toBeGreaterThan(0);
     });
   });
 
   it('renders clinical day timeline', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('Доба 1')).toBeInTheDocument();
-      expect(screen.getByText('Доба 2')).toBeInTheDocument();
+      expect(screen.getAllByText(/День 1/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/День 2/).length).toBeGreaterThan(0);
     });
   });
 
@@ -197,7 +197,7 @@ describe('PatientDayPage', () => {
       expect(screen.getByText(/Показник \/ година/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Втрати/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Призначення/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Баланс рідини/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Баланс/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -217,38 +217,38 @@ describe('PatientDayPage', () => {
     });
   });
 
-  it('shows sign dialog when "Підписати добу" is clicked', async () => {
+  it('shows sign dialog when "Підписати" is clicked', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('Підписати добу')).toBeInTheDocument();
+      expect(screen.getByText('Підписати')).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByText('Підписати добу'));
+    await userEvent.click(screen.getByText('Підписати'));
     await waitFor(() => {
-      expect(screen.getByText('Підписання доби №1')).toBeInTheDocument();
+      expect(screen.getByText('Підписання дня 1')).toBeInTheDocument();
     });
   });
 
   it('calls signDoctor on sign dialog confirm', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('Підписати добу')).toBeInTheDocument();
-    });
-    await userEvent.click(screen.getByText('Підписати добу'));
-    await waitFor(() => {
       expect(screen.getByText('Підписати')).toBeInTheDocument();
     });
     await userEvent.click(screen.getByText('Підписати'));
+    await waitFor(() => {
+      expect(screen.getByText('Підписання дня 1')).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getAllByText('Підписати')[1]);
     await waitFor(() => {
       expect(mockSignDoctor).toHaveBeenCalledWith('day-1', { userId: 1 });
     });
   });
 
-  it('navigates back on "Назад" click', async () => {
+  it('navigates back on back button click', async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('Назад')).toBeInTheDocument();
+      expect(screen.getByText('← Назад до пацієнтів')).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByText('Назад'));
+    await userEvent.click(screen.getByText('← Назад до пацієнтів'));
     expect(mockNavigate).toHaveBeenCalledWith('/doctor');
   });
 

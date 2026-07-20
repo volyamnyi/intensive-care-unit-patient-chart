@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Typography } from '@mui/material';
 import type { AuditLog } from '../../types';
 
@@ -15,14 +14,12 @@ const actionColors: Record<string, 'default' | 'success' | 'error' | 'info' | 'w
 };
 
 export default function AuditLogTable({ logs, loading }: AuditLogTableProps) {
-  const { t } = useTranslation();
-
   if (loading) {
-    return <Typography color="text.secondary">{t('auditLog.loading')}</Typography>;
+    return <Typography color="text.secondary">Завантаження...</Typography>;
   }
 
   if (logs.length === 0) {
-    return <Typography color="text.secondary">{t('auditLog.empty')}</Typography>;
+    return <Typography color="text.secondary">Немає записів аудиту</Typography>;
   }
 
   return (
@@ -30,11 +27,11 @@ export default function AuditLogTable({ logs, loading }: AuditLogTableProps) {
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>{t('auditLog.tableHeaders.timestamp')}</TableCell>
-            <TableCell>{t('auditLog.tableHeaders.user')}</TableCell>
-            <TableCell>{t('auditLog.tableHeaders.entity')}</TableCell>
-            <TableCell>{t('auditLog.tableHeaders.action')}</TableCell>
-            <TableCell>{t('auditLog.tableHeaders.changes')}</TableCell>
+            <TableCell>Час</TableCell>
+            <TableCell>Користувач</TableCell>
+            <TableCell>Сутність</TableCell>
+            <TableCell>Дія</TableCell>
+            <TableCell>Зміни</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

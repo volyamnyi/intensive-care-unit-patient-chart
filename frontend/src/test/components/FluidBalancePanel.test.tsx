@@ -50,7 +50,7 @@ describe('FluidBalancePanel', () => {
 
   it('shows daily balance and cumulative balance', () => {
     renderPanel({ items: mockItems });
-    const balances = screen.getAllByText(/\+?50\s*мл/);
+    const balances = screen.getAllByText(/\b50\s*ml/);
     expect(balances).toHaveLength(2);
   });
 
@@ -68,13 +68,13 @@ describe('FluidBalancePanel', () => {
       },
     ];
     renderPanel({ items: negativeItems });
-    const allBalances = screen.getAllByText(/-400\s*мл/);
+    const allBalances = screen.getAllByText(/-400\s*ml/);
     expect(allBalances).toHaveLength(2);
   });
 
   it('colors positive daily balance green', () => {
     renderPanel({ items: mockItems });
-    const allBalances = screen.getAllByText(/\+?50\s*мл/);
+    const allBalances = screen.getAllByText(/\b50\s*ml/);
     expect(allBalances).toHaveLength(2);
   });
 

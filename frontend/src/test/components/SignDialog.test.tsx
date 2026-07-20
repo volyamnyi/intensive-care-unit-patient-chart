@@ -23,27 +23,27 @@ describe('SignDialog', () => {
 
   it('opens when open=true', () => {
     renderDialog({ open: true });
-    expect(screen.getByText('Підписання доби №1')).toBeInTheDocument();
+    expect(screen.getByText('Підписання дня 1')).toBeInTheDocument();
   });
 
   it('does not render when open=false', () => {
     renderDialog({ open: false });
-    expect(screen.queryByText('Підписання доби №1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Підписання дня 1')).not.toBeInTheDocument();
   });
 
   it('shows day number in title', () => {
     renderDialog({ open: true, dayNumber: 3 });
-    expect(screen.getByText('Підписання доби №3')).toBeInTheDocument();
+    expect(screen.getByText('Підписання дня 3')).toBeInTheDocument();
   });
 
   it('shows role-specific text for doctor', () => {
     renderDialog({ open: true, role: 'DOCTOR' });
-    expect(screen.getByText(/лікаря/)).toBeInTheDocument();
+    expect(screen.getByText(/як лікар/)).toBeInTheDocument();
   });
 
   it('shows role-specific text for nurse', () => {
     renderDialog({ open: true, role: 'NURSE' });
-    const matches = screen.getAllByText(/медсестри/);
+    const matches = screen.getAllByText(/як медсестра/);
     expect(matches.length).toBeGreaterThan(0);
   });
 

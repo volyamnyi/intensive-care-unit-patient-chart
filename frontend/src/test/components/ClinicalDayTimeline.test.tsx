@@ -83,15 +83,15 @@ describe('ClinicalDayTimeline', () => {
 
   it('renders day chips for each clinical day', () => {
     renderTimeline({ days: mockDays });
-    expect(screen.getByText('Доба 1')).toBeInTheDocument();
-    expect(screen.getByText('Доба 2')).toBeInTheDocument();
-    expect(screen.getByText('Доба 3')).toBeInTheDocument();
+    expect(screen.getByText('День 1')).toBeInTheDocument();
+    expect(screen.getByText('День 2')).toBeInTheDocument();
+    expect(screen.getByText('День 3')).toBeInTheDocument();
   });
 
   it('highlights the selected day with a unique style', () => {
     renderTimeline({ days: mockDays, selectedDayId: 'day-2' });
-    const day2 = screen.getByText('Доба 2').closest('div');
-    const day1 = screen.getByText('Доба 1').closest('div');
+    const day2 = screen.getByText('День 2').closest('div');
+    const day1 = screen.getByText('День 1').closest('div');
     expect(day2).toHaveStyle('border: 2px solid rgb(255, 95, 51)');
     expect(day1).not.toHaveStyle('border: 2px solid rgb(255, 95, 51)');
   });
@@ -99,7 +99,7 @@ describe('ClinicalDayTimeline', () => {
   it('calls onSelectDay when a day chip is clicked', async () => {
     const onSelectDay = vi.fn();
     renderTimeline({ days: mockDays, onSelectDay });
-    await userEvent.click(screen.getByText('Доба 2'));
+    await userEvent.click(screen.getByText('День 2'));
     expect(onSelectDay).toHaveBeenCalledWith(mockDays[1]);
   });
 

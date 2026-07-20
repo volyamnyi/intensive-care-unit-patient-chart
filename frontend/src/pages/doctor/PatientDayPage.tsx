@@ -4,14 +4,12 @@ import { Box, Button, Alert, CircularProgress, Dialog, DialogTitle, DialogConten
 import { ArrowBack, LockOpen, Download } from '@mui/icons-material';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
-import { useTranslation } from 'react-i18next';
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard';
 import NurseDashboard from '../../components/monitoring/NurseDashboard';
 import SignDialog from '../../components/common/SignDialog';
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
 
 export default function PatientDayPage() {
-  const { t } = useTranslation();
   const { episodeId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -118,7 +116,7 @@ export default function PatientDayPage() {
   };
 
   if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
-  if (!episode) return <Alert severity="error">{t('doctor.patientDay.episodeNotFound')}</Alert>;
+  if (!episode) return <Alert severity="error">Епізод не знайдено</Alert>;
 
   const isNurse = user?.role === 'NURSE';
   const isDoctor = user?.role === 'DOCTOR' || user?.role === 'HEAD_OF_DEPARTMENT';
@@ -146,7 +144,7 @@ export default function PatientDayPage() {
           onClick={() => navigate(isNurse ? '/nurse' : '/doctor')}
           sx={{ color: theme.palette.text.secondary, fontSize: 13 }}
         >
-          {t('doctor.patientDay.backButton')}
+          {isNurse ? '← Назад до пацієнтів' : '← Назад до пацієнтів'}
         </Button>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           {selectedDay && selectedDay.status === 'CLOSED' && (
@@ -156,12 +154,12 @@ export default function PatientDayPage() {
           )}
           {canReopen && (
             <Button size="small" variant="outlined" color="warning" startIcon={<LockOpen />} onClick={() => setReopenDialogOpen(true)}>
-              {t('doctor.patientDay.reopenButton')}
+              Відкрити повторно
             </Button>
           )}
           {canSign && (
             <Button size="small" variant="contained" onClick={() => setSignDialogOpen(true)} sx={{ fontWeight: 700 }}>
-              {t('doctor.patientDay.signOffButton')}
+              Підписати
             </Button>
           )}
         </Box>
@@ -201,14 +199,14 @@ export default function PatientDayPage() {
       )}
 
       <Dialog open={reopenDialogOpen} onClose={() => setReopenDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('doctor.patientDay.reopenDialog.title', { dayNumber: selectedDay?.dayNumber })}</DialogTitle>
+        <DialogTitle>Повторне відкриття дня {selectedDay?.dayNumber}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            {t('doctor.patientDay.reopenDialog.text')}
+            Ви впевнені, що хочете повторно відкрити цей клінічний день? Це скасує всі підписи.
           </Typography>
           <TextField
             autoFocus
-            label={t('doctor.patientDay.reopenDialog.reasonLabel')}
+            label="Причина повторного відкриття"
             fullWidth
             multiline
             rows={3}
@@ -217,9 +215,9 @@ export default function PatientDayPage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReopenDialogOpen(false)}>{t('doctor.patientDay.reopenDialog.cancelButton')}</Button>
+          <Button onClick={() => setReopenDialogOpen(false)}>Скасувати</Button>
           <Button onClick={handleReopen} variant="contained" color="warning" disabled={!reopenReason.trim()}>
-            {t('doctor.patientDay.reopenDialog.reopenButton')}
+            Відкрити повторно
           </Button>
         </DialogActions>
       </Dialog>

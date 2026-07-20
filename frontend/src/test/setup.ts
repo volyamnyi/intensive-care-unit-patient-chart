@@ -1,5 +1,5 @@
-import { vi } from 'vitest';
 import '@testing-library/jest-dom';
+<<<<<<< HEAD
 
 vi.mock('react-i18next', () => {
   const uk: Record<string, unknown> = {
@@ -47,3 +47,5 @@ vi.mock('react-i18next', () => {
     I18nextProvider: ({ children }: { children?: React.ReactNode }) => children,
   };
 });
+=======
+>>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)

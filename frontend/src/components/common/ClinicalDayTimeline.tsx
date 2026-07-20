@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { Box, Typography, useTheme } from '@mui/material';
 import type { ClinicalDay } from '../../types';
 
@@ -32,9 +31,8 @@ function getStatusBorderColor(theme: import('@mui/material').Theme): Record<stri
 
 export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }: ClinicalDayTimelineProps) {
   const theme = useTheme();
-  const { t } = useTranslation();
   if (days.length === 0) {
-    return <Typography color="text.secondary">{t('clinicalDayTimeline.empty')}</Typography>;
+    return <Typography color="text.secondary">Немає клінічних днів</Typography>;
   }
 
   return (
@@ -61,7 +59,7 @@ export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }
             }}
           >
             <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              {t('clinicalDayTimeline.dayLabel', { dayNumber: day.dayNumber })}
+              День {day.dayNumber}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {new Date(day.startDateTime).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })}

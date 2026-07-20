@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { Dialog, DialogTitle, DialogContent, Typography, DialogActions, Button } from '@mui/material';
 
 interface SignDialogProps {
@@ -11,28 +10,28 @@ interface SignDialogProps {
 }
 
 export default function SignDialog({ open, onClose, onConfirm, dayNumber, signing, role }: SignDialogProps) {
-  const { t } = useTranslation();
+  const roleLabel = role === 'NURSE' ? 'медсестра' : 'лікар';
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle sx={{ fontFamily: '"Rubik", sans-serif' }}>
-        {t('signDialog.title', { dayNumber })}
+        {`Підписання дня ${dayNumber}`}
       </DialogTitle>
       <DialogContent>
         <Typography>
-          {t('signDialog.text', { role: t(role === 'NURSE' ? 'signDialog.roleNurse' : 'signDialog.roleDoctor') })}
+          {`Підтвердьте підписання клінічного дня як ${roleLabel}`}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {role === 'NURSE'
-            ? t('signDialog.nurseInfo')
-            : t('signDialog.doctorInfo')}
+            ? 'Після підписання медсестрою день буде доступний для підписання лікарем.'
+            : 'Після підписання лікарем клінічний день буде закрито.'}
         </Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('signDialog.cancelButton')}</Button>
+        <Button onClick={onClose}>{'Скасувати'}</Button>
         <Button
           variant="contained" onClick={onConfirm} disabled={signing}
         >
-          {signing ? t('signDialog.signingButton') : t('signDialog.signButton')}
+          {signing ? 'Підписання...' : 'Підписати'}
         </Button>
       </DialogActions>
     </Dialog>

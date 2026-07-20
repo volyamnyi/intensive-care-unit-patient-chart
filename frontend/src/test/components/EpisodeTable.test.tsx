@@ -65,9 +65,9 @@ describe('EpisodeTable', () => {
     expect(screen.getByText('Завантаження...')).toBeInTheDocument();
   });
 
-  it('shows "Немає епізодів" empty state when not loading', () => {
+  it('shows "Немає даних" empty state when not loading', () => {
     renderTable({ episodes: [], loading: false });
-    expect(screen.getByText('Немає епізодів')).toBeInTheDocument();
+    expect(screen.getByText('Немає даних')).toBeInTheDocument();
   });
 
   it('renders episode rows with patient name', () => {

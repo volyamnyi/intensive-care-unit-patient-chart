@@ -24,25 +24,25 @@ function renderForm(props: Partial<Parameters<typeof VitalSignsForm>[0]> = {}) {
 describe('VitalSignsForm', () => {
   it('renders all vital sign input fields', () => {
     renderForm();
-    expect(screen.getByLabelText('АТ сист (мм.рт.ст)')).toBeInTheDocument();
-    expect(screen.getByLabelText('АТ діас (мм.рт.ст)')).toBeInTheDocument();
-    expect(screen.getByLabelText('ЧСС (в 1 хв)')).toBeInTheDocument();
-    expect(screen.getByLabelText('SpO2 (%)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Темп. тіла (°С)')).toBeInTheDocument();
-    expect(screen.getByLabelText('ЦВТ (мм.вод.ст)')).toBeInTheDocument();
-    expect(screen.getByLabelText('ЧД (в 1 хв)')).toBeInTheDocument();
+    expect(screen.getByLabelText('АТ сист. (мм рт.ст.)')).toBeInTheDocument();
+    expect(screen.getByLabelText('АТ діас. (мм рт.ст.)')).toBeInTheDocument();
+    expect(screen.getByLabelText('ЧСС (уд/хв)')).toBeInTheDocument();
+    expect(screen.getByLabelText('SpO₂ (%)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Температура (°C)')).toBeInTheDocument();
+    expect(screen.getByLabelText('ЦВТ (мм рт.ст.)')).toBeInTheDocument();
+    expect(screen.getByLabelText('ЧД (дих/хв)')).toBeInTheDocument();
     expect(screen.getByLabelText('Свідомість')).toBeInTheDocument();
-    expect(screen.getByLabelText('etCO2 (мм.рт.ст)')).toBeInTheDocument();
-    expect(screen.getByLabelText('FiO2 (%)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Діурез (мл/год)')).toBeInTheDocument();
+    expect(screen.getByLabelText('EtCO₂ (мм рт.ст.)')).toBeInTheDocument();
+    expect(screen.getByLabelText('FiO₂ (%)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Діурез (мл)')).toBeInTheDocument();
     expect(screen.getByLabelText('Дренаж (мл)')).toBeInTheDocument();
     expect(screen.getByLabelText('Біль (0-10)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Нотатки')).toBeInTheDocument();
+    expect(screen.getByLabelText('Примітки')).toBeInTheDocument();
   });
 
   it('shows save button', () => {
     renderForm();
-    expect(screen.getByText('Зберегти показники')).toBeInTheDocument();
+    expect(screen.getByText('Зберегти')).toBeInTheDocument();
   });
 
   it('disables save button when saving', () => {
@@ -53,14 +53,14 @@ describe('VitalSignsForm', () => {
   it('calls onSave when save button clicked', async () => {
     const onSave = vi.fn();
     renderForm({ onSave });
-    await userEvent.click(screen.getByText('Зберегти показники'));
+    await userEvent.click(screen.getByText('Зберегти'));
     expect(onSave).toHaveBeenCalled();
   });
 
   it('calls onChange when a numeric field is edited', async () => {
     const onChange = vi.fn();
     renderForm({ onChange });
-    const input = screen.getByLabelText('ЧСС (в 1 хв)');
+    const input = screen.getByLabelText('ЧСС (уд/хв)');
     await userEvent.type(input, '80');
     expect(onChange).toHaveBeenCalled();
   });

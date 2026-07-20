@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { Box, Typography, Button, Paper, useTheme, Divider, Chip } from '@mui/material';
 import type { FluidBalanceItem } from '../../types';
 
@@ -29,7 +28,6 @@ interface FluidBalancePanelProps {
 
 export default function FluidBalancePanel({ items, onRecalculate, loading }: FluidBalancePanelProps) {
   const theme = useTheme();
-  const { t } = useTranslation();
   const isDark = theme.palette.mode === 'dark';
   const totalIntake = items.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = items.reduce((s, i) => s + (i.output || 0), 0);
@@ -57,7 +55,7 @@ export default function FluidBalancePanel({ items, onRecalculate, loading }: Flu
       border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)',
     }}>
       <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>
-        {t('fluidBalance.title')}
+        Водний баланс
         <Chip label="Auto" size="small" color="info" sx={{ ml: 1, fontSize: 9, fontWeight: 700, height: 18 }} />
       </Typography>
 
@@ -65,7 +63,7 @@ export default function FluidBalancePanel({ items, onRecalculate, loading }: Flu
         {/* Intake breakdown */}
         <Box sx={{ flex: 1, minWidth: 180 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13, mb: 0.5, color: '#4CAF50' }}>
-            {t('fluidBalance.intake')} — {totalIntake} ml
+            Надходження — {totalIntake} ml
           </Typography>
           {intakeByCategory && renderCategoryList(intakeByCategory, INTAKE_LABELS)}
         </Box>
@@ -73,7 +71,7 @@ export default function FluidBalancePanel({ items, onRecalculate, loading }: Flu
         {/* Output breakdown */}
         <Box sx={{ flex: 1, minWidth: 180 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13, mb: 0.5, color: '#FF9100' }}>
-            {t('fluidBalance.output')} — {totalOutput} ml
+            Виведення — {totalOutput} ml
           </Typography>
           {outputByCategory && renderCategoryList(outputByCategory, OUTPUT_LABELS)}
         </Box>
@@ -82,20 +80,20 @@ export default function FluidBalancePanel({ items, onRecalculate, loading }: Flu
       <Divider sx={{ my: 1.5 }} />
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-        <Typography variant="body2" color="text.secondary">{t('fluidBalance.dailyBalance')}</Typography>
+        <Typography variant="body2" color="text.secondary">Денний баланс</Typography>
         <Typography sx={{ fontWeight: 700 }} color={dailyBalance < 0 ? '#FF5252' : '#4CAF50'}>
-          {dailyBalance >= 0 ? '+' : ''}{dailyBalance} {t('fluidBalance.unit')}
+          {dailyBalance >= 0 ? '+' : ''}{dailyBalance} ml
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography variant="body2" color="text.secondary">{t('fluidBalance.cumulativeBalance')}</Typography>
+        <Typography variant="body2" color="text.secondary">Кумулятивний баланс</Typography>
         <Typography sx={{ fontWeight: 700 }} color={cumulativeBalance < 0 ? '#FF5252' : '#4CAF50'}>
-          {cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance} {t('fluidBalance.unit')}
+          {cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance} ml
         </Typography>
       </Box>
       {onRecalculate && (
         <Button size="small" variant="outlined" onClick={onRecalculate} disabled={loading}>
-          {loading ? t('fluidBalance.calculatingButton') : t('fluidBalance.recalculateButton')}
+          {loading ? 'Розрахунок...' : 'Перерахувати'}
         </Button>
       )}
     </Paper>

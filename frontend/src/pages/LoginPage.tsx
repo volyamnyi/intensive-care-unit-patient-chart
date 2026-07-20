@@ -3,11 +3,9 @@ import { Box, Card, CardContent, TextField, Button, Typography, Alert, InputAdor
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../services/AuthContext';
 import { useThemeMode } from '../styles/ThemeContext';
-import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
-  const { t } = useTranslation();
-  useEffect(() => { document.title = t('login.title'); }, []);
+  useEffect(() => { document.title = 'ВАІТ — Вхід'; }, []);
   const { login } = useAuth();
   const { mode } = useThemeMode();
   const isDark = mode === 'dark';
@@ -23,7 +21,7 @@ export default function LoginPage() {
       await login({ login: loginField, password });
       window.location.href = '/';
     } catch {
-      setError(t('login.error'));
+      setError('Невірний логін або пароль');
     }
   };
 
@@ -55,17 +53,17 @@ export default function LoginPage() {
             <Box
               component="img"
               src={isDark ? '/superhumans-white.svg' : '/superhumans.svg'}
-              alt={t('login.superhumansAlt')}
+              alt="Superhumans"
               sx={{ height: 56, width: 'auto', mx: 'auto', mb: 2.5, display: 'block' }}
             />
             <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', mb: 0.5, fontWeight: 800, color: isDark ? '#FFFFFF' : '#1F1F1F', letterSpacing: '-0.5px' }}>
-              {t('common.appTitle')}
+              ВАІТ
             </Typography>
             <Typography variant="body2" sx={{ color: isDark ? '#A0A0A0' : '#5A5A5A', fontSize: 13, mb: 0.5 }}>
-              {t('common.appSubtitle')}
+              Карта інтенсивної терапії
             </Typography>
             <Typography variant="body2" sx={{ color: '#FF8C66', fontSize: 12, fontWeight: 600 }}>
-              {t('login.heading')}
+              Вхід до системи
             </Typography>
           </Box>
 
@@ -73,12 +71,12 @@ export default function LoginPage() {
 
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
-              fullWidth label={t('login.username')} value={loginField}
+              fullWidth label="Логін" value={loginField}
               onChange={(e) => setLoginField(e.target.value)}
               sx={{ mb: 2 }} required
             />
             <TextField
-              fullWidth label={t('login.password')}
+              fullWidth label="Пароль"
               type={showPassword ? 'text' : 'password'} value={password}
               onChange={(e) => setPassword(e.target.value)}
               sx={{ mb: 3.5 }} required
@@ -97,7 +95,7 @@ export default function LoginPage() {
             <Button
               fullWidth variant="contained" size="large" type="submit"
             >
-              {t('login.submit')}
+              Увійти
             </Button>
           </Box>
         </CardContent>

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, TextField, Button, MenuItem, Chip, Stack,
   Paper,
@@ -42,7 +41,6 @@ interface LabResultsPanelProps {
 export default function LabResultsPanel({
   labs, isLocked, onCreate,
 }: LabResultsPanelProps) {
-  const { t } = useTranslation();
   const [selectedCode, setSelectedCode] = useState('');
   const [result, setResult] = useState('');
   const [saving, setSaving] = useState(false);
@@ -74,7 +72,7 @@ export default function LabResultsPanel({
       {!isLocked && (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1.5, alignItems: 'flex-start' }}>
           <TextField
-            select size="small" label={t('labResults.testLabel')}
+            select size="small" label={'Тест'}
             value={selectedCode} onChange={(e) => setSelectedCode(e.target.value)}
             sx={{ minWidth: 200 }}
           >
@@ -84,22 +82,22 @@ export default function LabResultsPanel({
           </TextField>
           {selected && (
             <Typography sx={{ fontSize: 11, color: 'text.secondary', alignSelf: 'center' }}>
-              {t('labResults.reference', { min: String(selected.min ?? '—'), max: String(selected.max ?? '—'), unit: selected.unit })}
+              {`Норма: ${selected.min ?? '—'}–${selected.max ?? '—'} ${selected.unit}`}
             </Typography>
           )}
           <TextField
-            size="small" type="number" label={t('labResults.resultLabel')}
+            size="small" type="number" label={'Результат'}
             value={result} onChange={(e) => setResult(e.target.value)}
             sx={{ width: 130 }}
           />
           <Button variant="contained" size="small" onClick={handleAdd} disabled={saving || !selected || result.trim() === ''} sx={{ mt: 0.5 }}>
-            {t('labResults.addButton')}
+            {'Додати'}
           </Button>
         </Stack>
       )}
 
       {labs.length === 0 ? (
-        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('labResults.empty')}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає лабораторних досліджень'}</Typography>
       ) : (
         <Stack spacing={0.75}>
           {labs.map((l) => (
@@ -111,14 +109,10 @@ export default function LabResultsPanel({
               <Box sx={{ minWidth: 0 }}>
                 <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
                   {l.testName}
-                  {l.isAbnormal && <Chip label={t('labResults.abnormal')} color="error" size="small" sx={{ ml: 1, height: 18, fontSize: 9, fontWeight: 700 }} />}
+                  {l.isAbnormal && <Chip label={'Аномалія'} color="error" size="small" sx={{ ml: 1, height: 18, fontSize: 9, fontWeight: 700 }} />}
                 </Typography>
                 <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                  {t('labResults.valueWithRef', {
-                    result: l.result,
-                    unit: l.unit,
-                    ref: (l.referenceMin ?? l.referenceMax) != null ? ` (${l.referenceMin ?? '—'}–${l.referenceMax ?? '—'} ${l.unit})` : '',
-                  })}
+                  {`${l.result} ${l.unit}${(l.referenceMin ?? l.referenceMax) != null ? ` (${l.referenceMin ?? '—'}–${l.referenceMax ?? '—'} ${l.unit})` : ''}`}
                 </Typography>
               </Box>
             </Paper>

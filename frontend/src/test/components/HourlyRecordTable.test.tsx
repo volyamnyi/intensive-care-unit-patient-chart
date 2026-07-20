@@ -39,11 +39,10 @@ describe('HourlyRecordTable', () => {
   it('renders table header columns', () => {
     renderTable();
     expect(screen.getByText('Година')).toBeInTheDocument();
-    expect(screen.getByText('АТ сист')).toBeInTheDocument();
-    expect(screen.getByText('АТ діас')).toBeInTheDocument();
-    expect(screen.getByText('ЧСС')).toBeInTheDocument();
-    expect(screen.getByText('SpO2')).toBeInTheDocument();
-    expect(screen.getByText('Темп')).toBeInTheDocument();
+    expect(screen.getByText('АТ сист.')).toBeInTheDocument();
+    expect(screen.getByText('АТ діас.')).toBeInTheDocument();
+    expect(screen.getByText('SpO₂')).toBeInTheDocument();
+    expect(screen.getByText('Темп.')).toBeInTheDocument();
     expect(screen.getByText('ЦВТ')).toBeInTheDocument();
     expect(screen.getByText('ЧД')).toBeInTheDocument();
   });
@@ -68,7 +67,7 @@ describe('HourlyRecordTable', () => {
 
   it('shows dash for hours without data', () => {
     renderTable();
-    const dashes = screen.getAllByText('-');
+    const dashes = screen.getAllByText('—');
     expect(dashes.length).toBe(7);
   });
 

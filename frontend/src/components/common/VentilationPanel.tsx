@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Box, Typography, TextField, Button, MenuItem, Stack, Paper,
 } from '@mui/material';
@@ -17,7 +16,6 @@ interface VentilationPanelProps {
 export default function VentilationPanel({
   ventilation, isLocked, onCreate,
 }: VentilationPanelProps) {
-  const { t } = useTranslation();
   const [form, setForm] = useState({
     recordHour: new Date().getHours(),
     mode: 'CMV',
@@ -55,10 +53,10 @@ export default function VentilationPanel({
       {!isLocked && (
         <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
-            <TextField size="small" type="number" label={t('ventilation.hourLabel')}
+            <TextField size="small" type="number" label={'Година'}
               value={form.recordHour} onChange={(e) => setForm({ ...form, recordHour: Number(e.target.value) })}
               sx={{ width: 110 }} />
-            <TextField size="small" select label={t('ventilation.modeLabel')}
+            <TextField size="small" select label={'Режим'}
               value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}
               sx={{ width: 130 }}>
               {MODES.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
@@ -67,19 +65,19 @@ export default function VentilationPanel({
               onChange={(e) => setForm({ ...form, fio2: e.target.value })} sx={{ width: 100 }} />
             <TextField size="small" type="number" label="PEEP" value={form.peep}
               onChange={(e) => setForm({ ...form, peep: e.target.value })} sx={{ width: 100 }} />
-            <TextField size="small" type="number" label={t('ventilation.rrLabel')} value={form.respiratoryRate}
+            <TextField size="small" type="number" label={'ЧД'} value={form.respiratoryRate}
               onChange={(e) => setForm({ ...form, respiratoryRate: e.target.value })} sx={{ width: 100 }} />
-            <TextField size="small" type="number" label={t('ventilation.tvLabel')} value={form.tidalVolume}
+            <TextField size="small" type="number" label={'Vt'} value={form.tidalVolume}
               onChange={(e) => setForm({ ...form, tidalVolume: e.target.value })} sx={{ width: 100 }} />
-            <TextField size="small" type="number" label={t('ventilation.platLabel')} value={form.plateauPressure}
+            <TextField size="small" type="number" label={'Pplat'} value={form.plateauPressure}
               onChange={(e) => setForm({ ...form, plateauPressure: e.target.value })} sx={{ width: 100 }} />
-            <Button variant="contained" size="small" onClick={handleAdd} disabled={saving}>{t('ventilation.addButton')}</Button>
+            <Button variant="contained" size="small" onClick={handleAdd} disabled={saving}>{'Додати'}</Button>
           </Stack>
         </Paper>
       )}
 
       {ventilation.length === 0 ? (
-        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('ventilation.empty')}</Typography>
+        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає налаштувань вентиляції'}</Typography>
       ) : (
         <Stack spacing={0.75}>
           {ventilation.map((v) => (

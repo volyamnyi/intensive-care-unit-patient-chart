@@ -34,18 +34,18 @@ describe('LabResultsPanel', () => {
 
   it('shows empty message when no labs', () => {
     renderPanel({ labs: [] });
-    expect(screen.getByText('labResults.empty')).toBeInTheDocument();
+    expect(screen.getByText('Немає лабораторних досліджень')).toBeInTheDocument();
   });
 
   it('renders existing labs with abnormal flag', () => {
     renderPanel({ labs: mockLabs });
     expect(screen.getByText('Hemoglobin')).toBeInTheDocument();
-    expect(screen.getByText('Відхилення')).toBeInTheDocument();
+    expect(screen.getByText('Аномалія')).toBeInTheDocument();
   });
 
   it('hides create UI when locked', () => {
     renderPanel({ labs: [], isLocked: true });
-    expect(screen.queryByLabelText('labResults.testLabel')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Тест')).not.toBeInTheDocument();
   });
 
   it('creates a lab result from the form', async () => {

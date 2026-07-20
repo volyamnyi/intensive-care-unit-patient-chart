@@ -28,28 +28,28 @@ describe('PatientStatePanel', () => {
 
   it('shows empty message when no assessments', () => {
     renderPanel({ assessments: [] });
-    expect(screen.getByText('patientState.empty')).toBeInTheDocument();
+    expect(screen.getByText('Немає оцінок')).toBeInTheDocument();
   });
 
   it('renders existing assessment', () => {
     renderPanel({ assessments: mockState });
     expect(screen.getByText('9:00')).toBeInTheDocument();
-    expect(screen.getAllByText(/patientState\.alert/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Ясна/).length).toBeGreaterThan(0);
   });
 
   it('hides create UI when locked', () => {
     renderPanel({ assessments: [], isLocked: true });
-    expect(screen.queryByLabelText('patientState.consciousnessLabel')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Свідомість')).not.toBeInTheDocument();
   });
 
   it('creates an assessment from the form', async () => {
     const onCreate = vi.fn();
     renderPanel({ assessments: [], onCreate });
-    await userEvent.click(screen.getByLabelText('patientState.consciousnessLabel'));
-    await userEvent.click(await screen.findByRole('option', { name: 'patientState.drowsy' }));
-    await userEvent.click(screen.getByLabelText('patientState.skinLabel'));
-    await userEvent.click(await screen.findByRole('option', { name: 'patientState.cyanotic' }));
-    await userEvent.click(screen.getByText('patientState.addButton'));
+    await userEvent.click(screen.getByLabelText('Свідомість'));
+    await userEvent.click(await screen.findByRole('option', { name: 'Сонливість' }));
+    await userEvent.click(screen.getByLabelText('Шкіра'));
+    await userEvent.click(await screen.findByRole('option', { name: 'Ціаноз' }));
+    await userEvent.click(screen.getByText('Додати'));
     await waitFor(() => {
       const call = onCreate.mock.calls[0][0] as PatientStateCreateRequest;
       expect(call.consciousness).toBe('drowsy');

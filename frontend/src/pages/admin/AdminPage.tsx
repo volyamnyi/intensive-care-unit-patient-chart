@@ -10,11 +10,9 @@ import { useAuth } from '../../services/AuthContext';
 import { userApi, auditApi } from '../../api/endpoints';
 import AuditLogTable from '../../components/common/AuditLogTable';
 import type { User, AuditLog } from '../../types';
-import { useTranslation } from 'react-i18next';
 
 export default function AdminPage() {
-  const { t } = useTranslation();
-  useEffect(() => { document.title = t('admin.title'); }, []);
+  useEffect(() => { document.title = 'ВАІТ — Адміністрування'; }, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -41,7 +39,11 @@ export default function AdminPage() {
       const params: Record<string, string> = {};
       if (auditFilterEntity) params.entity = auditFilterEntity;
       const res = await auditApi.list(params);
+<<<<<<< HEAD
       setAuditLogs(res.data.content ?? []);
+=======
+      setAuditLogs(res.data.content ?? res.data);
+>>>>>>> 91f3cfc (fix: IntensiveCareCard.test timeout — mock location.reload, increase test timeout)
     } finally {
       setAuditLoading(false);
     }
@@ -51,10 +53,10 @@ export default function AdminPage() {
     if (showAudit) loadAudit();
   }, [showAudit]);
 
-  const roleLabel = (u: User) => u.role === 'DOCTOR' ? t('admin.roleDoctor')
-    : u.role === 'NURSE' ? t('admin.roleNurse')
-    : u.role === 'HEAD_OF_DEPARTMENT' ? t('admin.roleHod')
-    : u.role === 'ADMINISTRATOR' ? t('admin.roleAdmin') : u.role;
+  const roleLabel = (u: User) => u.role === 'DOCTOR' ? 'Лікар'
+    : u.role === 'NURSE' ? 'Медсестра'
+    : u.role === 'HEAD_OF_DEPARTMENT' ? 'Завідувач відділення'
+    : u.role === 'ADMINISTRATOR' ? 'Адміністратор' : u.role;
 
   const renderTable = (title: string, rows: User[]) => (
     <Paper sx={{ p: 2.5, mb: 3 }}>
@@ -63,10 +65,10 @@ export default function AdminPage() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>{t('admin.tableHeaders.fullName')}</TableCell>
-              <TableCell>{t('admin.tableHeaders.login')}</TableCell>
-              <TableCell>{t('admin.tableHeaders.role')}</TableCell>
-              <TableCell>{t('admin.tableHeaders.email')}</TableCell>
+              <TableCell>ПІБ</TableCell>
+              <TableCell>Логін</TableCell>
+              <TableCell>Роль</TableCell>
+              <TableCell>Email</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -80,7 +82,7 @@ export default function AdminPage() {
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3, color: theme.palette.text.secondary }}>{t('admin.noData')}</TableCell>
+                <TableCell colSpan={4} align="center" sx={{ py: 3, color: theme.palette.text.secondary }}>Немає даних</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -93,42 +95,42 @@ export default function AdminPage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700 }}>
-          {t('admin.heading')}
+          Адміністрування
         </Typography>
         <IconButton aria-label="Меню користувача" onClick={(e) => setAnchorEl(e.currentTarget)}>
           <AccountCircle />
         </IconButton>
         <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
           <MenuItem disabled>{user?.fullName}</MenuItem>
-          <MenuItem onClick={handleLogout}>{t('common.logout')}</MenuItem>
+          <MenuItem onClick={handleLogout}>Вийти</MenuItem>
         </Menu>
       </Box>
       {loading ? (
         <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />
       ) : (
         <>
-          {renderTable(t('admin.sectionDoctors'), doctors)}
-          {renderTable(t('admin.sectionNurses'), nurses)}
+          {renderTable('Лікарі', doctors)}
+          {renderTable('Медсестри', nurses)}
 
           {/* Audit Log Section */}
           <Paper sx={{ p: 2.5, mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-              <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif' }}>{t('auditLog.title')}</Typography>
+              <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif' }}>Журнал аудиту</Typography>
               <Button
                 size="small"
                 variant={showAudit ? 'outlined' : 'contained'}
                 startIcon={<History />}
                 onClick={() => setShowAudit(!showAudit)}
               >
-                {showAudit ? t('auditLog.hide') : t('auditLog.view')}
+                {showAudit ? 'Сховати' : 'Переглянути'}
               </Button>
             </Box>
             {showAudit && (
               <>
                 <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
-                  <TextField size="small" label={t('auditLog.filterByEntity')} value={auditFilterEntity}
+                  <TextField size="small" label="Фільтр за сутністю" value={auditFilterEntity}
                     onChange={e => setAuditFilterEntity(e.target.value)} sx={{ width: 200 }} />
-                  <Button size="small" variant="outlined" onClick={loadAudit}>{t('common.search')}</Button>
+                  <Button size="small" variant="outlined" onClick={loadAudit}>Пошук</Button>
                 </Box>
                 <AuditLogTable logs={auditLogs} loading={auditLoading} />
               </>

@@ -1,5 +1,4 @@
 import { Box, Typography, Paper, Chip, useTheme } from '@mui/material';
-import { useTranslation } from 'react-i18next';
 import ClinicalDayTimeline from '../common/ClinicalDayTimeline';
 import IntensiveCareCard from './IntensiveCareCard';
 import type { DashboardProps } from './dashboardTypes';
@@ -12,7 +11,6 @@ export default function DoctorDashboard(props: DashboardProps) {
   } = props;
 
   const theme = useTheme();
-  const { t } = useTranslation();
   const isDark = theme.palette.mode === 'dark';
   const bd = `1px solid ${isDark ? '#2A2A2A' : '#E0DED9'}`;
   const paperSx = {
@@ -49,21 +47,21 @@ export default function DoctorDashboard(props: DashboardProps) {
             <Chip label={episode.admissionDiagnosis} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11, maxWidth: 200 }} />
           )}
           {selectedDay && (
-            <Chip label={`${t('doctor.patientDay.dayPrefix')}${selectedDay.dayNumber}`} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 12 }} />
+            <Chip label={`День ${selectedDay.dayNumber}`} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 12 }} />
           )}
           <Chip
-            label={selectedDay?.status === 'OPEN' ? t('doctor.patientDay.statusOpen')
-              : selectedDay?.status === 'NURSE_SIGNED' ? t('doctor.patientDay.statusNurseSigned')
-              : selectedDay?.status === 'DOCTOR_SIGNED' ? t('doctor.patientDay.statusDoctorSigned')
-              : selectedDay?.status === 'REOPENED' ? t('doctor.patientDay.statusReopened')
-              : t('doctor.patientDay.statusClosed')}
+            label={selectedDay?.status === 'OPEN' ? 'Відкритий'
+              : selectedDay?.status === 'NURSE_SIGNED' ? 'Підписано медсестрою'
+              : selectedDay?.status === 'DOCTOR_SIGNED' ? 'Підписано лікарем'
+              : selectedDay?.status === 'REOPENED' ? 'Відкрито повторно'
+              : 'Закрито'}
             color={dayChipColor(selectedDay?.status ?? '')}
             size="small"
             sx={{ fontWeight: 600, fontSize: 11 }}
           />
         </Box>
         <Typography variant="caption" color="text.secondary">
-          {t('doctor.patientDay.episodeChipPrefix', { id: episode.id?.slice(0, 8) })}
+          {'Епізод #' + episode.id?.slice(0, 8)}
         </Typography>
       </Paper>
 

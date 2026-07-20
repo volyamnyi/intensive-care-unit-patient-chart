@@ -44,12 +44,12 @@ describe('PatientSearch', () => {
 
   it('renders the search input', () => {
     renderSearch();
-    expect(screen.getByLabelText('ПІБ, телефон або № медкарти')).toBeInTheDocument();
+    expect(screen.getByLabelText('Пошук пацієнта (ПІБ, № медкарти)')).toBeInTheDocument();
   });
 
   it('shows hint when input is less than 2 characters', async () => {
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('Пошук пацієнта (ПІБ, № медкарти)');
     await userEvent.type(input, 'A');
     await waitFor(() => {
       expect(screen.getByText('Введіть мінімум 2 символи')).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe('PatientSearch', () => {
   it('shows no patients found when search has no results', async () => {
     mockSearch.mockResolvedValue({ data: [] });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('Пошук пацієнта (ПІБ, № медкарти)');
     await userEvent.type(input, 'NonExistent');
     await waitFor(() => {
       expect(screen.getByText('Пацієнтів не знайдено')).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('PatientSearch', () => {
   it('calls patientApi.search with query after debounce', async () => {
     mockSearch.mockResolvedValue({ data: [] });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('Пошук пацієнта (ПІБ, № медкарти)');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(mockSearch).toHaveBeenCalledWith('Петр', expect.any(Object));
@@ -79,7 +79,7 @@ describe('PatientSearch', () => {
   it('displays patient options in dropdown', async () => {
     mockSearch.mockResolvedValue({ data: testPatients });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('Пошук пацієнта (ПІБ, № медкарти)');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('PatientSearch', () => {
   it('calls onSelect when a patient is chosen', async () => {
     mockSearch.mockResolvedValue({ data: testPatients });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('Пошук пацієнта (ПІБ, № медкарти)');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('PatientSearch', () => {
   it('shows loading indicator during search', async () => {
     mockSearch.mockReturnValue(new Promise(() => {}));
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('Пошук пацієнта (ПІБ, № медкарти)');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument();

@@ -42,7 +42,7 @@ describe('MedicalNotesPanel', () => {
 
   it('renders create note UI when onCreateNote is provided', () => {
     renderPanel({ onCreateNote: vi.fn() });
-    expect(screen.getByText('Додати нотатку')).toBeInTheDocument();
+    expect(screen.getByText('Додати')).toBeInTheDocument();
     expect(screen.getByLabelText('Нова нотатка')).toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe('MedicalNotesPanel', () => {
     renderPanel({ onCreateNote });
     const textarea = screen.getByLabelText('Нова нотатка');
     await userEvent.type(textarea, 'Температура тіла в нормі.');
-    await userEvent.click(screen.getByText('Додати нотатку'));
+    await userEvent.click(screen.getByText('Додати'));
     await waitFor(() => {
       expect(onCreateNote).toHaveBeenCalledWith('Температура тіла в нормі.', 'DOCTOR_NOTE');
     });
@@ -62,7 +62,7 @@ describe('MedicalNotesPanel', () => {
     renderPanel({ onCreateNote });
     const textarea = screen.getByLabelText('Нова нотатка') as HTMLTextAreaElement;
     await userEvent.type(textarea, 'Нотатка для очищення');
-    await userEvent.click(screen.getByText('Додати нотатку'));
+    await userEvent.click(screen.getByText('Додати'));
     await waitFor(() => {
       expect(onCreateNote).toHaveBeenCalled();
     });
@@ -72,7 +72,7 @@ describe('MedicalNotesPanel', () => {
   it('does not create empty note on submit', async () => {
     const onCreateNote = vi.fn();
     renderPanel({ onCreateNote });
-    await userEvent.click(screen.getByText('Додати нотатку'));
+    await userEvent.click(screen.getByText('Додати'));
     expect(onCreateNote).not.toHaveBeenCalled();
   });
 });

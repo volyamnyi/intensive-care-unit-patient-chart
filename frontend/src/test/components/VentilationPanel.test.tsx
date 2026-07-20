@@ -30,7 +30,7 @@ describe('VentilationPanel', () => {
 
   it('shows empty message when no ventilation entries', () => {
     renderPanel({ ventilation: [] });
-    expect(screen.getByText('ventilation.empty')).toBeInTheDocument();
+    expect(screen.getByText('Немає налаштувань вентиляції')).toBeInTheDocument();
   });
 
   it('renders existing ventilation entries', () => {
@@ -41,18 +41,18 @@ describe('VentilationPanel', () => {
 
   it('hides create UI when locked', () => {
     renderPanel({ ventilation: [], isLocked: true });
-    expect(screen.queryByLabelText('ventilation.modeLabel')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Режим')).not.toBeInTheDocument();
   });
 
   it('creates a ventilation entry from the form', async () => {
     const onCreate = vi.fn();
     renderPanel({ ventilation: [], onCreate });
-    await userEvent.click(screen.getByLabelText('ventilation.modeLabel'));
+    await userEvent.click(screen.getByLabelText('Режим'));
     await userEvent.click(await screen.findByRole('option', { name: 'SIMV' }));
     const numberInputs = Array.from(document.querySelectorAll('input[type="number"]')) as HTMLInputElement[];
     fireEvent.change(numberInputs[0], { target: { value: '12' } });
     fireEvent.change(numberInputs[1], { target: { value: '40' } });
-    await userEvent.click(screen.getByText('ventilation.addButton'));
+    await userEvent.click(screen.getByText('Додати'));
     await waitFor(() => {
       const call = onCreate.mock.calls[0][0] as VentilationCreateRequest;
       expect(call.mode).toBe('SIMV');
