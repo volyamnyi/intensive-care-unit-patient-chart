@@ -10,11 +10,16 @@ import { useTranslation } from 'react-i18next';
 import type {
   Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem,
   HourlyRecordCreateRequest, MedicalNoteCreateRequest,
+  LabResult, LabResultCreateRequest, VentilationSettings, VentilationCreateRequest,
+  PatientStateAssessment, PatientStateCreateRequest,
 } from '../../types';
 import {
   hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi,
   ventilationApi, labResultApi, patientStateApi, medicalOrderApi,
 } from '../../api/endpoints';
+import LabResultsPanel from '../common/LabResultsPanel';
+import VentilationPanel from '../common/VentilationPanel';
+import PatientStatePanel from '../common/PatientStatePanel';
 
 interface UserLike {
   id: number;
@@ -96,6 +101,42 @@ export default function IntensiveCareCard({
 
   const canEditSidebar = !isLocked;
 
+  const refreshSidebar = async () => {
+    if (!selectedDay) return;
+    try {
+      const [n, s, v, l, p] = await Promise.all([
+        medicalNoteApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+        clinicalScaleApi.getResultsByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+        ventilationApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+        labResultApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+        patientStateApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+      ]);
+      setNotes(n as unknown as { id: string; text: string; authorId?: string | null; role?: string | null; createdAt?: string | null }[]);
+      setScales(s as unknown as { id: string; name?: string; result: string }[]);
+      setVentilation(v as unknown as { id: string; mode?: string; [k: string]: unknown }[]);
+      setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
+      setPatientState(p as unknown as { id: string; assessment?: string }[]);
+    } catch {
+      // silent
+    }
+  };
+
+  const createLab = async (data: LabResultCreateRequest) => {
+    if (!selectedDay || isLocked) return;
+    await labResultApi.create(selectedDay.id, data).catch(() => undefined);
+    await refreshSidebar();
+  };
+  const createVentilation = async (data: VentilationCreateRequest) => {
+    if (!selectedDay || isLocked) return;
+    await ventilationApi.create(selectedDay.id, data).catch(() => undefined);
+    await refreshSidebar();
+  };
+  const createPatientState = async (data: PatientStateCreateRequest) => {
+    if (!selectedDay || isLocked) return;
+    await patientStateApi.create(selectedDay.id, data).catch(() => undefined);
+    await refreshSidebar();
+  };
+
   const [orderDialog, setOrderDialog] = useState(false);
   const [orderForm, setOrderForm] = useState({
     drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '',
@@ -128,24 +169,8 @@ export default function IntensiveCareCard({
 
   useEffect(() => {
     if (!selectedDay) return;
-    let cancelled = false;
     setLoadingSidebar(true);
-    Promise.all([
-      medicalNoteApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
-      clinicalScaleApi.getResultsByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
-      ventilationApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
-      labResultApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
-      patientStateApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
-    ]).then(([n, s, v, l, p]) => {
-      if (cancelled) return;
-       setNotes(n as unknown as { id: string; text: string; authorId?: string | null; role?: string | null; createdAt?: string | null }[]);
-      setScales(s as unknown as { id: string; name?: string; result: string }[]);
-      setVentilation(v as unknown as { id: string; mode?: string; [k: string]: unknown }[]);
-      setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
-      setPatientState(p as unknown as { id: string; assessment?: string }[]);
-      setLoadingSidebar(false);
-    });
-    return () => { cancelled = true; };
+    refreshSidebar().finally(() => setLoadingSidebar(false));
   }, [selectedDay]);
 
   const recByHour = useMemo(() => {
@@ -430,45 +455,30 @@ export default function IntensiveCareCard({
         </SidebarSection>
 
         <SidebarSection title={t('ventilation.title')} count={ventilation.length}>
-          {ventilation.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('ventilation.empty')}</Typography>
-          ) : (
-            <List dense sx={{ py: 0 }}>
-              {ventilation.map((v) => (
-                <ListItem key={v.id} sx={{ px: 0 }}>
-                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{String(v.mode ?? v.id)}</Typography>} />
-                </ListItem>
-              ))}
-            </List>
-          )}
+          <VentilationPanel
+            clinicalDayId={selectedDay?.id ?? ''}
+            ventilation={ventilation as unknown as VentilationSettings[]}
+            isLocked={isLocked}
+            onCreate={createVentilation}
+          />
         </SidebarSection>
 
         <SidebarSection title={t('labResults.title')} count={labs.length}>
-          {labs.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('labResults.empty')}</Typography>
-          ) : (
-            <List dense sx={{ py: 0 }}>
-              {labs.map((l) => (
-                <ListItem key={l.id} sx={{ px: 0 }}>
-                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>`${l.testName ?? ''}: ${l.result ?? ''}`</Typography>} />
-                </ListItem>
-              ))}
-            </List>
-          )}
+          <LabResultsPanel
+            clinicalDayId={selectedDay?.id ?? ''}
+            labs={labs as unknown as LabResult[]}
+            isLocked={isLocked}
+            onCreate={createLab}
+          />
         </SidebarSection>
 
         <SidebarSection title={t('patientState.title')} count={patientState.length}>
-          {patientState.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{t('patientState.empty')}</Typography>
-          ) : (
-            <List dense sx={{ py: 0 }}>
-              {patientState.map((p) => (
-                <ListItem key={p.id} sx={{ px: 0 }}>
-                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{p.assessment ?? ''}</Typography>} />
-                </ListItem>
-              ))}
-            </List>
-          )}
+          <PatientStatePanel
+            clinicalDayId={selectedDay?.id ?? ''}
+            assessments={patientState as unknown as PatientStateAssessment[]}
+            isLocked={isLocked}
+            onCreate={createPatientState}
+          />
         </SidebarSection>
       </Stack>
 
