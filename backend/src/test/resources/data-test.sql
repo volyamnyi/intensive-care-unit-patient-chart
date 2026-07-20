@@ -1,8 +1,9 @@
 -- Integration test seed data
 -- Clean slate: truncate all tables so every test class starts from a known state
 TRUNCATE users, episodes, clinical_days, hourly_records, medical_orders, order_executions,
-        medical_notes, scale_results, fluid_balances, signatures, generated_pdfs,
-        patient_states, ventilations, lab_results, audit_logs, system_settings
+        medical_notes, clinical_scales, scale_results, fluid_balances, signatures,
+        generated_pdfs, patient_state_assessments, ventilation_settings, lab_results,
+        audit_logs, system_settings, reference_values
         RESTART IDENTITY CASCADE;
 
 INSERT INTO users (id, login, password_hash, full_name, role, email, speciality_code, speciality_name, phone, created_at, created_by, updated_at, updated_by, version)
