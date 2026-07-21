@@ -428,7 +428,8 @@ export default function IntensiveCareCard({
             {activeOrders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell sx={{ fontSize: 10, borderRight: bd, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {order.drugName} {order.dose}{order.unit}
+                  {order.drugName} {order.dose}{order.unit}{' '}
+                  <Box component="span" sx={{ fontSize: 9, color: 'success.main', fontWeight: 700 }}>{order.status === 'ACTIVE' ? 'Активне' : order.status === 'DRAFT' ? 'Чернетка' : ''}</Box>
                 </TableCell>
                 {HOURS.map((h) => (
                   <TherapyCell
@@ -463,7 +464,7 @@ export default function IntensiveCareCard({
           )}
         </Box>
         <Box sx={{ flex: 1, minWidth: 220, p: 1.5, border: bd, borderRadius: 2, bgcolor: isDark ? '#141414' : '#fff' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>{'Водний баланс'}</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>{'Баланс рідини'}</Typography>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
             <span>{'Надходження'}</span><b>{totalIntake} {'ml'}</b>
           </Box>
@@ -526,7 +527,7 @@ export default function IntensiveCareCard({
 
         <SidebarSection title={'Шкали'} count={scales.length}>
           {scales.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає результатів'}</Typography>
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає даних шкал'}</Typography>
           ) : (
             <List dense sx={{ py: 0 }}>
               {scales.map((s) => (
@@ -547,7 +548,7 @@ export default function IntensiveCareCard({
           />
         </SidebarSection>
 
-        <SidebarSection title={'Лабораторні'} count={labs.length}>
+        <SidebarSection title={'Лабораторні результати'} count={labs.length}>
           <LabResultsPanel
             clinicalDayId={selectedDay?.id ?? ''}
             labs={labs as unknown as LabResult[]}

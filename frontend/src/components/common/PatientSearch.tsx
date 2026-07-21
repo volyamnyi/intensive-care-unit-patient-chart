@@ -9,7 +9,7 @@ interface PatientSearchProps {
 }
 
 export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
-  const resolvedLabel = label ?? 'Пошук пацієнта (ПІБ, № медкарти)';
+  const resolvedLabel = label ?? 'ПІБ, телефон або № медкарти';
   const [search, setSearch] = useState('');
   const [patients, setPatients] = useState<PatientDto[]>([]);
   const [selected, setSelected] = useState<PatientDto | null>(null);
