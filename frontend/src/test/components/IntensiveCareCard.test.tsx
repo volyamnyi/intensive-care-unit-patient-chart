@@ -167,13 +167,13 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByText('Пацієнт')).toBeInTheDocument();
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
       expect(screen.getByText(/Пневмонія/)).toBeInTheDocument();
-      expect(screen.getByText('Водний баланс')).toBeInTheDocument();
+      expect(screen.getByText('Баланс рідини')).toBeInTheDocument();
     });
 
     it('shows weight and all sidebar sections', () => {
       renderCard({ selectedDay: { ...mockDay, weightKg: 78 } });
       expect(screen.getByText(/Вага: 78/)).toBeInTheDocument();
-      ['Нотатки', 'Шкали', 'Вентиляція', 'Лабораторні', 'Стан пацієнта']
+      ['Нотатки', 'Шкали', 'Вентиляція', 'Лабораторні результати', 'Стан пацієнта']
         .forEach(label => expect(screen.getByText(label)).toBeInTheDocument());
     });
 
