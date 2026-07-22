@@ -97,7 +97,6 @@ class ClinicalDayServiceTest {
 
         ReflectionTestUtils.setField(clinicalDayService, "signingWindowStartHour", 7);
         ReflectionTestUtils.setField(clinicalDayService, "signingWindowEndHour", 9);
-        clinicalDayService.initSigningWindow();
     }
 
     @Test

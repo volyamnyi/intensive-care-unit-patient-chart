@@ -12,51 +12,36 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import jakarta.annotation.PostConstruct;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ClinicalDayService {
 
-    ClinicalDayRepository clinicalDayRepository;
-    EpisodeRepository episodeRepository;
-    HourlyRecordRepository hourlyRecordRepository;
-    SignatureService signatureService;
-    AuditService auditService;
-    ClinicalDayMapper clinicalDayMapper;
-    SignatureMapper signatureMapper;
-    EmailService emailService;
-    FluidBalanceService fluidBalanceService;
-    PdfGeneratorService pdfGeneratorService;
+    private final ClinicalDayRepository clinicalDayRepository;
+    private final EpisodeRepository episodeRepository;
+    private final HourlyRecordRepository hourlyRecordRepository;
+    private final SignatureService signatureService;
+    private final AuditService auditService;
+    private final ClinicalDayMapper clinicalDayMapper;
+    private final SignatureMapper signatureMapper;
+    private final EmailService emailService;
+    private final FluidBalanceService fluidBalanceService;
+    private final PdfGeneratorService pdfGeneratorService;
 
     @Value("${app.scheduling.signing-window-start:7}")
-    int signingWindowStartHour;
+    private int signingWindowStartHour;
 
     @Value("${app.scheduling.signing-window-end:9}")
-    int signingWindowEndHour;
-
-    LocalTime signingWindowStart;
-    LocalTime signingWindowEnd;
-
-    @PostConstruct
-    void initSigningWindow() {
-        signingWindowStart = LocalTime.of(signingWindowStartHour, 0);
-        signingWindowEnd = LocalTime.of(signingWindowEndHour, 0);
-    }
+    private int signingWindowEndHour;
 
     public ClinicalDayResponse getClinicalDay(UUID id) {
         ClinicalDay day = clinicalDayRepository.findById(id)
@@ -130,9 +115,11 @@ public class ClinicalDayService {
 
     private void assertSigningWindow() {
         LocalTime now = signingWindowNow();
-        if (now.isBefore(signingWindowStart) || now.isAfter(signingWindowEnd)) {
+        LocalTime start = LocalTime.of(signingWindowStartHour, 0);
+        LocalTime end = LocalTime.of(signingWindowEndHour, 0);
+        if (now.isBefore(start) || now.isAfter(end)) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
-                    "Підпис можливий лише з " + signingWindowStart.getHour() + ":00 до " + signingWindowEnd.getHour() + ":00");
+                    "Підпис можливий лише з " + signingWindowStartHour + ":00 до " + signingWindowEndHour + ":00");
         }
     }
 
