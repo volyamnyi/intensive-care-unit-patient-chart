@@ -61,7 +61,7 @@ export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }
             }}
           >
             <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              День {day.dayNumber}
+              Доба {day.dayNumber}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {new Date(day.startDateTime).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })}

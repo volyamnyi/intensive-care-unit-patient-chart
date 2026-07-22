@@ -12,7 +12,7 @@ import AuditLogTable from '../../components/common/AuditLogTable';
 import type { User, AuditLog } from '../../types';
 
 export default function AdminPage() {
-  useEffect(() => { document.title = 'ВАІТ — Адміністрування'; }, []);
+  useEffect(() => { document.title = 'ВАІТ — Адміністратор'; }, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -91,7 +91,7 @@ export default function AdminPage() {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700 }}>
-          Адміністрування
+          Користувачі системи
         </Typography>
         <IconButton aria-label="Меню користувача" onClick={(e) => setAnchorEl(e.currentTarget)}>
           <AccountCircle />
@@ -118,7 +118,7 @@ export default function AdminPage() {
                 startIcon={<History />}
                 onClick={() => setShowAudit(!showAudit)}
               >
-                {showAudit ? 'Сховати' : 'Переглянути'}
+                {showAudit ? 'Сховати' : 'Переглянути журнал аудиту'}
               </Button>
             </Box>
             {showAudit && (

@@ -153,12 +153,12 @@ export default function PatientDayPage() {
           )}
           {canReopen && (
             <Button size="small" variant="outlined" color="warning" startIcon={<LockOpen />} onClick={() => setReopenDialogOpen(true)}>
-              Відкрити повторно
+              Перевідкрити
             </Button>
           )}
           {canSign && !signConfirm && (
             <Button size="small" variant="contained" onClick={() => setSignConfirm(true)} sx={{ fontWeight: 700 }}>
-              Підписати
+              Підписати добу
             </Button>
           )}
         </Box>
@@ -167,13 +167,11 @@ export default function PatientDayPage() {
       {signConfirm && (
         <Paper elevation={3} sx={{ p: 2, mb: 2, border: `1px solid ${theme.palette.warning.main}`, borderRadius: 2 }}>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            {user?.role === 'NURSE'
-              ? 'Після підписання медсестрою день буде доступний для підписання лікарем.'
-              : 'Після підписання лікарем клінічний день буде закрито.'}
+            Після підписання доба стане read-only
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button variant="contained" onClick={handleSignOff}>
-              Підтвердити підписання
+              Підписати
             </Button>
             <Button variant="outlined" onClick={() => setSignConfirm(false)}>
               Скасувати
@@ -234,7 +232,7 @@ export default function PatientDayPage() {
         <DialogActions>
           <Button onClick={() => setReopenDialogOpen(false)}>Скасувати</Button>
           <Button onClick={handleReopen} variant="contained" color="warning" disabled={!reopenReason.trim()}>
-            Відкрити повторно
+            Перевідкрити
           </Button>
         </DialogActions>
       </Dialog>

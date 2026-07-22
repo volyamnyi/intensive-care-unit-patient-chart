@@ -595,13 +595,13 @@ export default function IntensiveCareCard({
         <Box sx={{ p: 1.5, border: bd, borderRadius: 2, bgcolor: isDark ? '#141414' : '#fff' }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>{'Баланс рідини'}</Typography>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Надходження'}</span><b>{totalIntake} {'ml'}</b>
+            <span>{'Надійшло:'}</span><b>{totalIntake} {'ml'}</b>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Виведення'}</span><b>{totalOutput} {'ml'}</b>
+            <span>{'Виділено:'}</span><b>{totalOutput} {'ml'}</b>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Денний баланс'}</span><b>{dailyBalance >= 0 ? '+' : ''}{dailyBalance}</b>
+            <span>{'Добовий баланс:'}</span><b>{dailyBalance >= 0 ? '+' : ''}{dailyBalance}</b>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
             <span>{'Кумулятивний баланс'}</span><b>{cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance}</b>
@@ -643,7 +643,7 @@ export default function IntensiveCareCard({
               />
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                 <Button size="small" variant="outlined" onClick={saveNow} disabled={savingNote || !noteText.trim()}>
-                  {'Додати'}
+                  {'Додати нотатку'}
                 </Button>
                 {autoSaveStatus === 'saving' && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -678,7 +678,7 @@ export default function IntensiveCareCard({
         </SidebarSection>
 
         {/* Ventilation */}
-        <SidebarSection title={'Вентиляція'} count={ventilation.length}>
+        <SidebarSection title={'ШВЛ'} count={ventilation.length}>
           <VentilationPanel
             clinicalDayId={selectedDay?.id ?? ''}
             ventilation={ventilation as unknown as VentilationSettings[]}
