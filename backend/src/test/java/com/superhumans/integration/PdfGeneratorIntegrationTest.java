@@ -63,7 +63,7 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
         assertThat(pdfRes.getBody()).isNotNull();
         assertThat(pdfRes.getBody().getClinicalDayId()).isEqualTo(dayId);
         assertThat(pdfRes.getBody().getFileName()).contains(dayId.toString());
-        assertThat(pdfRes.getBody().getFileVersion()).isEqualTo(1);
+        assertThat(pdfRes.getBody().getFileVersion()).isEqualTo(2);
         assertThat(pdfRes.getBody().getGeneratedAt()).isNotNull();
     }
 
