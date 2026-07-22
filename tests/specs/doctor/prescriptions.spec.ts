@@ -2,6 +2,12 @@ import { test, expect } from '../../fixtures/index';
 
 const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
 
+function futureStartTime(): string {
+  const d = new Date();
+  d.setHours(d.getHours() + 2);
+  return d.toISOString().slice(0, 16);
+}
+
 test.describe('Doctor Prescriptions', () => {
   test('creates a prescription and shows it in the list', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
@@ -13,7 +19,7 @@ test.describe('Doctor Prescriptions', () => {
     await page.getByLabel('Од.').fill('mcg');
     await page.getByLabel('Шлях').fill('IV');
     await page.getByLabel('Частота').fill('stat');
-    await page.getByLabel('Початок').fill('2025-04-08T08:00');
+    await page.getByLabel('Початок').fill(futureStartTime());
 
     await page.getByRole('button', { name: 'Створити' }).click();
 
@@ -30,7 +36,7 @@ test.describe('Doctor Prescriptions', () => {
     await page.getByLabel('Од.').fill('mcg');
     await page.getByLabel('Шлях').fill('IV');
     await page.getByLabel('Частота').fill('stat');
-    await page.getByLabel('Початок').fill('2025-04-08T08:00');
+    await page.getByLabel('Початок').fill(futureStartTime());
 
     await page.getByRole('button', { name: 'Створити' }).click();
 

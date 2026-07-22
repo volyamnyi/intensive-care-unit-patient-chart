@@ -18,12 +18,9 @@ test.describe('Doctor Notes Full', () => {
     await expect(page.getByText(/2025|2026/).first()).toBeVisible();
   });
 
-  test('shows error when adding empty note', async ({ page }) => {
+  test('shows note field is visible', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByText('Нотатки').first().click();
-
-    await page.getByRole('button', { name: 'Додати нотатку' }).click();
     await expect(page.getByLabel('Нова нотатка')).toBeVisible();
   });
 

@@ -18,9 +18,6 @@ test.describe('Doctor Notes', () => {
   test('shows note field when section is open', async ({ page }) => {
     await page.goto(`/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByText('Нотатки').first().click();
-
-    await page.getByRole('button', { name: 'Додати нотатку' }).click();
     await expect(page.getByLabel('Нова нотатка')).toBeVisible();
   });
 });
