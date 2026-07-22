@@ -56,8 +56,10 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void recalculateThenGet_returnsSameData() {
+        var futureTime = LocalDateTime.now().plusHours(2);
+
         HourlyRecordCreateRequest hrReq1 = new HourlyRecordCreateRequest();
-        hrReq1.setRecordTime(LocalDateTime.now().withHour(14));
+        hrReq1.setRecordTime(futureTime);
         hrReq1.setUrineOutput(300.0);
 
         MedicalOrderCreateRequest orderReq = new MedicalOrderCreateRequest();
@@ -67,7 +69,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
         orderReq.setUnit("мл");
         orderReq.setRoute("в/в");
         orderReq.setFrequency("крапельно");
-        orderReq.setStartTime(LocalDateTime.now().withHour(14));
+        orderReq.setStartTime(futureTime);
 
         var hrEntity = authEntity(hrReq1, getNurseToken());
         restTemplate.exchange(
@@ -81,7 +83,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = orderRes.getBody().getId();
         OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                13L, LocalDateTime.now().withHour(14), "500", "");
+                13L, futureTime, "500", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,
@@ -134,7 +136,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
         orderReq.setUnit("мл");
         orderReq.setRoute("в/в");
         orderReq.setFrequency("крапельно");
-        orderReq.setStartTime(LocalDateTime.now().withHour(9));
+        orderReq.setStartTime(LocalDateTime.now().plusHours(2));
 
         var orderEntity = authEntity(orderReq, getDoctorToken());
         var orderRes = restTemplate.exchange(
@@ -143,7 +145,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = orderRes.getBody().getId();
         OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                13L, LocalDateTime.now().withHour(9), "500", "");
+                13L, LocalDateTime.now().plusHours(2), "500", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,

@@ -21,12 +21,15 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+
+import jakarta.annotation.PostConstruct;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ClinicalDayService {
 
     ClinicalDayRepository clinicalDayRepository;
@@ -40,8 +43,20 @@ public class ClinicalDayService {
     FluidBalanceService fluidBalanceService;
     PdfGeneratorService pdfGeneratorService;
 
-    private static final LocalTime SIGNING_WINDOW_START = LocalTime.of(7, 0);
-    private static final LocalTime SIGNING_WINDOW_END = LocalTime.of(9, 0);
+    @Value("${app.scheduling.signing-window-start:7}")
+    int signingWindowStartHour;
+
+    @Value("${app.scheduling.signing-window-end:9}")
+    int signingWindowEndHour;
+
+    LocalTime signingWindowStart;
+    LocalTime signingWindowEnd;
+
+    @PostConstruct
+    void initSigningWindow() {
+        signingWindowStart = LocalTime.of(signingWindowStartHour, 0);
+        signingWindowEnd = LocalTime.of(signingWindowEndHour, 0);
+    }
 
     public ClinicalDayResponse getClinicalDay(UUID id) {
         ClinicalDay day = clinicalDayRepository.findById(id)
@@ -115,9 +130,9 @@ public class ClinicalDayService {
 
     private void assertSigningWindow() {
         LocalTime now = signingWindowNow();
-        if (now.isBefore(SIGNING_WINDOW_START) || now.isAfter(SIGNING_WINDOW_END)) {
+        if (now.isBefore(signingWindowStart) || now.isAfter(signingWindowEnd)) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
-                    "Підпис можливий лише з 7:00 до 9:00");
+                    "Підпис можливий лише з " + signingWindowStart.getHour() + ":00 до " + signingWindowEnd.getHour() + ":00");
         }
     }
 

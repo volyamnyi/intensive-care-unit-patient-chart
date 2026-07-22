@@ -51,6 +51,8 @@ app:
   scheduling:
     day-close-hour: 7
     escalation-hour: 9
+    signing-window-start: 7
+    signing-window-end: 9
 
 logging:
   level:
