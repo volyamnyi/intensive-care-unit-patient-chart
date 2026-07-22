@@ -15,3 +15,7 @@ ALTER TABLE generated_pdfs ADD COLUMN file_data OID;
 ALTER TABLE generated_pdfs ADD COLUMN transfer_status VARCHAR(20) DEFAULT 'PENDING';
 ALTER TABLE generated_pdfs ADD COLUMN transfer_error VARCHAR(500);
 ALTER TABLE generated_pdfs ADD COLUMN transferred_at TIMESTAMP;
+
+--changeset patient-chart:5
+-- Change file_data from OID to BYTEA for proper byte[] persistence
+ALTER TABLE generated_pdfs ALTER COLUMN file_data TYPE BYTEA USING lo_get(file_data::oid);

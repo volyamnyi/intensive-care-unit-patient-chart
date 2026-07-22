@@ -103,7 +103,7 @@ class MockMisServiceTest {
     @Test
     void searchPatients_withEmptyQuery_returnsAll() {
         var result = misService.searchPatients(null);
-        assertThat(result).hasSize(5);
+        assertThat(result).hasSize(50);
     }
 
     @Test
