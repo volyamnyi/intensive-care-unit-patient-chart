@@ -8,6 +8,7 @@
 - **MedicalOrderServiceTest (14/14 ✅)** — Fixed 3 test failures caused by hardcoded `LocalDateTime.of(2026, 7, 21, ...)` dates that now fail the `PAST_HOUR_ORDER` validation. Replaced with dynamic `LocalDateTime.now().plusHours(2)` dates.
 - **GeneratedPdf entity** — Fixed `@Lob byte[]` PostgreSQL OID issue: added `columnDefinition = "BYTEA"` to `@Column(name = "file_data")` so PDF binary data actually persists (was always NULL with OID mapping).
 - **CI gaps fixed** — Checkstyle `failsOnError: false` → `true` in `pom.xml`; added backend test results + JaCoCo coverage artifact uploads in `playwright.yml`.
+- **Seed data `day_number` mismatch** — `data.sql` had `b1111112` (NURSE_SIGNED) at `day_number=1`, but E2E tests reference it as "Доба 2". Root cause: day numbers were swapped between production and test seed files (`data-test.sql` had it at day_number=2). Fix: swapped in `data.sql` so `b1111112`→day 2 (NURSE_SIGNED), `b1111111`→day 1 (OPEN), matching both `data-test.sql` and E2E test expectations. Affected tests: `episode-locked`, `clinical-day-reopen` (the clicking 'Доба 2' expecting NURSE_SIGNED behavior).
 
 **Refinements applied (2026-07-21):**
 - **PDF layout** — Виправлено макет PDF під форму 003-15/о: таблиця losses (colspan=9 замість 8), verticalCell (rowspan=11 замість 9), таблиця stats info2 (rowspan=4 замість 3). Підтверджено: PDF генерується, API повертає 201 Created.
