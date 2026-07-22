@@ -32,7 +32,6 @@ public class GeneratedPdf extends BaseEntity {
     @Column(length = 256)
     String checksum;
 
-    @Lob
     @Column(name = "file_data", columnDefinition = "BYTEA")
     byte[] fileData;
 
