@@ -93,6 +93,8 @@ class ClinicalDayServiceTest {
         testDay.setStartDateTime(LocalDateTime.now());
         testDay.setEndDateTime(LocalDateTime.now().plusHours(24));
         testDay.setVersion(0);
+
+        clinicalDayService.initSigningWindow();
     }
 
     @Test
