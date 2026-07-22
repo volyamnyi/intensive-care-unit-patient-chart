@@ -47,6 +47,7 @@ app:
     expiration-ms: 86400000
   mis:
     mock-enabled: true
+    wiremock-enabled: false
   scheduling:
     day-close-hour: 7
     escalation-hour: 9

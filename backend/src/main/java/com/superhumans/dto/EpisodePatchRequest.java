@@ -14,6 +14,8 @@ public class EpisodePatchRequest {
     UUID departmentId;
     LocalDateTime dischargeDate;
     Double heightCm;
+    Long attendingDoctorId;
+
     String ward;
     String bedNumber;
     String admissionDiagnosis;

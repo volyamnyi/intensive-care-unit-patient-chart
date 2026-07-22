@@ -31,15 +31,15 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
   }
 
   return (
-    <TableContainer>
-      <Table size="small">
+    <TableContainer sx={{ overflowX: 'auto' }}>
+      <Table size="small" sx={{ minWidth: 650 }}>
         <TableHead>
           <TableRow>
             <TableCell>Пацієнт</TableCell>
-            <TableCell>Палата/Ліжко</TableCell>
-            <TableCell>Діагноз</TableCell>
+            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Палата/Ліжко</TableCell>
+            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Діагноз</TableCell>
             <TableCell>Дата госпіталізації</TableCell>
-            <TableCell>Дата виписки</TableCell>
+            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Дата виписки</TableCell>
             <TableCell>Статус</TableCell>
             <TableCell></TableCell>
           </TableRow>
@@ -55,16 +55,16 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
               <TableCell sx={{ fontWeight: 600 }}>
                 {ep.patientName || ep.patientId}
               </TableCell>
-              <TableCell sx={{ fontSize: 12 }}>
+              <TableCell sx={{ fontSize: 12, display: { xs: 'none', sm: 'table-cell' } }}>
                 {[ep.ward, ep.bedNumber].filter(Boolean).join(' / ') || '—'}
               </TableCell>
-              <TableCell sx={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <TableCell sx={{ fontSize: 12, display: { xs: 'none', md: 'table-cell' }, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {ep.admissionDiagnosis || '—'}
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>
                 {new Date(ep.admissionDate).toLocaleDateString('uk-UA')}
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, whiteSpace: 'nowrap' }}>
                 {ep.dischargeDate ? new Date(ep.dischargeDate).toLocaleDateString('uk-UA') : '-'}
               </TableCell>
               <TableCell>
@@ -77,7 +77,7 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
               <TableCell>
                 {onSelect && (
                   <Box
-                    sx={{ color: '#FF8C66', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                    sx={{ color: '#FF8C66', fontWeight: 600, fontSize: 13, cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}
                     role="button"
                     tabIndex={0}
                     onClick={(e) => { e.stopPropagation(); onSelect(ep); }}

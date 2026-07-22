@@ -66,8 +66,8 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
       {title && (
         <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>{title}</Typography>
       )}
-      <Grid container spacing={1}>
-        <Grid size={4}>
+      <Grid container spacing={1.5}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <TextField fullWidth size="small" type="number" label={'АТ сист. (мм рт.ст.)'}
             value={values.systolicBP ?? ''}
             onChange={(e) => onChange(setNum(values, 'systolicBP', e.target.value))}
@@ -75,7 +75,7 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
             disabled={disabled}
             slotProps={{ htmlInput: { min: CLINICAL_RANGES.systolicBP.min, max: CLINICAL_RANGES.systolicBP.max, step: 1 } }} />
         </Grid>
-        <Grid size={4}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <TextField fullWidth size="small" type="number" label={'АТ діас. (мм рт.ст.)'}
             value={values.diastolicBP ?? ''}
             onChange={(e) => onChange(setNum(values, 'diastolicBP', e.target.value))}
@@ -83,7 +83,7 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
             disabled={disabled}
             slotProps={{ htmlInput: { min: CLINICAL_RANGES.diastolicBP.min, max: CLINICAL_RANGES.diastolicBP.max, step: 1 } }} />
         </Grid>
-        <Grid size={4}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <TextField fullWidth size="small" type="number" label={'ЧСС (уд/хв)'}
             value={values.heartRate ?? ''}
             onChange={(e) => onChange(setNum(values, 'heartRate', e.target.value))}
@@ -91,7 +91,7 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
             disabled={disabled}
             slotProps={{ htmlInput: { min: CLINICAL_RANGES.heartRate.min, max: CLINICAL_RANGES.heartRate.max, step: 1 } }} />
         </Grid>
-        <Grid size={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <TextField fullWidth size="small" type="number" label={'SpO₂ (%)'}
             value={values.spo2 ?? ''}
             onChange={(e) => onChange(setNum(values, 'spo2', e.target.value))}
@@ -99,7 +99,7 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
             disabled={disabled}
             slotProps={{ htmlInput: { min: CLINICAL_RANGES.spo2.min, max: CLINICAL_RANGES.spo2.max, step: 1 } }} />
         </Grid>
-        <Grid size={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <TextField fullWidth size="small" type="number" label={'Температура (°C)'}
             value={values.temperature ?? ''}
             onChange={(e) => onChange(setNum(values, 'temperature', e.target.value))}
@@ -107,14 +107,14 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
             disabled={disabled}
             slotProps={{ htmlInput: { min: CLINICAL_RANGES.temperature.min, max: CLINICAL_RANGES.temperature.max, step: 0.1 } }} />
         </Grid>
-        <Grid size={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <TextField fullWidth size="small" type="number" label={'ЦВТ (мм рт.ст.)'}
             value={values.cvp ?? ''}
             onChange={(e) => onChange(setNum(values, 'cvp', e.target.value))}
             disabled={disabled}
             slotProps={{ htmlInput: { min: 0, max: 50, step: 1 } }} />
         </Grid>
-        <Grid size={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <TextField fullWidth size="small" type="number" label={'ЧД (дих/хв)'}
             value={values.respiratoryRate ?? ''}
             onChange={(e) => onChange(setNum(values, 'respiratoryRate', e.target.value))}
@@ -122,41 +122,41 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
             disabled={disabled}
             slotProps={{ htmlInput: { min: CLINICAL_RANGES.respiratoryRate.min, max: CLINICAL_RANGES.respiratoryRate.max, step: 1 } }} />
         </Grid>
-        <Grid size={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField fullWidth size="small" label={'Свідомість'}
             value={values.consciousness ?? ''}
             onChange={(e) => onChange(setStr(values, 'consciousness', e.target.value))}
             disabled={disabled} />
         </Grid>
-        <Grid size={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <TextField fullWidth size="small" type="number" label={'EtCO₂ (мм рт.ст.)'}
             value={values.etco2 ?? ''}
             onChange={(e) => onChange(setNum(values, 'etco2', e.target.value))}
             disabled={disabled}
             slotProps={{ htmlInput: { min: 0, max: 100, step: 1 } }} />
         </Grid>
-        <Grid size={3}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <TextField fullWidth size="small" type="number" label={'FiO₂ (%)'}
             value={values.fio2 ?? ''}
             onChange={(e) => onChange(setNum(values, 'fio2', e.target.value))}
             disabled={disabled}
             slotProps={{ htmlInput: { min: 21, max: 100, step: 1 } }} />
         </Grid>
-        <Grid size={4}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <TextField fullWidth size="small" type="number" label={'Діурез (мл)'}
             value={values.urineOutput ?? ''}
             onChange={(e) => onChange(setNum(values, 'urineOutput', e.target.value))}
             disabled={disabled}
             slotProps={{ htmlInput: { min: 0, max: 2000, step: 10 } }} />
         </Grid>
-        <Grid size={4}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <TextField fullWidth size="small" type="number" label={'Дренаж (мл)'}
             value={values.drainOutput ?? ''}
             onChange={(e) => onChange(setNum(values, 'drainOutput', e.target.value))}
             disabled={disabled}
             slotProps={{ htmlInput: { min: 0, max: 5000, step: 10 } }} />
         </Grid>
-        <Grid size={4}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <TextField fullWidth size="small" type="number" label={'Біль (0-10)'}
             value={values.painScore ?? ''}
             onChange={(e) => onChange(setNum(values, 'painScore', e.target.value))}

@@ -2,9 +2,12 @@ package com.superhumans.service;
 
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
@@ -12,6 +15,7 @@ import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.superhumans.dto.PdfResponse;
 import com.superhumans.entity.*;
+import com.superhumans.entity.TransferStatus;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.mis.MisService;
@@ -24,10 +28,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+
+import com.itextpdf.kernel.colors.ColorConstants;
 
 @Service
 @RequiredArgsConstructor
@@ -47,22 +54,23 @@ public class PdfGeneratorService {
     SignatureRepository signatureRepository;
     UserRepository userRepository;
     MisService misService;
+    SystemSettingsRepository systemSettingsRepository;
 
     public PdfResponse getLatestPdf(UUID clinicalDayId) {
         GeneratedPdf pdf = generatedPdfRepository
                 .findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId)
-                .orElseThrow(() -> new NotFoundException("No PDF found for clinical day: " + clinicalDayId));
+                .orElseThrow(() -> new NotFoundException("PDF не знайдено для клінічного дня: " + clinicalDayId));
         return toResponse(pdf);
     }
 
     @Transactional
     public PdfResponse generatePdf(UUID clinicalDayId, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
-                .orElseThrow(() -> new NotFoundException("Clinical day not found: " + clinicalDayId));
+                .orElseThrow(() -> new NotFoundException("Клінічний день не знайдено: " + clinicalDayId));
 
         if (day.getStatus() == ClinicalDayStatus.OPEN
                 || day.getStatus() == ClinicalDayStatus.NURSE_SIGNED) {
-            throw new DocumentLockedException("Clinical day must be signed by doctor before generating PDF");
+            throw new DocumentLockedException("Клінічний день має бути підписаний лікарем перед генерацією PDF");
         }
 
         int nextVersion = generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId)
@@ -80,33 +88,117 @@ public class PdfGeneratorService {
                 .build();
         if (pdfContent != null) {
             pdf.setChecksum(Integer.toHexString(pdfContent.hashCode()));
+            pdf.setFileData(pdfContent);
         }
+        pdf.setTransferStatus(TransferStatus.PENDING);
         pdf.setCreatedBy(userId);
         pdf.setUpdatedBy(userId);
         pdf = generatedPdfRepository.save(pdf);
         auditService.logAction("GeneratedPdf", clinicalDayId, "GENERATE", userId);
+
+        try {
+            boolean sent = misService.sendPdf(clinicalDayId, pdfContent, pdf.getFileName(), nextVersion);
+            if (sent) {
+                pdf.setTransferStatus(TransferStatus.SENT);
+                pdf.setTransferredAt(LocalDateTime.now());
+            } else {
+                pdf.setTransferStatus(TransferStatus.FAILED);
+                pdf.setTransferError("MIS відхилив PDF");
+            }
+        } catch (Exception e) {
+            pdf.setTransferStatus(TransferStatus.FAILED);
+            pdf.setTransferError(e.getMessage());
+        }
+        pdf = generatedPdfRepository.save(pdf);
         return toResponse(pdf);
     }
+
+    // ========================================================================
+    // PDF CONTENT BUILDING
+    // ========================================================================
 
     private byte[] buildPdfContent(ClinicalDay day, int version, Long userId) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
             PdfDocument pdfDoc = new PdfDocument(writer);
+            pdfDoc.setDefaultPageSize(PageSize.A4.rotate());
             Document document = new Document(pdfDoc);
 
             PdfFont font = loadFont();
             PdfFont boldFont = loadBoldFont(font);
 
-            addHeader(document, font, boldFont, version, userId);
-            addSection(document, font, boldFont, day);
-            addEpisodeInfo(document, font, boldFont, day);
-            addHourlyRecords(document, font, boldFont, day);
-            addFluidBalance(document, font, boldFont, day);
-            addMedicalOrders(document, font, boldFont, day);
-            addMedicalNotes(document, font, boldFont, day);
-            addScaleResults(document, font, boldFont, day);
-            addSignatures(document, font, boldFont, day);
+            List<HourlyRecord> hourlyRecords = hourlyRecordRepository
+                    .findByClinicalDayIdOrderByRecordTimeAsc(day.getId());
+            List<FluidBalance> balances = fluidBalanceRepository
+                    .findByClinicalDayIdOrderByHourAsc(day.getId());
+            List<Signature> signatures = signatureRepository.findByClinicalDayId(day.getId());
+            List<ScaleResult> scales = scaleResultRepository.findByClinicalDayId(day.getId());
+            List<MedicalNote> notes = medicalNoteRepository
+                    .findByClinicalDayIdOrderByCreatedAtAsc(day.getId());
+            List<MedicalOrder> orders = medicalOrderRepository
+                    .findByClinicalDayIdOrderByStartTimeAsc(day.getId());
+
+            Episode episode = day.getEpisode();
+            PatientDTO patient = null;
+            if (episode != null && episode.getPatientId() != null) {
+                try {
+                    patient = misService.getPatient(episode.getPatientId()).orElse(null);
+                } catch (Exception ignored) {}
+            }
+
+            int[] displayHours = buildDisplayHours();
+            Map<Integer, HourlyRecord> hourMap = buildHourMap(hourlyRecords);
+
+            // Execution hours per order for therapy chart
+            Map<UUID, Set<Integer>> orderExecHours = new HashMap<>();
+            for (MedicalOrder order : orders) {
+                Set<Integer> hours = new HashSet<>();
+                List<OrderExecution> execs = orderExecutionRepository.findByOrderId(order.getId());
+                for (OrderExecution exec : execs) {
+                    if (exec.getExecutedAt() != null) {
+                        hours.add(exec.getExecutedAt().getHour());
+                    }
+                }
+                orderExecHours.put(order.getId(), hours);
+            }
+
+            // Loss data by display hour index
+            double[] urineByHour = new double[24];
+            double[] drainByHour = new double[24];
+            for (HourlyRecord r : hourlyRecords) {
+                int idx = displayHourIndex(r.getRecordHour());
+                if (idx >= 0 && idx < 24) {
+                    if (r.getUrineOutput() != null) urineByHour[idx] = r.getUrineOutput();
+                    if (r.getDrainOutput() != null) drainByHour[idx] = r.getDrainOutput();
+                }
+            }
+
+            // === MASTER LAYOUT: 2 columns (left content + right sidebar) ===
+            float[] masterCols = {86f, 14f};
+            Table master = new Table(UnitValue.createPercentArray(masterCols));
+            master.setWidth(UnitValue.createPercentValue(100));
+
+            // Header row spanning both columns
+            master.addCell(makeHeaderCell(font, boldFont, version, userId, patient, day, episode));
+            // Right corner
+            master.addCell(cell("").setHeight(26).setBorder(Border.NO_BORDER));
+
+            // Main left content
+            Cell leftCell = new Cell().setPadding(0).setBorder(Border.NO_BORDER);
+            leftCell.add(createStatsTable(font, boldFont, day, patient, hourMap, displayHours));
+            leftCell.add(createTherapyTable(font, boldFont, orders, orderExecHours, displayHours));
+            leftCell.add(createLossesTable(font, boldFont, hourMap, displayHours, urineByHour, drainByHour));
+            master.addCell(leftCell);
+
+            // Right sidebar
+            master.addCell(createSidebar(font, boldFont, patient, episode, balances, signatures));
+
+            document.add(master);
+
+            // Additional pages for notes and scales
+            addNotesSection(document, font, boldFont, notes);
+            addScalesSection(document, font, boldFont, scales);
             addFooter(document, font, version, userId);
 
             document.close();
@@ -116,229 +208,456 @@ public class PdfGeneratorService {
         }
     }
 
-    private void addHeader(Document doc, PdfFont font, PdfFont boldFont, int version, Long userId) {
-        doc.add(new Paragraph("ICU PATIENT CHART")
-                .setFont(boldFont).setFontSize(18).setHorizontalAlignment(HorizontalAlignment.CENTER));
-        doc.add(new Paragraph("Clinical Day Report")
-                .setFont(font).setFontSize(14).setHorizontalAlignment(HorizontalAlignment.CENTER));
-        doc.add(new Paragraph("Version: " + version + " | Generated: "
-                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))
-                .setFont(font).setFontSize(10).setHorizontalAlignment(HorizontalAlignment.CENTER));
-        doc.add(new Paragraph(" "));
+    // ========================================================================
+    // DISPLAY HOUR HELPERS
+    // ========================================================================
+
+    private int[] buildDisplayHours() {
+        int[] h = new int[24];
+        for (int i = 0; i < 16; i++) h[i] = i + 8;
+        h[16] = 24;
+        for (int i = 17; i < 24; i++) h[i] = i - 16;
+        return h;
     }
 
-    private void addSection(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("CLINICAL DAY INFORMATION")
-                .setFont(boldFont).setFontSize(13).setUnderline());
-        doc.add(keyValue("Day Number", String.valueOf(day.getDayNumber()), font));
-        doc.add(keyValue("Status", day.getStatus().name(), font));
-        doc.add(keyValue("Period", day.getStartDateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                + " - " + (day.getEndDateTime() != null
-                ? day.getEndDateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "N/A"), font));
-        if (day.getClosedAt() != null) {
-            doc.add(keyValue("Closed At", day.getClosedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), font));
+    private int displayHourIndex(int recordHour) {
+        return (recordHour >= 8) ? (recordHour - 8) : (recordHour + 16);
+    }
+
+    private Map<Integer, HourlyRecord> buildHourMap(List<HourlyRecord> records) {
+        Map<Integer, HourlyRecord> map = new HashMap<>();
+        for (HourlyRecord r : records) {
+            map.put(displayHourIndex(r.getRecordHour()), r);
         }
-        doc.add(new Paragraph(" "));
+        return map;
     }
 
-    private void addEpisodeInfo(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("EPISODE INFORMATION")
-                .setFont(boldFont).setFontSize(13).setUnderline());
+    // ========================================================================
+    // FORM HEADER CELL
+    // ========================================================================
 
-        if (day.getEpisode() != null) {
-            Episode episode = day.getEpisode();
-            doc.add(keyValue("Episode ID", episode.getId().toString(), font));
-            doc.add(keyValue("Admission", episode.getAdmissionDate()
-                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), font));
-            doc.add(keyValue("Status", episode.getStatus().name(), font));
+    private Cell makeHeaderCell(PdfFont font, PdfFont boldFont, int version, Long userId,
+                                 PatientDTO patient, ClinicalDay day, Episode episode) {
+        String institution = loadInstitutionName();
+        Table inner = new Table(new float[]{48f, 14f, 38f});
+        inner.setWidth(UnitValue.createPercentValue(100));
 
-            if (episode.getPatientId() != null) {
-                try {
-                    PatientDTO patient = misService.getPatient(episode.getPatientId()).orElse(null);
-                    if (patient != null) {
-                        doc.add(keyValue("Patient", patient.getFullName(), font));
-                        doc.add(keyValue("Date of Birth", patient.getBirthDate() != null
-                                ? patient.getBirthDate().toString() : "N/A", font));
-                        doc.add(keyValue("Sex", patient.getSexCode() != null
-                                ? ("M".equals(patient.getSexCode()) ? "Male" : "Female") : "N/A", font));
-                        if (patient.getExternalId1() != null)
-                            doc.add(keyValue("MRN", patient.getExternalId1(), font));
-                    }
-                } catch (Exception ignored) {
-                    doc.add(keyValue("Patient ID", episode.getPatientId().toString(), font));
+        String minName = "Найменування міністерства, іншого органу виконавчої влади,\n"
+                + "підприємства, установи, організації, до сфери управління якого\n"
+                + "належить заклад охорони здоров'я";
+        String addrName = "Найменування та місцезнаходження (повна поштова адреса)\n"
+                + "закладу охорони здоров'я, де заповнена форма";
+        String edrpou = institution.contains("ЄДРПОУ") ? institution
+                : (institution.isEmpty() ? "" : institution + "\nКод за ЄДРПОУ 1234567890");
+
+        Cell leftCell = cell(minName + "\n" + addrName + "\n" + edrpou).setFontSize(8).setPadding(3);
+        Cell centerCell = cell("").setBorder(Border.NO_BORDER);
+        String headerRight = "МЕДИЧНА ДОКУМЕНТАЦІЯ\n"
+                + "Форма первинної облікової документації № 003-15/о\n"
+                + "ЗАТВЕРДЖЕНО\n"
+                + "Наказ МОЗ України\n"
+                + (version > 0 ? String.valueOf(version) : "123456789");
+        Cell rightCell = cell(headerRight).setFontSize(9).setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER).setPadding(3);
+
+        inner.addCell(leftCell.setFont(font));
+        inner.addCell(centerCell);
+        inner.addCell(rightCell.setFont(font));
+
+        // Second row: title
+        Cell titleRow = cell("КАРТА ІНТЕНСИВНОЇ ТЕРАПІЇ")
+                .setFont(boldFont).setFontSize(14)
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER)
+                .setPadding(4);
+
+        Table wrapper = new Table(1);
+        wrapper.setWidth(UnitValue.createPercentValue(100));
+        wrapper.addCell(new Cell().add(inner).setBorder(Border.NO_BORDER).setPadding(0));
+        wrapper.addCell(new Cell().add(titleRow).setBorder(Border.NO_BORDER).setPadding(0));
+
+        Cell master = new Cell().add(wrapper).setPadding(0);
+        return master;
+    }
+
+    // ========================================================================
+    // MEDICAL STATS TABLE  (24h × 8 metrics)
+    // ========================================================================
+
+    private Table createStatsTable(PdfFont font, PdfFont boldFont, ClinicalDay day,
+                                    PatientDTO patient, Map<Integer, HourlyRecord> hourMap, int[] displayHours) {
+        int[] dh = displayHours;
+        int totalCols = 3 + 24;
+        float[] colWidths = new float[totalCols];
+        colWidths[0] = 14f;
+        colWidths[1] = 1.6f;
+        colWidths[2] = 8.4f;
+        for (int i = 3; i < totalCols; i++) colWidths[i] = 76f / 24f;
+
+        Table t = new Table(UnitValue.createPercentArray(colWidths));
+        t.setWidth(UnitValue.createPercentValue(100));
+
+        float dataSize = 6f;
+        float headerSize = 7f;
+
+        // Row 0: info + hour headers
+        t.addCell(infoCell("Дата заповнення:", font, boldFont, headerSize));
+        t.addCell(cell("").setFontSize(headerSize));
+        t.addCell(headerCell("Час", font, boldFont, headerSize));
+        for (int i = 0; i < 24; i++) {
+            t.addCell(headerCell(String.valueOf(dh[i]), font, boldFont, headerSize));
+        }
+
+        // Metrics rows
+        String[] metrics = {
+                "АТсист (мм.рт.ст)", "АТдіас (мм.рт.ст)", "ЧСС ( в 1 хв)",
+                "SpO₂ (%)", "Темп. тіла (°С)", "ЦВТ (мм.вод.ст)", "Дихання", "ЧД (в 1 хв.)"
+        };
+        String[] infoLabels = {"Вік пацієнта:", "Доба перебування у ВАІТ:"};
+        String[] infoValues = new String[2];
+        infoValues[0] = patient != null && patient.getBirthDate() != null
+                ? ChronoUnit.YEARS.between(patient.getBirthDate(), LocalDateTime.now()) + " р."
+                : "";
+        infoValues[1] = String.valueOf(day.getDayNumber());
+
+        // Row 1: info1 + vertical label + metric0
+        t.addCell(infoCell(infoLabels[0], font, boldFont, headerSize));
+        t.addCell(verticalCell("Показники", font, boldFont, headerSize, 8));
+        t.addCell(metricCell(metrics[0], font, headerSize));
+        for (int i = 0; i < 24; i++) {
+            HourlyRecord r = hourMap.get(i);
+            t.addCell(dataCell(formatStat(r, 0), font, dataSize));
+        }
+
+        // Row 2: info2 (rowspan=7) + metric1
+        t.addCell(new Cell(7, 1)
+                .add(new Paragraph(infoLabels[1]).setFont(font).setBold().setFontSize(headerSize))
+                .setVerticalAlignment(com.itextpdf.layout.properties.VerticalAlignment.MIDDLE)
+                .setPadding(2));
+        t.addCell(metricCell(metrics[1], font, headerSize));
+        for (int i = 0; i < 24; i++) {
+            HourlyRecord r = hourMap.get(i);
+            t.addCell(dataCell(formatStat(r, 1), font, dataSize));
+        }
+
+        // Rows 3-8: metrics[2..7]
+        for (int m = 2; m < metrics.length; m++) {
+            t.addCell(metricCell(metrics[m], font, headerSize));
+            int mi = m;
+            for (int i = 0; i < 24; i++) {
+                HourlyRecord r = hourMap.get(i);
+                t.addCell(dataCell(formatStat(r, mi), font, dataSize));
+            }
+        }
+
+        return t;
+    }
+
+    private String formatStat(HourlyRecord r, int idx) {
+        if (r == null) return "";
+        return switch (idx) {
+            case 0 -> r.getSystolicBP() != null ? String.valueOf(r.getSystolicBP().intValue()) : "";
+            case 1 -> r.getDiastolicBP() != null ? String.valueOf(r.getDiastolicBP().intValue()) : "";
+            case 2 -> r.getHeartRate() != null ? String.valueOf(r.getHeartRate().intValue()) : "";
+            case 3 -> r.getSpo2() != null ? String.format("%.0f", r.getSpo2()) : "";
+            case 4 -> r.getTemperature() != null ? String.format("%.1f", r.getTemperature()) : "";
+            case 5 -> r.getCvp() != null ? String.valueOf(r.getCvp().intValue()) : "";
+            case 6 -> r.getConsciousness() != null ? r.getConsciousness() : "";
+            case 7 -> r.getRespiratoryRate() != null ? String.valueOf(r.getRespiratoryRate().intValue()) : "";
+            default -> "";
+        };
+    }
+
+    // ========================================================================
+    // THERAPY TABLE  (9 rows × 24h)
+    // ========================================================================
+
+    private Table createTherapyTable(PdfFont font, PdfFont boldFont, List<MedicalOrder> orders,
+                                      Map<UUID, Set<Integer>> execHours, int[] displayHours) {
+        float[] cw = new float[3 + 24];
+        cw[0] = 14f; cw[1] = 2f; cw[2] = 8f;
+        for (int i = 3; i < cw.length; i++) cw[i] = 76f / 24f;
+
+        Table t = new Table(UnitValue.createPercentArray(cw));
+        t.setWidth(UnitValue.createPercentValue(100));
+
+        float cellSize = 6f;
+        float headerSize = 8f;
+
+        // Title row
+        t.addCell(new Cell(1, 3).add(new Paragraph("Терапія").setFont(boldFont).setFontSize(headerSize))
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER).setPadding(2));
+        for (int i = 0; i < 24; i++) {
+            t.addCell(cell("").setFontSize(cellSize));
+        }
+
+        // 9 data rows
+        int orderCount = Math.min(orders.size(), 9);
+        List<String> labels = new ArrayList<>();
+        for (int i = 0; i < orderCount; i++) {
+            MedicalOrder o = orders.get(i);
+            labels.add(o.getDrugName() + " " + (o.getDose() != null ? o.getDose() : "") + (o.getUnit() != null ? " " + o.getUnit() : ""));
+        }
+        while (labels.size() < 9) labels.add("");
+
+        for (int row = 0; row < 9; row++) {
+            boolean groupStart = (row == 3 || row == 6);
+            float borderW = groupStart ? 1.5f : 0.5f;
+
+            t.addCell(cell("").setFontSize(cellSize));
+            t.addCell(cell("").setFontSize(cellSize));
+            t.addCell(metricCell(labels.get(row), font, cellSize));
+
+            String label = labels.get(row);
+            for (int i = 0; i < 24; i++) {
+                String mark = "";
+                if (row < orderCount && !label.isEmpty()) {
+                    MedicalOrder o = orders.get(row);
+                    Set<Integer> hours = execHours.getOrDefault(o.getId(), Collections.emptySet());
+                    if (hours.contains(displayHours[i])) mark = "+";
                 }
+                t.addCell(dataCell(mark, font, cellSize));
             }
         }
-        doc.add(new Paragraph(" "));
+
+        return t;
     }
 
-    private void addHourlyRecords(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("HOURLY RECORDS")
-                .setFont(boldFont).setFontSize(13).setUnderline());
+    // ========================================================================
+    // LOSSES TABLE  (4 rows × 24h)
+    // ========================================================================
 
-        List<HourlyRecord> records = hourlyRecordRepository
-                .findByClinicalDayIdOrderByRecordTimeAsc(day.getId());
-        if (records.isEmpty()) {
-            doc.add(new Paragraph("  No records.").setFont(font));
-        } else {
-            Table table = new Table(UnitValue.createPercentArray(new float[]{14, 10, 8, 8, 8, 8, 8, 8, 8, 10}))
-                    .useAllAvailableWidth();
-            addTableHeader(table, font, "Time", "HR", "RR", "BP Sys", "BP Dia", "SpO2", "Temp", "Pain", "Urine", "CSP");
-            for (HourlyRecord r : records) {
-                addTableRow(table, font,
-                        r.getRecordTime().format(DateTimeFormatter.ofPattern("HH:mm")),
-                        val(r.getHeartRate()), val(r.getRespiratoryRate()),
-                        val(r.getSystolicBP()), val(r.getDiastolicBP()),
-                        pct(r.getSpo2()), val(r.getTemperature()), val(r.getPainScore()),
-                        val(r.getUrineOutput()), r.getConsciousness() != null ? r.getConsciousness() : "");
+    private Table createLossesTable(PdfFont font, PdfFont boldFont, Map<Integer, HourlyRecord> hourMap,
+                                     int[] displayHours, double[] urineByHour, double[] drainByHour) {
+        float[] cw = new float[1 + 24];
+        cw[0] = 24f;
+        for (int i = 1; i < cw.length; i++) cw[i] = 76f / 24f;
+
+        Table t = new Table(UnitValue.createPercentArray(cw));
+        t.setWidth(UnitValue.createPercentValue(100));
+
+        float cellSize = 6f;
+        float headerSize = 8f;
+
+        // Title row spanning all 25 columns
+        t.addCell(new Cell(1, 25)
+                .add(new Paragraph("Втрати").setFont(boldFont).setFontSize(headerSize))
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER).setPadding(2));
+
+        // 4 loss rows: urine, drain, stool, vomit
+        String[] lossLabels = {"Діурез (сеча)", "Дренаж", "Стілець", "Блювота"};
+        for (int row = 0; row < 4; row++) {
+            t.addCell(metricCell(lossLabels[row], font, cellSize));
+            for (int i = 0; i < 24; i++) {
+                HourlyRecord r = hourMap.get(i);
+                String val = switch (row) {
+                    case 0 -> urineByHour[i] > 0 ? String.format("%.0f", urineByHour[i]) : "";
+                    case 1 -> drainByHour[i] > 0 ? String.format("%.0f", drainByHour[i]) : "";
+                    case 2 -> r != null && r.getStool() != null ? r.getStool().toString() : "";
+                    case 3 -> r != null && r.getVomit() != null ? r.getVomit().toString() : "";
+                    default -> "";
+                };
+                t.addCell(dataCell(val, font, cellSize));
             }
-            doc.add(table);
         }
-        doc.add(new Paragraph(" "));
+
+        return t;
     }
 
-    private void addFluidBalance(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("FLUID BALANCE")
-                .setFont(boldFont).setFontSize(13).setUnderline());
+    // ========================================================================
+    // SIDEBAR
+    // ========================================================================
 
-        List<FluidBalance> balances = fluidBalanceRepository
-                .findByClinicalDayIdOrderByHourAsc(day.getId());
-        if (balances.isEmpty()) {
-            doc.add(new Paragraph("  Not calculated. Use POST /fluid-balance/recalculate to compute.")
-                    .setFont(font));
-        } else {
-            Table table = new Table(UnitValue.createPercentArray(new float[]{12, 22, 22, 22, 22}))
-                    .useAllAvailableWidth();
-            addTableHeader(table, font, "Hour", "Intake", "Output", "Balance", "Cumulative");
-            for (FluidBalance fb : balances) {
-                addTableRow(table, font,
-                        fb.getHour() + ":00",
-                        fmt(fb.getIntake()), fmt(fb.getOutput()),
-                        fmtSigned(fb.getBalance()), fmtSigned(fb.getCumulativeBalance()));
-            }
-            doc.add(table);
+    private Cell createSidebar(PdfFont font, PdfFont boldFont, PatientDTO patient, Episode episode,
+                                List<FluidBalance> balances, List<Signature> signatures) {
+        float cellSize = 7f;
+        float titleSize = 8f;
+
+        Table sb = new Table(1);
+        sb.setWidth(UnitValue.createPercentValue(100));
+
+        // Patient name
+        String name = patient != null ? patient.getFullName() : "Пацієнт (ПІП)";
+        sb.addCell(sideCell(name, font, cellSize).setMinHeight(40));
+
+        // Diagnosis
+        sb.addCell(sideCell("Діагноз:", font, cellSize).setMinHeight(50));
+
+        // Anthropometry
+        sb.addCell(sideCell("Маса тіла: ________________", font, cellSize).setMinHeight(12));
+        sb.addCell(sideCell("Зріст: ____________________", font, cellSize).setMinHeight(12));
+        sb.addCell(sideCell("Ідеальна маса тіла: ________", font, cellSize).setMinHeight(12));
+
+        // Blood group + Rh
+        String bloodGroup = patient != null && patient.getBloodGroup() != null ? patient.getBloodGroup() : "____";
+        String rhFactor = patient != null && patient.getRhFactor() != null ? patient.getRhFactor() : "____";
+        sb.addCell(sideCell("Група крові: " + bloodGroup, font, cellSize).setMinHeight(12));
+        sb.addCell(sideCell("Резус-фактор: " + rhFactor, font, cellSize).setMinHeight(12));
+
+        // APACHE II
+        sb.addCell(sideCell("Важкість стану за APACHE II: ____", font, cellSize).setMinHeight(12));
+
+        // SOFA
+        sb.addCell(sideCell("Ступінь тяж. ПОН за SOFA: ____", font, cellSize).setMinHeight(12));
+
+        // Fluid balance
+        sb.addCell(sideSectionTitle("Баланс рідини", font, boldFont, titleSize));
+        double totalIntake = 0, totalOutput = 0;
+        for (FluidBalance fb : balances) {
+            if (fb.getIntake() != null) totalIntake += fb.getIntake();
+            if (fb.getOutput() != null) totalOutput += fb.getOutput();
         }
-        doc.add(new Paragraph(" "));
+        double netBalance = totalIntake - totalOutput;
+        sb.addCell(sideCell("Поступлення: " + fmt(totalIntake), font, cellSize).setMinHeight(10));
+        sb.addCell(sideCell("Виділення: " + fmt(totalOutput), font, cellSize).setMinHeight(10));
+        sb.addCell(sideCell("Добовий баланс: " + fmtSigned(netBalance), font, cellSize).setMinHeight(10));
+
+        double cumulative = 0;
+        if (!balances.isEmpty()) {
+            FluidBalance last = balances.get(balances.size() - 1);
+            if (last.getCumulativeBalance() != null) cumulative = last.getCumulativeBalance();
+        }
+        sb.addCell(sideCell("Кумулятивний баланс: " + fmtSigned(cumulative), font, cellSize).setMinHeight(10));
+
+        // Nurse signatures
+        sb.addCell(sideSectionTitle("Сестри/брати медичні\n(Власне ім'я, прізвище та підпис)", font, boldFont, titleSize));
+        List<Signature> nurseSigs = signatures.stream()
+                .filter(s -> "NURSE".equals(s.getRole()) && "ACTIVE".equals(s.getStatus()))
+                .collect(Collectors.toList());
+        int ns = Math.min(nurseSigs.size(), 2);
+        for (int i = 0; i < 2; i++) {
+            String line = (i + 1) + ". ";
+            if (i < ns) {
+                line += lookupUserName(nurseSigs.get(i).getUserId());
+            }
+            sb.addCell(sideCell(line, font, cellSize).setMinHeight(14));
+        }
+
+        // Doctor signatures
+        sb.addCell(sideSectionTitle("Лікарі\n(Власне ім'я, прізвище та підпис)", font, boldFont, titleSize));
+        List<Signature> docSigs = signatures.stream()
+                .filter(s -> ("DOCTOR".equals(s.getRole()) || "HEAD_OF_DEPARTMENT".equals(s.getRole())) && "ACTIVE".equals(s.getStatus()))
+                .collect(Collectors.toList());
+        int ds = Math.min(docSigs.size(), 2);
+        for (int i = 0; i < 2; i++) {
+            String line = (i + 1) + ". ";
+            if (i < ds) {
+                line += lookupUserName(docSigs.get(i).getUserId());
+            }
+            sb.addCell(sideCell(line, font, cellSize).setMinHeight(14));
+        }
+
+        Cell wrapper = new Cell().add(sb).setPadding(0);
+        return wrapper;
     }
 
-    private void addMedicalOrders(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("MEDICAL ORDERS")
-                .setFont(boldFont).setFontSize(13).setUnderline());
+    // ========================================================================
+    // ADDITIONAL SECTIONS (after main form)
+    // ========================================================================
 
-        List<MedicalOrder> orders = medicalOrderRepository
-                .findByClinicalDayIdOrderByStartTimeAsc(day.getId());
-        if (orders.isEmpty()) {
-            doc.add(new Paragraph("  No orders.").setFont(font));
-        } else {
-            for (MedicalOrder order : orders) {
-                doc.add(new Paragraph("  " + order.getDrugName() + " | " + order.getDose() + " " + order.getUnit()
-                        + " | " + order.getRoute() + " | " + order.getFrequency()
-                        + " | Status: " + order.getStatus())
-                        .setFont(font));
-
-                List<OrderExecution> executions = orderExecutionRepository.findByOrderId(order.getId());
-                if (!executions.isEmpty()) {
-                    Table execTable = new Table(UnitValue.createPercentArray(new float[]{16, 20, 20, 20, 24}))
-                            .useAllAvailableWidth();
-                    addTableHeader(execTable, font, "Executed At", "By", "Dose", "Status", "Comment");
-                    Map<Long, String> userNames = getUserNames(executions);
-                    for (OrderExecution exec : executions) {
-                        addTableRow(execTable, font,
-                                exec.getExecutedAt().format(DateTimeFormatter.ofPattern("HH:mm")),
-                                userNames.getOrDefault(exec.getExecutedBy(), String.valueOf(exec.getExecutedBy())),
-                                exec.getActualDose() != null ? exec.getActualDose() : "",
-                                exec.getStatus().name(),
-                                exec.getComment() != null ? exec.getComment() : "");
-                    }
-                    doc.add(execTable);
-                }
-                doc.add(new Paragraph(" "));
-            }
-        }
+    private void addNotesSection(Document doc, PdfFont font, PdfFont boldFont, List<MedicalNote> notes) {
+        if (notes.isEmpty()) return;
         doc.add(new Paragraph(" "));
+        doc.add(new Paragraph("МЕДИЧНІ НОТАТКИ")
+                .setFont(boldFont).setFontSize(12).setUnderline());
+
+        Map<Long, String> authorNames = getAuthorNames(notes);
+        for (MedicalNote note : notes) {
+            String author = authorNames.getOrDefault(note.getAuthorId(),
+                    String.valueOf(note.getAuthorId()));
+            doc.add(new Paragraph("  [" + note.getNoteType() + "] " + author + " ("
+                    + translateRole(note.getRole()) + "):")
+                    .setFont(font).setBold());
+            doc.add(new Paragraph("    " + note.getText()).setFont(font));
+            doc.add(new Paragraph("    — " + note.getCreatedAt()
+                    .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).setFont(font));
+            doc.add(new Paragraph(" "));
+        }
     }
 
-    private void addMedicalNotes(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("MEDICAL NOTES")
-                .setFont(boldFont).setFontSize(13).setUnderline());
-
-        List<MedicalNote> notes = medicalNoteRepository
-                .findByClinicalDayIdOrderByCreatedAtAsc(day.getId());
-        if (notes.isEmpty()) {
-            doc.add(new Paragraph("  No notes.").setFont(font));
-        } else {
-            Map<Long, String> authorNames = getAuthorNames(notes);
-            for (MedicalNote note : notes) {
-                String author = authorNames.getOrDefault(note.getAuthorId(),
-                        String.valueOf(note.getAuthorId()));
-                doc.add(new Paragraph("  [" + note.getNoteType() + "] " + author + " (" + note.getRole() + "):")
-                        .setFont(font).setBold());
-                doc.add(new Paragraph("    " + note.getText()).setFont(font));
-                doc.add(new Paragraph("    — " + note.getCreatedAt()
-                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).setFont(font));
-                doc.add(new Paragraph(" "));
-            }
-        }
+    private void addScalesSection(Document doc, PdfFont font, PdfFont boldFont, List<ScaleResult> scales) {
+        if (scales.isEmpty()) return;
         doc.add(new Paragraph(" "));
-    }
+        doc.add(new Paragraph("КЛІНІЧНІ ШКАЛИ")
+                .setFont(boldFont).setFontSize(12).setUnderline());
 
-    private void addScaleResults(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("CLINICAL SCALES")
-                .setFont(boldFont).setFontSize(13).setUnderline());
-
-        List<ScaleResult> scales = scaleResultRepository.findByClinicalDayId(day.getId());
-        if (scales.isEmpty()) {
-            doc.add(new Paragraph("  No scale results.").setFont(font));
-        } else {
-            Table table = new Table(UnitValue.createPercentArray(new float[]{30, 20, 25, 25}))
-                    .useAllAvailableWidth();
-            addTableHeader(table, font, "Scale", "Result", "Calculated At", "By");
-            Map<Long, String> userNames = getScaleUserNames(scales);
-            for (ScaleResult sr : scales) {
-                addTableRow(table, font,
-                        sr.getScale().getName(),
-                        sr.getResult(),
-                        sr.getCalculatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
-                        userNames.getOrDefault(sr.getCalculatedBy(),
-                                String.valueOf(sr.getCalculatedBy())));
-            }
-            doc.add(table);
+        Table table = new Table(UnitValue.createPercentArray(new float[]{30, 20, 25, 25}))
+                .useAllAvailableWidth();
+        addTableHeader(table, font, "Шкала", "Результат", "Обчислено", "Ким");
+        Map<Long, String> userNames = getScaleUserNames(scales);
+        for (ScaleResult sr : scales) {
+            addTableRow(table, font,
+                    sr.getScale().getName(),
+                    sr.getResult(),
+                    sr.getCalculatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
+                    userNames.getOrDefault(sr.getCalculatedBy(),
+                            String.valueOf(sr.getCalculatedBy())));
         }
-        doc.add(new Paragraph(" "));
-    }
-
-    private void addSignatures(Document doc, PdfFont font, PdfFont boldFont, ClinicalDay day) {
-        doc.add(new Paragraph("SIGNATURES")
-                .setFont(boldFont).setFontSize(13).setUnderline());
-
-        List<Signature> signatures = signatureRepository.findByClinicalDayId(day.getId());
-        if (signatures.isEmpty()) {
-            doc.add(new Paragraph("  No signatures.").setFont(font));
-        } else {
-            Table table = new Table(UnitValue.createPercentArray(new float[]{16, 20, 20, 22, 22}))
-                    .useAllAvailableWidth();
-            addTableHeader(table, font, "Role", "User", "Signed At", "Status", "Hash");
-            Map<Long, String> userNames = getSignatureUserNames(signatures);
-            for (Signature sig : signatures) {
-                addTableRow(table, font,
-                        sig.getRole(),
-                        userNames.getOrDefault(sig.getUserId(),
-                                String.valueOf(sig.getUserId())),
-                        sig.getSignedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
-                        sig.getStatus(),
-                        sig.getHash() != null ? sig.getHash().substring(0, Math.min(16, sig.getHash().length())) : "");
-            }
-            doc.add(table);
-        }
-        doc.add(new Paragraph(" "));
+        doc.add(table);
     }
 
     private void addFooter(Document doc, PdfFont font, int version, Long userId) {
-        doc.add(new Paragraph("— End of Document —")
+        doc.add(new Paragraph(" "));
+        doc.add(new Paragraph("— Кінець документа —")
                 .setFont(font).setFontSize(10).setHorizontalAlignment(HorizontalAlignment.CENTER));
-        doc.add(new Paragraph("Document v" + version + " | Generated by: " + userId
-                + " | " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+        doc.add(new Paragraph("Документ v" + version + " | Сформовано користувачем: " + userId
+                + " | " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")))
                 .setFont(font).setFontSize(8).setHorizontalAlignment(HorizontalAlignment.CENTER));
+    }
+
+    // ========================================================================
+    // CELL HELPERS
+    // ========================================================================
+
+    private Cell cell(String text) {
+        Paragraph p = new Paragraph(text != null ? text : "");
+        return new Cell().add(p).setPadding(1);
+    }
+
+    private Cell infoCell(String text, PdfFont font, PdfFont boldFont, float size) {
+        return cell(text).setFont(font).setFontSize(size).setBold().setVerticalAlignment(
+                com.itextpdf.layout.properties.VerticalAlignment.TOP).setPadding(2);
+    }
+
+    private Cell headerCell(String text, PdfFont font, PdfFont boldFont, float size) {
+        return cell(text).setFont(font).setFontSize(size).setBold()
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER);
+    }
+
+    private Cell metricCell(String text, PdfFont font, float size) {
+        return cell(text).setFont(font).setFontSize(size).setPadding(2);
+    }
+
+    private Cell dataCell(String text, PdfFont font, float size) {
+        return cell(text).setFont(font).setFontSize(size)
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER);
+    }
+
+    private Cell verticalCell(String text, PdfFont font, PdfFont boldFont, float size, int rowspan) {
+        Paragraph p = new Paragraph(text).setFont(boldFont).setFontSize(size)
+                .setTextAlignment(com.itextpdf.layout.properties.TextAlignment.CENTER);
+        return new Cell(rowspan, 1).add(p).setVerticalAlignment(
+                com.itextpdf.layout.properties.VerticalAlignment.MIDDLE);
+    }
+
+    private Cell sideCell(String text, PdfFont font, float size) {
+        return cell(text).setFont(font).setFontSize(size).setPadding(2);
+    }
+
+    private Cell sideSectionTitle(String text, PdfFont font, PdfFont boldFont, float size) {
+        return cell(text).setFont(boldFont).setFontSize(size).setPadding(2);
+    }
+
+    // ========================================================================
+    // ORIGINAL UTILITY METHODS (kept)
+    // ========================================================================
+
+    private String loadInstitutionName() {
+        try {
+            return systemSettingsRepository.findByKey("institution_name")
+                    .map(s -> s.getValue())
+                    .orElse("");
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private Paragraph keyValue(String key, String value, PdfFont font) {
@@ -347,13 +666,13 @@ public class PdfGeneratorService {
 
     private void addTableHeader(Table table, PdfFont font, String... headers) {
         for (String header : headers) {
-            table.addHeaderCell(new Cell().add(new Paragraph(header).setFont(font).setFontSize(8).setBold()));
+            table.addHeaderCell(new Cell().add(new Paragraph(header).setFont(font).setFontSize(7).setBold()));
         }
     }
 
     private void addTableRow(Table table, PdfFont font, String... values) {
         for (String value : values) {
-            table.addCell(new Cell().add(new Paragraph(value).setFont(font).setFontSize(7)));
+            table.addCell(new Cell().add(new Paragraph(value).setFont(font).setFontSize(6)));
         }
     }
 
@@ -375,6 +694,70 @@ public class PdfGeneratorService {
     private String fmtSigned(Double d) {
         if (d == null) return "0.0";
         return (d >= 0 ? "+" : "") + String.format("%.1f", d);
+    }
+
+    private String translateStatus(ClinicalDayStatus status) {
+        return switch (status) {
+            case OPEN -> "ВІДКРИТИЙ";
+            case NURSE_SIGNED -> "ПІДПИСАНО МЕДСЕСТРОЮ";
+            case DOCTOR_SIGNED -> "ПІДПИСАНО ЛІКАРЕМ";
+            case CLOSED -> "ЗАКРИТО";
+            case REOPENED -> "ВІДКРИТО ЗАНОВО";
+        };
+    }
+
+    private String translateEpisodeStatus(EpisodeStatus status) {
+        return switch (status) {
+            case DRAFT -> "ЧЕРНЕТКА";
+            case ACTIVE -> "АКТИВНИЙ";
+            case COMPLETED -> "ЗАВЕРШЕНО";
+            case ARCHIVED -> "АРХІВОВАНО";
+        };
+    }
+
+    private String translateSex(String code) {
+        if (code == null) return "Н/Д";
+        return "M".equals(code) ? "Чоловіча" : "Жіноча";
+    }
+
+    private String translateRole(String role) {
+        if (role == null) return "";
+        return switch (role) {
+            case "DOCTOR" -> "Лікар";
+            case "NURSE" -> "Медична сестра";
+            case "HEAD_OF_DEPARTMENT" -> "Завідувач відділення";
+            case "ADMINISTRATOR" -> "Адміністратор";
+            case "AUDITOR" -> "Аудитор";
+            default -> role;
+        };
+    }
+
+    private String translateOrderStatus(MedicalOrderStatus status) {
+        return switch (status) {
+            case DRAFT -> "ЧЕРНЕТКА";
+            case ACTIVE -> "АКТИВНЕ";
+            case COMPLETED -> "ВИКОНАНО";
+            case CANCELLED -> "СКАСОВАНО";
+        };
+    }
+
+    private String translateExecutionStatus(OrderExecutionStatus status) {
+        return switch (status) {
+            case PLANNED -> "ЗАПЛАНОВАНО";
+            case IN_PROGRESS -> "ВИКОНУЄТЬСЯ";
+            case COMPLETED -> "ВИКОНАНО";
+            case PARTIALLY_COMPLETED -> "ЧАСТКОВО ВИКОНАНО";
+            case CANCELLED -> "СКАСОВАНО";
+        };
+    }
+
+    private String translateSignatureStatus(String status) {
+        if (status == null) return "";
+        return switch (status) {
+            case "ACTIVE" -> "АКТИВНИЙ";
+            case "REVOKED" -> "ВІДКЛИКАНО";
+            default -> status;
+        };
     }
 
     private Map<Long, String> getUserNames(List<OrderExecution> executions) {
@@ -482,6 +865,9 @@ public class PdfGeneratorService {
                 .generatedAt(entity.getGeneratedAt())
                 .generatedBy(entity.getGeneratedBy())
                 .checksum(entity.getChecksum())
+                .transferStatus(entity.getTransferStatus())
+                .transferredAt(entity.getTransferredAt())
+                .transferError(entity.getTransferError())
                 .build();
     }
 }

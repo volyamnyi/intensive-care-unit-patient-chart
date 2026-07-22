@@ -31,6 +31,7 @@ public class FluidBalanceService {
         List<FluidBalanceResponse> responses = fluidBalanceRepository
                 .findByClinicalDayIdOrderByHourAsc(clinicalDayId)
                 .stream().map(fluidBalanceMapper::toResponse)
+                .sorted(Comparator.comparingInt(r -> (r.getHour() + 16) % 24))
                 .collect(Collectors.toList());
         enrichWithCategoryBreakdowns(clinicalDayId, responses);
         return responses;
@@ -66,12 +67,11 @@ public class FluidBalanceService {
             double output = 0.0;
             if (rec.getUrineOutput() != null) output += rec.getUrineOutput();
             if (rec.getDrainOutput() != null) output += rec.getDrainOutput();
-            if (rec.getStool() != null && !rec.getStool().isBlank()) output += 200.0;
             if (rec.getVomit() != null && !rec.getVomit().isBlank()) output += 100.0;
             outputByHour.merge(hour, output, Double::sum);
         }
 
-        Set<Integer> allHours = new TreeSet<>();
+        Set<Integer> allHours = new TreeSet<>(Comparator.comparingInt((Integer h) -> (h + 16) % 24));
         allHours.addAll(intakeByHour.keySet());
         allHours.addAll(outputByHour.keySet());
 
@@ -142,7 +142,6 @@ public class FluidBalanceService {
         outputByCategory.put("diuresis", 0.0);
         outputByCategory.put("drainage", 0.0);
         outputByCategory.put("vomiting", 0.0);
-        outputByCategory.put("stool", 0.0);
         outputByCategory.put("bloodLoss", 0.0);
         outputByCategory.put("other", 0.0);
 
@@ -153,8 +152,6 @@ public class FluidBalanceService {
                 outputByCategory.merge("drainage", rec.getDrainOutput(), Double::sum);
             if (rec.getVomit() != null && !rec.getVomit().isBlank())
                 outputByCategory.merge("vomiting", 100.0, Double::sum);
-            if (rec.getStool() != null && !rec.getStool().isBlank())
-                outputByCategory.merge("stool", 200.0, Double::sum);
         }
 
         for (FluidBalanceResponse response : responses) {

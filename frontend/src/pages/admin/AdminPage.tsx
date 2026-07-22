@@ -57,14 +57,14 @@ export default function AdminPage() {
   const renderTable = (title: string, rows: User[]) => (
     <Paper sx={{ p: 2.5, mb: 3 }}>
       <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>{title}</Typography>
-      <TableContainer>
-        <Table size="small">
+      <TableContainer sx={{ overflowX: 'auto' }}>
+        <Table size="small" sx={{ minWidth: 450 }}>
           <TableHead>
             <TableRow>
               <TableCell>ПІБ</TableCell>
               <TableCell>Логін</TableCell>
-              <TableCell>Роль</TableCell>
-              <TableCell>Email</TableCell>
+              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Роль</TableCell>
+              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Email</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -72,8 +72,8 @@ export default function AdminPage() {
               <TableRow key={u.id}>
                 <TableCell sx={{ fontWeight: 600 }}>{u.fullName}</TableCell>
                 <TableCell>{u.login}</TableCell>
-                <TableCell>{roleLabel(u)}</TableCell>
-                <TableCell>{u.email}</TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{roleLabel(u)}</TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{u.email}</TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (
@@ -123,9 +123,9 @@ export default function AdminPage() {
             </Box>
             {showAudit && (
               <>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
                   <TextField size="small" label="Фільтр за сутністю" value={auditFilterEntity}
-                    onChange={e => setAuditFilterEntity(e.target.value)} sx={{ width: 200 }} />
+                    onChange={e => setAuditFilterEntity(e.target.value)} sx={{ width: { xs: '100%', sm: 200 } }} />
                   <Button size="small" variant="outlined" onClick={loadAudit}>Пошук</Button>
                 </Box>
                 <AuditLogTable logs={auditLogs} loading={auditLoading} />

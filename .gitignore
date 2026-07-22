@@ -29,5 +29,11 @@ playwright-report-exploratory/
 tests/exploratory/
 tests/playwright-exploratory.config.ts
 tests/specs/**/exploratory.spec.ts
-ImprovementPlan.md
-exploratory-test-plan.md
+*.err
+*.pdf
+MIS_API.json
+MIS_API_SPEC.md
+anchored-summary.md
+test-plan-based-on-exploratory.md
+ShortUserManual.md
+UseManual.md

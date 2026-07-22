@@ -56,9 +56,15 @@ public class ClinicalScaleService {
         ClinicalScale scale = clinicalScaleRepository.findById(request.getScaleId())
                 .orElseThrow(() -> new NotFoundException("Clinical scale not found: " + request.getScaleId()));
 
-        String result = scale.getIsAutomatic() != null && scale.getIsAutomatic()
-                ? calculateAutomatic(scale, clinicalDayId, request.getResult())
-                : request.getResult();
+        String result = request.getResult();
+        if (scale.getIsAutomatic() != null && scale.getIsAutomatic()) {
+            result = calculateAutomatic(scale, clinicalDayId, null);
+        } else {
+            if (result == null || result.isBlank()) {
+                result = autoFillFromPreviousDay(day, scale, clinicalDayId);
+            }
+        }
+        if (result == null) result = "N/A";
 
         ScaleResult sr = ScaleResult.builder()
                 .clinicalDay(day)
@@ -72,6 +78,29 @@ public class ClinicalScaleService {
         sr = scaleResultRepository.save(sr);
         auditService.logCreate("ScaleResult", sr.getId(), userId);
         return scaleResultMapper.toResponse(sr);
+    }
+
+    private String autoFillFromPreviousDay(ClinicalDay day, ClinicalScale scale, UUID clinicalDayId) {
+        String scaleName = scale.getName() != null ? scale.getName().toLowerCase() : "";
+        if (!scaleName.contains("apache") && !scaleName.contains("sofa")) return null;
+
+        List<ClinicalDay> days = clinicalDayRepository
+                .findByEpisodeIdOrderByDayNumberAsc(day.getEpisode().getId());
+        int idx = -1;
+        for (int i = 0; i < days.size(); i++) {
+            if (days.get(i).getId().equals(clinicalDayId)) { idx = i; break; }
+        }
+        if (idx <= 0) return null;
+
+        ClinicalDay prevDay = days.get(idx - 1);
+        List<ScaleResult> prevResults = scaleResultRepository.findByClinicalDayId(prevDay.getId());
+        for (ScaleResult pr : prevResults) {
+            if (pr.getScale() != null && pr.getScale().getName() != null
+                    && pr.getScale().getName().equalsIgnoreCase(scale.getName())) {
+                return pr.getResult();
+            }
+        }
+        return null;
     }
 
     @Transactional

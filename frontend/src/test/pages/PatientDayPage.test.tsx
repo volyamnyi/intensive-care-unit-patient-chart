@@ -94,6 +94,7 @@ const mockEpisode: Episode = {
   ward: null,
   bedNumber: null,
   admissionDiagnosis: null,
+  attendingDoctorId: null,
   createdBy: 1,
   createdAt: '2025-06-01T10:00:00Z',
   updatedBy: 1,
@@ -217,27 +218,27 @@ describe('PatientDayPage', () => {
     });
   });
 
-  it('shows sign dialog when "Підписати" is clicked', async () => {
+  it('shows sign inline confirm when "Підписати" is clicked', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Підписати')).toBeInTheDocument();
     });
     await userEvent.click(screen.getByText('Підписати'));
     await waitFor(() => {
-      expect(screen.getByText('Підписання дня 1')).toBeInTheDocument();
+      expect(screen.getByText('Підтвердити підписання')).toBeInTheDocument();
     });
   });
 
-  it('calls signDoctor on sign dialog confirm', async () => {
+  it('calls signDoctor on sign inline confirm', async () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Підписати')).toBeInTheDocument();
     });
     await userEvent.click(screen.getByText('Підписати'));
     await waitFor(() => {
-      expect(screen.getByText('Підписання дня 1')).toBeInTheDocument();
+      expect(screen.getByText('Підтвердити підписання')).toBeInTheDocument();
     });
-    await userEvent.click(screen.getAllByText('Підписати')[1]);
+    await userEvent.click(screen.getByText('Підтвердити підписання'));
     await waitFor(() => {
       expect(mockSignDoctor).toHaveBeenCalledWith('day-1', { userId: 1 });
     });

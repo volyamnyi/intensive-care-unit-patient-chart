@@ -1,0 +1,15 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "url": "/api/run",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$[?(@.name == 'spzIBCompanyDetails')]" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "company_details.json",
+    "headers": { "Content-Type": "application/json" }
+  }
+}

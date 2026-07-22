@@ -24,13 +24,20 @@ public class SignatureService {
     SignatureRepository signatureRepository;
 
     @Transactional
-    public Signature createSignature(ClinicalDay day, Long userId, String role, String hash) {
+    public Signature createSignature(ClinicalDay day, Long userId, String role, String hash,
+            String certSerialNumber, String certIssuer, String certSubject,
+            LocalDateTime certValidFrom, LocalDateTime certValidUntil) {
         Signature signature = Signature.builder()
                 .clinicalDay(day)
                 .userId(userId)
                 .role(role)
                 .signedAt(LocalDateTime.now())
                 .hash(hash)
+                .certSerialNumber(certSerialNumber)
+                .certIssuer(certIssuer)
+                .certSubject(certSubject)
+                .certValidFrom(certValidFrom)
+                .certValidUntil(certValidUntil)
                 .status("ACTIVE")
                 .build();
         signature.setCreatedBy(userId);

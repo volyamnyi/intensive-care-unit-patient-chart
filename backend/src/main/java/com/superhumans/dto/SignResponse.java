@@ -14,5 +14,10 @@ public class SignResponse {
     String role;
     LocalDateTime signedAt;
     String hash;
+    String certSerialNumber;
+    String certIssuer;
+    String certSubject;
+    LocalDateTime certValidFrom;
+    LocalDateTime certValidUntil;
     Integer version;
 }

@@ -29,6 +29,21 @@ public class Signature extends BaseEntity {
     @Column(length = 256)
     String hash;
 
+    @Column(name = "cert_serial_number", length = 64)
+    String certSerialNumber;
+
+    @Column(name = "cert_issuer", length = 256)
+    String certIssuer;
+
+    @Column(name = "cert_subject", length = 256)
+    String certSubject;
+
+    @Column(name = "cert_valid_from")
+    LocalDateTime certValidFrom;
+
+    @Column(name = "cert_valid_until")
+    LocalDateTime certValidUntil;
+
     @Column(nullable = false, length = 20)
     String status;
 }

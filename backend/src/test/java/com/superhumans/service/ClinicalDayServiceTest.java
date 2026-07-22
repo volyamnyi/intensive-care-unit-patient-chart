@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.mockito.MockedStatic;
 
 @ExtendWith(MockitoExtension.class)
 class ClinicalDayServiceTest {
@@ -50,6 +52,15 @@ class ClinicalDayServiceTest {
 
     @Mock
     private SignatureMapper signatureMapper;
+
+    @Mock
+    private PdfGeneratorService pdfGeneratorService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private FluidBalanceService fluidBalanceService;
 
     @InjectMocks
     private ClinicalDayService clinicalDayService;
@@ -188,23 +199,26 @@ class ClinicalDayServiceTest {
 
     @Test
     void signNurse_signsSuccessfully() {
-        SignRequest req = new SignRequest(userId, "hash123");
-        Signature signature = new Signature();
-        signature.setId(UUID.randomUUID());
-        signature.setClinicalDay(testDay);
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(8, 0));
+            SignRequest req = new SignRequest(userId, "hash123");
+            Signature signature = new Signature();
+            signature.setId(UUID.randomUUID());
+            signature.setClinicalDay(testDay);
 
-        when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
-        doNothing().when(signatureService).assertNoNurseSignature(dayId);
-        when(signatureService.createSignature(any(), eq(userId), eq("NURSE"), eq("hash123")))
-                .thenReturn(signature);
-        when(clinicalDayRepository.save(any(ClinicalDay.class))).thenReturn(testDay);
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+            doNothing().when(signatureService).assertNoNurseSignature(dayId);
+            when(signatureService.createSignature(any(), eq(userId), eq("NURSE"), eq("hash123"),
+                    any(), any(), any(), any(), any())).thenReturn(signature);
+            when(clinicalDayRepository.save(any(ClinicalDay.class))).thenReturn(testDay);
 
-        SignResponse res = clinicalDayService.signNurse(dayId, req, userId);
+            SignResponse res = clinicalDayService.signNurse(dayId, req, userId);
 
-        verify(clinicalDayRepository).save(dayCaptor.capture());
-        assertThat(dayCaptor.getValue().getNurseSigned()).isTrue();
-        assertThat(dayCaptor.getValue().getStatus()).isEqualTo(ClinicalDayStatus.NURSE_SIGNED);
-        verify(auditService).logAction("ClinicalDay", dayId, "SIGN_NURSE", userId);
+            verify(clinicalDayRepository).save(dayCaptor.capture());
+            assertThat(dayCaptor.getValue().getNurseSigned()).isTrue();
+            assertThat(dayCaptor.getValue().getStatus()).isEqualTo(ClinicalDayStatus.NURSE_SIGNED);
+            verify(auditService).logAction("ClinicalDay", dayId, "SIGN_NURSE", userId);
+        }
     }
 
     @Test
@@ -219,34 +233,105 @@ class ClinicalDayServiceTest {
 
     @Test
     void signDoctor_whenNurseNotSigned_throws() {
-        SignRequest req = new SignRequest(userId, "hash");
-        when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(8, 0));
+            SignRequest req = new SignRequest(userId, "hash");
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
 
-        assertThatThrownBy(() -> clinicalDayService.signDoctor(dayId, req, userId))
-                .isInstanceOf(BusinessException.class);
+            assertThatThrownBy(() -> clinicalDayService.signDoctor(dayId, req, userId))
+                    .isInstanceOf(BusinessException.class);
+        }
     }
 
     @Test
     void signDoctor_signsSuccessfully() {
-        testDay.setNurseSigned(true);
-        SignRequest req = new SignRequest(userId, "hash456");
-        Signature signature = new Signature();
-        signature.setId(UUID.randomUUID());
-        signature.setClinicalDay(testDay);
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(8, 0));
+            testDay.setNurseSigned(true);
+            SignRequest req = new SignRequest(userId, "hash456");
+            Signature signature = new Signature();
+            signature.setId(UUID.randomUUID());
+            signature.setClinicalDay(testDay);
 
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+            doNothing().when(signatureService).assertNoDoctorSignature(dayId);
+            when(signatureService.createSignature(any(), eq(userId), eq("DOCTOR"), eq("hash456"),
+                    any(), any(), any(), any(), any())).thenReturn(signature);
+            when(clinicalDayRepository.save(any(ClinicalDay.class))).thenReturn(testDay);
+
+            SignResponse res = clinicalDayService.signDoctor(dayId, req, userId);
+
+            verify(clinicalDayRepository).save(dayCaptor.capture());
+            assertThat(dayCaptor.getValue().getDoctorSigned()).isTrue();
+            assertThat(dayCaptor.getValue().getStatus()).isEqualTo(ClinicalDayStatus.DOCTOR_SIGNED);
+            assertThat(dayCaptor.getValue().getClosedAt()).isNotNull();
+            verify(auditService).logAction("ClinicalDay", dayId, "SIGN_DOCTOR", userId);
+            verify(pdfGeneratorService).generatePdf(dayId, userId);
+        }
+    }
+
+    @Test
+    void signDoctor_whenAttendingDoctorMismatch_throws() {
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(8, 0));
+            testDay.setNurseSigned(true);
+            testEpisode.setAttendingDoctorId(99L);
+            SignRequest req = new SignRequest(userId, "hash");
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+
+            assertThatThrownBy(() -> clinicalDayService.signDoctor(dayId, req, userId))
+                    .isInstanceOf(BusinessException.class);
+        }
+    }
+
+    @Test
+    void closeEarly_success() {
+        testDay.setStatus(ClinicalDayStatus.OPEN);
         when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
-        doNothing().when(signatureService).assertNoDoctorSignature(dayId);
-        when(signatureService.createSignature(any(), eq(userId), eq("DOCTOR"), eq("hash456")))
-                .thenReturn(signature);
         when(clinicalDayRepository.save(any(ClinicalDay.class))).thenReturn(testDay);
 
-        SignResponse res = clinicalDayService.signDoctor(dayId, req, userId);
+        clinicalDayService.closeEarly(dayId, "Patient stable", userId);
 
         verify(clinicalDayRepository).save(dayCaptor.capture());
-        assertThat(dayCaptor.getValue().getDoctorSigned()).isTrue();
-        assertThat(dayCaptor.getValue().getStatus()).isEqualTo(ClinicalDayStatus.DOCTOR_SIGNED);
+        assertThat(dayCaptor.getValue().getStatus()).isEqualTo(ClinicalDayStatus.CLOSED);
         assertThat(dayCaptor.getValue().getClosedAt()).isNotNull();
-        verify(auditService).logAction("ClinicalDay", dayId, "SIGN_DOCTOR", userId);
+        verify(auditService).logAction("ClinicalDay", dayId, "CLOSE_EARLY", userId);
+    }
+
+    @Test
+    void closeEarly_whenAlreadySigned_throws() {
+        testDay.setStatus(ClinicalDayStatus.DOCTOR_SIGNED);
+        when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+
+        assertThatThrownBy(() -> clinicalDayService.closeEarly(dayId, "reason", userId))
+                .isInstanceOf(DocumentLockedException.class);
+    }
+
+    @Test
+    void autoCloseExpiredDays_closesDays() {
+        ClinicalDay day1 = new ClinicalDay();
+        day1.setId(dayId);
+        day1.setEpisode(testEpisode);
+        day1.setStatus(ClinicalDayStatus.OPEN);
+        day1.setVersion(0);
+
+        UUID day2Id = UUID.randomUUID();
+        Episode ep2 = new Episode();
+        ep2.setId(UUID.randomUUID());
+        ClinicalDay day2 = new ClinicalDay();
+        day2.setId(day2Id);
+        day2.setEpisode(ep2);
+        day2.setStatus(ClinicalDayStatus.NURSE_SIGNED);
+        day2.setVersion(0);
+
+        when(clinicalDayRepository.findDaysToAutoClose(any())).thenReturn(List.of(day1, day2));
+        when(clinicalDayRepository.save(any(ClinicalDay.class))).thenAnswer(i -> i.getArgument(0));
+
+        clinicalDayService.autoCloseExpiredDays();
+
+        verify(clinicalDayRepository, times(2)).save(any(ClinicalDay.class));
+        verify(auditService, times(2)).logAction(eq("ClinicalDay"), any(), eq("AUTO_CLOSE"), eq(0L));
+        verify(pdfGeneratorService, times(2)).generatePdf(any(UUID.class), eq(0L));
     }
 
     @Test

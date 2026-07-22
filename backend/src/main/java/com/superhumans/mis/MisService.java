@@ -20,4 +20,6 @@ public interface MisService {
     List<DictionaryItemDTO> getDictionary(String dictionaryName);
 
     List<PatientDTO> searchPatients(String query);
+
+    boolean sendPdf(UUID clinicalDayId, byte[] pdfContent, String fileName, int version);
 }

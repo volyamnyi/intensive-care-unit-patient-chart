@@ -1,5 +1,6 @@
 package com.superhumans.dto;
 
+import com.superhumans.entity.TransferStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,4 +17,7 @@ public class PdfResponse {
     LocalDateTime generatedAt;
     Long generatedBy;
     String checksum;
+    TransferStatus transferStatus;
+    LocalDateTime transferredAt;
+    String transferError;
 }

@@ -43,4 +43,7 @@ public class Episode extends BaseEntity {
 
     @Column(name = "admission_diagnosis", length = 500)
     String admissionDiagnosis;
+
+    @Column(name = "attending_doctor_id")
+    Long attendingDoctorId;
 }

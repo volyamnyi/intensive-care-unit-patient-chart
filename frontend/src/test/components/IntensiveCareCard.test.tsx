@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material';
 import IntensiveCareCard from '../../components/monitoring/IntensiveCareCard';
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
@@ -12,7 +12,7 @@ const mockEpisode: Episode = {
   hospitalizationId: null, departmentId: null,
   admissionDate: '2025-06-01T10:00:00Z', dischargeDate: null,
   status: 'ACTIVE', heightCm: 175, ward: 'Відділення 3', bedNumber: '12',
-  admissionDiagnosis: 'Пневмонія', createdBy: 1, createdAt: '',
+  admissionDiagnosis: 'Пневмонія', attendingDoctorId: null, createdBy: 1, createdAt: '',
   updatedBy: 0, updatedAt: '', version: 1,
 };
 
@@ -159,7 +159,7 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByText('Втрати (мл)')).toBeInTheDocument();
       expect(screen.getByText('Терапія (призначення)')).toBeInTheDocument();
       // 'ЧД' may appear in multiple contexts — use getAllByText
-      const rowLabels = ['АТсист', 'АТдіас', 'ЧСС', 'SpO₂', 'Темп', 'ЦВТ',
+      const rowLabels = ['АТсист', 'АТдіас', 'ЧСС', 'SpO2', 'Темп', 'ЦВТ',
         'Сеча', 'Зонд', 'Випорожнення', 'Дренаж'];
       rowLabels.forEach(label => expect(screen.getByText(label)).toBeInTheDocument());
       expect(screen.getAllByText('Свідомість').length).toBeGreaterThanOrEqual(1);
@@ -197,7 +197,7 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByDisplayValue('72')).toBeInTheDocument();
       expect(screen.getByDisplayValue('98')).toBeInTheDocument();
       expect(screen.getByDisplayValue('36.6')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('8')).toBeInTheDocument();
+      expect(screen.getAllByDisplayValue('8').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByDisplayValue('16')).toBeInTheDocument();
       // Hour 10 values
       expect(screen.getByDisplayValue('130')).toBeInTheDocument();
@@ -291,14 +291,15 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByText('Немає призначень')).toBeInTheDocument();
     });
 
-    it('creates order from dialog', { timeout: 120000 }, async () => {
+    it('creates order from inline form', { timeout: 120000 }, async () => {
       renderCard({ isNurse: false });
       fireEvent.click(screen.getByText('+ Нове призначення'));
-      await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument(), { timeout: 10000 });
-      const dlg = within(screen.getByRole('dialog'));
-      fireEvent.change(dlg.getByLabelText('Препарат'), { target: { value: 'Парацетамол' } });
-      fireEvent.change(dlg.getByLabelText('Доза'), { target: { value: '500' } });
-      fireEvent.click(dlg.getByText('Створити'));
+      await waitFor(() => expect(screen.getByText('Нове призначення')).toBeInTheDocument(), { timeout: 10000 });
+      const inputs = screen.getAllByLabelText('Препарат');
+      fireEvent.change(inputs[inputs.length - 1], { target: { value: 'Парацетамол' } });
+      const doseInputs = screen.getAllByLabelText('Доза');
+      fireEvent.change(doseInputs[doseInputs.length - 1], { target: { value: '500' } });
+      fireEvent.click(screen.getByText('Створити'));
       await waitFor(() => expect(mockOrderCreate).toHaveBeenCalled(), { timeout: 10000 });
     });
 

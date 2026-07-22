@@ -1,0 +1,9 @@
+{
+  "bookingStatusList": [
+    { "bookingStatusCode": "PLANNED", "bookingStatusName": "Заплановано" },
+    { "bookingStatusCode": "CONFIRMED", "bookingStatusName": "Підтверджено" },
+    { "bookingStatusCode": "IN_PROGRESS", "bookingStatusName": "В процесі" },
+    { "bookingStatusCode": "COMPLETED", "bookingStatusName": "Завершено" },
+    { "bookingStatusCode": "CANCELLED", "bookingStatusName": "Скасовано" }
+  ]
+}

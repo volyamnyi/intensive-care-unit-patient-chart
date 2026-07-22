@@ -1,0 +1,8 @@
+{
+  "scheduleStatusList": [
+    { "scheduleStatusCode": "FREE", "scheduleStatusName": "Вільно" },
+    { "scheduleStatusCode": "BOOKED", "scheduleStatusName": "Заброньовано" },
+    { "scheduleStatusCode": "OCCUPIED", "scheduleStatusName": "Зайнято" },
+    { "scheduleStatusCode": "MAINTENANCE", "scheduleStatusName": "Обслуговування" }
+  ]
+}

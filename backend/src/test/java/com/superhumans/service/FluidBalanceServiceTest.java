@@ -175,7 +175,7 @@ class FluidBalanceServiceTest {
         FluidBalance savedFb10 = batchCaptor.getValue().get(1);
         assertThat(savedFb10.getHour()).isEqualTo(10);
         assertThat(savedFb10.getIntake()).isEqualTo(0.0);
-        assertThat(savedFb10.getOutput()).isEqualTo(600.0);
+        assertThat(savedFb10.getOutput()).isEqualTo(400.0);
 
         verify(auditService).logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
     }

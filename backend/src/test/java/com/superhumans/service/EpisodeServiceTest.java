@@ -136,7 +136,7 @@ class EpisodeServiceTest {
 
     @Test
     void createEpisode_createsAndReturns() {
-        EpisodeCreateRequest req = new EpisodeCreateRequest(patientId, null, null, LocalDateTime.now(), null, null, null, null);
+        EpisodeCreateRequest req = new EpisodeCreateRequest(patientId, null, null, LocalDateTime.now(), null, null, null, null, null);
         when(episodeRepository.findByPatientIdAndStatus(patientId, EpisodeStatus.ACTIVE))
                 .thenReturn(Optional.empty());
         Episode entity = Episode.builder().patientId(patientId).build();
@@ -162,7 +162,7 @@ class EpisodeServiceTest {
 
     @Test
     void createEpisode_whenActiveExists_throws() {
-        EpisodeCreateRequest req = new EpisodeCreateRequest(patientId, null, null, LocalDateTime.now(), null, null, null, null);
+        EpisodeCreateRequest req = new EpisodeCreateRequest(patientId, null, null, LocalDateTime.now(), null, null, null, null, null);
         when(episodeRepository.findByPatientIdAndStatus(patientId, EpisodeStatus.ACTIVE))
                 .thenReturn(Optional.of(testEpisode));
 
@@ -174,7 +174,7 @@ class EpisodeServiceTest {
     @Test
     void updateEpisode_withVersionMismatch_throws() {
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
-        EpisodePatchRequest req = new EpisodePatchRequest(null, null, null, null, null, null, null, 999);
+        EpisodePatchRequest req = new EpisodePatchRequest(null, null, null, null, null, null, null, null, 999);
 
         assertThatThrownBy(() -> episodeService.updateEpisode(episodeId, req, userId))
                 .isInstanceOf(VersionConflictException.class);
@@ -189,7 +189,7 @@ class EpisodeServiceTest {
         when(episodeRepository.save(any(Episode.class))).thenReturn(saved);
 
         EpisodePatchRequest req = new EpisodePatchRequest(
-                UUID.randomUUID(), UUID.randomUUID(), LocalDateTime.now(), null, null, null, null, 0);
+                UUID.randomUUID(), UUID.randomUUID(), LocalDateTime.now(), null, null, null, null, null, 0);
 
         when(episodeMapper.toResponse(any(Episode.class))).thenReturn(
                 EpisodeResponse.builder().id(episodeId).build());
@@ -227,3 +227,4 @@ class EpisodeServiceTest {
         verify(auditService).logAction("Episode", episodeId, "CLOSE", userId);
     }
 }
+

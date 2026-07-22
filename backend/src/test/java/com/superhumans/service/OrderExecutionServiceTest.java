@@ -157,6 +157,37 @@ class OrderExecutionServiceTest {
     }
 
     @Test
+    void createExecution_logsBackEntry_whenPastHour() {
+        when(medicalOrderRepository.findById(orderId)).thenReturn(Optional.of(medicalOrder));
+
+        LocalDateTime pastTime = LocalDateTime.now().minusHours(2);
+        OrderExecutionCreateRequest req = new OrderExecutionCreateRequest(
+                userId, pastTime, "10", null);
+
+        OrderExecution saved = new OrderExecution();
+        saved.setId(executionId);
+        saved.setOrder(medicalOrder);
+        saved.setExecutedAt(pastTime);
+        saved.setVersion(0);
+        when(orderExecutionRepository.save(any(OrderExecution.class))).thenReturn(saved);
+
+        OrderExecution execEntity = new OrderExecution();
+        execEntity.setExecutedBy(userId);
+        execEntity.setExecutedAt(pastTime);
+        execEntity.setActualDose("10");
+        OrderExecutionResponse expected = OrderExecutionResponse.builder()
+                .id(executionId)
+                .build();
+        when(orderExecutionMapper.toEntity(req)).thenReturn(execEntity);
+        when(orderExecutionMapper.toResponse(any(OrderExecution.class))).thenReturn(expected);
+
+        OrderExecutionResponse res = orderExecutionService.createExecution(orderId, req, userId);
+
+        verify(auditService).logAction("OrderExecution", executionId, "BACK_ENTRY", userId);
+        verify(auditService).logAction("OrderExecution", executionId, "EXECUTE", userId);
+    }
+
+    @Test
     void createExecution_whenDaySigned_throws() {
         clinicalDay.setStatus(ClinicalDayStatus.DOCTOR_SIGNED);
         when(medicalOrderRepository.findById(orderId)).thenReturn(Optional.of(medicalOrder));

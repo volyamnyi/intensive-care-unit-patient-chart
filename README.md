@@ -9,11 +9,16 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> A full-stack electronic medical record system for Intensive Care Units (ICU). Enables doctors and nurses to digitally manage patient ICU charts — including hourly vital sign tracking, fluid balance monitoring, prescription management, clinical scale assessments, PDF generation, and digital signing workflows.
+> A full-stack electronic medical record system for Intensive Care Units (ICU). Implements the Ukrainian standard form **003-15/о «Карта інтенсивної терапії»**. Enables doctors and nurses to digitally manage patient ICU charts — including hourly vital sign tracking, fluid balance monitoring, prescription management, clinical scale assessments, PDF generation (A4 landscape, Times New Roman), and digital signing workflows.
 
 ---
 
 ## Features
+
+- **Form 003-15/о compliant** — Electronic ICU chart matching the Ukrainian paper standard
+- **PDF Generation** — A4 landscape with tabular layout, Times New Roman font, all card sections
+- **PDF Transfer to MIS** — PDF is stored as binary, transmitted to MIS, with transfer status tracking (PENDING/SENT/FAILED)
+- **Single-Page Layout** — Two-column design (table + sidebar), all sections always visible, no tabs/accordions
 
 ### For Doctors / HOD
 - **Episode Dashboard** — View all active ICU episodes with patient names and status
@@ -276,8 +281,9 @@ java -jar backend/target/patient-chart-backend-*.jar
 ### PDF
 | Method | URL | Auth | Description |
 |---|---|---|---|
-| `GET` | `/api/clinical-days/{id}/pdf` | Yes | Get PDF metadata |
+| `GET` | `/api/clinical-days/{id}/pdf` | Yes | Get latest generated PDF |
 | `POST` | `/api/clinical-days/{id}/pdf` | Yes | Generate PDF |
+| `GET` | `/api/clinical-days/{id}/pdf/status` | Yes | Get PDF transfer status |
 
 ### Users
 | Method | URL | Auth | Description |
@@ -329,14 +335,14 @@ icu-patient-chart/
 │       ├── SuperhumansApplication.java
 │       ├── auth/             # JWT authentication (filter + token provider)
 │       ├── config/           # Security, CORS
-│       ├── controller/       # REST controllers (11)
-│       ├── dto/              # Request/response DTOs
-│       ├── entity/           # JPA entities (15)
+│       ├── controller/       # REST controllers (18)
+│       ├── dto/              # Request/response DTOs (48 total)
+│       ├── entity/           # JPA entities (25 including enums)
 │       ├── exception/        # Domain exceptions + global handler
 │       ├── mapper/           # Entity ↔ DTO mappers
 │       ├── mis/              # MIS integration (mock + interface)
-│       ├── repository/       # Spring Data repositories (13)
-│       └── service/          # Business logic services (12)
+│       ├── repository/       # Spring Data repositories (18)
+│       └── service/          # Business logic services (17 implementation + 2 interfaces)
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts
@@ -380,13 +386,13 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest unit tests (144) |
+| `npm t` | Run Vitest tests (~190 across 22 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (79 total, 7 projects) |
-| `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests (79) |
+| `npx playwright test` | Run all E2E tests (38 spec files) |
+| `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
 | `npx playwright show-report` | View HTML report |
@@ -399,8 +405,8 @@ icu-patient-chart/
 |---|---|---|
 | Backend unit (151) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
-| Frontend Vitest (144) | `test` → `npm test` | Same |
-| Playwright E2E (79) | `test` → `npx playwright test` | Same |
+| Frontend Vitest (~190) | `test` → `npm test` | Same |
+| Playwright E2E (38 spec files) | `test` → `npx playwright test` | Same |
 | Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
 
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
@@ -408,8 +414,8 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 ### Testing Summary
 - **Backend unit tests**: 151 tests (14 classes) — `mvn test`
 - **Backend integration tests**: 79 tests via Testcontainers (13 classes) — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 144 tests (18 files)
-- **E2E Playwright tests**: 79 tests (28 spec files, 7 projects)
+- **Frontend Vitest tests**: ~190 tests (22 files)
+- **E2E Playwright tests**: 38 spec files, 7 projects
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
 > **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.

@@ -1,0 +1,15 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "url": "/api/run",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$[?(@.name == 'spzIBBookingPaymentStatusDictionary')]" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "booking_payment_status_dictionary.json",
+    "headers": { "Content-Type": "application/json" }
+  }
+}

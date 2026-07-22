@@ -15,4 +15,6 @@ public final class ErrorCode {
     public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
     public static final String VALIDATION_ERROR = "VALIDATION_ERROR";
     public static final String DUPLICATE_HOURLY_RECORD = "DUPLICATE_HOURLY_RECORD";
+    public static final String BUSINESS_RULE = "BUSINESS_RULE";
+    public static final String PAST_HOUR_ORDER = "PAST_HOUR_ORDER";
 }

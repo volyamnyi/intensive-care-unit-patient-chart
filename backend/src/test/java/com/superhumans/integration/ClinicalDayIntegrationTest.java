@@ -46,7 +46,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createClinicalDay_createsSuccessfully() {
         EpisodeCreateRequest epReq = new EpisodeCreateRequest(
-                1020L, null, null, LocalDateTime.now(), null, null, null, null);
+                1020L, null, null, LocalDateTime.now(), null, null, null, null, null);
         var epEntity = authEntity(epReq, getDoctorToken());
         var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
         UUID newEpisodeId = epRes.getBody().getId();
@@ -68,7 +68,7 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createClinicalDay_whenOpenDayExists_returnsConflict() {
         EpisodeCreateRequest epReq = new EpisodeCreateRequest(
-                1021L, null, null, LocalDateTime.now(), null, null, null, null);
+                1021L, null, null, LocalDateTime.now(), null, null, null, null, null);
         var epEntity = authEntity(epReq, getDoctorToken());
         var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
         UUID newEpisodeId = epRes.getBody().getId();
@@ -234,3 +234,4 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }
+

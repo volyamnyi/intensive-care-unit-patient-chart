@@ -23,15 +23,15 @@ export default function AuditLogTable({ logs, loading }: AuditLogTableProps) {
   }
 
   return (
-    <TableContainer>
-      <Table size="small">
+    <TableContainer sx={{ overflowX: 'auto' }}>
+      <Table size="small" sx={{ minWidth: 600 }}>
         <TableHead>
           <TableRow>
             <TableCell>Час</TableCell>
             <TableCell>Користувач</TableCell>
-            <TableCell>Сутність</TableCell>
+            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Сутність</TableCell>
             <TableCell>Дія</TableCell>
-            <TableCell>Зміни</TableCell>
+            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Зміни</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -41,7 +41,7 @@ export default function AuditLogTable({ logs, loading }: AuditLogTableProps) {
                 {new Date(log.timestamp).toLocaleString('uk-UA')}
               </TableCell>
               <TableCell>{log.userId ?? '-'}</TableCell>
-              <TableCell>
+              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                 {log.entity}
                 {log.entityId && <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>#{log.entityId.slice(0, 8)}</Typography>}
               </TableCell>
@@ -52,7 +52,7 @@ export default function AuditLogTable({ logs, loading }: AuditLogTableProps) {
                   size="small"
                 />
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                 <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
                   {log.oldValue && `- ${log.oldValue}`}
                   {log.newValue && `\n+ ${log.newValue}`}

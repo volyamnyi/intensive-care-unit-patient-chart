@@ -20,7 +20,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -127,6 +127,7 @@ class PdfGeneratorServiceTest {
         when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
         when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
                 .thenReturn(Optional.empty());
+        when(misService.sendPdf(any(), any(), any(), anyInt())).thenReturn(true);
 
         GeneratedPdf saved = new GeneratedPdf();
         saved.setId(UUID.randomUUID());
@@ -139,7 +140,7 @@ class PdfGeneratorServiceTest {
 
         PdfResponse res = pdfGeneratorService.generatePdf(clinicalDayId, userId);
 
-        verify(generatedPdfRepository).save(pdfCaptor.capture());
+        verify(generatedPdfRepository, times(2)).save(pdfCaptor.capture());
         assertThat(pdfCaptor.getValue().getFileVersion()).isEqualTo(1);
         assertThat(pdfCaptor.getValue().getGeneratedBy()).isEqualTo(userId);
         verify(auditService).logAction("GeneratedPdf", clinicalDayId, "GENERATE", userId);
@@ -173,6 +174,7 @@ class PdfGeneratorServiceTest {
         when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
         when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
                 .thenReturn(Optional.of(existing));
+        when(misService.sendPdf(any(), any(), any(), anyInt())).thenReturn(true);
 
         GeneratedPdf saved = new GeneratedPdf();
         saved.setId(UUID.randomUUID());
@@ -182,7 +184,7 @@ class PdfGeneratorServiceTest {
 
         PdfResponse res = pdfGeneratorService.generatePdf(clinicalDayId, userId);
 
-        verify(generatedPdfRepository).save(pdfCaptor.capture());
+        verify(generatedPdfRepository, times(2)).save(pdfCaptor.capture());
         assertThat(pdfCaptor.getValue().getFileVersion()).isEqualTo(2);
     }
 }

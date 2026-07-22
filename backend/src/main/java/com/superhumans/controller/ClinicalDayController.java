@@ -74,4 +74,14 @@ public class ClinicalDayController {
         clinicalDayService.reopenClinicalDay(id, request, userId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/close-early")
+    public ResponseEntity<Void> closeEarly(
+            @PathVariable UUID id,
+            @RequestBody CloseEarlyRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        clinicalDayService.closeEarly(id, request.getReason(), userId);
+        return ResponseEntity.noContent().build();
+    }
 }

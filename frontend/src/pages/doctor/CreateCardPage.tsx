@@ -50,28 +50,37 @@ export default function CreateCardPage() {
             Дані пацієнта (з МІС)
           </Typography>
           <Grid container spacing={2}>
-            <Grid size={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="ПІП" value={selectedPatient.fullName} slotProps={{ input: { readOnly: true } }} />
             </Grid>
-            <Grid size={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <TextField fullWidth label="Дата народження" value={selectedPatient.birthDate} slotProps={{ input: { readOnly: true } }} />
             </Grid>
-            <Grid size={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <TextField fullWidth label="Стать" value={selectedPatient.sexCode === 'M' ? 'Чол' : 'Жін'} slotProps={{ input: { readOnly: true } }} />
             </Grid>
-            <Grid size={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <TextField fullWidth label="Зріст (см)" value={selectedPatient.height ?? ''} slotProps={{ input: { readOnly: true } }} />
             </Grid>
-            <Grid size={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <TextField fullWidth label="Маса (кг)" value={selectedPatient.weight ?? ''} slotProps={{ input: { readOnly: true } }} />
             </Grid>
-            <Grid size={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
+              <TextField fullWidth label="Ідеальна маса (кг)" value={
+                selectedPatient.height
+                  ? (selectedPatient.sexCode === 'M'
+                    ? (50 + 0.91 * (selectedPatient.height - 152.4)).toFixed(1)
+                    : (45.5 + 0.91 * (selectedPatient.height - 152.4)).toFixed(1))
+                  : ''
+              } slotProps={{ input: { readOnly: true } }} />
+            </Grid>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <TextField fullWidth label="Група крові" value={selectedPatient.bloodGroup} slotProps={{ input: { readOnly: true } }} />
             </Grid>
-            <Grid size={3}>
+            <Grid size={{ xs: 6, sm: 3 }}>
               <TextField fullWidth label="Rezus" value={selectedPatient.rhFactor} slotProps={{ input: { readOnly: true } }} />
             </Grid>
-            <Grid size={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="№ медкарти" value={selectedPatient.externalId1} slotProps={{ input: { readOnly: true } }} />
             </Grid>
           </Grid>
@@ -83,13 +92,13 @@ export default function CreateCardPage() {
             Деталі госпіталізації
           </Typography>
           <Grid container spacing={2}>
-            <Grid size={4}>
+            <Grid size={{ xs: 6, sm: 4 }}>
               <TextField fullWidth label="Палата" value={ward} onChange={e => setWard(e.target.value)} placeholder="напр. ВАІТ-1" />
             </Grid>
-            <Grid size={2}>
+            <Grid size={{ xs: 6, sm: 2 }}>
               <TextField fullWidth label="Ліжко" value={bedNumber} onChange={e => setBedNumber(e.target.value)} placeholder="напр. 101A" />
             </Grid>
-            <Grid size={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField fullWidth label="Діагноз при госпіталізації" value={admissionDiagnosis} onChange={e => setAdmissionDiagnosis(e.target.value)}
                 placeholder="напр. Позалікарняна пневмонія" />
             </Grid>

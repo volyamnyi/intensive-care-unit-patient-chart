@@ -1,0 +1,29 @@
+{
+  "companyList": [
+    {
+      "companyGUID": "1",
+      "companyName": "Відділення анестезіології та інтенсивної терапії",
+      "companyShortName": "ВАІТ"
+    },
+    {
+      "companyGUID": "2",
+      "companyName": "Хірургічне відділення",
+      "companyShortName": "SURG"
+    },
+    {
+      "companyGUID": "3",
+      "companyName": "Терапевтичне відділення",
+      "companyShortName": "THER"
+    },
+    {
+      "companyGUID": "4",
+      "companyName": "Кардіологічне відділення",
+      "companyShortName": "CARD"
+    },
+    {
+      "companyGUID": "5",
+      "companyName": "Неврологічне відділення",
+      "companyShortName": "NEUR"
+    }
+  ]
+}

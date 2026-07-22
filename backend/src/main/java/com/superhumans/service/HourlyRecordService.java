@@ -17,11 +17,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +65,12 @@ public class HourlyRecordService {
         record.setCreatedBy(userId);
         record.setUpdatedBy(userId);
         record = hourlyRecordRepository.save(record);
+
+        if (record.getRecordTime() != null && record.getRecordTime().getHour() < LocalDateTime.now().getHour()) {
+            log.info("BACK_ENTRY: HourlyRecord {} created for past hour {}", record.getId(), record.getRecordTime());
+            auditService.logAction("HourlyRecord", record.getId(), "BACK_ENTRY", userId);
+        }
+
         auditService.logCreate("HourlyRecord", record.getId(), userId);
         fluidBalanceService.recalculate(clinicalDayId, userId);
         return hourlyRecordMapper.toResponse(record);

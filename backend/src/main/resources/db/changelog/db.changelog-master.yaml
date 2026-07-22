@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: changesets/001-initial-schema.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/002-add-missing-columns.sql

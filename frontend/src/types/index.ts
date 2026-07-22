@@ -34,6 +34,7 @@ export interface EpisodeCreateRequest {
   ward?: string;
   bedNumber?: string;
   admissionDiagnosis?: string;
+  attendingDoctorId?: number;
 }
 
 export interface EpisodePatchRequest {
@@ -44,6 +45,7 @@ export interface EpisodePatchRequest {
   ward?: string;
   bedNumber?: string;
   admissionDiagnosis?: string;
+  attendingDoctorId?: number;
   version: number;
 }
 
@@ -233,6 +235,7 @@ export interface Episode {
   ward: string | null;
   bedNumber: string | null;
   admissionDiagnosis: string | null;
+  attendingDoctorId: number | null;
   createdBy: number;
   createdAt: string;
   updatedBy: number;
@@ -386,6 +389,8 @@ export interface Signature {
   version: number;
 }
 
+export type TransferStatus = 'PENDING' | 'SENT' | 'FAILED';
+
 export interface PdfResponse {
   id: string;
   clinicalDayId: string;
@@ -394,6 +399,9 @@ export interface PdfResponse {
   generatedAt: string;
   generatedBy: number;
   checksum: string | null;
+  transferStatus: TransferStatus | null;
+  transferredAt: string | null;
+  transferError: string | null;
 }
 
 export interface AuditLog {
@@ -422,6 +430,37 @@ export interface LoginResponse {
   fullName: string;
   role: string;
   email: string;
+}
+
+export interface DepartmentStats {
+  activePatients: number;
+  openDays: number;
+  nurseSignedDays: number;
+  doctorSignedDays: number;
+  closedDays: number;
+  totalBeds: number;
+  occupiedBeds: number;
+  activeDoctors: number;
+  activeNurses: number;
+}
+
+export interface DepartmentPatient {
+  id: string;
+  patientId: number;
+  patientName: string | null;
+  hospitalizationId: string | null;
+  departmentId: string | null;
+  admissionDate: string;
+  dischargeDate: string | null;
+  status: string;
+  attendingDoctorId: number | null;
+  attendingDoctorName: string | null;
+  ward: string | null;
+  bedNumber: string | null;
+  admissionDiagnosis: string | null;
+  latestDayStatus: string | null;
+  latestDayNumber: number | null;
+  daysSinceAdmission: number;
 }
 
 export interface PageResponse<T> {

@@ -19,6 +19,8 @@ public class EpisodeResponse {
     LocalDateTime dischargeDate;
     EpisodeStatus status;
     Double heightCm;
+    Long attendingDoctorId;
+
     String ward;
     String bedNumber;
     String admissionDiagnosis;

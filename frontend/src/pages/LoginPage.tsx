@@ -43,7 +43,7 @@ export default function LoginPage() {
         }} />
       )}
       <Card className="fade-in-up" sx={{
-        width: 420, p: 4, position: 'relative',
+        width: { xs: 'calc(100% - 32px)', sm: 420 }, p: { xs: 2.5, sm: 4 }, position: 'relative',
         border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`,
         boxShadow: isDark ? '0 8px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(255, 95, 51, 0.05)' : '0 4px 24px rgba(0,0,0,0.06)',
         bgcolor: isDark ? '#1A1A1A' : '#FFFFFF',

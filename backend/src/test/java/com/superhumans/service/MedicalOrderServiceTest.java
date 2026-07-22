@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -139,6 +140,124 @@ class MedicalOrderServiceTest {
         verify(medicalOrderRepository).save(orderCaptor.capture());
         assertThat(orderCaptor.getValue().getStatus()).isEqualTo(MedicalOrderStatus.ACTIVE);
         verify(auditService).logCreate("MedicalOrder", orderId, userId);
+    }
+
+    @Test
+    void createOrder_roundsUpStartTime_toNextHour() {
+        LocalDateTime inputTime = LocalDateTime.now().plusHours(2).withMinute(30).withSecond(0).withNano(0);
+        LocalDateTime roundedTime = inputTime.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+
+        MedicalOrderCreateRequest req = new MedicalOrderCreateRequest();
+        req.setCategory("MEDICATION");
+        req.setDrugName("Drug");
+        req.setDose("5");
+        req.setUnit("mg");
+        req.setRoute("IV");
+        req.setFrequency("BID");
+        req.setStartTime(inputTime);
+
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+
+        MedicalOrder mapped = new MedicalOrder();
+        mapped.setStartTime(inputTime);
+        when(medicalOrderMapper.toEntity(req)).thenReturn(mapped);
+
+        MedicalOrder saved = new MedicalOrder();
+        saved.setId(orderId);
+        saved.setClinicalDay(clinicalDay);
+        saved.setStatus(MedicalOrderStatus.ACTIVE);
+        saved.setStartTime(roundedTime);
+        when(medicalOrderRepository.save(any(MedicalOrder.class))).thenReturn(saved);
+
+        MedicalOrderResponse expected = MedicalOrderResponse.builder()
+                .id(orderId)
+                .startTime(roundedTime)
+                .build();
+        when(medicalOrderMapper.toResponse(any(MedicalOrder.class))).thenReturn(expected);
+
+        MedicalOrderResponse res = medicalOrderService.createOrder(clinicalDayId, req, userId);
+
+        verify(medicalOrderRepository).save(orderCaptor.capture());
+        assertThat(orderCaptor.getValue().getStartTime()).isEqualTo(roundedTime);
+        assertThat(res.getStartTime()).isEqualTo(roundedTime);
+    }
+
+    @Test
+    void createOrder_doesNotRoundUp_whenOnTheHour() {
+        LocalDateTime inputTime = LocalDateTime.now().plusHours(2).withMinute(0).withSecond(0).withNano(0);
+
+        MedicalOrderCreateRequest req = new MedicalOrderCreateRequest();
+        req.setCategory("MEDICATION");
+        req.setDrugName("Drug");
+        req.setDose("5");
+        req.setUnit("mg");
+        req.setRoute("IV");
+        req.setFrequency("BID");
+        req.setStartTime(inputTime);
+
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+
+        MedicalOrder mapped = new MedicalOrder();
+        mapped.setStartTime(inputTime);
+        when(medicalOrderMapper.toEntity(req)).thenReturn(mapped);
+
+        MedicalOrder saved = new MedicalOrder();
+        saved.setId(orderId);
+        saved.setClinicalDay(clinicalDay);
+        saved.setStatus(MedicalOrderStatus.ACTIVE);
+        saved.setStartTime(inputTime);
+        when(medicalOrderRepository.save(any(MedicalOrder.class))).thenReturn(saved);
+
+        MedicalOrderResponse expected = MedicalOrderResponse.builder()
+                .id(orderId)
+                .startTime(inputTime)
+                .build();
+        when(medicalOrderMapper.toResponse(any(MedicalOrder.class))).thenReturn(expected);
+
+        MedicalOrderResponse res = medicalOrderService.createOrder(clinicalDayId, req, userId);
+
+        verify(medicalOrderRepository).save(orderCaptor.capture());
+        assertThat(orderCaptor.getValue().getStartTime()).isEqualTo(inputTime);
+    }
+
+    @Test
+    void createOrder_roundsUpStartTime_forLabCategory() {
+        LocalDateTime inputTime = LocalDateTime.now().plusHours(2).withMinute(45).withSecond(0).withNano(0);
+        LocalDateTime roundedTime = inputTime.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+
+        MedicalOrderCreateRequest req = new MedicalOrderCreateRequest();
+        req.setCategory("LAB");
+        req.setDrugName("CBC");
+        req.setDose("1");
+        req.setUnit("test");
+        req.setRoute("N/A");
+        req.setFrequency("STAT");
+        req.setStartTime(inputTime);
+
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+
+        MedicalOrder mapped = new MedicalOrder();
+        mapped.setStartTime(inputTime);
+        when(medicalOrderMapper.toEntity(req)).thenReturn(mapped);
+
+        MedicalOrder saved = new MedicalOrder();
+        saved.setId(orderId);
+        saved.setClinicalDay(clinicalDay);
+        saved.setStatus(MedicalOrderStatus.ACTIVE);
+        saved.setStartTime(roundedTime);
+        when(medicalOrderRepository.save(any(MedicalOrder.class))).thenReturn(saved);
+
+        MedicalOrderResponse expected = MedicalOrderResponse.builder()
+                .id(orderId)
+                .startTime(roundedTime)
+                .build();
+        when(medicalOrderMapper.toResponse(any(MedicalOrder.class))).thenReturn(expected);
+
+        MedicalOrderResponse res = medicalOrderService.createOrder(clinicalDayId, req, userId);
+
+        verify(medicalOrderRepository).save(orderCaptor.capture());
+        assertThat(orderCaptor.getValue().getStartTime()).isEqualTo(roundedTime);
+        assertThat(res.getStartTime()).isEqualTo(roundedTime);
     }
 
     @Test

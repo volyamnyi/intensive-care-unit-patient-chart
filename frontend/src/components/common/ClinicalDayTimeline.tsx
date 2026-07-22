@@ -35,9 +35,11 @@ export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }
     return <Typography color="text.secondary">Немає клінічних днів</Typography>;
   }
 
+  const sortedDays = [...days].sort((a, b) => a.dayNumber - b.dayNumber);
+
   return (
     <Box sx={{ display: 'flex', gap: 1, overflow: 'auto', py: 1 }}>
-      {days.map((day) => {
+      {sortedDays.map((day) => {
         const isSelected = day.id === selectedDayId;
         return (
           <Box

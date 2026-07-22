@@ -10,6 +10,7 @@ import NurseLayout from './layouts/NurseLayout';
 import DashboardPage from './pages/doctor/DashboardPage';
 import CreateCardPage from './pages/doctor/CreateCardPage';
 import PatientDayPage from './pages/doctor/PatientDayPage';
+import DepartmentDashboardPage from './pages/doctor/DepartmentDashboardPage';
 import NurseDashboardPage from './pages/nurse/NurseDashboardPage';
 import AdminPage from './pages/admin/AdminPage';
 
@@ -92,6 +93,11 @@ function AppRoutes() {
         </Guard>
       }>
         <Route index element={<DashboardPage />} />
+        <Route path="department" element={
+          <Guard roles={['HEAD_OF_DEPARTMENT']}>
+            <DepartmentDashboardPage />
+          </Guard>
+        } />
         <Route path="create-card" element={<CreateCardPage />} />
         <Route path="episode/:episodeId" element={<PatientDayPage />} />
       </Route>

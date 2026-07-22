@@ -12,13 +12,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -31,6 +36,12 @@ public class ClinicalDayService {
     AuditService auditService;
     ClinicalDayMapper clinicalDayMapper;
     SignatureMapper signatureMapper;
+    EmailService emailService;
+    FluidBalanceService fluidBalanceService;
+    PdfGeneratorService pdfGeneratorService;
+
+    private static final LocalTime SIGNING_WINDOW_START = LocalTime.of(7, 0);
+    private static final LocalTime SIGNING_WINDOW_END = LocalTime.of(9, 0);
 
     public ClinicalDayResponse getClinicalDay(UUID id) {
         ClinicalDay day = clinicalDayRepository.findById(id)
@@ -98,15 +109,30 @@ public class ClinicalDayService {
         return clinicalDayMapper.toResponse(day);
     }
 
+    static LocalTime signingWindowNow() {
+        return LocalTime.now();
+    }
+
+    private void assertSigningWindow() {
+        LocalTime now = signingWindowNow();
+        if (now.isBefore(SIGNING_WINDOW_START) || now.isAfter(SIGNING_WINDOW_END)) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Підпис можливий лише з 7:00 до 9:00");
+        }
+    }
+
     @Transactional
     public SignResponse signNurse(UUID id, SignRequest request, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + id));
         assertNotLocked(day);
+        assertSigningWindow();
 
         signatureService.assertNoNurseSignature(id);
 
-        Signature signature = signatureService.createSignature(day, userId, "NURSE", request.getHash());
+        Signature signature = signatureService.createSignature(day, userId, "NURSE", request.getHash(),
+                request.getCertSerialNumber(), request.getCertIssuer(), request.getCertSubject(),
+                request.getCertValidFrom(), request.getCertValidUntil());
 
         day.setNurseSigned(true);
         day.setStatus(ClinicalDayStatus.NURSE_SIGNED);
@@ -121,15 +147,24 @@ public class ClinicalDayService {
     public SignResponse signDoctor(UUID id, SignRequest request, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + id));
+        assertSigningWindow();
 
         if (!Boolean.TRUE.equals(day.getNurseSigned())) {
             throw new BusinessException(ErrorCode.SIGNATURE_REQUIRED,
                     "Nurse signature is required before doctor can sign");
         }
 
+        Episode episode = day.getEpisode();
+        if (episode.getAttendingDoctorId() != null && !episode.getAttendingDoctorId().equals(userId)) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Only the attending doctor can sign this clinical day");
+        }
+
         signatureService.assertNoDoctorSignature(id);
 
-        Signature signature = signatureService.createSignature(day, userId, "DOCTOR", request.getHash());
+        Signature signature = signatureService.createSignature(day, userId, "DOCTOR", request.getHash(),
+                request.getCertSerialNumber(), request.getCertIssuer(), request.getCertSubject(),
+                request.getCertValidFrom(), request.getCertValidUntil());
 
         day.setDoctorSigned(true);
         day.setStatus(ClinicalDayStatus.DOCTOR_SIGNED);
@@ -138,7 +173,30 @@ public class ClinicalDayService {
         clinicalDayRepository.save(day);
 
         auditService.logAction("ClinicalDay", id, "SIGN_DOCTOR", userId);
+        try {
+            pdfGeneratorService.generatePdf(id, userId);
+            log.info("Auto-generated PDF for clinical day {}", id);
+        } catch (Exception e) {
+            log.error("Failed to auto-generate PDF for clinical day {}: {}", id, e.getMessage());
+        }
         return signatureMapper.toResponse(signature);
+    }
+
+    @Transactional
+    public void closeEarly(UUID id, String reason, Long userId) {
+        ClinicalDay day = clinicalDayRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Clinical day not found: " + id));
+        assertNotLocked(day);
+        if (day.getStatus() != ClinicalDayStatus.OPEN && day.getStatus() != ClinicalDayStatus.REOPENED) {
+            throw new BusinessException(ErrorCode.DOCUMENT_LOCKED,
+                    "Only open or reopened clinical days can be closed early");
+        }
+        day.setStatus(ClinicalDayStatus.CLOSED);
+        day.setClosedAt(LocalDateTime.now());
+        day.setUpdatedBy(userId);
+        clinicalDayRepository.save(day);
+        auditService.logAction("ClinicalDay", id, "CLOSE_EARLY", userId);
+        log.info("Early closed clinical day {}: reason={}", id, reason);
     }
 
     @Transactional
@@ -182,6 +240,45 @@ public class ClinicalDayService {
                 || day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
                 || day.getStatus() == ClinicalDayStatus.CLOSED) {
             throw new DocumentLockedException("Clinical day is signed and cannot be modified");
+        }
+    }
+
+    @Scheduled(cron = "0 0 7 * * *")
+    @Transactional
+    public void autoCloseExpiredDays() {
+        List<ClinicalDay> daysToClose = clinicalDayRepository.findDaysToAutoClose(LocalDateTime.now());
+        for (ClinicalDay day : daysToClose) {
+            day.setStatus(ClinicalDayStatus.CLOSED);
+            day.setClosedAt(LocalDateTime.now());
+            day.setUpdatedBy(0L);
+            clinicalDayRepository.save(day);
+            try {
+                fluidBalanceService.recalculate(day.getId(), 0L);
+            } catch (Exception e) {
+                log.warn("Failed to recalculate fluid balance for auto-closed day {}: {}", day.getId(), e.getMessage());
+            }
+            try {
+                pdfGeneratorService.generatePdf(day.getId(), 0L);
+                log.info("Auto-generated PDF for auto-closed clinical day {}", day.getId());
+            } catch (Exception e) {
+                log.error("Failed to auto-generate PDF for auto-closed clinical day {}: {}", day.getId(), e.getMessage());
+            }
+            log.info("Auto-closed clinical day {} for episode {}", day.getId(), day.getEpisode().getId());
+            auditService.logAction("ClinicalDay", day.getId(), "AUTO_CLOSE", 0L);
+            emailService.sendEscalationIfUnsigned(day);
+        }
+    }
+
+    @Scheduled(cron = "0 0 9 * * *")
+    @Transactional
+    public void escalateUnsignedDays() {
+        List<ClinicalDay> unsignedDays = clinicalDayRepository.findByStatusIn(
+                List.of(ClinicalDayStatus.NURSE_SIGNED, ClinicalDayStatus.OPEN, ClinicalDayStatus.REOPENED));
+        for (ClinicalDay day : unsignedDays) {
+            log.warn("ESCALATION: Clinical day {} (episode {}) still unsigned at 09:00",
+                    day.getId(), day.getEpisode().getId());
+            auditService.logAction("ClinicalDay", day.getId(), "ESCALATE", 0L);
+            emailService.sendEscalationIfUnsigned(day);
         }
     }
 }

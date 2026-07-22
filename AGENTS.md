@@ -1,5 +1,22 @@
 # ICU Patient Chart — AI Agent Guide
 
+## Current Session
+
+**Refinements applied (2026-07-22):**
+- **Controller tests (106/106 ✅)** — Fixed `@WebMvcTest` controller tests failing with `ApplicationContext` errors. Root cause: `JwtAuthenticationFilter` wasn't in the filter chain → `auth.getCredentials()` returned `null`. Fix: `@Import(SecurityConfig.class)` + `@MockBean` for `JwtTokenProvider`/`AuditLogRepository`/`AuditService` + `anyString()` JWT mocks in `@BeforeEach` + `.header("Authorization", "Bearer test-jwt-token")` on GET `perform()` calls. Also fixed 8 pre-existing test data bugs (CSRF, UUID format, LocalDateTime format, missing field).
+- **TestSecurityHelper** — Refactored to use 3 distinct tokens per role (`test-jwt-token` / `test-nurse-token` / `test-admin-token`), each setting both `SecurityContext` (via `SecurityMockMvcRequestPostProcessors.authentication`) and the `Authorization` header.
+- **MedicalOrderServiceTest (14/14 ✅)** — Fixed 3 test failures caused by hardcoded `LocalDateTime.of(2026, 7, 21, ...)` dates that now fail the `PAST_HOUR_ORDER` validation. Replaced with dynamic `LocalDateTime.now().plusHours(2)` dates.
+- **GeneratedPdf entity** — Fixed `@Lob byte[]` PostgreSQL OID issue: added `columnDefinition = "BYTEA"` to `@Column(name = "file_data")` so PDF binary data actually persists (was always NULL with OID mapping).
+- **CI gaps fixed** — Checkstyle `failsOnError: false` → `true` in `pom.xml`; added backend test results + JaCoCo coverage artifact uploads in `playwright.yml`.
+
+**Refinements applied (2026-07-21):**
+- **PDF layout** — Виправлено макет PDF під форму 003-15/о: таблиця losses (colspan=9 замість 8), verticalCell (rowspan=11 замість 9), таблиця stats info2 (rowspan=4 замість 3). Підтверджено: PDF генерується, API повертає 201 Created.
+- **Frontend layout** — `IntensiveCareCard.tsx` переписано на двоколонковий макет: таблична частина зліва, бокова панель (300px) справа. Всі секції завжди видимі (без акардеонів/вкладок). `tsc --noEmit` проходить чисто.
+- **Форма 003-15/о** — Додано посилання на паперову форму та референс-реалізацію (localhost:5174) у технічне завдання.
+- **Autosave** — §60 доповнено деталями реалізації (useAutoSave, debounce ~1000ms, optimistic update).
+- **DayNumber sorting** — `ClinicalDayTimeline.tsx` тепер сортує дні за `dayNumber` ASC, щоб День 1 завжди був першим хронологічно.
+- **Відомі проблеми:** `MedicalOrderServiceTest` — 3 pre-existing помилки (не пов'язані). [FIXED 2026-07-22]
+
 ## Architecture
 
 ```
@@ -25,7 +42,7 @@ tests/     (Playwright 1.61)
 | Backend unit (151) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
 | Frontend Vitest (~190) | `test` → `npm test` | Same |
-| Playwright E2E (35 spec files) | `test` → `npx playwright test` | Same |
+| Playwright E2E (38 spec files) | `test` → `npx playwright test` | Same |
 | Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
 
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
@@ -54,15 +71,15 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (35 spec files) |
+| `npx playwright test` | Run all E2E tests (38 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
-- **Backend**: 151 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL) = 35 test files total. JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: ~190 Vitest tests across 20 files (pages, components, AuthContext, endpoints). Run with `npm t`.
-- **E2E**: 35 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
+- **Backend**: 151 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL) = 35 total test files. JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: ~190 Vitest tests across 22 files (pages, components, AuthContext, endpoints). Run with `npm t`.
+- **E2E**: 38 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
 
@@ -134,7 +151,7 @@ AuditLog (standalone, no BaseEntity)
 | `ScaleResult` | BaseEntity | clinicalDay(M→1), scale(M→1), result, calculatedAt, calculatedBy | Auto-calculates GCS/RASS from consciousness |
 | `FluidBalance` | BaseEntity | clinicalDay(M→1), hour, intake, output, balance, cumulativeBalance | Recalculated on HourlyRecord changes |
 | `Signature` | BaseEntity | clinicalDay(M→1), userId, role, signedAt, hash, status | — |
-| `GeneratedPdf` | BaseEntity | clinicalDay(M→1), fileName, fileVersion, generatedAt, generatedBy, checksum | — |
+| `GeneratedPdf` | BaseEntity | clinicalDay(M→1), fileName, fileVersion, generatedAt, generatedBy, checksum, fileData(byte[]), transferStatus(TransferStatus), transferError, transferredAt | TransferStatus: PENDING/SENT/FAILED |
 | `SystemSettings` | BaseEntity | key(unique), value(TEXT), description(TEXT) | — |
 
 ### Enums
@@ -146,6 +163,7 @@ AuditLog (standalone, no BaseEntity)
 | `ClinicalDayStatus` | OPEN, NURSE_SIGNED, DOCTOR_SIGNED, CLOSED, REOPENED |
 | `MedicalOrderStatus` | DRAFT, ACTIVE, COMPLETED, CANCELLED |
 | `OrderExecutionStatus` | PLANNED, IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, CANCELLED |
+| `TransferStatus` | PENDING, SENT, FAILED |
 
 ## API Endpoints
 
@@ -238,6 +256,7 @@ All endpoints prefixed with `/api`.
 |---|---|---|---|
 | GET | `/api/clinical-days/{id}/pdf` | Yes | Get latest generated PDF |
 | POST | `/api/clinical-days/{id}/pdf` | Yes | Generate PDF for clinical day |
+| GET | `/api/clinical-days/{id}/pdf/status` | Yes | Get PDF transfer status |
 
 ### Audit
 | Method | Path | Auth | Description |
@@ -265,31 +284,38 @@ All endpoints prefixed with `/api`.
 
 ## Frontend Components
 
-### Pages (6)
+### Pages (7)
 | File | Description |
 |---|---|
 | `LoginPage.tsx` | Login form with error handling |
 | `doctor/DashboardPage.tsx` | Doctor episode list with patient search |
+| `doctor/DepartmentDashboardPage.tsx` | HOD department dashboard with stats |
 | `doctor/CreateCardPage.tsx` | Create new episode (select patient, set dates) |
 | `doctor/PatientDayPage.tsx` | Doctor view of clinical day (orders, notes, scales, sign-off) |
 | `nurse/NurseDashboardPage.tsx` | Nurse episode list with active patients |
 | `admin/AdminPage.tsx` | User management tables + audit log viewer |
 
-### Common Components (12)
+### Common Components (18)
 | File | Description |
 |---|---|
+| `AuditLogTable.tsx` | Audit log viewer with filters |
 | `ClinicalDayTimeline.tsx` | Timeline of clinical days for an episode |
+| `DoctorDashboard.tsx` | Doctor dashboard quick-view |
 | `EpisodeTable.tsx` | Table of episodes with search/filter |
 | `FluidBalancePanel.tsx` | Fluid balance display with intake/output chart |
 | `HourSelector.tsx` | Hour picker for vital signs entry |
 | `HourlyRecordTable.tsx` | Hourly vital signs grid |
+| `IntensiveCareCard.tsx` | Central ICU card component |
+| `LabResultsPanel.tsx` | Lab results entry and display |
 | `MedicalNotesPanel.tsx` | Medical notes list and create/edit |
 | `MedicalOrdersPanel.tsx` | Medical orders list and create/edit/cancel |
+| `NurseDashboard.tsx` | Nurse dashboard quick-view |
 | `PatientSearch.tsx` | Patient search autocomplete (from mock MIS) |
+| `PatientStatePanel.tsx` | Patient state assessment panel |
 | `ScaleResultsPanel.tsx` | Clinical scale results display |
 | `SignDialog.tsx` | Sign dialog with hash confirmation |
+| `VentilationPanel.tsx` | Ventilation settings panel |
 | `VitalSignsForm.tsx` | Vital signs entry form |
-| `AuditLogTable.tsx` | Audit log viewer with filters |
 
 ### API Client (`frontend/src/api/`)
 - **`client.ts`**: Axios instance → `http://localhost:8085/api`, JWT interceptor
@@ -342,6 +368,8 @@ All endpoints prefixed with `/api`.
 | §87 | Mock MIS error scenarios | Error modes: timeout, not_found, unavailable via `POST /api/mis/error-mode` |
 | §88 | JaCoCo coverage | 60% instruction / 50% branch minimums |
 | §89 | Checkstyle analysis | Google checks with console output |
+| §94 | PDF transfer status tracking | `GeneratedPdf.transferStatus` + `TransferStatus` enum (PENDING/SENT/FAILED) + `GET /clinical-days/{id}/pdf/status` |
+| §98 | MIS calls audited | All `MockMisServiceImpl` methods call `auditService.logAction()` including `sendPdf()` |
 
 ## Key Patterns
 
@@ -377,20 +405,20 @@ UseManual.md           ← User manual (Ukrainian)
 .gitignore             ← Global ignore rules
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire
-  src/main/java/       ← 129 Java source files
+  src/main/java/       ← 161 Java source files
   src/main/resources/  ← application.yml, data.sql, PDF template
-  src/test/java/       ← 28 test files (14 unit + 13 integration + 1 abstract)
+  src/test/java/       ← 54 test files (32 unit + 13 integration + 1 abstract + 8 more)
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 46 TS/TSX source + 18 test files
+  src/                 ← 59 TS/TSX source + 22 test files
 tests/
   playwright.config.ts ← Playwright config with 7 projects
   package.json         ← Test dependencies
-  specs/               ← 28 spec files
+  specs/               ← 38 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/

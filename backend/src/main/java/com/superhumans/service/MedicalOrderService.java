@@ -7,7 +7,9 @@ import com.superhumans.entity.ClinicalDay;
 import com.superhumans.entity.ClinicalDayStatus;
 import com.superhumans.entity.MedicalOrder;
 import com.superhumans.entity.MedicalOrderStatus;
+import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.DocumentLockedException;
+import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.MedicalOrderMapper;
@@ -17,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -55,6 +59,16 @@ public class MedicalOrderService {
         order.setStatus(MedicalOrderStatus.ACTIVE);
         order.setCreatedBy(userId);
         order.setUpdatedBy(userId);
+
+        if (order.getStartTime() != null) {
+            LocalDateTime rounded = roundToNextHour(order.getStartTime());
+            if (rounded.isBefore(LocalDateTime.now().minusHours(1))) {
+                throw new BusinessException(ErrorCode.PAST_HOUR_ORDER,
+                        "Не можна створити призначення на минулу годину");
+            }
+            order.setStartTime(rounded);
+        }
+
         order = medicalOrderRepository.save(order);
         auditService.logCreate("MedicalOrder", order.getId(), userId);
         return medicalOrderMapper.toResponse(order);
@@ -101,6 +115,13 @@ public class MedicalOrderService {
         order = medicalOrderRepository.save(order);
         auditService.logAction("MedicalOrder", id, "CANCEL", userId);
         return medicalOrderMapper.toResponse(order);
+    }
+
+    private LocalDateTime roundToNextHour(LocalDateTime dt) {
+        if (dt.getMinute() > 0 || dt.getSecond() > 0 || dt.getNano() > 0) {
+            return dt.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+        }
+        return dt;
     }
 
     private void assertNotLocked(ClinicalDay day) {

@@ -47,6 +47,14 @@ export default function DoctorLayout() {
           >
             Пацієнти
           </Button>
+          {user?.role === 'HEAD_OF_DEPARTMENT' && (
+            <Button
+              component={RouterLink} to="/doctor/department"
+              sx={{ color: theme.palette.text.secondary, mr: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 600, fontSize: 13, borderRadius: 50, px: 2, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }}
+            >
+              Відділення
+            </Button>
+          )}
 
           <IconButton
             aria-label="Переключити тему"

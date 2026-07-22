@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Button, Alert, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, useTheme } from '@mui/material';
+import { Box, Button, Alert, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, useTheme, Paper } from '@mui/material';
 import { ArrowBack, LockOpen, Download } from '@mui/icons-material';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard';
 import NurseDashboard from '../../components/monitoring/NurseDashboard';
-import SignDialog from '../../components/common/SignDialog';
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
 
 export default function PatientDayPage() {
@@ -21,7 +20,7 @@ export default function PatientDayPage() {
   const [records, setRecords] = useState<HourlyRecord[]>([]);
   const [orders, setOrders] = useState<MedicalOrder[]>([]);
   const [balanceItems, setFluidBalanceItems] = useState<FluidBalanceItem[]>([]);
-  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [signConfirm, setSignConfirm] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
   const [loading, setLoading] = useState(true);
@@ -81,7 +80,7 @@ export default function PatientDayPage() {
       } else {
         await clinicalDayApi.signDoctor(selectedDay.id, { userId: user.id });
       }
-      setSignDialogOpen(false);
+      setSignConfirm(false);
       const daysRes = await episodeApi.getClinicalDays(episodeId!);
       setClinicalDays(daysRes.data);
       const updated = daysRes.data.find(d => d.id === selectedDay.id);
@@ -157,13 +156,31 @@ export default function PatientDayPage() {
               Відкрити повторно
             </Button>
           )}
-          {canSign && (
-            <Button size="small" variant="contained" onClick={() => setSignDialogOpen(true)} sx={{ fontWeight: 700 }}>
+          {canSign && !signConfirm && (
+            <Button size="small" variant="contained" onClick={() => setSignConfirm(true)} sx={{ fontWeight: 700 }}>
               Підписати
             </Button>
           )}
         </Box>
       </Box>
+
+      {signConfirm && (
+        <Paper elevation={3} sx={{ p: 2, mb: 2, border: `1px solid ${theme.palette.warning.main}`, borderRadius: 2 }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {user?.role === 'NURSE'
+              ? 'Після підписання медсестрою день буде доступний для підписання лікарем.'
+              : 'Після підписання лікарем клінічний день буде закрито.'}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="contained" onClick={handleSignOff}>
+              Підтвердити підписання
+            </Button>
+            <Button variant="outlined" onClick={() => setSignConfirm(false)}>
+              Скасувати
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       {/* Main dashboard — role-specific view */}
       {selectedDay && (
@@ -222,13 +239,6 @@ export default function PatientDayPage() {
         </DialogActions>
       </Dialog>
 
-      <SignDialog
-        open={signDialogOpen}
-        onClose={() => setSignDialogOpen(false)}
-        onConfirm={handleSignOff}
-        dayNumber={selectedDay?.dayNumber || 0}
-        role={user?.role}
-      />
     </Box>
   );
 }

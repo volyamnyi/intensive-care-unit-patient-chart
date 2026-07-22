@@ -3,7 +3,7 @@ import type {
   User, PatientDto, Episode, ClinicalDay, HourlyRecord, MedicalOrder,
   OrderExecution, MedicalNote, ClinicalScale, ScaleResult, FluidBalanceItem,
   PdfResponse, AuditLog, LoginRequest, LoginResponse, PageResponse,
-  SignRequest, SignResponse, ReopenRequest,
+  SignRequest, SignResponse, ReopenRequest, DepartmentStats, DepartmentPatient,
   EpisodeCreateRequest, EpisodePatchRequest, EpisodeCloseRequest,
   ClinicalDayCreateRequest, ClinicalDayPatchRequest,
   HourlyRecordCreateRequest,
@@ -120,6 +120,8 @@ export const pdfApi = {
     client.get<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf`),
   generate: (clinicalDayId: string) =>
     client.post<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf`),
+  getStatus: (clinicalDayId: string) =>
+    client.get<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf/status`),
 };
 
 export const userApi = {
@@ -153,6 +155,13 @@ export const labResultApi = {
     client.post<LabResult>(`/clinical-days/${clinicalDayId}/lab-results`, data),
   update: (id: string, data: { result?: string; version: number }) =>
     client.patch<LabResult>(`/lab-results/${id}`, data),
+};
+
+export const departmentApi = {
+  getStats: () =>
+    client.get<DepartmentStats>('/department/stats'),
+  getPatients: () =>
+    client.get<DepartmentPatient[]>('/department/patients'),
 };
 
 export const auditApi = {

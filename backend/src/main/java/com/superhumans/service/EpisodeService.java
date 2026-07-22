@@ -100,6 +100,9 @@ public class EpisodeService {
         if (request.getHeightCm() != null) {
             episode.setHeightCm(request.getHeightCm());
         }
+        if (request.getAttendingDoctorId() != null) {
+            episode.setAttendingDoctorId(request.getAttendingDoctorId());
+        }
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
         auditService.logUpdate("Episode", id, userId, null, "Updated episode fields");

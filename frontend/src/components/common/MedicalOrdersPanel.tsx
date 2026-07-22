@@ -57,55 +57,57 @@ export default function MedicalOrdersPanel({
                 {'Нове призначення'}
               </Typography>
               <Grid container spacing={1} sx={{ alignItems: 'center' }}>
-                <Grid size={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <TextField fullWidth size="small" label={'Категорія'}
                     value={newOrder.category}
                     onChange={(e) => setNewOrder({ ...newOrder, category: e.target.value })} />
                 </Grid>
-                <Grid size={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <TextField fullWidth size="small" label={'Препарат'}
                     value={newOrder.drugName}
                     onChange={(e) => setNewOrder({ ...newOrder, drugName: e.target.value })} />
                 </Grid>
-                <Grid size={2}>
+                <Grid size={{ xs: 4, sm: 2 }}>
                   <TextField fullWidth size="small" label={'Доза'}
                     value={newOrder.dose}
                     onChange={(e) => setNewOrder({ ...newOrder, dose: e.target.value })} />
                 </Grid>
-                <Grid size={2}>
+                <Grid size={{ xs: 4, sm: 2 }}>
                   <TextField fullWidth size="small" label={'Од.'}
                     value={newOrder.unit}
                     onChange={(e) => setNewOrder({ ...newOrder, unit: e.target.value })} />
                 </Grid>
-                <Grid size={2}>
+                <Grid size={{ xs: 4, sm: 2 }}>
                   <TextField fullWidth size="small" label={'Шлях'}
                     value={newOrder.route}
                     onChange={(e) => setNewOrder({ ...newOrder, route: e.target.value })} />
                 </Grid>
-                <Grid size={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <TextField fullWidth size="small" label={'Частота'}
                     value={newOrder.frequency}
                     onChange={(e) => setNewOrder({ ...newOrder, frequency: e.target.value })} />
                 </Grid>
-                <Grid size={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <TextField fullWidth size="small" type="datetime-local" label={'Початок'}
                     value={newOrder.startTime}
                     onChange={(e) => setNewOrder({ ...newOrder, startTime: e.target.value })}
                     slotProps={{ inputLabel: { shrink: true } }} />
                 </Grid>
-                <Grid size={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                   <TextField fullWidth size="small" type="datetime-local" label={'Кінець'}
                     value={newOrder.endTime}
                     onChange={(e) => setNewOrder({ ...newOrder, endTime: e.target.value })}
                     slotProps={{ inputLabel: { shrink: true } }} />
                 </Grid>
-                <Grid size={3}>
-                  <Button variant="contained" size="small" onClick={handleCreate}>
-                    {'Створити'}
-                  </Button>
-                  <Button size="small" sx={{ ml: 1 }} onClick={() => setShowForm(false)}>
-                    {'Скасувати'}
-                  </Button>
+                <Grid size={{ xs: 12, sm: 3 }}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button variant="contained" size="small" onClick={handleCreate}>
+                      {'Створити'}
+                    </Button>
+                    <Button size="small" onClick={() => setShowForm(false)}>
+                      {'Скасувати'}
+                    </Button>
+                  </Box>
                 </Grid>
               </Grid>
             </Paper>
@@ -117,8 +119,8 @@ export default function MedicalOrdersPanel({
         </Box>
       )}
 
-      <TableContainer component={Paper}>
-        <Table size="small">
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <Table size="small" sx={{ minWidth: 500 }}>
           <TableHead>
             <TableRow>
               <TableCell>{'Препарат'}</TableCell>

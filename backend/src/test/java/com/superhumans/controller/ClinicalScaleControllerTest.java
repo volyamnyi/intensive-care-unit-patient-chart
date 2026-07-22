@@ -1,0 +1,137 @@
+package com.superhumans.controller;
+
+import com.superhumans.dto.ScaleResultCreateRequest;
+import com.superhumans.dto.ScaleResultPatchRequest;
+import com.superhumans.dto.ScaleResultResponse;
+import com.superhumans.entity.ClinicalScale;
+import com.superhumans.service.ClinicalScaleService;
+import com.superhumans.auth.JwtTokenProvider;
+import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.service.AuditService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.Import;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+
+@WebMvcTest(ClinicalScaleController.class)
+@Import(com.superhumans.config.SecurityConfig.class)
+class ClinicalScaleControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private ClinicalScaleService clinicalScaleService;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private AuditLogRepository auditLogRepository;
+
+    @MockBean
+    private AuditService auditService;
+@BeforeEach
+    void setUpJwt() {
+        when(jwtTokenProvider.validateToken(anyString())).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(anyString())).thenReturn("testuser");
+        when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
+        when(jwtTokenProvider.getUserIdFromToken(anyString())).thenReturn(1L);
+    }
+    @Test
+    void getAvailableScales_returnsList() throws Exception {
+        ClinicalScale scale = new ClinicalScale();
+        scale.setId(UUID.randomUUID());
+        scale.setName("GCS");
+
+        when(clinicalScaleService.getAvailableScales()).thenReturn(List.of(scale));
+
+        mockMvc.perform(get("/api/scales").header("Authorization", "Bearer test-jwt-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("GCS"));
+    }
+
+    @Test
+    void getScaleResults_returnsList() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        ScaleResultResponse response = ScaleResultResponse.builder()
+                .id(UUID.randomUUID())
+                .result("15")
+                .build();
+
+        when(clinicalScaleService.getScaleResultsByClinicalDay(dayId)).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/clinical-days/{clinicalDayId}/scales", dayId).header("Authorization", "Bearer test-jwt-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].result").value("15"));
+    }
+
+    @Test
+    void createScaleResult_returnsCreated() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        ScaleResultResponse response = ScaleResultResponse.builder()
+                .id(UUID.randomUUID())
+                .result("15")
+                .build();
+
+        when(clinicalScaleService.createScaleResult(eq(dayId), any(ScaleResultCreateRequest.class), eq(1L)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/{clinicalDayId}/scales", dayId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scaleId\":\"550e8400-e29b-41d4-a716-446655440000\",\"result\":\"15\"}")
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.result").value("15"));
+    }
+
+    @Test
+    void createScaleResult_missingFields_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/clinical-days/{clinicalDayId}/scales", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateScaleResult_returnsNoContent() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(clinicalScaleService.updateScaleResult(eq(id), any(ScaleResultPatchRequest.class), eq(1L))).thenReturn(null);
+
+        mockMvc.perform(patch("/api/scales/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"14\",\"version\":1}")
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void updateScaleResult_conflict_returnsError() throws Exception {
+        UUID id = UUID.randomUUID();
+        when(clinicalScaleService.updateScaleResult(eq(id), any(ScaleResultPatchRequest.class), eq(1L)))
+                .thenThrow(new com.superhumans.exception.VersionConflictException("conflict"));
+
+        mockMvc.perform(patch("/api/scales/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"result\":\"14\",\"version\":1}")
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isConflict());
+    }
+}

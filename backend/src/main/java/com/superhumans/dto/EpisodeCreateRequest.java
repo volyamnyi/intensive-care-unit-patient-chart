@@ -18,6 +18,8 @@ public class EpisodeCreateRequest {
     LocalDateTime admissionDate;
 
     Double heightCm;
+    Long attendingDoctorId;
+
     String ward;
     String bedNumber;
     String admissionDiagnosis;

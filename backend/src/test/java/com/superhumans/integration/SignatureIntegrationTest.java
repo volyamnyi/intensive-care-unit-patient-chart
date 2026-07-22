@@ -47,7 +47,7 @@ class SignatureIntegrationTest extends AbstractIntegrationTest {
     @Test
     void signNurse_returnsNoContent() {
         EpisodeCreateRequest epReq = new EpisodeCreateRequest(
-                1030L, null, null, java.time.LocalDateTime.now(), null, null, null, null);
+                1030L, null, null, java.time.LocalDateTime.now(), null, null, null, null, null);
         var epEntity = authEntity(epReq, getDoctorToken());
         var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
 
@@ -137,3 +137,4 @@ class SignatureIntegrationTest extends AbstractIntegrationTest {
         assertThat(afterRes.getBody().getDoctorSigned()).isFalse();
     }
 }
+

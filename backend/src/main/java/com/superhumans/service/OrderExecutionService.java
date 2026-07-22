@@ -17,15 +17,18 @@ import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.MedicalOrderRepository;
 import com.superhumans.repository.OrderExecutionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -71,6 +74,12 @@ public class OrderExecutionService {
         execution.setCreatedBy(userId);
         execution.setUpdatedBy(userId);
         execution = orderExecutionRepository.save(execution);
+
+        if (execution.getExecutedAt() != null && execution.getExecutedAt().getHour() < LocalDateTime.now().getHour()) {
+            log.info("BACK_ENTRY: OrderExecution {} created for past hour {}", execution.getId(), execution.getExecutedAt());
+            auditService.logAction("OrderExecution", execution.getId(), "BACK_ENTRY", userId);
+        }
+
         auditService.logAction("OrderExecution", execution.getId(), "EXECUTE", userId);
         fluidBalanceService.recalculate(order.getClinicalDay().getId(), userId);
         return orderExecutionMapper.toResponse(execution);

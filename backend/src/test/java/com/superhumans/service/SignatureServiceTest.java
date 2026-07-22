@@ -58,7 +58,8 @@ class SignatureServiceTest {
 
         when(signatureRepository.save(any(Signature.class))).thenReturn(sig);
 
-        Signature result = signatureService.createSignature(clinicalDay, userId, "DOCTOR", "hash123");
+        Signature result = signatureService.createSignature(clinicalDay, userId, "DOCTOR", "hash123",
+                null, null, null, null, null);
 
         verify(signatureRepository).save(sigCaptor.capture());
         assertThat(sigCaptor.getValue().getUserId()).isEqualTo(userId);

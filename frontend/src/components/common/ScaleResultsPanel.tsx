@@ -28,11 +28,11 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
   return (
     <>
       {onCreateResult && availableScales.length > 0 && (
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <TextField
             select size="small" label={'Шкала'} value={selectedScaleId}
             onChange={(e) => setSelectedScaleId(e.target.value)}
-            sx={{ minWidth: 200 }}
+            sx={{ minWidth: { xs: '100%', sm: 200 } }}
           >
             {availableScales.map((s) => (
               <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
@@ -41,9 +41,9 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
           <TextField
             size="small" label={'Результат'} value={resultValue}
             onChange={(e) => setResultValue(e.target.value)}
+            sx={{ minWidth: { xs: '100%', sm: 120 } }}
           />
-          <Button variant="contained" size="small" onClick={handleCreate}
-            sx={{ mt: 0.5 }}>
+          <Button variant="contained" size="small" onClick={handleCreate}>
             {'Додати'}
           </Button>
         </Box>
