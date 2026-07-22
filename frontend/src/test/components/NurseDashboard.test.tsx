@@ -62,7 +62,7 @@ describe('NurseDashboard', () => {
 
   it('renders day number chip', () => {
     renderWithTheme(<NurseDashboard {...defaultProps} />);
-    const dayElements = screen.getAllByText('День 2');
+    const dayElements = screen.getAllByText('Доба 2');
     expect(dayElements.length).toBeGreaterThanOrEqual(1);
   });
 

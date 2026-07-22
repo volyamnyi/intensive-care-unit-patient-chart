@@ -173,7 +173,7 @@ describe('IntensiveCareCard', () => {
     it('shows weight and all sidebar sections', () => {
       renderCard({ selectedDay: { ...mockDay, weightKg: 78 } });
       expect(screen.getByText(/Вага: 78/)).toBeInTheDocument();
-      ['Нотатки', 'Шкали', 'Вентиляція', 'Лабораторні результати', 'Стан пацієнта']
+      ['Нотатки', 'Шкали', 'ШВЛ', 'Лабораторні результати', 'Стан пацієнта']
         .forEach(label => expect(screen.getByText(label)).toBeInTheDocument());
     });
 

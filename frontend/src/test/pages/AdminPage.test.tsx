@@ -64,12 +64,12 @@ describe('AdminPage', () => {
 
   it('sets document title on mount', () => {
     renderPage();
-    expect(document.title).toBe('ВАІТ — Адміністрування');
+    expect(document.title).toBe('ВАІТ — Адміністратор');
   });
 
   it('renders the page title', () => {
     renderPage();
-    expect(screen.getByText('Адміністрування')).toBeInTheDocument();
+    expect(screen.getByText('Користувачі системи')).toBeInTheDocument();
   });
 
   it('shows loading spinner initially', () => {
@@ -151,7 +151,7 @@ describe('AdminPage', () => {
       },
     });
     renderPage();
-    await userEvent.click(await screen.findByRole('button', { name: 'Переглянути' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Переглянути журнал аудиту' }));
     await waitFor(() => {
       expect(screen.getByText('AUTH')).toBeInTheDocument();
       expect(screen.getByText('EPISODE')).toBeInTheDocument();
@@ -164,7 +164,7 @@ describe('AdminPage', () => {
       data: { content: [], totalElements: 0, totalPages: 0, number: 0, size: 10 },
     });
     renderPage();
-    await userEvent.click(await screen.findByRole('button', { name: 'Переглянути' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Переглянути журнал аудиту' }));
     await waitFor(() => {
       expect(screen.getByText('Немає записів аудиту')).toBeInTheDocument();
     });
