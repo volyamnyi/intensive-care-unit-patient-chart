@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import org.mockito.MockedStatic;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ClinicalDayServiceTest {
@@ -94,8 +95,8 @@ class ClinicalDayServiceTest {
         testDay.setEndDateTime(LocalDateTime.now().plusHours(24));
         testDay.setVersion(0);
 
-        clinicalDayService.signingWindowStartHour = 7;
-        clinicalDayService.signingWindowEndHour = 9;
+        ReflectionTestUtils.setField(clinicalDayService, "signingWindowStartHour", 7);
+        ReflectionTestUtils.setField(clinicalDayService, "signingWindowEndHour", 9);
         clinicalDayService.initSigningWindow();
     }
 
