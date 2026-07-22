@@ -120,7 +120,7 @@ export default function LabResultsPanel({
             value={result} onChange={(e) => handleResultChange(e.target.value)}
             sx={{ width: 130 }}
           />
-          <Stack spacing={0.5} alignItems="center">
+          <Stack spacing={0.5} sx={{ alignItems: 'center' }}>
             <Button variant="contained" size="small" onClick={handleAdd} disabled={saving || !selected || result.trim() === ''} sx={{ mt: 0.5 }}>
               {'Додати'}
             </Button>

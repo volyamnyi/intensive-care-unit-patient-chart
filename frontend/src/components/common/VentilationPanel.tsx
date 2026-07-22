@@ -90,7 +90,7 @@ export default function VentilationPanel({
               onChange={(e) => setFormAndDirty({ tidalVolume: e.target.value })} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
             <TextField size="small" type="number" label={'Pplat'} value={form.plateauPressure}
               onChange={(e) => setFormAndDirty({ plateauPressure: e.target.value })} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
-            <Stack spacing={0.5} alignItems="center">
+            <Stack spacing={0.5} sx={{ alignItems: 'center' }}>
               <Button variant="contained" size="small" onClick={handleAdd} disabled={saving} sx={{ width: { xs: '100%', sm: 'auto' } }}>{'Додати'}</Button>
               {autoSaveStatus === 'saving' && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

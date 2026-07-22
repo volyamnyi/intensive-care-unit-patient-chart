@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Tooltip, useTheme, CircularProgress, Divider,
-  List, ListItem, ListItemText, Button, Stack, MenuItem, Input, Chip,
+  TextField, Tooltip, useTheme, CircularProgress,
+  List, ListItem, ListItemText, Button, Stack, MenuItem, Input,
 } from '@mui/material';
 import type {
   Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem,
@@ -641,7 +641,7 @@ export default function IntensiveCareCard({
                 minRows={2}
                 slotProps={{ input: { 'aria-label': 'Нова нотатка' } }}
               />
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                 <Button size="small" variant="outlined" onClick={saveNow} disabled={savingNote || !noteText.trim()}>
                   {'Додати'}
                 </Button>

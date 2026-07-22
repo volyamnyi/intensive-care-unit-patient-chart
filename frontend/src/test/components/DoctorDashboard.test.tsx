@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material';
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard';
 import type { DashboardProps } from '../../components/monitoring/dashboardTypes';
-import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
+import type { Episode, ClinicalDay } from '../../types';
 
 const theme = createTheme({});
 

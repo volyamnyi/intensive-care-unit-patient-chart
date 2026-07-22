@@ -111,7 +111,7 @@ export default function PatientStatePanel({
             onChange={(e) => setAndDirty(e as React.ChangeEvent<HTMLInputElement>, 'generalCondition')} sx={{ mb: 1 }} />
           <TextField fullWidth size="small" label={'Примітки'} value={form.additionalNotes}
             onChange={(e) => setAndDirty(e as React.ChangeEvent<HTMLInputElement>, 'additionalNotes')} sx={{ mb: 1 }} multiline minRows={2} />
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <Button variant="contained" size="small" onClick={handleAdd} disabled={saving}>{'Додати'}</Button>
             {autoSaveStatus === 'saving' && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
