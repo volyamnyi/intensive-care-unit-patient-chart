@@ -11,15 +11,15 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import java.util.List;
 
 
 
-@ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-    "spring.sql.init.mode=never"
+    "spring.sql.init.mode=never",
+    "app.scheduling.signing-window-start=0",
+    "app.scheduling.signing-window-end=23"
 })
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test.sql")
 public abstract class AbstractIntegrationTest {
