@@ -595,16 +595,16 @@ export default function IntensiveCareCard({
         <Box sx={{ p: 1.5, border: bd, borderRadius: 2, bgcolor: isDark ? '#141414' : '#fff' }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>{'Баланс рідини'}</Typography>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Надійшло:'}</span><b>{totalIntake} {'ml'}</b>
+            <span>{'Надійшло:'}</span><b>{totalIntake} {'мл'}</b>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Виділено:'}</span><b>{totalOutput} {'ml'}</b>
+            <span>{'Виділено:'}</span><b>{totalOutput} {'мл'}</b>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
             <span>{'Добовий баланс:'}</span><b>{dailyBalance >= 0 ? '+' : ''}{dailyBalance}</b>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Кумулятивний баланс'}</span><b>{cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance}</b>
+            <span>{'Кумулятивний баланс:'}</span><b>{cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance}</b>
           </Box>
         </Box>
 
