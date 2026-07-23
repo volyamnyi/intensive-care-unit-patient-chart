@@ -2953,3 +2953,126 @@ VALUES
 ('a1049110-1049-1000-1000-104911000010','b1049001-1049-1049-1049-104910490001',13,'NURSE',DATE_TRUNC('day', NOW() - INTERVAL '24 days') + INTERVAL '20 hours','hash-nurse-1049d1','ACTIVE',DATE_TRUNC('day', NOW() - INTERVAL '24 days') + INTERVAL '20 hours',13,DATE_TRUNC('day', NOW() - INTERVAL '24 days') + INTERVAL '20 hours',13,0)
 ON CONFLICT (id) DO NOTHING;
 
+-- ============================================================
+-- FIX: Set actual_dose on existing order_executions linked to MEDICATION/INFUSION orders
+-- (root cause of zero fluid balance intake)
+-- ============================================================
+UPDATE order_executions oe
+SET actual_dose = mo.dose
+FROM medical_orders mo
+WHERE oe.order_id = mo.id
+  AND mo.category IN ('MEDICATION', 'INFUSION')
+  AND mo.dose IS NOT NULL AND mo.dose != '-';
+
+-- ============================================================
+-- FLUID DATA: Петренко (episode a1111111, patient 1001)
+-- ============================================================
+
+-- b1111112 (NURSE_SIGNED, yesterday 08:00 -> today 08:00) -- hourly records with output
+INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c1112001-1112-1112-0000-111211120001','b1111112-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',37.1,78,18,125,70,88,98.0,5.5,NULL,0.35,NULL,85,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c1112002-1112-1112-0200-111211120002','b1111112-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',36.8,72,16,118,68,85,97.0,5.2,NULL,0.31,9,62,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c1112003-1112-1112-0400-111211120003','b1111112-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '4 hours',4,'SEDATED',37.5,85,20,130,75,93,96.0,6.1,NULL,0.38,NULL,95,22,NULL,NULL,3,NULL,NOW(),11,NOW(),11,0),
+('c1112004-1112-1112-0600-111211120004','b1111112-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '6 hours',6,'CLEAR',37.0,70,14,115,65,82,98.0,5.8,NULL,NULL,7,55,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c1112005-1112-1112-0800-111211120005','b1111112-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '8 hours',8,'CLEAR',36.9,80,18,122,72,89,99.0,5.0,NULL,0.33,NULL,120,0,NULL,NULL,1,NULL,NOW(),11,NOW(),11,0),
+('c1112006-1112-1112-1000-111211120006','b1111112-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '10 hours',10,'CLEAR',37.3,76,15,128,70,89,97.0,6.3,NULL,0.36,NULL,70,28,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+-- b1111112 (NURSE_SIGNED) -- medical orders with fluid-related MEDICATION/INFUSION
+INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('d1112001-1112-1112-0000-111211120001','b1111112-1111-1111-1111-111111111111','MEDICATION','Natrii chloridi 0.9%','500','ml','IV drip','1 r/d',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','COMPLETED',NOW(),11,NOW(),11,0),
+('d1112002-1112-1112-0100-111211120002','b1111112-1111-1111-1111-111111111111','MEDICATION','Ceftriaxone','1.0','g','IV','2 r/d',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','COMPLETED',NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+-- b1111112 (NURSE_SIGNED) -- order executions with actual_dose
+INSERT INTO order_executions (id, order_id, executed_by, executed_at, actual_dose, status, comment, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('e1112001-1112-1112-0000-111211120001','d1112001-1112-1112-0000-111211120001',13,DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','500','COMPLETED','done',NOW(),13,NOW(),13,0),
+('e1112002-1112-1112-0100-111211120002','d1112002-1112-1112-0100-111211120002',13,DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','1.0','COMPLETED','done',NOW(),13,NOW(),13,0)
+ON CONFLICT (id) DO NOTHING;
+
+-- b1111111 (OPEN, today 08:00 -> tomorrow 08:00) -- hourly records
+INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c1111001-1111-1111-0000-111111110001','b1111111-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',37.0,76,18,120,68,85,98.0,5.4,NULL,0.30,NULL,30,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c1111002-1111-1111-0200-111111110002','b1111111-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',36.9,74,16,122,70,87,99.0,5.1,NULL,0.32,8,45,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('d1111001-1111-1111-0000-111111110001','b1111111-1111-1111-1111-111111111111','MEDICATION','Natrii chloridi 0.9%','500','ml','IV drip','1 r/d',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '1 day','ACTIVE',NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO order_executions (id, order_id, executed_by, executed_at, actual_dose, status, comment, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('e1111001-1111-1111-0000-111111110001','d1111001-1111-1111-0000-111111110001',13,DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','500','COMPLETED','done',NOW(),13,NOW(),13,0)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- FLUID DATA: Коваленко (episode a2222222, patient 1002)
+-- ============================================================
+
+-- b4444444 (NURSE_SIGNED, yesterday 08:00 -> today 08:00) -- hourly records
+INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c4444001-4444-4444-0000-444444440001','b4444444-4444-4444-4444-444444444444',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',36.9,82,18,128,72,91,97.0,5.8,NULL,0.34,NULL,90,0,NULL,NULL,1,NULL,NOW(),11,NOW(),11,0),
+('c4444002-4444-4444-0200-444444440002','b4444444-4444-4444-4444-444444444444',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',37.2,78,16,115,66,82,98.0,5.3,NULL,0.30,7,75,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c4444003-4444-4444-0400-444444440003','b4444444-4444-4444-4444-444444444444',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '4 hours',4,'SEDATED',37.8,88,22,135,78,97,96.0,6.4,NULL,0.40,NULL,110,30,NULL,NULL,4,NULL,NOW(),11,NOW(),11,0),
+('c4444004-4444-4444-0600-444444440004','b4444444-4444-4444-4444-444444444444',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '6 hours',6,'CLEAR',36.5,72,14,112,64,80,99.0,5.0,NULL,NULL,6,60,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c4444005-4444-4444-0800-444444440005','b4444444-4444-4444-4444-444444444444',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '8 hours',8,'CLEAR',37.1,84,20,126,74,91,97.0,5.6,NULL,0.35,NULL,135,0,NULL,NULL,2,NULL,NOW(),11,NOW(),11,0),
+('c4444006-4444-4444-1000-444444440006','b4444444-4444-4444-4444-444444444444',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours' + INTERVAL '10 hours',10,'CLEAR',36.8,76,15,120,68,85,98.0,6.0,NULL,0.33,9,85,18,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+-- b4444444 (NURSE_SIGNED) -- medical orders
+INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('d4444001-4444-4444-0000-444444440001','b4444444-4444-4444-4444-444444444444','INFUSION','Ringer lactate','1000','ml','IV drip','1 r/d',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','COMPLETED',NOW(),11,NOW(),11,0),
+('d4444002-4444-4444-0100-444444440002','b4444444-4444-4444-4444-444444444444','MEDICATION','Enoxaparin','0.4','ml','SC','1 r/d',DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','COMPLETED',NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO order_executions (id, order_id, executed_by, executed_at, actual_dose, status, comment, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('e4444001-4444-4444-0000-444444440001','d4444001-4444-4444-0000-444444440001',13,DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','1000','COMPLETED','done',NOW(),13,NOW(),13,0),
+('e4444002-4444-4444-0100-444444440002','d4444002-4444-4444-0100-444444440002',13,DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','0.4','COMPLETED','done',NOW(),13,NOW(),13,0)
+ON CONFLICT (id) DO NOTHING;
+
+-- b2222222 (OPEN, today 08:00 -> tomorrow 08:00) -- hourly records
+INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c2222001-2222-2222-0000-222222220001','b2222222-2222-2222-2222-222222222222',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',37.0,80,18,125,70,88,98.0,5.5,NULL,0.32,NULL,25,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c2222002-2222-2222-0200-222222220002','b2222222-2222-2222-2222-222222222222',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',36.8,76,16,120,68,85,99.0,5.2,NULL,0.30,7,40,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('d2222001-2222-2222-0000-222222220001','b2222222-2222-2222-2222-222222222222','INFUSION','Ringer lactate','1000','ml','IV drip','1 r/d',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '1 day','ACTIVE',NOW(),11,NOW(),11,0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO order_executions (id, order_id, executed_by, executed_at, actual_dose, status, comment, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('e2222001-2222-2222-0000-222222220001','d2222001-2222-2222-0000-222222220001',13,DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','1000','COMPLETED','done',NOW(),13,NOW(),13,0)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- FLUID DATA: Сидоренко (episode a3333333, patient 1003)
+-- ============================================================
+
+-- b3333333 (OPEN, today 08:00 -> tomorrow 08:00) -- hourly records
+INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c3333001-3333-3333-0000-333333330001','b3333333-3333-3333-3333-333333333333',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',37.2,78,16,122,68,86,98.0,5.6,NULL,0.31,NULL,20,0,NULL,NULL,0,NULL,NOW(),12,NOW(),12,0),
+('c3333002-3333-3333-0200-333333330002','b3333333-3333-3333-3333-333333333333',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',36.9,74,14,118,65,83,99.0,5.3,NULL,0.29,6,35,0,NULL,NULL,0,NULL,NOW(),12,NOW(),12,0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('d3333001-3333-3333-0000-333333330001','b3333333-3333-3333-3333-333333333333','INFUSION','Glucose 5%','500','ml','IV drip','1 r/d',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '1 day','ACTIVE',NOW(),12,NOW(),12,0)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO order_executions (id, order_id, executed_by, executed_at, actual_dose, status, comment, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('e3333001-3333-3333-0000-333333330001','d3333001-3333-3333-0000-333333330001',13,DATE_TRUNC('day', NOW()) + INTERVAL '8 hours','500','COMPLETED','done',NOW(),13,NOW(),13,0)
+ON CONFLICT (id) DO NOTHING;
+

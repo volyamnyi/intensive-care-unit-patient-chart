@@ -22,8 +22,14 @@ public class FluidBalanceController {
 
     @GetMapping("/clinical-days/{clinicalDayId}/fluid-balance")
     public ResponseEntity<List<FluidBalanceResponse>> getFluidBalance(
-            @PathVariable UUID clinicalDayId) {
-        return ResponseEntity.ok(fluidBalanceService.getBalances(clinicalDayId));
+            @PathVariable UUID clinicalDayId,
+            Authentication auth) {
+        List<FluidBalanceResponse> balances = fluidBalanceService.getBalances(clinicalDayId);
+        if (balances.isEmpty()) {
+            Long userId = (Long) auth.getCredentials();
+            balances = fluidBalanceService.recalculate(clinicalDayId, userId);
+        }
+        return ResponseEntity.ok(balances);
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/fluid-balance/recalculate")

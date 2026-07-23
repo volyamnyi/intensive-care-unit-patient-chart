@@ -73,6 +73,7 @@ class FluidBalanceControllerTest {
     void getFluidBalance_emptyList_returnsOk() throws Exception {
         UUID dayId = UUID.randomUUID();
         when(fluidBalanceService.getBalances(dayId)).thenReturn(List.of());
+        when(fluidBalanceService.recalculate(eq(dayId), eq(1L))).thenReturn(List.of());
 
         mockMvc.perform(get("/api/clinical-days/{clinicalDayId}/fluid-balance", dayId).header("Authorization", "Bearer test-jwt-token"))
                 .andExpect(status().isOk())
