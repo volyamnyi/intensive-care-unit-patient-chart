@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, IconButton, Menu, MenuItem, useTheme,
@@ -33,7 +33,7 @@ export default function AdminPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const loadAudit = async () => {
+  const loadAudit = useCallback(async () => {
     setAuditLoading(true);
     try {
       const params: Record<string, string> = {};
@@ -43,11 +43,11 @@ export default function AdminPage() {
     } finally {
       setAuditLoading(false);
     }
-  };
+  }, [auditFilterEntity]);
 
   useEffect(() => {
     if (showAudit) loadAudit();
-  }, [showAudit]);
+  }, [showAudit, loadAudit]);
 
   const roleLabel = (u: User) => u.role === 'DOCTOR' ? 'Лікар'
     : u.role === 'NURSE' ? 'Медсестра'

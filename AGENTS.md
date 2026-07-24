@@ -2,12 +2,14 @@
 
 ## Current Session
 
-**Sidebar refactor — shadcn-inspired MUI-native Sidebar composables (2026-07-24):**
-- **New file** `frontend/src/components/ui/Sidebar.tsx` — 8 exports: `SidebarProvider` (context + drag logic + localStorage), `Sidebar`, `SidebarRail`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarTrigger`, `useSidebar`. Continuous drag resize (200–600px, default 300px) lives in `SidebarProvider`.
-- **`IntensiveCareCard.tsx`** refactored — removed inline sidebar Box, removed drag state/refs (`SIDEBAR_MIN`, `SIDEBAR_MAX`, `sidebarWidth`, `sidebarWidthRef`, `dragState`, `handleResizeStart`, mouse `useEffect`), removed `SidebarSection` helper. Now uses `<SidebarProvider>` wrapping `<Sidebar side="right" collapsible="none">` with `<SidebarRail />`, `<SidebarHeader>`, `<SidebarContent>`, and 6 `<SidebarGroup>` sections.
-- **Vitest tests** updated — sidebar resize tests now find rail by `getByRole('separator', { name: '...' })` instead of fragile DOM traversal.
-- **Playwright E2E** — `tests/specs/doctor/sidebar-resize.spec.ts` unchanged (locators still work).
-- **Unused imports removed** — `NoteAdd`, `ScaleOutlined` kept; `Assignment`, `Science`, `Air` icons cleaned.
+**CI test failure fixes after sidebar refactor (2026-07-24):**
+- **Backend `LoginResponse.java`** — restored `token` field that was removed during sidebar refactor. `AuthController.java.login()` now sets token on loginResponse before returning. Fixed 21 frontend tests that were silently failing (couldn't read token from login response body).
+- **`sideBar-resize.spec.ts`** — added `.first()` to 3 locators for "Петренко Іван Сергійович" (appears in both sidebar header `<p>` and dashboard heading `<h6>`).
+- **`clinical-day-reopen.spec.ts`** — updated for Paper-based reopen UI (sidebar refactor replaced `<Dialog>` with `<Paper>`).
+- **`vitals.spec.ts`** — removed invalid test "nurse edits a vital sign cell inline" (nurses cannot edit vital signs, only loss rows, by design in `IntensiveCareCard.tsx:104`).
+- **Oxlint warnings cleaned up** (9→0): `notifyParent` wrapped in `useRef` in `IntensiveCareCard.tsx`, missing `useEffect` deps added in 3 files, fast-refresh export warnings suppressed.
+- **Verification**: Backend 291/291 tests, `mvn clean verify` BUILD SUCCESS (0 Checkstyle violations), Frontend 276/276 Vitest, `npx tsc --noEmit` clean.
+- **Commit**: `40054db` — `fix: restore LoginResponse token field, fix 4 E2E test regressions from sidebar refactor`
 
 **Previous sessions (condensed):**
 - 2026-07-23: Frontend error display — `getErrorMessage()` helper (extracts `err.response?.data?.message`), used in all 8 API catch blocks. `OrderInlineForm` `onError` prop. `InvalidDataAccessApiUsageException` caught in `GlobalExceptionHandler` → 400.

@@ -318,7 +318,8 @@ export default function IntensiveCareCard({
     localRecordMap.current.clear();
   }, [records]);
 
-  const notifyParent = onFeedback ?? (() => {});
+  const notifyParentRef = useRef(onFeedback ?? (() => {}));
+  notifyParentRef.current = onFeedback ?? (() => {});
 
   useEffect(() => {
     setNoteText('');
@@ -341,11 +342,11 @@ export default function IntensiveCareCard({
       const refreshed = await medicalNoteApi.getByClinicalDay(day.id);
       setNotes(refreshed.data as unknown as { id: string; text: string; authorId?: string }[]);
     } catch (err) {
-      notifyParent(getErrorMessage(err, 'Не вдалося зберегти нотатку'), 'error');
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося зберегти нотатку'), 'error');
     } finally {
       setSavingNote(false);
     }
-  }, [isLocked, isNurse, notifyParent]);
+  }, [isLocked, isNurse]);
 
   const { status: autoSaveStatus, markDirty, saveNow } = useAutoSave({
     onSave: saveCurrentNote,
@@ -367,7 +368,7 @@ export default function IntensiveCareCard({
 
   const canEditSidebar = !isLocked;
 
-  const refreshSidebar = async () => {
+  const refreshSidebar = useCallback(async () => {
     if (!selectedDay) return;
     try {
       const [n, s, v, l, p] = await Promise.all([
@@ -383,9 +384,9 @@ export default function IntensiveCareCard({
       setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
       setPatientState(p as unknown as { id: string; assessment?: string }[]);
     } catch (err) {
-      notifyParent(getErrorMessage(err, 'Не вдалося оновити бічну панель'), 'error');
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося оновити бічну панель'), 'error');
     }
-  };
+  }, [selectedDay]);
 
   const createLab = async (data: LabResultCreateRequest) => {
     if (!selectedDay || isLocked) return;
@@ -393,7 +394,7 @@ export default function IntensiveCareCard({
       await labResultApi.create(selectedDay.id, data);
       await refreshSidebar();
     } catch (err) {
-      notifyParent(getErrorMessage(err, 'Не вдалося створити лаб. результат'), 'error');
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося створити лаб. результат'), 'error');
     }
   };
   const createVentilation = async (data: VentilationCreateRequest) => {
@@ -402,7 +403,7 @@ export default function IntensiveCareCard({
       await ventilationApi.create(selectedDay.id, data);
       await refreshSidebar();
     } catch (err) {
-      notifyParent(getErrorMessage(err, 'Не вдалося додати ШВЛ'), 'error');
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося додати ШВЛ'), 'error');
     }
   };
   const createPatientState = async (data: PatientStateCreateRequest) => {
@@ -411,7 +412,7 @@ export default function IntensiveCareCard({
       await patientStateApi.create(selectedDay.id, data);
       await refreshSidebar();
     } catch (err) {
-      notifyParent(getErrorMessage(err, 'Не вдалося зберегти стан пацієнта'), 'error');
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося зберегти стан пацієнта'), 'error');
     }
   };
 
@@ -421,7 +422,7 @@ export default function IntensiveCareCard({
     if (!selectedDay) return;
     setLoadingSidebar(true);
     refreshSidebar().finally(() => setLoadingSidebar(false));
-  }, [selectedDay]);
+  }, [selectedDay, refreshSidebar]);
 
   const recByHour = useMemo(() => {
     const map = new Map<number, HourlyRecord>();
@@ -473,9 +474,9 @@ export default function IntensiveCareCard({
       }
       onRefresh?.();
     } catch (err) {
-      notifyParent(getErrorMessage(err, 'Не вдалося зберегти показник'), 'error');
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося зберегти показник'), 'error');
     }
-  }, [selectedDay, isLocked, recByHour, onRefresh, notifyParent]);
+  }, [selectedDay, isLocked, recByHour, onRefresh]);
 
   const activeOrders = orders.filter(o => o.status === 'ACTIVE' || o.status === 'DRAFT');
 
@@ -490,11 +491,11 @@ export default function IntensiveCareCard({
         actualDose,
       });
     } catch (err) {
-      notifyParent(getErrorMessage(err, 'Не вдалося виконати призначення'), 'error');
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося виконати призначення'), 'error');
     } finally {
       setExecuting(null);
     }
-  }, [user, selectedDay, notifyParent]);
+  }, [user, selectedDay]);
 
   const totalIntake = balanceItems.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = balanceItems.reduce((s, i) => s + (i.output || 0), 0);

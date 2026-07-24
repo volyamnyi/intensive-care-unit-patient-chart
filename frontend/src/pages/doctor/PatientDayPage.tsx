@@ -74,7 +74,7 @@ export default function PatientDayPage() {
     if (selectedDay) {
       loadDayData(selectedDay);
     }
-  }, [selectedDay?.id]);
+  }, [selectedDay, loadDayData]);
 
   useEffect(() => {
     document.title = episode ? `ICU — ${episode.patientName}` : 'ICU — Patient';

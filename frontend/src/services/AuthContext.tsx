@@ -1,3 +1,4 @@
+/* eslint-disable react/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User, LoginRequest } from '../types';
 import { authApi, userApi } from '../api/endpoints';

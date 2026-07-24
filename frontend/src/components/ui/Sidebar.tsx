@@ -1,3 +1,4 @@
+/* eslint-disable react/only-export-components */
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { Box, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
