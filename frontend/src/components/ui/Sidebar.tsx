@@ -117,7 +117,7 @@ export function useSidebar() {
   return ctx;
 }
 
-export function Sidebar({ children, side = 'right', collapsible = 'none' }: SidebarProps) {
+export function Sidebar({ children }: SidebarProps) {
   const { sidebarWidth, isMobile } = useSidebar();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
