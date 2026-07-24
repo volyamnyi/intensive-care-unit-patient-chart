@@ -7,9 +7,10 @@
 - **`sideBar-resize.spec.ts`** — added `.first()` to 3 locators for "Петренко Іван Сергійович" (appears in both sidebar header `<p>` and dashboard heading `<h6>`).
 - **`clinical-day-reopen.spec.ts`** — updated for Paper-based reopen UI (sidebar refactor replaced `<Dialog>` with `<Paper>`).
 - **`vitals.spec.ts`** — removed invalid test "nurse edits a vital sign cell inline" (nurses cannot edit vital signs, only loss rows, by design in `IntensiveCareCard.tsx:104`).
-- **Oxlint warnings cleaned up** (9→0): `notifyParent` wrapped in `useRef` in `IntensiveCareCard.tsx`, missing `useEffect` deps added in 3 files, fast-refresh export warnings suppressed.
-- **Verification**: Backend 291/291 tests, `mvn clean verify` BUILD SUCCESS (0 Checkstyle violations), Frontend 276/276 Vitest, `npx tsc --noEmit` clean.
-- **Commit**: `40054db` — `fix: restore LoginResponse token field, fix 4 E2E test regressions from sidebar refactor`
+- **Oxlint warnings cleaned up (9→0)**: `notifyParent` wrapped in `useRef` in `IntensiveCareCard.tsx`, missing `useEffect` deps added in 3 files, fast-refresh export warnings suppressed.
+- **Follow-up CI catch**: `notifyParent` still used in `onError` prop on line 594 → changed to `notifyParentRef.current`. Frontend build now passes CI.
+- **Verification**: Backend 291/291 tests, `mvn clean verify` BUILD SUCCESS (0 Checkstyle violations), Frontend 276/276 Vitest, `npm run build` clean.
+- **Commits**: `40054db` → `8f45145` → `8cf71f8`
 
 **Previous sessions (condensed):**
 - 2026-07-23: Frontend error display — `getErrorMessage()` helper (extracts `err.response?.data?.message`), used in all 8 API catch blocks. `OrderInlineForm` `onError` prop. `InvalidDataAccessApiUsageException` caught in `GlobalExceptionHandler` → 400.
