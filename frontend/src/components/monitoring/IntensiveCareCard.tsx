@@ -591,7 +591,7 @@ export default function IntensiveCareCard({
                         isLocked={isLocked}
                         onCreated={onRefresh ?? (() => {})}
                         onCancel={() => setOrderFormOpen(false)}
-                        onError={(msg) => notifyParent(msg, 'error')}
+                        onError={(msg) => notifyParentRef.current(msg, 'error')}
                       />
                     </TableCell>
                   </TableRow>
