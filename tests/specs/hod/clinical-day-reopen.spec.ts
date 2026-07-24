@@ -48,20 +48,20 @@ test.describe('HOD Clinical Day Reopen', () => {
     await expect(page.getByRole('button', { name: 'Перевідкрити' })).toBeVisible({ timeout: 10000 });
   });
 
-  test('HOD reopen dialog blocks empty reason (regression F2/UC-14)', async ({ hodPage }) => {
+  test('HOD reopen form blocks empty reason (regression F2/UC-14)', async ({ hodPage }) => {
     await hodPage.goto('/doctor/episode/a1111111-1111-1111-1111-111111111111');
 
     await hodPage.getByText('Доба 2').click();
     await expect(hodPage.getByRole('button', { name: 'Перевідкрити' })).toBeVisible({ timeout: 10000 });
 
     await hodPage.getByRole('button', { name: 'Перевідкрити' }).click();
-    const dialog = hodPage.getByRole('dialog');
-    await expect(dialog).toBeVisible();
+    const reasonInput = hodPage.getByLabel(/причин/i);
+    await expect(reasonInput).toBeVisible();
 
-    const submit = dialog.getByRole('button', { name: 'Перевідкрити' });
+    const submit = hodPage.getByRole('button', { name: 'Перевідкрити' });
     await expect(submit).toBeDisabled();
 
-    await dialog.getByLabel(/причин/i).fill('E2E reason');
+    await reasonInput.fill('E2E reason');
     await expect(submit).toBeEnabled();
   });
 });

@@ -41,9 +41,11 @@ public class AuthController {
                 .path("/")
                 .maxAge(86400)
                 .build();
+        LoginResponse loginResponse = response.getBody();
+        loginResponse.setToken(token);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(response.getBody());
+                .body(loginResponse);
     }
 
     @PostMapping("/logout")

@@ -19,13 +19,13 @@ test.describe('Sidebar resize', () => {
     await doctorPage.goto(`/doctor/episode/${EPISODE_ID}`);
     const patientSection = doctorPage.getByText('Пацієнт').first();
     await expect(patientSection).toBeVisible();
-    await expect(doctorPage.getByText('Петренко Іван Сергійович')).toBeVisible();
+    await expect(doctorPage.getByText('Петренко Іван Сергійович').first()).toBeVisible();
   });
 
   test('sidebar retains functionality after resize interaction', async ({ doctorPage }) => {
     await doctorPage.goto(`/doctor/episode/${EPISODE_ID}`);
-    await expect(doctorPage.getByText('Пацієнт')).toBeVisible();
-    await expect(doctorPage.getByText('Петренко Іван Сергійович')).toBeVisible();
+    await expect(doctorPage.getByText('Пацієнт').first()).toBeVisible();
+    await expect(doctorPage.getByText('Петренко Іван Сергійович').first()).toBeVisible();
     const fluidBalance = doctorPage.getByText(/Надійшло|Виділено/).first();
     await expect(fluidBalance).toBeVisible();
   });
