@@ -40,7 +40,8 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('role')).toHaveTextContent('null');
   });
 
-  it('restores session from cookie on mount', async () => {
+  it('restores session from storage on mount', async () => {
+    localStorage.setItem('auth:session', '1');
     mockGetMe.mockResolvedValue({ data: { id: '1', login: 'doctor1', fullName: 'Doc', role: 'DOCTOR', email: '' } });
     render(<AuthProvider><TestComponent /></AuthProvider>);
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('yes'));
@@ -60,6 +61,7 @@ describe('AuthContext', () => {
   });
 
   it('logout calls api and clears user', async () => {
+    localStorage.setItem('auth:session', '1');
     mockLogoutFn.mockResolvedValue(undefined);
     mockGetMe.mockResolvedValue({ data: { id: '1', login: 'doctor1', fullName: 'Doc', role: 'DOCTOR', email: '' } });
     render(<AuthProvider><TestComponent /></AuthProvider>);
