@@ -2,7 +2,9 @@ package com.superhumans.exception;
 
 import com.superhumans.dto.ErrorResponse;
 import jakarta.persistence.OptimisticLockException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,9 +12,11 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import lombok.extern.slf4j.Slf4j;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -84,6 +88,25 @@ public class GlobalExceptionHandler {
                 new ErrorResponse(ErrorCode.VERSION_CONFLICT, "Data integrity violation", UUID.randomUUID().toString()));
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ex.getConstraintViolations().stream()
+                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                .collect(Collectors.joining("; "));
+        return ResponseEntity.badRequest().body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR, message, UUID.randomUUID().toString()));
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDataAccessApiUsage(InvalidDataAccessApiUsageException ex) {
+        if (ex.getCause() instanceof IllegalArgumentException iae) {
+            return handleIllegalArgument(iae);
+        }
+        log.error("Unexpected data access error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ErrorResponse(ErrorCode.INTERNAL_ERROR, ex.getMessage(), UUID.randomUUID().toString()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(
@@ -99,6 +122,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntime(RuntimeException ex) {
+        log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 new ErrorResponse(ErrorCode.INTERNAL_ERROR, ex.getMessage(), UUID.randomUUID().toString()));
     }

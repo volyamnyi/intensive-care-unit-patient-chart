@@ -1,0 +1,1568 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - link [ref=f2e6] [cursor=pointer]:
+        - /url: /doctor
+        - img "Superhumans" [ref=f2e7]
+        - generic [ref=f2e8]:
+          - paragraph [ref=f2e9]: ВАІТ
+          - paragraph [ref=f2e10]: Карта інтенсивної терапії
+      - link "Пацієнти" [ref=f2e11] [cursor=pointer]:
+        - /url: /doctor
+      - button "Переключити тему" [ref=f2e12] [cursor=pointer]
+      - button "Меню користувача" [ref=f2e15] [cursor=pointer]
+  - generic [ref=f2e22]:
+    - generic [ref=f2e23]:
+      - button [ref=f2e24] [cursor=pointer]
+      - button "Підписати добу" [ref=f2e29] [cursor=pointer]
+    - generic [ref=f2e30]:
+      - generic [ref=f2e31]:
+        - generic [ref=f2e32]:
+          - heading "Петренко Іван Сергійович" [level=6] [ref=f2e33]
+          - generic [ref=f2e34]: День 2
+          - generic [ref=f2e36]: Підписано медсестрою
+        - generic [ref=f2e38]: "Епізод #a1111111"
+      - generic [ref=f2e40]:
+        - generic [ref=f2e41] [cursor=pointer]:
+          - paragraph [ref=f2e42]: Доба 1
+          - text: 23 лип.
+        - generic [ref=f2e43] [cursor=pointer]:
+          - paragraph [ref=f2e44]: Доба 2
+          - text: 22 лип.
+      - generic [ref=f2e45]:
+        - table [ref=f2e48]:
+          - rowgroup [ref=f2e49]:
+            - row [ref=f2e50]:
+              - columnheader "Показник / година" [ref=f2e51]
+              - columnheader "8:00" [ref=f2e52]
+              - columnheader "9:00" [ref=f2e53]
+              - columnheader "10:00" [ref=f2e54]
+              - columnheader "11:00" [ref=f2e55]
+              - columnheader "12:00" [ref=f2e56]
+              - columnheader "13:00" [ref=f2e57]
+              - columnheader "14:00" [ref=f2e58]
+              - columnheader "15:00" [ref=f2e59]
+              - columnheader "16:00" [ref=f2e60]
+              - columnheader "17:00" [ref=f2e61]
+              - columnheader "18:00" [ref=f2e62]
+              - columnheader "19:00" [ref=f2e63]
+              - columnheader "20:00" [ref=f2e64]
+              - columnheader "21:00" [ref=f2e65]
+              - columnheader "22:00" [ref=f2e66]
+              - columnheader "23:00" [ref=f2e67]
+              - columnheader "0:00" [ref=f2e68]
+              - columnheader "1:00" [ref=f2e69]
+              - columnheader "2:00" [ref=f2e70]
+              - columnheader "3:00" [ref=f2e71]
+              - columnheader "4:00" [ref=f2e72]
+              - columnheader "5:00" [ref=f2e73]
+              - columnheader "6:00" [ref=f2e74]
+              - columnheader "7:00" [ref=f2e75]
+          - rowgroup [ref=f2e76]:
+            - row [ref=f2e77]:
+              - cell "Показники" [ref=f2e78]
+            - row [ref=f2e79]:
+              - cell "АТсист" [ref=f2e80]
+              - cell [ref=f2e81]:
+                - generic "АТсист 8:00" [ref=f2e82]:
+                  - generic [ref=f2e83]:
+                    - spinbutton [disabled] [ref=f2e84]: "125"
+                    - group
+              - cell [ref=f2e85]:
+                - generic "АТсист 9:00" [ref=f2e86]:
+                  - generic [ref=f2e87]:
+                    - spinbutton [disabled] [ref=f2e88]
+                    - group
+              - cell [ref=f2e89]:
+                - generic "АТсист 10:00" [ref=f2e90]:
+                  - generic [ref=f2e91]:
+                    - spinbutton [disabled] [ref=f2e92]: "118"
+                    - group
+              - cell [ref=f2e93]:
+                - generic "АТсист 11:00" [ref=f2e94]:
+                  - generic [ref=f2e95]:
+                    - spinbutton [disabled] [ref=f2e96]
+                    - group
+              - cell [ref=f2e97]:
+                - generic "АТсист 12:00" [ref=f2e98]:
+                  - generic [ref=f2e99]:
+                    - spinbutton [disabled] [ref=f2e100]: "130"
+                    - group
+              - cell [ref=f2e101]:
+                - generic "АТсист 13:00" [ref=f2e102]:
+                  - generic [ref=f2e103]:
+                    - spinbutton [disabled] [ref=f2e104]
+                    - group
+              - cell [ref=f2e105]:
+                - generic "АТсист 14:00" [ref=f2e106]:
+                  - generic [ref=f2e107]:
+                    - spinbutton [disabled] [ref=f2e108]: "115"
+                    - group
+              - cell [ref=f2e109]:
+                - generic "АТсист 15:00" [ref=f2e110]:
+                  - generic [ref=f2e111]:
+                    - spinbutton [disabled] [ref=f2e112]
+                    - group
+              - cell [ref=f2e113]:
+                - generic "АТсист 16:00" [ref=f2e114]:
+                  - generic [ref=f2e115]:
+                    - spinbutton [disabled] [ref=f2e116]: "122"
+                    - group
+              - cell [ref=f2e117]:
+                - generic "АТсист 17:00" [ref=f2e118]:
+                  - generic [ref=f2e119]:
+                    - spinbutton [disabled] [ref=f2e120]
+                    - group
+              - cell [ref=f2e121]:
+                - generic "АТсист 18:00" [ref=f2e122]:
+                  - generic [ref=f2e123]:
+                    - spinbutton [disabled] [ref=f2e124]: "128"
+                    - group
+              - cell [ref=f2e125]:
+                - generic "АТсист 19:00" [ref=f2e126]:
+                  - generic [ref=f2e127]:
+                    - spinbutton [disabled] [ref=f2e128]
+                    - group
+              - cell [ref=f2e129]:
+                - generic "АТсист 20:00" [ref=f2e130]:
+                  - generic [ref=f2e131]:
+                    - spinbutton [disabled] [ref=f2e132]
+                    - group
+              - cell [ref=f2e133]:
+                - generic "АТсист 21:00" [ref=f2e134]:
+                  - generic [ref=f2e135]:
+                    - spinbutton [disabled] [ref=f2e136]
+                    - group
+              - cell [ref=f2e137]:
+                - generic "АТсист 22:00" [ref=f2e138]:
+                  - generic [ref=f2e139]:
+                    - spinbutton [disabled] [ref=f2e140]
+                    - group
+              - cell [ref=f2e141]:
+                - generic "АТсист 23:00" [ref=f2e142]:
+                  - generic [ref=f2e143]:
+                    - spinbutton [disabled] [ref=f2e144]
+                    - group
+              - cell [ref=f2e145]:
+                - generic "АТсист 0:00" [ref=f2e146]:
+                  - generic [ref=f2e147]:
+                    - spinbutton [disabled] [ref=f2e148]
+                    - group
+              - cell [ref=f2e149]:
+                - generic "АТсист 1:00" [ref=f2e150]:
+                  - generic [ref=f2e151]:
+                    - spinbutton [disabled] [ref=f2e152]
+                    - group
+              - cell [ref=f2e153]:
+                - generic "АТсист 2:00" [ref=f2e154]:
+                  - generic [ref=f2e155]:
+                    - spinbutton [disabled] [ref=f2e156]
+                    - group
+              - cell [ref=f2e157]:
+                - generic "АТсист 3:00" [ref=f2e158]:
+                  - generic [ref=f2e159]:
+                    - spinbutton [disabled] [ref=f2e160]
+                    - group
+              - cell [ref=f2e161]:
+                - generic "АТсист 4:00" [ref=f2e162]:
+                  - generic [ref=f2e163]:
+                    - spinbutton [disabled] [ref=f2e164]
+                    - group
+              - cell [ref=f2e165]:
+                - generic "АТсист 5:00" [ref=f2e166]:
+                  - generic [ref=f2e167]:
+                    - spinbutton [disabled] [ref=f2e168]
+                    - group
+              - cell [ref=f2e169]:
+                - generic "АТсист 6:00" [ref=f2e170]:
+                  - generic [ref=f2e171]:
+                    - spinbutton [disabled] [ref=f2e172]
+                    - group
+              - cell [ref=f2e173]:
+                - generic "АТсист 7:00" [ref=f2e174]:
+                  - generic [ref=f2e175]:
+                    - spinbutton [disabled] [ref=f2e176]
+                    - group
+            - row [ref=f2e177]:
+              - cell "АТдіас" [ref=f2e178]
+              - cell [ref=f2e179]:
+                - generic "АТдіас 8:00" [ref=f2e180]:
+                  - generic [ref=f2e181]:
+                    - spinbutton [disabled] [ref=f2e182]: "70"
+                    - group
+              - cell [ref=f2e183]:
+                - generic "АТдіас 9:00" [ref=f2e184]:
+                  - generic [ref=f2e185]:
+                    - spinbutton [disabled] [ref=f2e186]
+                    - group
+              - cell [ref=f2e187]:
+                - generic "АТдіас 10:00" [ref=f2e188]:
+                  - generic [ref=f2e189]:
+                    - spinbutton [disabled] [ref=f2e190]: "68"
+                    - group
+              - cell [ref=f2e191]:
+                - generic "АТдіас 11:00" [ref=f2e192]:
+                  - generic [ref=f2e193]:
+                    - spinbutton [disabled] [ref=f2e194]
+                    - group
+              - cell [ref=f2e195]:
+                - generic "АТдіас 12:00" [ref=f2e196]:
+                  - generic [ref=f2e197]:
+                    - spinbutton [disabled] [ref=f2e198]: "75"
+                    - group
+              - cell [ref=f2e199]:
+                - generic "АТдіас 13:00" [ref=f2e200]:
+                  - generic [ref=f2e201]:
+                    - spinbutton [disabled] [ref=f2e202]
+                    - group
+              - cell [ref=f2e203]:
+                - generic "АТдіас 14:00" [ref=f2e204]:
+                  - generic [ref=f2e205]:
+                    - spinbutton [disabled] [ref=f2e206]: "65"
+                    - group
+              - cell [ref=f2e207]:
+                - generic "АТдіас 15:00" [ref=f2e208]:
+                  - generic [ref=f2e209]:
+                    - spinbutton [disabled] [ref=f2e210]
+                    - group
+              - cell [ref=f2e211]:
+                - generic "АТдіас 16:00" [ref=f2e212]:
+                  - generic [ref=f2e213]:
+                    - spinbutton [disabled] [ref=f2e214]: "72"
+                    - group
+              - cell [ref=f2e215]:
+                - generic "АТдіас 17:00" [ref=f2e216]:
+                  - generic [ref=f2e217]:
+                    - spinbutton [disabled] [ref=f2e218]
+                    - group
+              - cell [ref=f2e219]:
+                - generic "АТдіас 18:00" [ref=f2e220]:
+                  - generic [ref=f2e221]:
+                    - spinbutton [disabled] [ref=f2e222]: "70"
+                    - group
+              - cell [ref=f2e223]:
+                - generic "АТдіас 19:00" [ref=f2e224]:
+                  - generic [ref=f2e225]:
+                    - spinbutton [disabled] [ref=f2e226]
+                    - group
+              - cell [ref=f2e227]:
+                - generic "АТдіас 20:00" [ref=f2e228]:
+                  - generic [ref=f2e229]:
+                    - spinbutton [disabled] [ref=f2e230]
+                    - group
+              - cell [ref=f2e231]:
+                - generic "АТдіас 21:00" [ref=f2e232]:
+                  - generic [ref=f2e233]:
+                    - spinbutton [disabled] [ref=f2e234]
+                    - group
+              - cell [ref=f2e235]:
+                - generic "АТдіас 22:00" [ref=f2e236]:
+                  - generic [ref=f2e237]:
+                    - spinbutton [disabled] [ref=f2e238]
+                    - group
+              - cell [ref=f2e239]:
+                - generic "АТдіас 23:00" [ref=f2e240]:
+                  - generic [ref=f2e241]:
+                    - spinbutton [disabled] [ref=f2e242]
+                    - group
+              - cell [ref=f2e243]:
+                - generic "АТдіас 0:00" [ref=f2e244]:
+                  - generic [ref=f2e245]:
+                    - spinbutton [disabled] [ref=f2e246]
+                    - group
+              - cell [ref=f2e247]:
+                - generic "АТдіас 1:00" [ref=f2e248]:
+                  - generic [ref=f2e249]:
+                    - spinbutton [disabled] [ref=f2e250]
+                    - group
+              - cell [ref=f2e251]:
+                - generic "АТдіас 2:00" [ref=f2e252]:
+                  - generic [ref=f2e253]:
+                    - spinbutton [disabled] [ref=f2e254]
+                    - group
+              - cell [ref=f2e255]:
+                - generic "АТдіас 3:00" [ref=f2e256]:
+                  - generic [ref=f2e257]:
+                    - spinbutton [disabled] [ref=f2e258]
+                    - group
+              - cell [ref=f2e259]:
+                - generic "АТдіас 4:00" [ref=f2e260]:
+                  - generic [ref=f2e261]:
+                    - spinbutton [disabled] [ref=f2e262]
+                    - group
+              - cell [ref=f2e263]:
+                - generic "АТдіас 5:00" [ref=f2e264]:
+                  - generic [ref=f2e265]:
+                    - spinbutton [disabled] [ref=f2e266]
+                    - group
+              - cell [ref=f2e267]:
+                - generic "АТдіас 6:00" [ref=f2e268]:
+                  - generic [ref=f2e269]:
+                    - spinbutton [disabled] [ref=f2e270]
+                    - group
+              - cell [ref=f2e271]:
+                - generic "АТдіас 7:00" [ref=f2e272]:
+                  - generic [ref=f2e273]:
+                    - spinbutton [disabled] [ref=f2e274]
+                    - group
+            - row [ref=f2e275]:
+              - cell "ЧСС" [ref=f2e276]
+              - cell [ref=f2e277]:
+                - generic "ЧСС 8:00" [ref=f2e278]:
+                  - generic [ref=f2e279]:
+                    - spinbutton [disabled] [ref=f2e280]: "78"
+                    - group
+              - cell [ref=f2e281]:
+                - generic "ЧСС 9:00" [ref=f2e282]:
+                  - generic [ref=f2e283]:
+                    - spinbutton [disabled] [ref=f2e284]
+                    - group
+              - cell [ref=f2e285]:
+                - generic "ЧСС 10:00" [ref=f2e286]:
+                  - generic [ref=f2e287]:
+                    - spinbutton [disabled] [ref=f2e288]: "72"
+                    - group
+              - cell [ref=f2e289]:
+                - generic "ЧСС 11:00" [ref=f2e290]:
+                  - generic [ref=f2e291]:
+                    - spinbutton [disabled] [ref=f2e292]
+                    - group
+              - cell [ref=f2e293]:
+                - generic "ЧСС 12:00" [ref=f2e294]:
+                  - generic [ref=f2e295]:
+                    - spinbutton [disabled] [ref=f2e296]: "85"
+                    - group
+              - cell [ref=f2e297]:
+                - generic "ЧСС 13:00" [ref=f2e298]:
+                  - generic [ref=f2e299]:
+                    - spinbutton [disabled] [ref=f2e300]
+                    - group
+              - cell [ref=f2e301]:
+                - generic "ЧСС 14:00" [ref=f2e302]:
+                  - generic [ref=f2e303]:
+                    - spinbutton [disabled] [ref=f2e304]: "70"
+                    - group
+              - cell [ref=f2e305]:
+                - generic "ЧСС 15:00" [ref=f2e306]:
+                  - generic [ref=f2e307]:
+                    - spinbutton [disabled] [ref=f2e308]
+                    - group
+              - cell [ref=f2e309]:
+                - generic "ЧСС 16:00" [ref=f2e310]:
+                  - generic [ref=f2e311]:
+                    - spinbutton [disabled] [ref=f2e312]: "80"
+                    - group
+              - cell [ref=f2e313]:
+                - generic "ЧСС 17:00" [ref=f2e314]:
+                  - generic [ref=f2e315]:
+                    - spinbutton [disabled] [ref=f2e316]
+                    - group
+              - cell [ref=f2e317]:
+                - generic "ЧСС 18:00" [ref=f2e318]:
+                  - generic [ref=f2e319]:
+                    - spinbutton [disabled] [ref=f2e320]: "76"
+                    - group
+              - cell [ref=f2e321]:
+                - generic "ЧСС 19:00" [ref=f2e322]:
+                  - generic [ref=f2e323]:
+                    - spinbutton [disabled] [ref=f2e324]
+                    - group
+              - cell [ref=f2e325]:
+                - generic "ЧСС 20:00" [ref=f2e326]:
+                  - generic [ref=f2e327]:
+                    - spinbutton [disabled] [ref=f2e328]
+                    - group
+              - cell [ref=f2e329]:
+                - generic "ЧСС 21:00" [ref=f2e330]:
+                  - generic [ref=f2e331]:
+                    - spinbutton [disabled] [ref=f2e332]
+                    - group
+              - cell [ref=f2e333]:
+                - generic "ЧСС 22:00" [ref=f2e334]:
+                  - generic [ref=f2e335]:
+                    - spinbutton [disabled] [ref=f2e336]
+                    - group
+              - cell [ref=f2e337]:
+                - generic "ЧСС 23:00" [ref=f2e338]:
+                  - generic [ref=f2e339]:
+                    - spinbutton [disabled] [ref=f2e340]
+                    - group
+              - cell [ref=f2e341]:
+                - generic "ЧСС 0:00" [ref=f2e342]:
+                  - generic [ref=f2e343]:
+                    - spinbutton [disabled] [ref=f2e344]
+                    - group
+              - cell [ref=f2e345]:
+                - generic "ЧСС 1:00" [ref=f2e346]:
+                  - generic [ref=f2e347]:
+                    - spinbutton [disabled] [ref=f2e348]
+                    - group
+              - cell [ref=f2e349]:
+                - generic "ЧСС 2:00" [ref=f2e350]:
+                  - generic [ref=f2e351]:
+                    - spinbutton [disabled] [ref=f2e352]
+                    - group
+              - cell [ref=f2e353]:
+                - generic "ЧСС 3:00" [ref=f2e354]:
+                  - generic [ref=f2e355]:
+                    - spinbutton [disabled] [ref=f2e356]
+                    - group
+              - cell [ref=f2e357]:
+                - generic "ЧСС 4:00" [ref=f2e358]:
+                  - generic [ref=f2e359]:
+                    - spinbutton [disabled] [ref=f2e360]
+                    - group
+              - cell [ref=f2e361]:
+                - generic "ЧСС 5:00" [ref=f2e362]:
+                  - generic [ref=f2e363]:
+                    - spinbutton [disabled] [ref=f2e364]
+                    - group
+              - cell [ref=f2e365]:
+                - generic "ЧСС 6:00" [ref=f2e366]:
+                  - generic [ref=f2e367]:
+                    - spinbutton [disabled] [ref=f2e368]
+                    - group
+              - cell [ref=f2e369]:
+                - generic "ЧСС 7:00" [ref=f2e370]:
+                  - generic [ref=f2e371]:
+                    - spinbutton [disabled] [ref=f2e372]
+                    - group
+            - row [ref=f2e373]:
+              - cell "SpO2" [ref=f2e374]
+              - cell [ref=f2e375]:
+                - generic "SpO2 8:00" [ref=f2e376]:
+                  - generic [ref=f2e377]:
+                    - spinbutton [disabled] [ref=f2e378]: "98"
+                    - group
+              - cell [ref=f2e379]:
+                - generic "SpO2 9:00" [ref=f2e380]:
+                  - generic [ref=f2e381]:
+                    - spinbutton [disabled] [ref=f2e382]
+                    - group
+              - cell [ref=f2e383]:
+                - generic "SpO2 10:00" [ref=f2e384]:
+                  - generic [ref=f2e385]:
+                    - spinbutton [disabled] [ref=f2e386]: "97"
+                    - group
+              - cell [ref=f2e387]:
+                - generic "SpO2 11:00" [ref=f2e388]:
+                  - generic [ref=f2e389]:
+                    - spinbutton [disabled] [ref=f2e390]
+                    - group
+              - cell [ref=f2e391]:
+                - generic "SpO2 12:00" [ref=f2e392]:
+                  - generic [ref=f2e393]:
+                    - spinbutton [disabled] [ref=f2e394]: "96"
+                    - group
+              - cell [ref=f2e395]:
+                - generic "SpO2 13:00" [ref=f2e396]:
+                  - generic [ref=f2e397]:
+                    - spinbutton [disabled] [ref=f2e398]
+                    - group
+              - cell [ref=f2e399]:
+                - generic "SpO2 14:00" [ref=f2e400]:
+                  - generic [ref=f2e401]:
+                    - spinbutton [disabled] [ref=f2e402]: "98"
+                    - group
+              - cell [ref=f2e403]:
+                - generic "SpO2 15:00" [ref=f2e404]:
+                  - generic [ref=f2e405]:
+                    - spinbutton [disabled] [ref=f2e406]
+                    - group
+              - cell [ref=f2e407]:
+                - generic "SpO2 16:00" [ref=f2e408]:
+                  - generic [ref=f2e409]:
+                    - spinbutton [disabled] [ref=f2e410]: "99"
+                    - group
+              - cell [ref=f2e411]:
+                - generic "SpO2 17:00" [ref=f2e412]:
+                  - generic [ref=f2e413]:
+                    - spinbutton [disabled] [ref=f2e414]
+                    - group
+              - cell [ref=f2e415]:
+                - generic "SpO2 18:00" [ref=f2e416]:
+                  - generic [ref=f2e417]:
+                    - spinbutton [disabled] [ref=f2e418]: "97"
+                    - group
+              - cell [ref=f2e419]:
+                - generic "SpO2 19:00" [ref=f2e420]:
+                  - generic [ref=f2e421]:
+                    - spinbutton [disabled] [ref=f2e422]
+                    - group
+              - cell [ref=f2e423]:
+                - generic "SpO2 20:00" [ref=f2e424]:
+                  - generic [ref=f2e425]:
+                    - spinbutton [disabled] [ref=f2e426]
+                    - group
+              - cell [ref=f2e427]:
+                - generic "SpO2 21:00" [ref=f2e428]:
+                  - generic [ref=f2e429]:
+                    - spinbutton [disabled] [ref=f2e430]
+                    - group
+              - cell [ref=f2e431]:
+                - generic "SpO2 22:00" [ref=f2e432]:
+                  - generic [ref=f2e433]:
+                    - spinbutton [disabled] [ref=f2e434]
+                    - group
+              - cell [ref=f2e435]:
+                - generic "SpO2 23:00" [ref=f2e436]:
+                  - generic [ref=f2e437]:
+                    - spinbutton [disabled] [ref=f2e438]
+                    - group
+              - cell [ref=f2e439]:
+                - generic "SpO2 0:00" [ref=f2e440]:
+                  - generic [ref=f2e441]:
+                    - spinbutton [disabled] [ref=f2e442]
+                    - group
+              - cell [ref=f2e443]:
+                - generic "SpO2 1:00" [ref=f2e444]:
+                  - generic [ref=f2e445]:
+                    - spinbutton [disabled] [ref=f2e446]
+                    - group
+              - cell [ref=f2e447]:
+                - generic "SpO2 2:00" [ref=f2e448]:
+                  - generic [ref=f2e449]:
+                    - spinbutton [disabled] [ref=f2e450]
+                    - group
+              - cell [ref=f2e451]:
+                - generic "SpO2 3:00" [ref=f2e452]:
+                  - generic [ref=f2e453]:
+                    - spinbutton [disabled] [ref=f2e454]
+                    - group
+              - cell [ref=f2e455]:
+                - generic "SpO2 4:00" [ref=f2e456]:
+                  - generic [ref=f2e457]:
+                    - spinbutton [disabled] [ref=f2e458]
+                    - group
+              - cell [ref=f2e459]:
+                - generic "SpO2 5:00" [ref=f2e460]:
+                  - generic [ref=f2e461]:
+                    - spinbutton [disabled] [ref=f2e462]
+                    - group
+              - cell [ref=f2e463]:
+                - generic "SpO2 6:00" [ref=f2e464]:
+                  - generic [ref=f2e465]:
+                    - spinbutton [disabled] [ref=f2e466]
+                    - group
+              - cell [ref=f2e467]:
+                - generic "SpO2 7:00" [ref=f2e468]:
+                  - generic [ref=f2e469]:
+                    - spinbutton [disabled] [ref=f2e470]
+                    - group
+            - row [ref=f2e471]:
+              - cell "Темп" [ref=f2e472]
+              - cell [ref=f2e473]:
+                - generic "Темп 8:00" [ref=f2e474]:
+                  - generic [ref=f2e475]:
+                    - spinbutton [disabled] [ref=f2e476]: "37.1"
+                    - group
+              - cell [ref=f2e477]:
+                - generic "Темп 9:00" [ref=f2e478]:
+                  - generic [ref=f2e479]:
+                    - spinbutton [disabled] [ref=f2e480]
+                    - group
+              - cell [ref=f2e481]:
+                - generic "Темп 10:00" [ref=f2e482]:
+                  - generic [ref=f2e483]:
+                    - spinbutton [disabled] [ref=f2e484]: "36.8"
+                    - group
+              - cell [ref=f2e485]:
+                - generic "Темп 11:00" [ref=f2e486]:
+                  - generic [ref=f2e487]:
+                    - spinbutton [disabled] [ref=f2e488]
+                    - group
+              - cell [ref=f2e489]:
+                - generic "Темп 12:00" [ref=f2e490]:
+                  - generic [ref=f2e491]:
+                    - spinbutton [disabled] [ref=f2e492]: "37.5"
+                    - group
+              - cell [ref=f2e493]:
+                - generic "Темп 13:00" [ref=f2e494]:
+                  - generic [ref=f2e495]:
+                    - spinbutton [disabled] [ref=f2e496]
+                    - group
+              - cell [ref=f2e497]:
+                - generic "Темп 14:00" [ref=f2e498]:
+                  - generic [ref=f2e499]:
+                    - spinbutton [disabled] [ref=f2e500]: "37"
+                    - group
+              - cell [ref=f2e501]:
+                - generic "Темп 15:00" [ref=f2e502]:
+                  - generic [ref=f2e503]:
+                    - spinbutton [disabled] [ref=f2e504]
+                    - group
+              - cell [ref=f2e505]:
+                - generic "Темп 16:00" [ref=f2e506]:
+                  - generic [ref=f2e507]:
+                    - spinbutton [disabled] [ref=f2e508]: "36.9"
+                    - group
+              - cell [ref=f2e509]:
+                - generic "Темп 17:00" [ref=f2e510]:
+                  - generic [ref=f2e511]:
+                    - spinbutton [disabled] [ref=f2e512]
+                    - group
+              - cell [ref=f2e513]:
+                - generic "Темп 18:00" [ref=f2e514]:
+                  - generic [ref=f2e515]:
+                    - spinbutton [disabled] [ref=f2e516]: "37.3"
+                    - group
+              - cell [ref=f2e517]:
+                - generic "Темп 19:00" [ref=f2e518]:
+                  - generic [ref=f2e519]:
+                    - spinbutton [disabled] [ref=f2e520]
+                    - group
+              - cell [ref=f2e521]:
+                - generic "Темп 20:00" [ref=f2e522]:
+                  - generic [ref=f2e523]:
+                    - spinbutton [disabled] [ref=f2e524]
+                    - group
+              - cell [ref=f2e525]:
+                - generic "Темп 21:00" [ref=f2e526]:
+                  - generic [ref=f2e527]:
+                    - spinbutton [disabled] [ref=f2e528]
+                    - group
+              - cell [ref=f2e529]:
+                - generic "Темп 22:00" [ref=f2e530]:
+                  - generic [ref=f2e531]:
+                    - spinbutton [disabled] [ref=f2e532]
+                    - group
+              - cell [ref=f2e533]:
+                - generic "Темп 23:00" [ref=f2e534]:
+                  - generic [ref=f2e535]:
+                    - spinbutton [disabled] [ref=f2e536]
+                    - group
+              - cell [ref=f2e537]:
+                - generic "Темп 0:00" [ref=f2e538]:
+                  - generic [ref=f2e539]:
+                    - spinbutton [disabled] [ref=f2e540]
+                    - group
+              - cell [ref=f2e541]:
+                - generic "Темп 1:00" [ref=f2e542]:
+                  - generic [ref=f2e543]:
+                    - spinbutton [disabled] [ref=f2e544]
+                    - group
+              - cell [ref=f2e545]:
+                - generic "Темп 2:00" [ref=f2e546]:
+                  - generic [ref=f2e547]:
+                    - spinbutton [disabled] [ref=f2e548]
+                    - group
+              - cell [ref=f2e549]:
+                - generic "Темп 3:00" [ref=f2e550]:
+                  - generic [ref=f2e551]:
+                    - spinbutton [disabled] [ref=f2e552]
+                    - group
+              - cell [ref=f2e553]:
+                - generic "Темп 4:00" [ref=f2e554]:
+                  - generic [ref=f2e555]:
+                    - spinbutton [disabled] [ref=f2e556]
+                    - group
+              - cell [ref=f2e557]:
+                - generic "Темп 5:00" [ref=f2e558]:
+                  - generic [ref=f2e559]:
+                    - spinbutton [disabled] [ref=f2e560]
+                    - group
+              - cell [ref=f2e561]:
+                - generic "Темп 6:00" [ref=f2e562]:
+                  - generic [ref=f2e563]:
+                    - spinbutton [disabled] [ref=f2e564]
+                    - group
+              - cell [ref=f2e565]:
+                - generic "Темп 7:00" [ref=f2e566]:
+                  - generic [ref=f2e567]:
+                    - spinbutton [disabled] [ref=f2e568]
+                    - group
+            - row [ref=f2e569]:
+              - cell "ЦВТ" [ref=f2e570]
+              - cell [ref=f2e571]:
+                - generic "ЦВТ 8:00" [ref=f2e572]:
+                  - generic [ref=f2e573]:
+                    - spinbutton [disabled] [ref=f2e574]
+                    - group
+              - cell [ref=f2e575]:
+                - generic "ЦВТ 9:00" [ref=f2e576]:
+                  - generic [ref=f2e577]:
+                    - spinbutton [disabled] [ref=f2e578]
+                    - group
+              - cell [ref=f2e579]:
+                - generic "ЦВТ 10:00" [ref=f2e580]:
+                  - generic [ref=f2e581]:
+                    - spinbutton [disabled] [ref=f2e582]: "9"
+                    - group
+              - cell [ref=f2e583]:
+                - generic "ЦВТ 11:00" [ref=f2e584]:
+                  - generic [ref=f2e585]:
+                    - spinbutton [disabled] [ref=f2e586]
+                    - group
+              - cell [ref=f2e587]:
+                - generic "ЦВТ 12:00" [ref=f2e588]:
+                  - generic [ref=f2e589]:
+                    - spinbutton [disabled] [ref=f2e590]
+                    - group
+              - cell [ref=f2e591]:
+                - generic "ЦВТ 13:00" [ref=f2e592]:
+                  - generic [ref=f2e593]:
+                    - spinbutton [disabled] [ref=f2e594]
+                    - group
+              - cell [ref=f2e595]:
+                - generic "ЦВТ 14:00" [ref=f2e596]:
+                  - generic [ref=f2e597]:
+                    - spinbutton [disabled] [ref=f2e598]: "7"
+                    - group
+              - cell [ref=f2e599]:
+                - generic "ЦВТ 15:00" [ref=f2e600]:
+                  - generic [ref=f2e601]:
+                    - spinbutton [disabled] [ref=f2e602]
+                    - group
+              - cell [ref=f2e603]:
+                - generic "ЦВТ 16:00" [ref=f2e604]:
+                  - generic [ref=f2e605]:
+                    - spinbutton [disabled] [ref=f2e606]
+                    - group
+              - cell [ref=f2e607]:
+                - generic "ЦВТ 17:00" [ref=f2e608]:
+                  - generic [ref=f2e609]:
+                    - spinbutton [disabled] [ref=f2e610]
+                    - group
+              - cell [ref=f2e611]:
+                - generic "ЦВТ 18:00" [ref=f2e612]:
+                  - generic [ref=f2e613]:
+                    - spinbutton [disabled] [ref=f2e614]
+                    - group
+              - cell [ref=f2e615]:
+                - generic "ЦВТ 19:00" [ref=f2e616]:
+                  - generic [ref=f2e617]:
+                    - spinbutton [disabled] [ref=f2e618]
+                    - group
+              - cell [ref=f2e619]:
+                - generic "ЦВТ 20:00" [ref=f2e620]:
+                  - generic [ref=f2e621]:
+                    - spinbutton [disabled] [ref=f2e622]
+                    - group
+              - cell [ref=f2e623]:
+                - generic "ЦВТ 21:00" [ref=f2e624]:
+                  - generic [ref=f2e625]:
+                    - spinbutton [disabled] [ref=f2e626]
+                    - group
+              - cell [ref=f2e627]:
+                - generic "ЦВТ 22:00" [ref=f2e628]:
+                  - generic [ref=f2e629]:
+                    - spinbutton [disabled] [ref=f2e630]
+                    - group
+              - cell [ref=f2e631]:
+                - generic "ЦВТ 23:00" [ref=f2e632]:
+                  - generic [ref=f2e633]:
+                    - spinbutton [disabled] [ref=f2e634]
+                    - group
+              - cell [ref=f2e635]:
+                - generic "ЦВТ 0:00" [ref=f2e636]:
+                  - generic [ref=f2e637]:
+                    - spinbutton [disabled] [ref=f2e638]
+                    - group
+              - cell [ref=f2e639]:
+                - generic "ЦВТ 1:00" [ref=f2e640]:
+                  - generic [ref=f2e641]:
+                    - spinbutton [disabled] [ref=f2e642]
+                    - group
+              - cell [ref=f2e643]:
+                - generic "ЦВТ 2:00" [ref=f2e644]:
+                  - generic [ref=f2e645]:
+                    - spinbutton [disabled] [ref=f2e646]
+                    - group
+              - cell [ref=f2e647]:
+                - generic "ЦВТ 3:00" [ref=f2e648]:
+                  - generic [ref=f2e649]:
+                    - spinbutton [disabled] [ref=f2e650]
+                    - group
+              - cell [ref=f2e651]:
+                - generic "ЦВТ 4:00" [ref=f2e652]:
+                  - generic [ref=f2e653]:
+                    - spinbutton [disabled] [ref=f2e654]
+                    - group
+              - cell [ref=f2e655]:
+                - generic "ЦВТ 5:00" [ref=f2e656]:
+                  - generic [ref=f2e657]:
+                    - spinbutton [disabled] [ref=f2e658]
+                    - group
+              - cell [ref=f2e659]:
+                - generic "ЦВТ 6:00" [ref=f2e660]:
+                  - generic [ref=f2e661]:
+                    - spinbutton [disabled] [ref=f2e662]
+                    - group
+              - cell [ref=f2e663]:
+                - generic "ЦВТ 7:00" [ref=f2e664]:
+                  - generic [ref=f2e665]:
+                    - spinbutton [disabled] [ref=f2e666]
+                    - group
+            - row [ref=f2e667]:
+              - cell "ЧД" [ref=f2e668]
+              - cell [ref=f2e669]:
+                - generic "ЧД 8:00" [ref=f2e670]:
+                  - generic [ref=f2e671]:
+                    - spinbutton [disabled] [ref=f2e672]: "18"
+                    - group
+              - cell [ref=f2e673]:
+                - generic "ЧД 9:00" [ref=f2e674]:
+                  - generic [ref=f2e675]:
+                    - spinbutton [disabled] [ref=f2e676]
+                    - group
+              - cell [ref=f2e677]:
+                - generic "ЧД 10:00" [ref=f2e678]:
+                  - generic [ref=f2e679]:
+                    - spinbutton [disabled] [ref=f2e680]: "16"
+                    - group
+              - cell [ref=f2e681]:
+                - generic "ЧД 11:00" [ref=f2e682]:
+                  - generic [ref=f2e683]:
+                    - spinbutton [disabled] [ref=f2e684]
+                    - group
+              - cell [ref=f2e685]:
+                - generic "ЧД 12:00" [ref=f2e686]:
+                  - generic [ref=f2e687]:
+                    - spinbutton [disabled] [ref=f2e688]: "20"
+                    - group
+              - cell [ref=f2e689]:
+                - generic "ЧД 13:00" [ref=f2e690]:
+                  - generic [ref=f2e691]:
+                    - spinbutton [disabled] [ref=f2e692]
+                    - group
+              - cell [ref=f2e693]:
+                - generic "ЧД 14:00" [ref=f2e694]:
+                  - generic [ref=f2e695]:
+                    - spinbutton [disabled] [ref=f2e696]: "14"
+                    - group
+              - cell [ref=f2e697]:
+                - generic "ЧД 15:00" [ref=f2e698]:
+                  - generic [ref=f2e699]:
+                    - spinbutton [disabled] [ref=f2e700]
+                    - group
+              - cell [ref=f2e701]:
+                - generic "ЧД 16:00" [ref=f2e702]:
+                  - generic [ref=f2e703]:
+                    - spinbutton [disabled] [ref=f2e704]: "18"
+                    - group
+              - cell [ref=f2e705]:
+                - generic "ЧД 17:00" [ref=f2e706]:
+                  - generic [ref=f2e707]:
+                    - spinbutton [disabled] [ref=f2e708]
+                    - group
+              - cell [ref=f2e709]:
+                - generic "ЧД 18:00" [ref=f2e710]:
+                  - generic [ref=f2e711]:
+                    - spinbutton [disabled] [ref=f2e712]: "15"
+                    - group
+              - cell [ref=f2e713]:
+                - generic "ЧД 19:00" [ref=f2e714]:
+                  - generic [ref=f2e715]:
+                    - spinbutton [disabled] [ref=f2e716]
+                    - group
+              - cell [ref=f2e717]:
+                - generic "ЧД 20:00" [ref=f2e718]:
+                  - generic [ref=f2e719]:
+                    - spinbutton [disabled] [ref=f2e720]
+                    - group
+              - cell [ref=f2e721]:
+                - generic "ЧД 21:00" [ref=f2e722]:
+                  - generic [ref=f2e723]:
+                    - spinbutton [disabled] [ref=f2e724]
+                    - group
+              - cell [ref=f2e725]:
+                - generic "ЧД 22:00" [ref=f2e726]:
+                  - generic [ref=f2e727]:
+                    - spinbutton [disabled] [ref=f2e728]
+                    - group
+              - cell [ref=f2e729]:
+                - generic "ЧД 23:00" [ref=f2e730]:
+                  - generic [ref=f2e731]:
+                    - spinbutton [disabled] [ref=f2e732]
+                    - group
+              - cell [ref=f2e733]:
+                - generic "ЧД 0:00" [ref=f2e734]:
+                  - generic [ref=f2e735]:
+                    - spinbutton [disabled] [ref=f2e736]
+                    - group
+              - cell [ref=f2e737]:
+                - generic "ЧД 1:00" [ref=f2e738]:
+                  - generic [ref=f2e739]:
+                    - spinbutton [disabled] [ref=f2e740]
+                    - group
+              - cell [ref=f2e741]:
+                - generic "ЧД 2:00" [ref=f2e742]:
+                  - generic [ref=f2e743]:
+                    - spinbutton [disabled] [ref=f2e744]
+                    - group
+              - cell [ref=f2e745]:
+                - generic "ЧД 3:00" [ref=f2e746]:
+                  - generic [ref=f2e747]:
+                    - spinbutton [disabled] [ref=f2e748]
+                    - group
+              - cell [ref=f2e749]:
+                - generic "ЧД 4:00" [ref=f2e750]:
+                  - generic [ref=f2e751]:
+                    - spinbutton [disabled] [ref=f2e752]
+                    - group
+              - cell [ref=f2e753]:
+                - generic "ЧД 5:00" [ref=f2e754]:
+                  - generic [ref=f2e755]:
+                    - spinbutton [disabled] [ref=f2e756]
+                    - group
+              - cell [ref=f2e757]:
+                - generic "ЧД 6:00" [ref=f2e758]:
+                  - generic [ref=f2e759]:
+                    - spinbutton [disabled] [ref=f2e760]
+                    - group
+              - cell [ref=f2e761]:
+                - generic "ЧД 7:00" [ref=f2e762]:
+                  - generic [ref=f2e763]:
+                    - spinbutton [disabled] [ref=f2e764]
+                    - group
+            - row [ref=f2e765]:
+              - cell "Свідомість" [ref=f2e766]
+              - cell [ref=f2e767]:
+                - generic "Свідомість 8:00" [ref=f2e768]:
+                  - generic [ref=f2e769]:
+                    - textbox [disabled] [ref=f2e770]: CLEAR
+                    - group
+              - cell [ref=f2e771]:
+                - generic "Свідомість 9:00" [ref=f2e772]:
+                  - generic [ref=f2e773]:
+                    - textbox [disabled] [ref=f2e774]
+                    - group
+              - cell [ref=f2e775]:
+                - generic "Свідомість 10:00" [ref=f2e776]:
+                  - generic [ref=f2e777]:
+                    - textbox [disabled] [ref=f2e778]: CLEAR
+                    - group
+              - cell [ref=f2e779]:
+                - generic "Свідомість 11:00" [ref=f2e780]:
+                  - generic [ref=f2e781]:
+                    - textbox [disabled] [ref=f2e782]
+                    - group
+              - cell [ref=f2e783]:
+                - generic "Свідомість 12:00" [ref=f2e784]:
+                  - generic [ref=f2e785]:
+                    - textbox [disabled] [ref=f2e786]: SEDATED
+                    - group
+              - cell [ref=f2e787]:
+                - generic "Свідомість 13:00" [ref=f2e788]:
+                  - generic [ref=f2e789]:
+                    - textbox [disabled] [ref=f2e790]
+                    - group
+              - cell [ref=f2e791]:
+                - generic "Свідомість 14:00" [ref=f2e792]:
+                  - generic [ref=f2e793]:
+                    - textbox [disabled] [ref=f2e794]: CLEAR
+                    - group
+              - cell [ref=f2e795]:
+                - generic "Свідомість 15:00" [ref=f2e796]:
+                  - generic [ref=f2e797]:
+                    - textbox [disabled] [ref=f2e798]
+                    - group
+              - cell [ref=f2e799]:
+                - generic "Свідомість 16:00" [ref=f2e800]:
+                  - generic [ref=f2e801]:
+                    - textbox [disabled] [ref=f2e802]: CLEAR
+                    - group
+              - cell [ref=f2e803]:
+                - generic "Свідомість 17:00" [ref=f2e804]:
+                  - generic [ref=f2e805]:
+                    - textbox [disabled] [ref=f2e806]
+                    - group
+              - cell [ref=f2e807]:
+                - generic "Свідомість 18:00" [ref=f2e808]:
+                  - generic [ref=f2e809]:
+                    - textbox [disabled] [ref=f2e810]: CLEAR
+                    - group
+              - cell [ref=f2e811]:
+                - generic "Свідомість 19:00" [ref=f2e812]:
+                  - generic [ref=f2e813]:
+                    - textbox [disabled] [ref=f2e814]
+                    - group
+              - cell [ref=f2e815]:
+                - generic "Свідомість 20:00" [ref=f2e816]:
+                  - generic [ref=f2e817]:
+                    - textbox [disabled] [ref=f2e818]
+                    - group
+              - cell [ref=f2e819]:
+                - generic "Свідомість 21:00" [ref=f2e820]:
+                  - generic [ref=f2e821]:
+                    - textbox [disabled] [ref=f2e822]
+                    - group
+              - cell [ref=f2e823]:
+                - generic "Свідомість 22:00" [ref=f2e824]:
+                  - generic [ref=f2e825]:
+                    - textbox [disabled] [ref=f2e826]
+                    - group
+              - cell [ref=f2e827]:
+                - generic "Свідомість 23:00" [ref=f2e828]:
+                  - generic [ref=f2e829]:
+                    - textbox [disabled] [ref=f2e830]
+                    - group
+              - cell [ref=f2e831]:
+                - generic "Свідомість 0:00" [ref=f2e832]:
+                  - generic [ref=f2e833]:
+                    - textbox [disabled] [ref=f2e834]
+                    - group
+              - cell [ref=f2e835]:
+                - generic "Свідомість 1:00" [ref=f2e836]:
+                  - generic [ref=f2e837]:
+                    - textbox [disabled] [ref=f2e838]
+                    - group
+              - cell [ref=f2e839]:
+                - generic "Свідомість 2:00" [ref=f2e840]:
+                  - generic [ref=f2e841]:
+                    - textbox [disabled] [ref=f2e842]
+                    - group
+              - cell [ref=f2e843]:
+                - generic "Свідомість 3:00" [ref=f2e844]:
+                  - generic [ref=f2e845]:
+                    - textbox [disabled] [ref=f2e846]
+                    - group
+              - cell [ref=f2e847]:
+                - generic "Свідомість 4:00" [ref=f2e848]:
+                  - generic [ref=f2e849]:
+                    - textbox [disabled] [ref=f2e850]
+                    - group
+              - cell [ref=f2e851]:
+                - generic "Свідомість 5:00" [ref=f2e852]:
+                  - generic [ref=f2e853]:
+                    - textbox [disabled] [ref=f2e854]
+                    - group
+              - cell [ref=f2e855]:
+                - generic "Свідомість 6:00" [ref=f2e856]:
+                  - generic [ref=f2e857]:
+                    - textbox [disabled] [ref=f2e858]
+                    - group
+              - cell [ref=f2e859]:
+                - generic "Свідомість 7:00" [ref=f2e860]:
+                  - generic [ref=f2e861]:
+                    - textbox [disabled] [ref=f2e862]
+                    - group
+            - row [ref=f2e863]:
+              - cell "Втрати (мл)" [ref=f2e864]
+            - row [ref=f2e865]:
+              - cell "Сеча" [ref=f2e866]
+              - cell [ref=f2e867]:
+                - generic "Сеча 8:00" [ref=f2e868]:
+                  - generic [ref=f2e869]:
+                    - spinbutton [disabled] [ref=f2e870]: "85"
+                    - group
+              - cell [ref=f2e871]:
+                - generic "Сеча 9:00" [ref=f2e872]:
+                  - generic [ref=f2e873]:
+                    - spinbutton [disabled] [ref=f2e874]
+                    - group
+              - cell [ref=f2e875]:
+                - generic "Сеча 10:00" [ref=f2e876]:
+                  - generic [ref=f2e877]:
+                    - spinbutton [disabled] [ref=f2e878]: "62"
+                    - group
+              - cell [ref=f2e879]:
+                - generic "Сеча 11:00" [ref=f2e880]:
+                  - generic [ref=f2e881]:
+                    - spinbutton [disabled] [ref=f2e882]
+                    - group
+              - cell [ref=f2e883]:
+                - generic "Сеча 12:00" [ref=f2e884]:
+                  - generic [ref=f2e885]:
+                    - spinbutton [disabled] [ref=f2e886]: "95"
+                    - group
+              - cell [ref=f2e887]:
+                - generic "Сеча 13:00" [ref=f2e888]:
+                  - generic [ref=f2e889]:
+                    - spinbutton [disabled] [ref=f2e890]
+                    - group
+              - cell [ref=f2e891]:
+                - generic "Сеча 14:00" [ref=f2e892]:
+                  - generic [ref=f2e893]:
+                    - spinbutton [disabled] [ref=f2e894]: "55"
+                    - group
+              - cell [ref=f2e895]:
+                - generic "Сеча 15:00" [ref=f2e896]:
+                  - generic [ref=f2e897]:
+                    - spinbutton [disabled] [ref=f2e898]
+                    - group
+              - cell [ref=f2e899]:
+                - generic "Сеча 16:00" [ref=f2e900]:
+                  - generic [ref=f2e901]:
+                    - spinbutton [disabled] [ref=f2e902]: "120"
+                    - group
+              - cell [ref=f2e903]:
+                - generic "Сеча 17:00" [ref=f2e904]:
+                  - generic [ref=f2e905]:
+                    - spinbutton [disabled] [ref=f2e906]
+                    - group
+              - cell [ref=f2e907]:
+                - generic "Сеча 18:00" [ref=f2e908]:
+                  - generic [ref=f2e909]:
+                    - spinbutton [disabled] [ref=f2e910]: "70"
+                    - group
+              - cell [ref=f2e911]:
+                - generic "Сеча 19:00" [ref=f2e912]:
+                  - generic [ref=f2e913]:
+                    - spinbutton [disabled] [ref=f2e914]
+                    - group
+              - cell [ref=f2e915]:
+                - generic "Сеча 20:00" [ref=f2e916]:
+                  - generic [ref=f2e917]:
+                    - spinbutton [disabled] [ref=f2e918]
+                    - group
+              - cell [ref=f2e919]:
+                - generic "Сеча 21:00" [ref=f2e920]:
+                  - generic [ref=f2e921]:
+                    - spinbutton [disabled] [ref=f2e922]
+                    - group
+              - cell [ref=f2e923]:
+                - generic "Сеча 22:00" [ref=f2e924]:
+                  - generic [ref=f2e925]:
+                    - spinbutton [disabled] [ref=f2e926]
+                    - group
+              - cell [ref=f2e927]:
+                - generic "Сеча 23:00" [ref=f2e928]:
+                  - generic [ref=f2e929]:
+                    - spinbutton [disabled] [ref=f2e930]
+                    - group
+              - cell [ref=f2e931]:
+                - generic "Сеча 0:00" [ref=f2e932]:
+                  - generic [ref=f2e933]:
+                    - spinbutton [disabled] [ref=f2e934]
+                    - group
+              - cell [ref=f2e935]:
+                - generic "Сеча 1:00" [ref=f2e936]:
+                  - generic [ref=f2e937]:
+                    - spinbutton [disabled] [ref=f2e938]
+                    - group
+              - cell [ref=f2e939]:
+                - generic "Сеча 2:00" [ref=f2e940]:
+                  - generic [ref=f2e941]:
+                    - spinbutton [disabled] [ref=f2e942]
+                    - group
+              - cell [ref=f2e943]:
+                - generic "Сеча 3:00" [ref=f2e944]:
+                  - generic [ref=f2e945]:
+                    - spinbutton [disabled] [ref=f2e946]
+                    - group
+              - cell [ref=f2e947]:
+                - generic "Сеча 4:00" [ref=f2e948]:
+                  - generic [ref=f2e949]:
+                    - spinbutton [disabled] [ref=f2e950]
+                    - group
+              - cell [ref=f2e951]:
+                - generic "Сеча 5:00" [ref=f2e952]:
+                  - generic [ref=f2e953]:
+                    - spinbutton [disabled] [ref=f2e954]
+                    - group
+              - cell [ref=f2e955]:
+                - generic "Сеча 6:00" [ref=f2e956]:
+                  - generic [ref=f2e957]:
+                    - spinbutton [disabled] [ref=f2e958]
+                    - group
+              - cell [ref=f2e959]:
+                - generic "Сеча 7:00" [ref=f2e960]:
+                  - generic [ref=f2e961]:
+                    - spinbutton [disabled] [ref=f2e962]
+                    - group
+            - row [ref=f2e963]:
+              - cell "Зонд" [ref=f2e964]
+              - cell [ref=f2e965]:
+                - generic "Зонд 8:00" [ref=f2e966]:
+                  - generic [ref=f2e967]:
+                    - spinbutton [disabled] [ref=f2e968]: "0"
+                    - group
+              - cell [ref=f2e969]:
+                - generic "Зонд 9:00" [ref=f2e970]:
+                  - generic [ref=f2e971]:
+                    - spinbutton [disabled] [ref=f2e972]
+                    - group
+              - cell [ref=f2e973]:
+                - generic "Зонд 10:00" [ref=f2e974]:
+                  - generic [ref=f2e975]:
+                    - spinbutton [disabled] [ref=f2e976]: "0"
+                    - group
+              - cell [ref=f2e977]:
+                - generic "Зонд 11:00" [ref=f2e978]:
+                  - generic [ref=f2e979]:
+                    - spinbutton [disabled] [ref=f2e980]
+                    - group
+              - cell [ref=f2e981]:
+                - generic "Зонд 12:00" [ref=f2e982]:
+                  - generic [ref=f2e983]:
+                    - spinbutton [disabled] [ref=f2e984]: "22"
+                    - group
+              - cell [ref=f2e985]:
+                - generic "Зонд 13:00" [ref=f2e986]:
+                  - generic [ref=f2e987]:
+                    - spinbutton [disabled] [ref=f2e988]
+                    - group
+              - cell [ref=f2e989]:
+                - generic "Зонд 14:00" [ref=f2e990]:
+                  - generic [ref=f2e991]:
+                    - spinbutton [disabled] [ref=f2e992]: "0"
+                    - group
+              - cell [ref=f2e993]:
+                - generic "Зонд 15:00" [ref=f2e994]:
+                  - generic [ref=f2e995]:
+                    - spinbutton [disabled] [ref=f2e996]
+                    - group
+              - cell [ref=f2e997]:
+                - generic "Зонд 16:00" [ref=f2e998]:
+                  - generic [ref=f2e999]:
+                    - spinbutton [disabled] [ref=f2e1000]: "0"
+                    - group
+              - cell [ref=f2e1001]:
+                - generic "Зонд 17:00" [ref=f2e1002]:
+                  - generic [ref=f2e1003]:
+                    - spinbutton [disabled] [ref=f2e1004]
+                    - group
+              - cell [ref=f2e1005]:
+                - generic "Зонд 18:00" [ref=f2e1006]:
+                  - generic [ref=f2e1007]:
+                    - spinbutton [disabled] [ref=f2e1008]: "28"
+                    - group
+              - cell [ref=f2e1009]:
+                - generic "Зонд 19:00" [ref=f2e1010]:
+                  - generic [ref=f2e1011]:
+                    - spinbutton [disabled] [ref=f2e1012]
+                    - group
+              - cell [ref=f2e1013]:
+                - generic "Зонд 20:00" [ref=f2e1014]:
+                  - generic [ref=f2e1015]:
+                    - spinbutton [disabled] [ref=f2e1016]
+                    - group
+              - cell [ref=f2e1017]:
+                - generic "Зонд 21:00" [ref=f2e1018]:
+                  - generic [ref=f2e1019]:
+                    - spinbutton [disabled] [ref=f2e1020]
+                    - group
+              - cell [ref=f2e1021]:
+                - generic "Зонд 22:00" [ref=f2e1022]:
+                  - generic [ref=f2e1023]:
+                    - spinbutton [disabled] [ref=f2e1024]
+                    - group
+              - cell [ref=f2e1025]:
+                - generic "Зонд 23:00" [ref=f2e1026]:
+                  - generic [ref=f2e1027]:
+                    - spinbutton [disabled] [ref=f2e1028]
+                    - group
+              - cell [ref=f2e1029]:
+                - generic "Зонд 0:00" [ref=f2e1030]:
+                  - generic [ref=f2e1031]:
+                    - spinbutton [disabled] [ref=f2e1032]
+                    - group
+              - cell [ref=f2e1033]:
+                - generic "Зонд 1:00" [ref=f2e1034]:
+                  - generic [ref=f2e1035]:
+                    - spinbutton [disabled] [ref=f2e1036]
+                    - group
+              - cell [ref=f2e1037]:
+                - generic "Зонд 2:00" [ref=f2e1038]:
+                  - generic [ref=f2e1039]:
+                    - spinbutton [disabled] [ref=f2e1040]
+                    - group
+              - cell [ref=f2e1041]:
+                - generic "Зонд 3:00" [ref=f2e1042]:
+                  - generic [ref=f2e1043]:
+                    - spinbutton [disabled] [ref=f2e1044]
+                    - group
+              - cell [ref=f2e1045]:
+                - generic "Зонд 4:00" [ref=f2e1046]:
+                  - generic [ref=f2e1047]:
+                    - spinbutton [disabled] [ref=f2e1048]
+                    - group
+              - cell [ref=f2e1049]:
+                - generic "Зонд 5:00" [ref=f2e1050]:
+                  - generic [ref=f2e1051]:
+                    - spinbutton [disabled] [ref=f2e1052]
+                    - group
+              - cell [ref=f2e1053]:
+                - generic "Зонд 6:00" [ref=f2e1054]:
+                  - generic [ref=f2e1055]:
+                    - spinbutton [disabled] [ref=f2e1056]
+                    - group
+              - cell [ref=f2e1057]:
+                - generic "Зонд 7:00" [ref=f2e1058]:
+                  - generic [ref=f2e1059]:
+                    - spinbutton [disabled] [ref=f2e1060]
+                    - group
+            - row [ref=f2e1061]:
+              - cell "Випорожнення" [ref=f2e1062]
+              - cell [ref=f2e1063]:
+                - generic "Випорожнення 8:00" [ref=f2e1064]:
+                  - generic [ref=f2e1065]:
+                    - spinbutton [disabled] [ref=f2e1066]
+                    - group
+              - cell [ref=f2e1067]:
+                - generic "Випорожнення 9:00" [ref=f2e1068]:
+                  - generic [ref=f2e1069]:
+                    - spinbutton [disabled] [ref=f2e1070]
+                    - group
+              - cell [ref=f2e1071]:
+                - generic "Випорожнення 10:00" [ref=f2e1072]:
+                  - generic [ref=f2e1073]:
+                    - spinbutton [disabled] [ref=f2e1074]
+                    - group
+              - cell [ref=f2e1075]:
+                - generic "Випорожнення 11:00" [ref=f2e1076]:
+                  - generic [ref=f2e1077]:
+                    - spinbutton [disabled] [ref=f2e1078]
+                    - group
+              - cell [ref=f2e1079]:
+                - generic "Випорожнення 12:00" [ref=f2e1080]:
+                  - generic [ref=f2e1081]:
+                    - spinbutton [disabled] [ref=f2e1082]
+                    - group
+              - cell [ref=f2e1083]:
+                - generic "Випорожнення 13:00" [ref=f2e1084]:
+                  - generic [ref=f2e1085]:
+                    - spinbutton [disabled] [ref=f2e1086]
+                    - group
+              - cell [ref=f2e1087]:
+                - generic "Випорожнення 14:00" [ref=f2e1088]:
+                  - generic [ref=f2e1089]:
+                    - spinbutton [disabled] [ref=f2e1090]
+                    - group
+              - cell [ref=f2e1091]:
+                - generic "Випорожнення 15:00" [ref=f2e1092]:
+                  - generic [ref=f2e1093]:
+                    - spinbutton [disabled] [ref=f2e1094]
+                    - group
+              - cell [ref=f2e1095]:
+                - generic "Випорожнення 16:00" [ref=f2e1096]:
+                  - generic [ref=f2e1097]:
+                    - spinbutton [disabled] [ref=f2e1098]
+                    - group
+              - cell [ref=f2e1099]:
+                - generic "Випорожнення 17:00" [ref=f2e1100]:
+                  - generic [ref=f2e1101]:
+                    - spinbutton [disabled] [ref=f2e1102]
+                    - group
+              - cell [ref=f2e1103]:
+                - generic "Випорожнення 18:00" [ref=f2e1104]:
+                  - generic [ref=f2e1105]:
+                    - spinbutton [disabled] [ref=f2e1106]
+                    - group
+              - cell [ref=f2e1107]:
+                - generic "Випорожнення 19:00" [ref=f2e1108]:
+                  - generic [ref=f2e1109]:
+                    - spinbutton [disabled] [ref=f2e1110]
+                    - group
+              - cell [ref=f2e1111]:
+                - generic "Випорожнення 20:00" [ref=f2e1112]:
+                  - generic [ref=f2e1113]:
+                    - spinbutton [disabled] [ref=f2e1114]
+                    - group
+              - cell [ref=f2e1115]:
+                - generic "Випорожнення 21:00" [ref=f2e1116]:
+                  - generic [ref=f2e1117]:
+                    - spinbutton [disabled] [ref=f2e1118]
+                    - group
+              - cell [ref=f2e1119]:
+                - generic "Випорожнення 22:00" [ref=f2e1120]:
+                  - generic [ref=f2e1121]:
+                    - spinbutton [disabled] [ref=f2e1122]
+                    - group
+              - cell [ref=f2e1123]:
+                - generic "Випорожнення 23:00" [ref=f2e1124]:
+                  - generic [ref=f2e1125]:
+                    - spinbutton [disabled] [ref=f2e1126]
+                    - group
+              - cell [ref=f2e1127]:
+                - generic "Випорожнення 0:00" [ref=f2e1128]:
+                  - generic [ref=f2e1129]:
+                    - spinbutton [disabled] [ref=f2e1130]
+                    - group
+              - cell [ref=f2e1131]:
+                - generic "Випорожнення 1:00" [ref=f2e1132]:
+                  - generic [ref=f2e1133]:
+                    - spinbutton [disabled] [ref=f2e1134]
+                    - group
+              - cell [ref=f2e1135]:
+                - generic "Випорожнення 2:00" [ref=f2e1136]:
+                  - generic [ref=f2e1137]:
+                    - spinbutton [disabled] [ref=f2e1138]
+                    - group
+              - cell [ref=f2e1139]:
+                - generic "Випорожнення 3:00" [ref=f2e1140]:
+                  - generic [ref=f2e1141]:
+                    - spinbutton [disabled] [ref=f2e1142]
+                    - group
+              - cell [ref=f2e1143]:
+                - generic "Випорожнення 4:00" [ref=f2e1144]:
+                  - generic [ref=f2e1145]:
+                    - spinbutton [disabled] [ref=f2e1146]
+                    - group
+              - cell [ref=f2e1147]:
+                - generic "Випорожнення 5:00" [ref=f2e1148]:
+                  - generic [ref=f2e1149]:
+                    - spinbutton [disabled] [ref=f2e1150]
+                    - group
+              - cell [ref=f2e1151]:
+                - generic "Випорожнення 6:00" [ref=f2e1152]:
+                  - generic [ref=f2e1153]:
+                    - spinbutton [disabled] [ref=f2e1154]
+                    - group
+              - cell [ref=f2e1155]:
+                - generic "Випорожнення 7:00" [ref=f2e1156]:
+                  - generic [ref=f2e1157]:
+                    - spinbutton [disabled] [ref=f2e1158]
+                    - group
+            - row [ref=f2e1159]:
+              - cell "Дренаж" [ref=f2e1160]
+              - cell [ref=f2e1161]:
+                - generic "Дренаж 8:00" [ref=f2e1162]:
+                  - generic [ref=f2e1163]:
+                    - spinbutton [disabled] [ref=f2e1164]
+                    - group
+              - cell [ref=f2e1165]:
+                - generic "Дренаж 9:00" [ref=f2e1166]:
+                  - generic [ref=f2e1167]:
+                    - spinbutton [disabled] [ref=f2e1168]
+                    - group
+              - cell [ref=f2e1169]:
+                - generic "Дренаж 10:00" [ref=f2e1170]:
+                  - generic [ref=f2e1171]:
+                    - spinbutton [disabled] [ref=f2e1172]
+                    - group
+              - cell [ref=f2e1173]:
+                - generic "Дренаж 11:00" [ref=f2e1174]:
+                  - generic [ref=f2e1175]:
+                    - spinbutton [disabled] [ref=f2e1176]
+                    - group
+              - cell [ref=f2e1177]:
+                - generic "Дренаж 12:00" [ref=f2e1178]:
+                  - generic [ref=f2e1179]:
+                    - spinbutton [disabled] [ref=f2e1180]
+                    - group
+              - cell [ref=f2e1181]:
+                - generic "Дренаж 13:00" [ref=f2e1182]:
+                  - generic [ref=f2e1183]:
+                    - spinbutton [disabled] [ref=f2e1184]
+                    - group
+              - cell [ref=f2e1185]:
+                - generic "Дренаж 14:00" [ref=f2e1186]:
+                  - generic [ref=f2e1187]:
+                    - spinbutton [disabled] [ref=f2e1188]
+                    - group
+              - cell [ref=f2e1189]:
+                - generic "Дренаж 15:00" [ref=f2e1190]:
+                  - generic [ref=f2e1191]:
+                    - spinbutton [disabled] [ref=f2e1192]
+                    - group
+              - cell [ref=f2e1193]:
+                - generic "Дренаж 16:00" [ref=f2e1194]:
+                  - generic [ref=f2e1195]:
+                    - spinbutton [disabled] [ref=f2e1196]
+                    - group
+              - cell [ref=f2e1197]:
+                - generic "Дренаж 17:00" [ref=f2e1198]:
+                  - generic [ref=f2e1199]:
+                    - spinbutton [disabled] [ref=f2e1200]
+                    - group
+              - cell [ref=f2e1201]:
+                - generic "Дренаж 18:00" [ref=f2e1202]:
+                  - generic [ref=f2e1203]:
+                    - spinbutton [disabled] [ref=f2e1204]
+                    - group
+              - cell [ref=f2e1205]:
+                - generic "Дренаж 19:00" [ref=f2e1206]:
+                  - generic [ref=f2e1207]:
+                    - spinbutton [disabled] [ref=f2e1208]
+                    - group
+              - cell [ref=f2e1209]:
+                - generic "Дренаж 20:00" [ref=f2e1210]:
+                  - generic [ref=f2e1211]:
+                    - spinbutton [disabled] [ref=f2e1212]
+                    - group
+              - cell [ref=f2e1213]:
+                - generic "Дренаж 21:00" [ref=f2e1214]:
+                  - generic [ref=f2e1215]:
+                    - spinbutton [disabled] [ref=f2e1216]
+                    - group
+              - cell [ref=f2e1217]:
+                - generic "Дренаж 22:00" [ref=f2e1218]:
+                  - generic [ref=f2e1219]:
+                    - spinbutton [disabled] [ref=f2e1220]
+                    - group
+              - cell [ref=f2e1221]:
+                - generic "Дренаж 23:00" [ref=f2e1222]:
+                  - generic [ref=f2e1223]:
+                    - spinbutton [disabled] [ref=f2e1224]
+                    - group
+              - cell [ref=f2e1225]:
+                - generic "Дренаж 0:00" [ref=f2e1226]:
+                  - generic [ref=f2e1227]:
+                    - spinbutton [disabled] [ref=f2e1228]
+                    - group
+              - cell [ref=f2e1229]:
+                - generic "Дренаж 1:00" [ref=f2e1230]:
+                  - generic [ref=f2e1231]:
+                    - spinbutton [disabled] [ref=f2e1232]
+                    - group
+              - cell [ref=f2e1233]:
+                - generic "Дренаж 2:00" [ref=f2e1234]:
+                  - generic [ref=f2e1235]:
+                    - spinbutton [disabled] [ref=f2e1236]
+                    - group
+              - cell [ref=f2e1237]:
+                - generic "Дренаж 3:00" [ref=f2e1238]:
+                  - generic [ref=f2e1239]:
+                    - spinbutton [disabled] [ref=f2e1240]
+                    - group
+              - cell [ref=f2e1241]:
+                - generic "Дренаж 4:00" [ref=f2e1242]:
+                  - generic [ref=f2e1243]:
+                    - spinbutton [disabled] [ref=f2e1244]
+                    - group
+              - cell [ref=f2e1245]:
+                - generic "Дренаж 5:00" [ref=f2e1246]:
+                  - generic [ref=f2e1247]:
+                    - spinbutton [disabled] [ref=f2e1248]
+                    - group
+              - cell [ref=f2e1249]:
+                - generic "Дренаж 6:00" [ref=f2e1250]:
+                  - generic [ref=f2e1251]:
+                    - spinbutton [disabled] [ref=f2e1252]
+                    - group
+              - cell [ref=f2e1253]:
+                - generic "Дренаж 7:00" [ref=f2e1254]:
+                  - generic [ref=f2e1255]:
+                    - spinbutton [disabled] [ref=f2e1256]
+                    - group
+            - row [ref=f2e1257]:
+              - cell "Терапія (призначення)" [ref=f2e1258]
+            - row [ref=f2e1260]:
+              - cell "Немає призначень" [ref=f2e1261]
+        - generic [ref=f2e1262]:
+          - generic [ref=f2e1263]:
+            - heading "Пацієнт" [level=6] [ref=f2e1264]
+            - paragraph [ref=f2e1265]: Петренко Іван Сергійович
+            - paragraph [ref=f2e1266]: "Діагноз: —"
+            - paragraph [ref=f2e1267]: —
+          - generic [ref=f2e1268]:
+            - heading "Баланс рідини" [level=6] [ref=f2e1269]
+            - generic [ref=f2e1270]:
+              - generic [ref=f2e1271]: "Надійшло:"
+              - generic [ref=f2e1272]: 501 мл
+            - generic [ref=f2e1273]:
+              - generic [ref=f2e1274]: "Виділено:"
+              - generic [ref=f2e1275]: 537 мл
+            - generic [ref=f2e1276]:
+              - generic [ref=f2e1277]: "Добовий баланс:"
+              - generic [ref=f2e1278]: "-36"
+            - generic [ref=f2e1279]:
+              - generic [ref=f2e1280]: "Кумулятивний баланс:"
+              - generic [ref=f2e1281]: "-36"
+          - generic [ref=f2e1282]:
+            - paragraph [ref=f2e1283]: Нотатки
+            - paragraph [ref=f2e1284]: Немає нотаток
+          - generic [ref=f2e1285]:
+            - paragraph [ref=f2e1286]: Шкали
+            - paragraph [ref=f2e1287]: Немає даних шкал
+          - generic [ref=f2e1288]:
+            - paragraph [ref=f2e1289]: ШВЛ
+            - paragraph [ref=f2e1291]: Немає налаштувань вентиляції
+          - generic [ref=f2e1292]:
+            - paragraph [ref=f2e1293]: Лабораторні результати
+            - paragraph [ref=f2e1295]: Немає лабораторних досліджень
+          - generic [ref=f2e1296]:
+            - paragraph [ref=f2e1297]: Стан пацієнта
+            - paragraph [ref=f2e1299]: Немає оцінок

@@ -160,7 +160,7 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByText('Терапія (призначення)')).toBeInTheDocument();
       // 'ЧД' may appear in multiple contexts — use getAllByText
       const rowLabels = ['АТсист', 'АТдіас', 'ЧСС', 'SpO2', 'Темп', 'ЦВТ',
-        'Сеча', 'Зонд', 'Випорожнення', 'Дренаж'];
+        'Сеча', 'Дренаж', 'Випорожнення', 'Блювота'];
       rowLabels.forEach(label => expect(screen.getByText(label)).toBeInTheDocument());
       expect(screen.getAllByText('Свідомість').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText('ЧД').length).toBeGreaterThanOrEqual(1);
@@ -325,6 +325,35 @@ describe('IntensiveCareCard', () => {
     it('all 24 hour columns render', () => {
       renderCard({ records: [] });
       HOURS.forEach(h => expect(screen.getByText(`${h}:00`)).toBeInTheDocument());
+    });
+  });
+
+  describe('Sidebar resize', () => {
+    it('renders sidebar with patient info and all section labels', () => {
+      renderCard();
+      expect(screen.getByText('Пацієнт')).toBeInTheDocument();
+      expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
+      expect(screen.getByText('Баланс рідини')).toBeInTheDocument();
+      expect(screen.getByText('Нотатки')).toBeInTheDocument();
+      expect(screen.getByText('Шкали')).toBeInTheDocument();
+      expect(screen.getByText('ШВЛ')).toBeInTheDocument();
+      expect(screen.getByText('Лабораторні результати')).toBeInTheDocument();
+      expect(screen.getByText('Стан пацієнта')).toBeInTheDocument();
+    });
+
+    it('renders resize rail with aria-label', () => {
+      renderCard();
+      const rail = screen.getByRole('separator', { name: 'Зміна ширини бічної панелі' });
+      expect(rail).toBeInTheDocument();
+    });
+
+    it('mousedown on rail sets body cursor and mouseup cleans up', () => {
+      renderCard();
+      const rail = screen.getByRole('separator', { name: 'Зміна ширини бічної панелі' });
+      fireEvent.mouseDown(rail, { clientX: 500 });
+      expect(document.body.style.cursor).toBe('col-resize');
+      fireEvent.mouseUp(window);
+      expect(document.body.style.cursor).toBe('');
     });
   });
 });

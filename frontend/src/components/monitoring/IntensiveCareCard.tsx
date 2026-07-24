@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Tooltip, useTheme, CircularProgress,
+  TextField, Tooltip, useTheme, CircularProgress, useMediaQuery,
   List, ListItem, ListItemText, Button, Stack, MenuItem, Input,
 } from '@mui/material';
+import {
+  Person, NoteAdd, ScaleOutlined,
+} from '@mui/icons-material';
 import type {
   Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem,
   HourlyRecordCreateRequest, MedicalNoteCreateRequest,
@@ -18,6 +21,9 @@ import LabResultsPanel from '../common/LabResultsPanel';
 import VentilationPanel from '../common/VentilationPanel';
 import PatientStatePanel from '../common/PatientStatePanel';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import {
+  SidebarProvider, Sidebar, SidebarRail, SidebarHeader, SidebarContent, SidebarGroup,
+} from '../ui/Sidebar';
 
 interface UserLike {
   id: number;
@@ -41,9 +47,9 @@ const VITAL_ROWS: { key: keyof HourlyRecord; label: string; numeric: boolean }[]
 
 const LOSS_ROWS: { key: keyof HourlyRecord; label: string }[] = [
   { key: 'urineOutput', label: 'Сеча' },
-  { key: 'drainOutput', label: 'Зонд' },
+  { key: 'drainOutput', label: 'Дренаж' },
   { key: 'stool', label: 'Випорожнення' },
-  { key: 'vomit', label: 'Дренаж' },
+  { key: 'vomit', label: 'Блювота' },
 ];
 
 
@@ -69,7 +75,7 @@ const CRITICAL_RANGES: Partial<Record<string, { min: number; max: number }>> = {
   temperature: { min: 35.5, max: 39.5 },
   spo2: { min: 90, max: 100 },
   respiratoryRate: { min: 10, max: 30 },
-  cvp: { min: 4, max: 12 },
+  cvp: { min: 2, max: 14 },
 };
 
 function isCritical(key: string, val: string): boolean {
@@ -84,7 +90,17 @@ const Cell = React.memo(function Cell({
   hour, rowKey, numeric, label, value, isLocked, isNurse, isLossRow, isDark, isPast, onSave,
 }: CellProps) {
   const [draft, setDraft] = useState(value);
-  useEffect(() => { setDraft(value); }, [value]);
+  const focusedRef = useRef(false);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  // Don't sync value→draft while focused (prevents draft loss on concurrent save + refresh)
+  useEffect(() => {
+    if (!focusedRef.current) {
+      setDraft(value);
+    }
+  }, [value]);
+
   const readOnly = isLocked || (isNurse && !isLossRow);
   const critical = isCritical(String(rowKey), value);
   const bg = critical ? (isDark ? '#3A1A1A' : '#FFE0E0') : (isPast ? (isDark ? '#16241C' : '#F1F8F3') : 'inherit');
@@ -98,8 +114,13 @@ const Cell = React.memo(function Cell({
         disabled={readOnly}
         value={draft}
         aria-label={`${label} ${hour}:00`}
+        onFocus={() => { focusedRef.current = true; }}
         onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => { if (draft !== value) onSave(hour, rowKey, draft); }}
+        onBlur={() => {
+          focusedRef.current = false;
+          const saved = valueRef.current;
+          if (draft !== saved) onSave(hour, rowKey, draft);
+        }}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
         sx={{
           width: '100%',
@@ -177,6 +198,14 @@ const TherapyCell = React.memo(function TherapyCell({
   );
 });
 
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    if (axiosErr.response?.data?.message) return axiosErr.response.data.message;
+  }
+  return err instanceof Error ? err.message : fallback;
+}
+
 function getNextHourISO(): string {
   const now = new Date();
   now.setMinutes(0, 0, 0);
@@ -184,11 +213,12 @@ function getNextHourISO(): string {
   return now.toISOString().slice(0, 16);
 }
 
-function OrderInlineForm({ selectedDay, isLocked, onCreated, onCancel }: {
+function OrderInlineForm({ selectedDay, isLocked, onCreated, onCancel, onError }: {
   selectedDay: ClinicalDay | null;
   isLocked: boolean;
   onCreated: () => void;
   onCancel: () => void;
+  onError?: (msg: string) => void;
 }) {
   const [form, setForm] = useState({ category: 'MEDICATION', drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: getNextHourISO() });
   const [saving, setSaving] = useState(false);
@@ -209,8 +239,8 @@ function OrderInlineForm({ selectedDay, isLocked, onCreated, onCancel }: {
       setForm({ category: 'MEDICATION', drugName: '', dose: '', unit: '', route: '', frequency: '', startTime: '' });
       onCreated();
       onCancel();
-    } catch {
-      // silent
+    } catch (err) {
+      onError?.(getErrorMessage(err, 'Не вдалося створити призначення'));
     } finally {
       setSaving(false);
     }
@@ -263,10 +293,11 @@ interface IntensiveCareCardProps {
   isLocked: boolean;
   user: UserLike | null;
   onRefresh?: () => void;
+  onFeedback?: (message: string, severity: 'success' | 'error') => void;
 }
 
 export default function IntensiveCareCard({
-  episode, selectedDay, records, orders, balanceItems, isNurse, isLocked, user, onRefresh,
+  episode, selectedDay, records, orders, balanceItems, isNurse, isLocked, user, onRefresh, onFeedback,
 }: IntensiveCareCardProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -278,6 +309,16 @@ export default function IntensiveCareCard({
   const [noteText, setNoteText] = useState('');
   const noteTextRef = useRef('');
   const [savingNote, setSavingNote] = useState(false);
+  const selectedDayRef = useRef(selectedDay);
+  selectedDayRef.current = selectedDay;
+
+  // Track IDs of records created locally (before refresh completes), preventing 409 race
+  const localRecordMap = useRef<Map<number, { id: string; version: number }>>(new Map());
+  useEffect(() => {
+    localRecordMap.current.clear();
+  }, [records]);
+
+  const notifyParent = onFeedback ?? (() => {});
 
   useEffect(() => {
     setNoteText('');
@@ -286,28 +327,29 @@ export default function IntensiveCareCard({
 
   const saveCurrentNote = useCallback(async () => {
     const text = noteTextRef.current.trim();
-    if (!selectedDay || isLocked || !text) return;
+    const day = selectedDayRef.current;
+    if (!day || isLocked || !text) return;
     try {
       setSavingNote(true);
-      await medicalNoteApi.create(selectedDay.id, {
+      await medicalNoteApi.create(day.id, {
         text,
         noteType: 'CLINICAL',
         role: isNurse ? 'NURSE' : 'DOCTOR',
       } as unknown as MedicalNoteCreateRequest);
       setNoteText('');
       noteTextRef.current = '';
-      const refreshed = await medicalNoteApi.getByClinicalDay(selectedDay.id);
+      const refreshed = await medicalNoteApi.getByClinicalDay(day.id);
       setNotes(refreshed.data as unknown as { id: string; text: string; authorId?: string }[]);
-    } catch {
-      // silent
+    } catch (err) {
+      notifyParent(getErrorMessage(err, 'Не вдалося зберегти нотатку'), 'error');
     } finally {
       setSavingNote(false);
     }
-  }, [selectedDay, isLocked, isNurse]);
+  }, [isLocked, isNurse, notifyParent]);
 
   const { status: autoSaveStatus, markDirty, saveNow } = useAutoSave({
     onSave: saveCurrentNote,
-    delay: 8000,
+    delay: 2000,
     enabled: !!selectedDay && !isLocked,
   });
 
@@ -340,25 +382,37 @@ export default function IntensiveCareCard({
       setVentilation(v as unknown as { id: string; mode?: string; [k: string]: unknown }[]);
       setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
       setPatientState(p as unknown as { id: string; assessment?: string }[]);
-    } catch {
-      // silent
+    } catch (err) {
+      notifyParent(getErrorMessage(err, 'Не вдалося оновити бічну панель'), 'error');
     }
   };
 
   const createLab = async (data: LabResultCreateRequest) => {
     if (!selectedDay || isLocked) return;
-    await labResultApi.create(selectedDay.id, data).catch(() => undefined);
-    await refreshSidebar();
+    try {
+      await labResultApi.create(selectedDay.id, data);
+      await refreshSidebar();
+    } catch (err) {
+      notifyParent(getErrorMessage(err, 'Не вдалося створити лаб. результат'), 'error');
+    }
   };
   const createVentilation = async (data: VentilationCreateRequest) => {
     if (!selectedDay || isLocked) return;
-    await ventilationApi.create(selectedDay.id, data).catch(() => undefined);
-    await refreshSidebar();
+    try {
+      await ventilationApi.create(selectedDay.id, data);
+      await refreshSidebar();
+    } catch (err) {
+      notifyParent(getErrorMessage(err, 'Не вдалося додати ШВЛ'), 'error');
+    }
   };
   const createPatientState = async (data: PatientStateCreateRequest) => {
     if (!selectedDay || isLocked) return;
-    await patientStateApi.create(selectedDay.id, data).catch(() => undefined);
-    await refreshSidebar();
+    try {
+      await patientStateApi.create(selectedDay.id, data);
+      await refreshSidebar();
+    } catch (err) {
+      notifyParent(getErrorMessage(err, 'Не вдалося зберегти стан пацієнта'), 'error');
+    }
   };
 
   const [orderFormOpen, setOrderFormOpen] = useState(false);
@@ -399,7 +453,7 @@ export default function IntensiveCareCard({
     if (!selectedDay || isLocked) return;
     const numeric = key !== 'consciousness' && key !== 'stool' && key !== 'vomit';
     const value = raw.trim() === '' ? null : numeric ? Number(raw) : raw;
-    const existing = recByHour.get(hour);
+    const existing: { id: string; version: number } | undefined = recByHour.get(hour) || localRecordMap.current.get(hour);
     const recTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
     try {
       if (existing) {
@@ -410,17 +464,18 @@ export default function IntensiveCareCard({
         await hourlyRecordApi.update(existing.id, patch);
       } else {
         if (value !== null) {
-          await hourlyRecordApi.create(selectedDay.id, {
+          const res = await hourlyRecordApi.create(selectedDay.id, {
             recordTime: recTime,
             [key]: value,
           } as HourlyRecordCreateRequest);
+          localRecordMap.current.set(hour, { id: res.data.id, version: res.data.version });
         }
       }
       onRefresh?.();
-    } catch {
-      // silent
+    } catch (err) {
+      notifyParent(getErrorMessage(err, 'Не вдалося зберегти показник'), 'error');
     }
-  }, [selectedDay, isLocked, recByHour, onRefresh]);
+  }, [selectedDay, isLocked, recByHour, onRefresh, notifyParent]);
 
   const activeOrders = orders.filter(o => o.status === 'ACTIVE' || o.status === 'DRAFT');
 
@@ -434,295 +489,290 @@ export default function IntensiveCareCard({
         executedAt: execTime,
         actualDose,
       });
-    } catch {
-      // silent
+    } catch (err) {
+      notifyParent(getErrorMessage(err, 'Не вдалося виконати призначення'), 'error');
     } finally {
       setExecuting(null);
     }
-  }, [user, selectedDay]);
+  }, [user, selectedDay, notifyParent]);
 
   const totalIntake = balanceItems.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = balanceItems.reduce((s, i) => s + (i.output || 0), 0);
   const dailyBalance = totalIntake - totalOutput;
   const cumulativeBalance = balanceItems[balanceItems.length - 1]?.cumulativeBalance ?? 0;
 
-  return (
-    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-      {/* Left column: main table */}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <TableContainer sx={{ border: bd, borderRadius: 2, overflowX: 'auto', bgcolor: isDark ? '#141414' : '#fff' }}>
-          <Table size="small" sx={{ tableLayout: 'fixed', minWidth: 1100 }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: isDark ? '#1A1A1A' : '#F4F2ED' }}>
-                <TableCell sx={{ fontWeight: 700, minWidth: 130, borderRight: bd }}>Показник / година</TableCell>
-                {HOURS.map((h) => (
-                  <TableCell key={h} sx={{ textAlign: 'center', fontWeight: 700, fontSize: 11, p: '4px 2px', borderRight: h === 23 ? bd : 'none' }}>{h}:00</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <GroupHeader label="Показники" nurseEditable={!isNurse} />
-              {VITAL_ROWS.map((row) => (
-                <TableRow key={String(row.key)}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd, whiteSpace: 'nowrap' }}>{row.label}</TableCell>
-                  {HOURS.map((h) => (
-                    <Cell
-                      key={h}
-                      hour={h}
-                      rowKey={row.key}
-                      numeric={row.numeric}
-                      label={row.label}
-                      value={boundValue(h, row.key)}
-                      isLocked={isLocked}
-                      isNurse={isNurse}
-                      isLossRow={false}
-                      isDark={isDark}
-                      isPast={isPastMedDay(h, realClockHour)}
-                      onSave={saveCell}
-                    />
-                  ))}
-                </TableRow>
-              ))}
+  const isMobile = useMediaQuery('(max-width:1200px)');
 
-              <GroupHeader label="Втрати (мл)" nurseEditable />
-              {LOSS_ROWS.map((row) => (
-                <TableRow key={String(row.key)}>
-                  <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd }}>{row.label}</TableCell>
-                  {HOURS.map((h) => (
-                    <Cell
-                      key={h}
-                      hour={h}
-                      rowKey={row.key}
-                      numeric
-                      label={row.label}
-                      value={boundValue(h, row.key)}
-                      isLocked={isLocked}
-                      isNurse={isNurse}
-                      isLossRow
-                      isDark={isDark}
-                      isPast={isPastMedDay(h, realClockHour)}
-                      onSave={saveCell}
-                    />
-                  ))}
-                </TableRow>
-              ))}
-
-              <TableRow sx={{ bgcolor: isDark ? '#202020' : '#EDEBE6' }}>
-                <TableCell colSpan={25} sx={{ fontWeight: 800, fontSize: 11, py: 0.5, borderRight: `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Терапія (призначення)</span>
-                  {canEditSidebar && !isNurse && (
-                    <Button size="small" variant="outlined" onClick={() => setOrderFormOpen(v => !v)} sx={{ fontSize: 10, py: 0, minHeight: 22 }}>
-                      {orderFormOpen ? 'X Сховати' : '+ Нове призначення'}
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-              {orderFormOpen && (
-                <TableRow>
-                  <TableCell colSpan={25} sx={{ p: 0, border: 'none' }}>
-                    <OrderInlineForm
-                      selectedDay={selectedDay}
-                      isLocked={isLocked}
-                      onCreated={onRefresh ?? (() => {})}
-                      onCancel={() => setOrderFormOpen(false)}
-                    />
-                  </TableCell>
-                </TableRow>
-              )}
-              {activeOrders.length === 0 && !orderFormOpen && (
-                <TableRow>
-                  <TableCell colSpan={25} sx={{ textAlign: 'center', color: 'text.secondary', py: 1 }}>
-                    {'Немає призначень'}
-                  </TableCell>
-                </TableRow>
-              )}
-              {activeOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell sx={{ fontSize: 10, borderRight: bd, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {order.drugName} {order.dose}{order.unit}{' '}
-                    <Box component="span" sx={{ fontSize: 9, color: 'success.main', fontWeight: 700 }}>{order.status === 'ACTIVE' ? 'Активне' : order.status === 'DRAFT' ? 'Чернетка' : ''}</Box>
-                  </TableCell>
-                  {HOURS.map((h) => (
-                    <TherapyCell
-                      key={h}
-                      order={order}
-                      hour={h}
-                      isDark={isDark}
-                      isPast={isPastMedDay(h, realClockHour)}
-                      canExecute={!isLocked && !!user}
-                      isExecuting={executing === `${order.id}-${h}`}
-                      onToggle={toggleOrder}
-                    />
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
-
-      {/* Right sidebar: all non-hourly data always visible */}
-      <Box sx={{
-        width: 300, flexShrink: 0,
-        maxHeight: 'calc(100vh - 160px)',
-        overflowY: 'auto',
-        display: 'flex', flexDirection: 'column', gap: 1,
-      }}>
-        {/* Patient info */}
-        <Box sx={{ p: 1.5, border: bd, borderRadius: 2, bgcolor: isDark ? '#141414' : '#fff' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>Пацієнт</Typography>
-          <Typography sx={{ fontSize: 13 }}>{episode.patientName || '\u2014'}</Typography>
-          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>Діагноз: {episode.admissionDiagnosis || '\u2014'}</Typography>
-          <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
-            {[episode.ward, episode.bedNumber].filter(Boolean).join(' / ') || '\u2014'}
-            {episode.heightCm ? ` \u00B7 ${episode.heightCm} см` : ''}
-          </Typography>
-          {selectedDay?.weightKg && (
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>Вага: {selectedDay.weightKg} кг</Typography>
-          )}
-          {keyScales.length > 0 && (
-            <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {keyScales.map(s => (
-                <Box key={s.name} sx={{ fontSize: 11, bgcolor: isDark ? '#333' : '#eee', borderRadius: 1, px: 0.5, py: 0.25 }}>
-                  <b>{s.name}</b>: {s.result}
-                </Box>
-              ))}
-            </Box>
-          )}
-        </Box>
-
-        {/* Fluid balance */}
-        <Box sx={{ p: 1.5, border: bd, borderRadius: 2, bgcolor: isDark ? '#141414' : '#fff' }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 12, mb: 0.5 }}>{'Баланс рідини'}</Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Надійшло:'}</span><b>{totalIntake} {'мл'}</b>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Виділено:'}</span><b>{totalOutput} {'мл'}</b>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Добовий баланс:'}</span><b>{dailyBalance >= 0 ? '+' : ''}{dailyBalance}</b>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-            <span>{'Кумулятивний баланс:'}</span><b>{cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance}</b>
-          </Box>
-        </Box>
-
-        {/* Notes — always visible */}
-        <SidebarSection title={'Нотатки'} count={notes.length}>
-          {notes.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає нотаток'}</Typography>
-          ) : (
-            <List dense sx={{ py: 0 }}>
-              {notes.map((n) => (
-                <ListItem key={n.id} sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <ListItemText
-                    primary={<Typography component="span" sx={{ fontSize: 12 }}>{n.text}</Typography>}
-                    secondary={
-                      <Typography component="span" sx={{ fontSize: 10, color: 'text.secondary' }}>
-                        {[n.role, n.createdAt ? new Date(n.createdAt).toLocaleString('uk-UA') : null]
-                          .filter(Boolean)
-                          .join(' \u00B7 ')}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          )}
-          {canEditSidebar && (
-            <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-              <TextField
-                size="small"
-                label={'Нова нотатка'}
-                value={noteText}
-                onChange={handleNoteChange}
-                multiline
-                minRows={2}
-                slotProps={{ input: { 'aria-label': 'Нова нотатка' } }}
-              />
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                <Button size="small" variant="outlined" onClick={saveNow} disabled={savingNote || !noteText.trim()}>
-                  {'Додати нотатку'}
-                </Button>
-                {autoSaveStatus === 'saving' && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <CircularProgress size={10} />
-                    <Typography variant="caption" color="text.secondary">{'Зберігається...'}</Typography>
-                  </Box>
-                )}
-                {autoSaveStatus === 'saved' && (
-                  <Typography variant="caption" color="success.main">{'Збережено'}</Typography>
-                )}
-                {autoSaveStatus === 'error' && (
-                  <Typography variant="caption" color="error">{'Помилка'}</Typography>
-                )}
-              </Stack>
-            </Stack>
-          )}
-        </SidebarSection>
-
-        {/* Scales — always visible */}
-        <SidebarSection title={'Шкали'} count={scales.length}>
-          {scales.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає даних шкал'}</Typography>
-          ) : (
-            <List dense sx={{ py: 0 }}>
-              {scales.map((s) => (
-                <ListItem key={s.id} sx={{ px: 0 }}>
-                  <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{`${s.name ?? ''}: ${s.result}`}</Typography>} />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </SidebarSection>
-
-        {/* Ventilation */}
-        <SidebarSection title={'ШВЛ'} count={ventilation.length}>
-          <VentilationPanel
-            clinicalDayId={selectedDay?.id ?? ''}
-            ventilation={ventilation as unknown as VentilationSettings[]}
-            isLocked={isLocked}
-            onCreate={createVentilation}
-          />
-        </SidebarSection>
-
-        {/* Lab results */}
-        <SidebarSection title={'Лабораторні результати'} count={labs.length}>
-          <LabResultsPanel
-            clinicalDayId={selectedDay?.id ?? ''}
-            labs={labs as unknown as LabResult[]}
-            isLocked={isLocked}
-            onCreate={createLab}
-          />
-        </SidebarSection>
-
-        {/* Patient state */}
-        <SidebarSection title={'Стан пацієнта'} count={patientState.length}>
-          <PatientStatePanel
-            clinicalDayId={selectedDay?.id ?? ''}
-            assessments={patientState as unknown as PatientStateAssessment[]}
-            isLocked={isLocked}
-            onCreate={createPatientState}
-          />
-        </SidebarSection>
-
-        {loadingSidebar && (
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress size={16} /></Box>
-        )}
-      </Box>
+  const EmptyState = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1.5, opacity: 0.6 }}>
+      {icon}
+      <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.5 }}>{text}</Typography>
     </Box>
   );
-}
 
-function SidebarSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
-    <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography sx={{ fontWeight: 700, fontSize: 12, mb: 1 }}>
-        {title} {count > 0 && <span style={{ color: 'text.secondary', fontWeight: 400 }}>({count})</span>}
-      </Typography>
-      {children}
-    </Box>
+    <SidebarProvider defaultWidth={300} minWidth={200} maxWidth={600}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', position: 'relative' }}>
+        {/* Left column: main table */}
+        <Box component="main" sx={{ flex: 1, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
+          <TableContainer sx={{ border: bd, borderRadius: 2, overflowX: 'auto', bgcolor: isDark ? '#141414' : '#fff' }}>
+            <Table size="small" sx={{ tableLayout: 'fixed', minWidth: isMobile ? 900 : 1100 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: isDark ? '#1A1A1A' : '#F4F2ED' }}>
+                  <TableCell sx={{ fontWeight: 700, minWidth: 130, borderRight: bd }}>Показник / година</TableCell>
+                  {HOURS.map((h) => (
+                    <TableCell key={h} sx={{ textAlign: 'center', fontWeight: 700, fontSize: 11, p: '4px 2px', borderRight: h === 23 ? bd : 'none' }}>{h}:00</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <GroupHeader label="Показники" nurseEditable={!isNurse} />
+                {VITAL_ROWS.map((row) => (
+                  <TableRow key={String(row.key)}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd, whiteSpace: 'nowrap' }}>{row.label}</TableCell>
+                    {HOURS.map((h) => (
+                      <Cell
+                        key={h}
+                        hour={h}
+                        rowKey={row.key}
+                        numeric={row.numeric}
+                        label={row.label}
+                        value={boundValue(h, row.key)}
+                        isLocked={isLocked}
+                        isNurse={isNurse}
+                        isLossRow={false}
+                        isDark={isDark}
+                        isPast={isPastMedDay(h, realClockHour)}
+                        onSave={saveCell}
+                      />
+                    ))}
+                  </TableRow>
+                ))}
+
+                <GroupHeader label="Втрати (мл)" nurseEditable />
+                {LOSS_ROWS.map((row) => (
+                  <TableRow key={String(row.key)}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: 11, borderRight: bd }}>{row.label}</TableCell>
+                    {HOURS.map((h) => (
+                      <Cell
+                        key={h}
+                        hour={h}
+                        rowKey={row.key}
+                        numeric
+                        label={row.label}
+                        value={boundValue(h, row.key)}
+                        isLocked={isLocked}
+                        isNurse={isNurse}
+                        isLossRow
+                        isDark={isDark}
+                        isPast={isPastMedDay(h, realClockHour)}
+                        onSave={saveCell}
+                      />
+                    ))}
+                  </TableRow>
+                ))}
+
+                <TableRow sx={{ bgcolor: isDark ? '#202020' : '#EDEBE6' }}>
+                  <TableCell colSpan={25} sx={{ fontWeight: 800, fontSize: 11, py: 0.5, borderRight: `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Терапія (призначення)</span>
+                    {canEditSidebar && !isNurse && (
+                      <Button size="small" variant="outlined" onClick={() => setOrderFormOpen(v => !v)} sx={{ fontSize: 10, py: 0, minHeight: 22 }}>
+                        {orderFormOpen ? 'X Сховати' : '+ Нове призначення'}
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+                {orderFormOpen && (
+                  <TableRow>
+                    <TableCell colSpan={25} sx={{ p: 0, border: 'none' }}>
+                      <OrderInlineForm
+                        selectedDay={selectedDay}
+                        isLocked={isLocked}
+                        onCreated={onRefresh ?? (() => {})}
+                        onCancel={() => setOrderFormOpen(false)}
+                        onError={(msg) => notifyParent(msg, 'error')}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+                {activeOrders.length === 0 && !orderFormOpen && (
+                  <TableRow>
+                    <TableCell colSpan={25} sx={{ textAlign: 'center', color: 'text.secondary', py: 1 }}>
+                      {'Немає призначень'}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {activeOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell sx={{ fontSize: 10, borderRight: bd, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {order.drugName} {order.dose}{order.unit}{' '}
+                      <Box component="span" sx={{ fontSize: 9, color: 'success.main', fontWeight: 700 }}>{order.status === 'ACTIVE' ? 'Активне' : order.status === 'DRAFT' ? 'Чернетка' : ''}</Box>
+                    </TableCell>
+                    {HOURS.map((h) => (
+                      <TherapyCell
+                        key={h}
+                        order={order}
+                        hour={h}
+                        isDark={isDark}
+                        isPast={isPastMedDay(h, realClockHour)}
+                        canExecute={!isLocked && !!user}
+                        isExecuting={executing === `${order.id}-${h}`}
+                        onToggle={toggleOrder}
+                      />
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        <Sidebar side="right" collapsible="none">
+          <SidebarRail />
+          <SidebarHeader>
+            <Typography sx={{ fontWeight: 700, fontSize: 13, mb: 0.75, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Person sx={{ fontSize: 16 }} /> Пацієнт
+            </Typography>
+            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{episode.patientName || '\u2014'}</Typography>
+            <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>
+              Діагноз: {episode.admissionDiagnosis || '\u2014'}
+            </Typography>
+            <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+              {[episode.ward, episode.bedNumber].filter(Boolean).join(' / ') || '\u2014'}
+              {episode.heightCm ? ` \u00B7 ${episode.heightCm} см` : ''}
+            </Typography>
+            {selectedDay?.weightKg && (
+              <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>Вага: {selectedDay.weightKg} кг</Typography>
+            )}
+            {keyScales.length > 0 && (
+              <Box sx={{ mt: 0.75, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {keyScales.map(s => (
+                  <Box key={s.name} sx={{ fontSize: 11, bgcolor: isDark ? '#333' : '#E8E8E4', borderRadius: 1, px: 0.75, py: 0.25 }}>
+                    <b>{s.name}</b>: {s.result}
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup label="Баланс рідини">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, py: 0.25 }}>
+                <span>{'Надійшло:'}</span><b>{totalIntake} {'мл'}</b>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, py: 0.25 }}>
+                <span>{'Виділено:'}</span><b>{totalOutput} {'мл'}</b>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, py: 0.25, borderTop: `1px solid ${isDark ? '#2A2A2A' : '#E0DED9'}`, mt: 0.25, pt: 0.5 }}>
+                <span>{'Добовий баланс:'}</span>
+                <Box component="b" sx={{ color: dailyBalance < 0 ? '#D32F2F' : '#2E7D32' }}>{dailyBalance >= 0 ? '+' : ''}{dailyBalance}</Box>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, py: 0.25 }}>
+                <span>{'Кумулятивний баланс:'}</span>
+                <Box component="b" sx={{ color: cumulativeBalance < 0 ? '#D32F2F' : '#2E7D32' }}>{cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance}</Box>
+              </Box>
+            </SidebarGroup>
+
+            <SidebarGroup label="Нотатки" count={notes.length}>
+              {notes.length === 0 ? (
+                <EmptyState icon={<NoteAdd sx={{ fontSize: 24 }} />} text={'Немає нотаток. Додайте нову нотатку вище.'} />
+              ) : (
+                <List dense sx={{ py: 0 }}>
+                  {notes.map((n) => (
+                    <ListItem key={n.id} sx={{ px: 0, flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <ListItemText
+                        primary={<Typography component="span" sx={{ fontSize: 12 }}>{n.text}</Typography>}
+                        secondary={
+                          <Typography component="span" sx={{ fontSize: 10, color: 'text.secondary' }}>
+                            {[n.role, n.createdAt ? new Date(n.createdAt).toLocaleString('uk-UA') : null]
+                              .filter(Boolean)
+                              .join(' \u00B7 ')}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+              {canEditSidebar && (
+                <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                  <TextField
+                    size="small"
+                    label={'Нова нотатка'}
+                    value={noteText}
+                    onChange={handleNoteChange}
+                    multiline
+                    minRows={2}
+                    slotProps={{ input: { 'aria-label': 'Нова нотатка' } }}
+                  />
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <Button size="small" variant="outlined" onClick={saveNow} disabled={savingNote || !noteText.trim()}>
+                      {'Додати нотатку'}
+                    </Button>
+                    {autoSaveStatus === 'saving' && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <CircularProgress size={10} />
+                        <Typography variant="caption" color="text.secondary">{'Зберігається...'}</Typography>
+                      </Box>
+                    )}
+                    {autoSaveStatus === 'saved' && (
+                      <Typography variant="caption" color="success.main">{'Збережено'}</Typography>
+                    )}
+                    {autoSaveStatus === 'error' && (
+                      <Typography variant="caption" color="error">{'Помилка'}</Typography>
+                    )}
+                  </Stack>
+                </Stack>
+              )}
+            </SidebarGroup>
+
+            <SidebarGroup label="Шкали" count={scales.length}>
+              {scales.length === 0 ? (
+                <EmptyState icon={<ScaleOutlined sx={{ fontSize: 24 }} />} text={'Немає даних шкал'} />
+              ) : (
+                <List dense sx={{ py: 0 }}>
+                  {scales.map((s) => (
+                    <ListItem key={s.id} sx={{ px: 0 }}>
+                      <ListItemText primary={<Typography component="span" sx={{ fontSize: 12 }}>{`${s.name ?? ''}: ${s.result}`}</Typography>} />
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </SidebarGroup>
+
+            <SidebarGroup label="ШВЛ" count={ventilation.length}>
+              <VentilationPanel
+                clinicalDayId={selectedDay?.id ?? ''}
+                ventilation={ventilation as unknown as VentilationSettings[]}
+                isLocked={isLocked}
+                onCreate={createVentilation}
+              />
+            </SidebarGroup>
+
+            <SidebarGroup label="Лабораторні результати" count={labs.length}>
+              <LabResultsPanel
+                clinicalDayId={selectedDay?.id ?? ''}
+                labs={labs as unknown as LabResult[]}
+                isLocked={isLocked}
+                onCreate={createLab}
+              />
+            </SidebarGroup>
+
+            <SidebarGroup label="Стан пацієнта" count={patientState.length}>
+              <PatientStatePanel
+                clinicalDayId={selectedDay?.id ?? ''}
+                assessments={patientState as unknown as PatientStateAssessment[]}
+                isLocked={isLocked}
+                onCreate={createPatientState}
+              />
+            </SidebarGroup>
+
+            {loadingSidebar && (
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress size={16} /></Box>
+            )}
+          </SidebarContent>
+        </Sidebar>
+      </Box>
+    </SidebarProvider>
   );
 }
 

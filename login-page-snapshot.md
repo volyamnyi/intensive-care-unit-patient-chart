@@ -1,0 +1,25 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - img "Superhumans" [ref=e7]
+    - heading "ВАІТ" [level=5] [ref=e8]
+    - paragraph [ref=e9]: Карта інтенсивної терапії
+    - paragraph [ref=e10]: Вхід до системи
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e23]:
+        - text: Логін
+        - generic [ref=e24]: "*"
+      - generic [ref=e13]:
+        - textbox "Логін" [ref=e14]: doctor1
+        - group:
+          - generic: Логін *
+    - generic [ref=e15]:
+      - generic [ref=e25]:
+        - text: Пароль
+        - generic [ref=e26]: "*"
+      - generic [ref=e16]:
+        - textbox "Пароль" [ref=e17]: doctor123
+        - button [ref=e19] [cursor=pointer]
+        - group:
+          - generic: Пароль *
+    - button "Увійти" [ref=e22] [cursor=pointer]

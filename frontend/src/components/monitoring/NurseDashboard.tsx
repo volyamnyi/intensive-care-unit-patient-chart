@@ -7,7 +7,7 @@ export default function NurseDashboard(props: DashboardProps) {
   const {
     episode, clinicalDays, selectedDay, onSelectDay,
     records, orders, balanceItems,
-    isLocked, isNurse, user, onRefresh,
+    isLocked, isNurse, user, onRefresh, onFeedback,
   } = props;
 
   const theme = useTheme();
@@ -75,6 +75,7 @@ export default function NurseDashboard(props: DashboardProps) {
         isLocked={isLocked}
         user={user ?? null}
         onRefresh={onRefresh}
+        onFeedback={onFeedback}
       />
     </Box>
   );

@@ -1,9 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Box, Typography, TextField, Button, MenuItem, Stack, Paper, CircularProgress,
 } from '@mui/material';
 import type { VentilationSettings, VentilationCreateRequest } from '../../types';
-import { useAutoSave } from '../../hooks/useAutoSave';
 
 const MODES = ['CMV', 'SIMV', 'PSV', 'BiPAP', 'CPAP', 'APRV', 'PCV', 'VCV'];
 
@@ -27,44 +26,26 @@ export default function VentilationPanel({
     plateauPressure: '',
   });
   const [saving, setSaving] = useState(false);
-  const formRef = useRef(form);
-  formRef.current = form;
 
   const num = (v: string) => (v.trim() === '' ? undefined : Number(v));
 
-  const doCreate = useCallback(async () => {
-    const f = formRef.current;
+  const handleAdd = async () => {
     if (isLocked) return;
     try {
       setSaving(true);
       await onCreate({
-        recordHour: Number(f.recordHour),
-        mode: f.mode,
-        fio2: num(f.fio2),
-        peep: num(f.peep),
-        respiratoryRate: num(f.respiratoryRate),
-        tidalVolume: num(f.tidalVolume),
-        plateauPressure: num(f.plateauPressure),
+        recordHour: Number(form.recordHour),
+        mode: form.mode,
+        fio2: num(form.fio2),
+        peep: num(form.peep),
+        respiratoryRate: num(form.respiratoryRate),
+        tidalVolume: num(form.tidalVolume),
+        plateauPressure: num(form.plateauPressure),
       });
       setForm((prev) => ({ ...prev, fio2: '', peep: '', respiratoryRate: '', tidalVolume: '', plateauPressure: '' }));
     } finally {
       setSaving(false);
     }
-  }, [isLocked, onCreate]);
-
-  const { status: autoSaveStatus, markDirty, saveNow } = useAutoSave({
-    onSave: doCreate,
-    delay: 10000,
-    enabled: !isLocked,
-  });
-
-  const handleAdd = async () => {
-    await saveNow();
-  };
-
-  const setFormAndDirty = (upd: Partial<typeof form>) => {
-    setForm((prev) => ({ ...prev, ...upd }));
-    markDirty();
   };
 
   return (
@@ -73,38 +54,29 @@ export default function VentilationPanel({
         <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField size="small" type="number" label={'Година'}
-              value={form.recordHour} onChange={(e) => setFormAndDirty({ recordHour: Number(e.target.value) })}
+              value={form.recordHour} onChange={(e) => setForm((prev) => ({ ...prev, recordHour: Number(e.target.value) }))}
               sx={{ width: { xs: '100%', sm: 110 } }} />
             <TextField size="small" select label={'Режим'}
-              value={form.mode} onChange={(e) => setFormAndDirty({ mode: e.target.value })}
+              value={form.mode} onChange={(e) => setForm((prev) => ({ ...prev, mode: e.target.value }))}
               sx={{ width: { xs: '100%', sm: 130 } }}>
               {MODES.map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}
             </TextField>
             <TextField size="small" type="number" label="FiO₂ %" value={form.fio2}
-              onChange={(e) => setFormAndDirty({ fio2: e.target.value })} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
+              onChange={(e) => setForm((prev) => ({ ...prev, fio2: e.target.value }))} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
             <TextField size="small" type="number" label="PEEP" value={form.peep}
-              onChange={(e) => setFormAndDirty({ peep: e.target.value })} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
+              onChange={(e) => setForm((prev) => ({ ...prev, peep: e.target.value }))} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
             <TextField size="small" type="number" label={'ЧД'} value={form.respiratoryRate}
-              onChange={(e) => setFormAndDirty({ respiratoryRate: e.target.value })} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
+              onChange={(e) => setForm((prev) => ({ ...prev, respiratoryRate: e.target.value }))} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
             <TextField size="small" type="number" label={'Vt'} value={form.tidalVolume}
-              onChange={(e) => setFormAndDirty({ tidalVolume: e.target.value })} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
+              onChange={(e) => setForm((prev) => ({ ...prev, tidalVolume: e.target.value }))} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
             <TextField size="small" type="number" label={'Pplat'} value={form.plateauPressure}
-              onChange={(e) => setFormAndDirty({ plateauPressure: e.target.value })} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
-            <Stack spacing={0.5} sx={{ alignItems: 'center' }}>
-              <Button variant="contained" size="small" onClick={handleAdd} disabled={saving} sx={{ width: { xs: '100%', sm: 'auto' } }}>{'Додати'}</Button>
-              {autoSaveStatus === 'saving' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <CircularProgress size={8} />
-                  <Typography variant="caption" color="text.secondary">{'Зберігається...'}</Typography>
-                </Box>
-              )}
-              {autoSaveStatus === 'saved' && (
-                <Typography variant="caption" color="success.main">{'Збережено'}</Typography>
-              )}
-              {autoSaveStatus === 'error' && (
-                <Typography variant="caption" color="error">{'Помилка'}</Typography>
-              )}
-            </Stack>
+              onChange={(e) => setForm((prev) => ({ ...prev, plateauPressure: e.target.value }))} sx={{ width: { xs: 'calc(50% - 8px)', sm: 100 } }} />
+            <Box sx={{ alignItems: 'center' }}>
+              <Button variant="contained" size="small" onClick={handleAdd} disabled={saving} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                {saving ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : null}
+                {saving ? 'Зберігається...' : 'Додати'}
+              </Button>
+            </Box>
           </Stack>
         </Paper>
       )}

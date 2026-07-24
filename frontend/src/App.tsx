@@ -65,6 +65,7 @@ function LoginRoute() {
 function RoleRedirect() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const redirected = useRef(false);
 
   useEffect(() => {
@@ -73,8 +74,11 @@ function RoleRedirect() {
       redirected.current = true;
       const target = user.role === 'NURSE' ? '/nurse'
         : user.role === 'ADMINISTRATOR' ? '/admin'
+        : user.role === 'AUDITOR' ? '/admin'
         : '/doctor';
-      navigate(target, { replace: true });
+      if (location.pathname !== target) {
+        navigate(target, { replace: true });
+      }
     }
   });
 
@@ -112,7 +116,7 @@ function AppRoutes() {
       </Route>
 
       <Route path="/admin" element={
-        <Guard roles={['ADMINISTRATOR']}>
+        <Guard roles={['ADMINISTRATOR', 'AUDITOR']}>
           <AdminPage />
         </Guard>
       } />

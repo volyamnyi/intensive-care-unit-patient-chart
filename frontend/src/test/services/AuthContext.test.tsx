@@ -50,7 +50,7 @@ describe('AuthContext', () => {
   it('login sets user from response', async () => {
     mockGetMe.mockRejectedValue(new Error('no session'));
     mockLoginFn.mockResolvedValue({
-      data: { token: 'new-token', userId: '1', login: 'doctor1', fullName: 'Doc', role: 'DOCTOR', email: 'doc@test.com' },
+      data: { userId: '1', login: 'doctor1', fullName: 'Doc', role: 'DOCTOR', email: 'doc@test.com' },
     });
     render(<AuthProvider><TestComponent /></AuthProvider>);
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('no'));
@@ -73,7 +73,7 @@ describe('AuthContext', () => {
   it('hasRole checks user role', async () => {
     mockGetMe.mockRejectedValue(new Error('no session'));
     mockLoginFn.mockResolvedValue({
-      data: { token: 't', userId: '2', login: 'nurse1', fullName: 'Nurse', role: 'NURSE', email: 'n@t.com' },
+      data: { userId: '2', login: 'nurse1', fullName: 'Nurse', role: 'NURSE', email: 'n@t.com' },
     });
     render(<AuthProvider><TestComponent /></AuthProvider>);
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('no'));

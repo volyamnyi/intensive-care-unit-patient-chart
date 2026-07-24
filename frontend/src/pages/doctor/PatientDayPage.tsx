@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Button, Alert, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Typography, useTheme, Paper } from '@mui/material';
+import { Box, Button, Alert, CircularProgress, TextField, Typography, useTheme, Paper } from '@mui/material';
 import { ArrowBack, LockOpen, Download } from '@mui/icons-material';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
@@ -21,9 +21,13 @@ export default function PatientDayPage() {
   const [orders, setOrders] = useState<MedicalOrder[]>([]);
   const [balanceItems, setFluidBalanceItems] = useState<FluidBalanceItem[]>([]);
   const [signConfirm, setSignConfirm] = useState(false);
-  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dayLoading, setDayLoading] = useState(false);
+  const [signingLoading, setSigningLoading] = useState(false);
+  const [reopenLoading, setReopenLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (!episodeId) return;
@@ -42,6 +46,7 @@ export default function PatientDayPage() {
   }, [episodeId, user]);
 
   const loadDayData = useCallback(async (day: ClinicalDay) => {
+    setDayLoading(true);
     try {
       const [recRes, ordRes, balRes] = await Promise.all([
         hourlyRecordApi.getByClinicalDay(day.id),
@@ -51,8 +56,11 @@ export default function PatientDayPage() {
       setRecords(recRes.data);
       setOrders(ordRes.data);
       setFluidBalanceItems(balRes.data);
-    } catch {
-      // data stays stale on error
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Не вдалося завантажити дані доби';
+      setFeedback({ message: msg, severity: 'error' });
+    } finally {
+      setDayLoading(false);
     }
   }, []);
 
@@ -74,6 +82,7 @@ export default function PatientDayPage() {
 
   const handleSignOff = async () => {
     if (!selectedDay || !user) return;
+    setSigningLoading(true);
     try {
       if (user.role === 'NURSE') {
         await clinicalDayApi.signNurse(selectedDay.id, { userId: user.id });
@@ -85,23 +94,32 @@ export default function PatientDayPage() {
       setClinicalDays(daysRes.data);
       const updated = daysRes.data.find(d => d.id === selectedDay.id);
       if (updated) setSelectedDay(updated);
-    } catch {
-      // error handled silently
+      setFeedback({ message: 'Добу підписано', severity: 'success' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Не вдалося підписати добу';
+      setFeedback({ message: msg, severity: 'error' });
+    } finally {
+      setSigningLoading(false);
     }
   };
 
   const handleReopen = async () => {
     if (!selectedDay || !user || !reopenReason.trim()) return;
+    setReopenLoading(true);
     try {
       await clinicalDayApi.reopen(selectedDay.id, { reason: reopenReason.trim(), version: selectedDay.version });
-      setReopenDialogOpen(false);
+      setReopenOpen(false);
       setReopenReason('');
       const daysRes = await episodeApi.getClinicalDays(episodeId!);
       setClinicalDays(daysRes.data);
       const updated = daysRes.data.find(d => d.id === selectedDay.id);
       if (updated) setSelectedDay(updated);
-    } catch {
-      // error handled silently
+      setFeedback({ message: 'Добу перевідкрито', severity: 'success' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Не вдалося перевідкрити добу';
+      setFeedback({ message: msg, severity: 'error' });
+    } finally {
+      setReopenLoading(false);
     }
   };
 
@@ -109,8 +127,9 @@ export default function PatientDayPage() {
     if (!selectedDay) return;
     try {
       await pdfApi.generate(selectedDay.id);
+      setFeedback({ message: 'PDF успішно згенеровано', severity: 'success' });
     } catch {
-      // error handled silently
+      setFeedback({ message: 'Не вдалося згенерувати PDF', severity: 'error' });
     }
   };
 
@@ -145,19 +164,21 @@ export default function PatientDayPage() {
         >
           {isNurse ? '← Назад до пацієнтів' : '← Назад до пацієнтів'}
         </Button>
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          {dayLoading && <CircularProgress size={16} sx={{ mr: 0.5 }} />}
           {selectedDay && selectedDay.status === 'CLOSED' && (
             <Button size="small" variant="outlined" startIcon={<Download />} onClick={handleGeneratePDF}>
               PDF
             </Button>
           )}
           {canReopen && (
-            <Button size="small" variant="outlined" color="warning" startIcon={<LockOpen />} onClick={() => setReopenDialogOpen(true)}>
-              Перевідкрити
+            <Button size="small" variant="outlined" color="warning" startIcon={<LockOpen />} onClick={() => setReopenOpen(v => !v)} disabled={reopenLoading}>
+              {reopenOpen ? 'Скасувати' : 'Перевідкрити'}
             </Button>
           )}
           {canSign && !signConfirm && (
-            <Button size="small" variant="contained" onClick={() => setSignConfirm(true)} sx={{ fontWeight: 700 }}>
+            <Button size="small" variant="contained" onClick={() => setSignConfirm(true)} sx={{ fontWeight: 700 }} disabled={signingLoading}>
+              {signingLoading ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : null}
               Підписати добу
             </Button>
           )}
@@ -170,10 +191,11 @@ export default function PatientDayPage() {
             Після підписання доба стане read-only
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button variant="contained" onClick={handleSignOff}>
+            <Button variant="contained" onClick={handleSignOff} disabled={signingLoading}>
+              {signingLoading ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : null}
               Підписати
             </Button>
-            <Button variant="outlined" onClick={() => setSignConfirm(false)}>
+            <Button variant="outlined" onClick={() => setSignConfirm(false)} disabled={signingLoading}>
               Скасувати
             </Button>
           </Box>
@@ -182,61 +204,87 @@ export default function PatientDayPage() {
 
       {/* Main dashboard — role-specific view */}
       {selectedDay && (
-        isNurse ? (
-          <NurseDashboard
-            episode={episode}
-            clinicalDays={clinicalDays}
-            selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
-            records={records}
-            orders={orders}
-            balanceItems={balanceItems}
-            isLocked={isLocked}
-            isNurse={isNurse}
-            user={user}
-            onRefresh={handleRefresh}
-          />
-        ) : (
-          <DoctorDashboard
-            episode={episode}
-            clinicalDays={clinicalDays}
-            selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
-            records={records}
-            orders={orders}
-            balanceItems={balanceItems}
-            isLocked={isLocked}
-            isNurse={isNurse}
-            user={user}
-            onRefresh={handleRefresh}
-          />
-        )
+        <Box sx={{ position: 'relative' }}>
+          {dayLoading && (
+            <Box sx={{
+              position: 'absolute', inset: 0, zIndex: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.6)',
+              borderRadius: 2,
+            }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          {isNurse ? (
+            <NurseDashboard
+              episode={episode}
+              clinicalDays={clinicalDays}
+              selectedDay={selectedDay}
+              onSelectDay={setSelectedDay}
+              records={records}
+              orders={orders}
+              balanceItems={balanceItems}
+              isLocked={isLocked}
+              isNurse={isNurse}
+              user={user}
+              onRefresh={handleRefresh}
+              onFeedback={(msg, sev) => setFeedback({ message: msg, severity: sev })}
+            />
+          ) : (
+            <DoctorDashboard
+              episode={episode}
+              clinicalDays={clinicalDays}
+              selectedDay={selectedDay}
+              onSelectDay={setSelectedDay}
+              records={records}
+              orders={orders}
+              balanceItems={balanceItems}
+              isLocked={isLocked}
+              isNurse={isNurse}
+              user={user}
+              onRefresh={handleRefresh}
+              onFeedback={(msg, sev) => setFeedback({ message: msg, severity: sev })}
+            />
+          )}
+        </Box>
       )}
 
-      <Dialog open={reopenDialogOpen} onClose={() => setReopenDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Повторне відкриття дня {selectedDay?.dayNumber}</DialogTitle>
-        <DialogContent>
+      {reopenOpen && selectedDay && (
+        <Paper elevation={3} sx={{ p: 2, mb: 2, border: '1px solid #FF9800', borderRadius: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+            Повторне відкриття дня {selectedDay.dayNumber}
+          </Typography>
           <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            Ви впевнені, що хочете повторно відкрити цей клінічний день? Це скасує всі підписи.
+            Це скасує всі підписи. Вкажіть причину:
           </Typography>
           <TextField
             autoFocus
-            label="Причина повторного відкриття"
+            label="Причина"
             fullWidth
             multiline
-            rows={3}
+            rows={2}
             value={reopenReason}
             onChange={e => setReopenReason(e.target.value)}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setReopenDialogOpen(false)}>Скасувати</Button>
-          <Button onClick={handleReopen} variant="contained" color="warning" disabled={!reopenReason.trim()}>
-            Перевідкрити
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+            <Button variant="contained" color="warning" onClick={handleReopen} disabled={!reopenReason.trim() || reopenLoading}>
+              {reopenLoading ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : null}
+              Перевідкрити
+            </Button>
+            <Button variant="outlined" onClick={() => setReopenOpen(false)} disabled={reopenLoading}>
+              Скасувати
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
+      {feedback && (
+        <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, display: 'flex', justifyContent: 'center', pt: 1 }}>
+          <Alert severity={feedback.severity} variant="filled" sx={{ fontSize: 13 }} onClose={() => setFeedback(null)}>
+            {feedback.message}
+          </Alert>
+        </Box>
+      )}
     </Box>
   );
 }

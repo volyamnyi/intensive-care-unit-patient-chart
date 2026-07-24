@@ -2,21 +2,17 @@
 
 ## Current Session
 
-**Refinements applied (2026-07-22):**
-- **Controller tests (106/106 ✅)** — Fixed `@WebMvcTest` controller tests failing with `ApplicationContext` errors. Root cause: `JwtAuthenticationFilter` wasn't in the filter chain → `auth.getCredentials()` returned `null`. Fix: `@Import(SecurityConfig.class)` + `@MockBean` for `JwtTokenProvider`/`AuditLogRepository`/`AuditService` + `anyString()` JWT mocks in `@BeforeEach` + `.header("Authorization", "Bearer test-jwt-token")` on GET `perform()` calls. Also fixed 8 pre-existing test data bugs (CSRF, UUID format, LocalDateTime format, missing field).
-- **TestSecurityHelper** — Refactored to use 3 distinct tokens per role (`test-jwt-token` / `test-nurse-token` / `test-admin-token`), each setting both `SecurityContext` (via `SecurityMockMvcRequestPostProcessors.authentication`) and the `Authorization` header.
-- **MedicalOrderServiceTest (14/14 ✅)** — Fixed 3 test failures caused by hardcoded `LocalDateTime.of(2026, 7, 21, ...)` dates that now fail the `PAST_HOUR_ORDER` validation. Replaced with dynamic `LocalDateTime.now().plusHours(2)` dates.
-- **GeneratedPdf entity** — Fixed `@Lob byte[]` PostgreSQL OID issue: added `columnDefinition = "BYTEA"` to `@Column(name = "file_data")` so PDF binary data actually persists (was always NULL with OID mapping).
-- **CI gaps fixed** — Checkstyle `failsOnError: false` → `true` in `pom.xml`; added backend test results + JaCoCo coverage artifact uploads in `playwright.yml`.
-- **Seed data `day_number` mismatch** — `data.sql` had `b1111112` (NURSE_SIGNED) at `day_number=1`, but E2E tests reference it as "Доба 2". Root cause: day numbers were swapped between production and test seed files (`data-test.sql` had it at day_number=2). Fix: swapped in `data.sql` so `b1111112`→day 2 (NURSE_SIGNED), `b1111111`→day 1 (OPEN), matching both `data-test.sql` and E2E test expectations. Affected tests: `episode-locked`, `clinical-day-reopen` (the clicking 'Доба 2' expecting NURSE_SIGNED behavior).
+**Sidebar refactor — shadcn-inspired MUI-native Sidebar composables (2026-07-24):**
+- **New file** `frontend/src/components/ui/Sidebar.tsx` — 8 exports: `SidebarProvider` (context + drag logic + localStorage), `Sidebar`, `SidebarRail`, `SidebarHeader`, `SidebarContent`, `SidebarGroup`, `SidebarTrigger`, `useSidebar`. Continuous drag resize (200–600px, default 300px) lives in `SidebarProvider`.
+- **`IntensiveCareCard.tsx`** refactored — removed inline sidebar Box, removed drag state/refs (`SIDEBAR_MIN`, `SIDEBAR_MAX`, `sidebarWidth`, `sidebarWidthRef`, `dragState`, `handleResizeStart`, mouse `useEffect`), removed `SidebarSection` helper. Now uses `<SidebarProvider>` wrapping `<Sidebar side="right" collapsible="none">` with `<SidebarRail />`, `<SidebarHeader>`, `<SidebarContent>`, and 6 `<SidebarGroup>` sections.
+- **Vitest tests** updated — sidebar resize tests now find rail by `getByRole('separator', { name: '...' })` instead of fragile DOM traversal.
+- **Playwright E2E** — `tests/specs/doctor/sidebar-resize.spec.ts` unchanged (locators still work).
+- **Unused imports removed** — `NoteAdd`, `ScaleOutlined` kept; `Assignment`, `Science`, `Air` icons cleaned.
 
-**Refinements applied (2026-07-21):**
-- **PDF layout** — Виправлено макет PDF під форму 003-15/о: таблиця losses (colspan=9 замість 8), verticalCell (rowspan=11 замість 9), таблиця stats info2 (rowspan=4 замість 3). Підтверджено: PDF генерується, API повертає 201 Created.
-- **Frontend layout** — `IntensiveCareCard.tsx` переписано на двоколонковий макет: таблична частина зліва, бокова панель (300px) справа. Всі секції завжди видимі (без акардеонів/вкладок). `tsc --noEmit` проходить чисто.
-- **Форма 003-15/о** — Додано посилання на паперову форму та референс-реалізацію (localhost:5174) у технічне завдання.
-- **Autosave** — §60 доповнено деталями реалізації (useAutoSave, debounce ~1000ms, optimistic update).
-- **DayNumber sorting** — `ClinicalDayTimeline.tsx` тепер сортує дні за `dayNumber` ASC, щоб День 1 завжди був першим хронологічно.
-- **Відомі проблеми:** `MedicalOrderServiceTest` — 3 pre-existing помилки (не пов'язані). [FIXED 2026-07-22]
+**Previous sessions (condensed):**
+- 2026-07-23: Frontend error display — `getErrorMessage()` helper (extracts `err.response?.data?.message`), used in all 8 API catch blocks. `OrderInlineForm` `onError` prop. `InvalidDataAccessApiUsageException` caught in `GlobalExceptionHandler` → 400.
+- 2026-07-22: Controller tests fixed (106/106) — `@WebMvcTest` + JWT mocks. `GeneratedPdf` BYTEA column fix. Seed data day_number swap. Checkstyle `failsOnError: true`.
+- 2026-07-21: PDF layout (003-15/о) corrected. Two-column frontend layout. Autosave §60. DayNumber ASC sorting.
 
 ## Architecture
 
@@ -102,6 +98,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | `nurse1` / `nurse2` | `nurse123` | NURSE |
 | `head1` | `head123` | HEAD_OF_DEPARTMENT |
 | `admin` | `admin123` | ADMINISTRATOR |
+| *(backend-only)* | — | AUDITOR |
 
 Mock MIS provides 5 test patients: Петренко, Коваленко, Сидоренко, Бондаренко, Ткачук.
 
@@ -386,6 +383,8 @@ All endpoints prefixed with `/api`.
 - **Error response**: `ErrorResponse` DTO with `code`, `message`, `correlationId`
 - **ClinicalDay locking**: Signed/closed days cannot be modified (throws `DocumentLockedException`)
 - **Signing flow**: Nurse must sign before doctor; signatures can be revoked on reopen
+- **Frontend error display**: All API catch blocks in `IntensiveCareCard.tsx` use `getErrorMessage(err, fallback)` which extracts `err.response?.data?.message` from Axios errors (shows the backend validation message instead of generic "Request failed with status code 400")
+- **Backend validation exceptions**: `ConstraintViolationException` (JSR-380) and `InvalidDataAccessApiUsageException` (wraps `IllegalArgumentException` from `@PrePersist`) are both caught in `GlobalExceptionHandler` and return 400 with the validation message
 
 ## Conventions
 
@@ -424,11 +423,6 @@ tests/
   fixtures/            ← Test fixtures
 docs/
   Технічне завдання карта Інтенсивної терапії.md  ← Full technical specification (2839 lines)
-  compliance-analysis-vs-tz.md                     ← Compliance matrix
-  Prompt.md                                        ← AI prompts
-  ПланРеалізації.md                                 ← Implementation plan
-  RepositoryInfo.md                                ← Repository info
-  MigrationPlan.md                                 ← Migration plan
 .github/
   workflows/playwright.yml  ← CI pipeline (3 jobs: integration-tests, test, format-check)
 ```

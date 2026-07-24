@@ -1,6 +1,5 @@
 package com.superhumans.service;
 
-import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.entity.User;
@@ -19,7 +18,6 @@ import lombok.experimental.FieldDefaults;
 public class AuthService {
 
     UserRepository userRepository;
-    JwtTokenProvider jwtTokenProvider;
     PasswordEncoder passwordEncoder;
     AuditService auditService;
 
@@ -39,13 +37,10 @@ public class AuthService {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
-        String token = jwtTokenProvider.generateToken(user.getLogin(), user.getRole().name(), user.getId());
-
         auditService.logAuth("LOGIN", user.getId(), user.getRole().name(), ipAddress,
                 "Successful login for login: " + user.getLogin());
 
         return ResponseEntity.ok(LoginResponse.builder()
-                .token(token)
                 .userId(user.getId())
                 .login(user.getLogin())
                 .fullName(user.getFullName())

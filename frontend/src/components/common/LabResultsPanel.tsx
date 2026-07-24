@@ -1,10 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Box, Typography, TextField, Button, MenuItem, Chip, Stack,
   Paper, CircularProgress,
 } from '@mui/material';
 import type { LabResult, LabResultCreateRequest } from '../../types';
-import { useAutoSave } from '../../hooks/useAutoSave';
 
 const PREDEFINED_TESTS: { code: string; name: string; unit: string; min: number | null; max: number | null }[] = [
   { code: 'Hb', name: 'Hemoglobin', unit: 'g/dL', min: 12, max: 16 },
@@ -45,14 +44,12 @@ export default function LabResultsPanel({
   const [selectedCode, setSelectedCode] = useState('');
   const [result, setResult] = useState('');
   const [saving, setSaving] = useState(false);
-  const selectedCodeRef = useRef('');
-  const resultRef = useRef('');
 
   const selected = PREDEFINED_TESTS.find((x) => x.code === selectedCode);
 
-  const doCreate = useCallback(async () => {
-    const code = selectedCodeRef.current;
-    const resVal = resultRef.current.trim();
+  const handleAdd = async () => {
+    const code = selectedCode;
+    const resVal = result.trim();
     const sel = PREDEFINED_TESTS.find((x) => x.code === code);
     if (!sel || !resVal || isLocked) return;
     try {
@@ -68,33 +65,9 @@ export default function LabResultsPanel({
       });
       setSelectedCode('');
       setResult('');
-      selectedCodeRef.current = '';
-      resultRef.current = '';
     } finally {
       setSaving(false);
     }
-  }, [isLocked, onCreate]);
-
-  const { status: autoSaveStatus, markDirty, saveNow } = useAutoSave({
-    onSave: doCreate,
-    delay: 10000,
-    enabled: !isLocked,
-  });
-
-  const handleAdd = async () => {
-    await saveNow();
-  };
-
-  const handleCodeChange = (v: string) => {
-    setSelectedCode(v);
-    selectedCodeRef.current = v;
-    markDirty();
-  };
-
-  const handleResultChange = (v: string) => {
-    setResult(v);
-    resultRef.current = v;
-    markDirty();
   };
 
   return (
@@ -103,7 +76,7 @@ export default function LabResultsPanel({
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1.5, alignItems: 'flex-start' }}>
           <TextField
             select size="small" label={'Тест'}
-            value={selectedCode} onChange={(e) => handleCodeChange(e.target.value)}
+            value={selectedCode} onChange={(e) => setSelectedCode(e.target.value)}
             sx={{ minWidth: 200 }}
           >
             {PREDEFINED_TESTS.map((x) => (
@@ -117,26 +90,15 @@ export default function LabResultsPanel({
           )}
           <TextField
             size="small" type="number" label={'Результат'}
-            value={result} onChange={(e) => handleResultChange(e.target.value)}
+            value={result} onChange={(e) => setResult(e.target.value)}
             sx={{ width: 130 }}
           />
-          <Stack spacing={0.5} sx={{ alignItems: 'center' }}>
+          <Box sx={{ alignItems: 'center' }}>
             <Button variant="contained" size="small" onClick={handleAdd} disabled={saving || !selected || result.trim() === ''} sx={{ mt: 0.5 }}>
-              {'Додати'}
+              {saving ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : null}
+              {saving ? 'Зберігається...' : 'Додати'}
             </Button>
-            {autoSaveStatus === 'saving' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <CircularProgress size={8} />
-                <Typography variant="caption" color="text.secondary">{'Зберігається...'}</Typography>
-              </Box>
-            )}
-            {autoSaveStatus === 'saved' && (
-              <Typography variant="caption" color="success.main">{'Збережено'}</Typography>
-            )}
-            {autoSaveStatus === 'error' && (
-              <Typography variant="caption" color="error">{'Помилка'}</Typography>
-            )}
-          </Stack>
+          </Box>
         </Stack>
       )}
 

@@ -24,7 +24,6 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getToken()).isNotEmpty();
         assertThat(res.getBody().getUserId()).isNotNull();
         assertThat(res.getBody().getLogin()).isEqualTo("doctor1");
         assertThat(res.getBody().getRole()).isEqualTo("DOCTOR");
@@ -41,7 +40,6 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getToken()).isNotEmpty();
         assertThat(res.getBody().getRole()).isEqualTo("NURSE");
     }
 
@@ -54,7 +52,6 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getToken()).isNotEmpty();
         assertThat(res.getBody().getRole()).isEqualTo("ADMINISTRATOR");
     }
 

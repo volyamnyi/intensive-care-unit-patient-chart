@@ -20,9 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
@@ -42,17 +40,19 @@ class AuthControllerTest {
 
     @MockBean
     private AuditService auditService;
-@BeforeEach
+
+    @BeforeEach
     void setUpJwt() {
         when(jwtTokenProvider.validateToken("test-jwt-token")).thenReturn(true);
         when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
+        when(jwtTokenProvider.generateToken(anyString(), anyString(), any())).thenReturn("jwt-token");
     }
+
     @Test
     void login_withValidCredentials_returnsTokenAndCookie() throws Exception {
         LoginResponse loginResponse = LoginResponse.builder()
-                .token("jwt-token")
                 .userId(1L)
                 .login("doctor1")
                 .fullName("Doctor")
@@ -69,7 +69,6 @@ class AuthControllerTest {
                         .with(doctor()))
                 .andExpect(status().isOk())
                 .andExpect(cookie().exists("jwt"))
-                .andExpect(jsonPath("$.token").value("jwt-token"))
                 .andExpect(jsonPath("$.userId").value(1))
                 .andExpect(jsonPath("$.role").value("DOCTOR"));
     }
@@ -88,23 +87,8 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_withNullToken_noCookieSet() throws Exception {
+    void login_withNullBody_noCookieSet() throws Exception {
         when(authService.login(any(LoginRequest.class), any())).thenReturn(ResponseEntity.ok(null));
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"doctor1\",\"password\":\"password123\"}")
-                        .with(csrf())
-                        .with(doctor()))
-                .andExpect(status().isOk())
-                .andExpect(cookie().doesNotExist("jwt"));
-    }
-
-    @Test
-    void login_withNullBodyToken_noCookieSet() throws Exception {
-        LoginResponse resp = new LoginResponse();
-        resp.setToken(null);
-        when(authService.login(any(LoginRequest.class), any())).thenReturn(ResponseEntity.ok(resp));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

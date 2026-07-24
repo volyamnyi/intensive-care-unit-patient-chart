@@ -18,7 +18,11 @@
 - **Form 003-15/о compliant** — Electronic ICU chart matching the Ukrainian paper standard
 - **PDF Generation** — A4 landscape with tabular layout, Times New Roman font, all card sections
 - **PDF Transfer to MIS** — PDF is stored as binary, transmitted to MIS, with transfer status tracking (PENDING/SENT/FAILED)
-- **Single-Page Layout** — Two-column design (table + sidebar), all sections always visible, no tabs/accordions
+- **Single-Page Layout** — Two-column design (table + resizable sidebar via left-edge drag), all sections always visible, no tabs/accordions
+
+### For AUDITOR
+- **Audit Log Viewer** — Read-only access to paginated audit logs with filters
+- **Patient Data** — Read-only view of episodes and clinical data
 
 ### For Doctors / HOD
 - **Episode Dashboard** — View all active ICU episodes with patient names and status
@@ -295,8 +299,8 @@ java -jar backend/target/patient-chart-backend-*.jar
 ### Audit
 | Method | URL | Auth | Description |
 |---|---|---|---|
-| `GET` | `/api/audit` | Admin | List audit logs |
-| `GET` | `/api/audit/{id}` | Admin | Get audit log entry |
+| `GET` | `/api/audit` | Admin/AUDITOR | List audit logs |
+| `GET` | `/api/audit/{id}` | Admin/AUDITOR | Get audit log entry |
 
 ---
 
@@ -310,6 +314,7 @@ java -jar backend/target/patient-chart-backend-*.jar
 | `nurse1` / `nurse2` | `nurse123` | NURSE |
 | `head1` | `head123` | HEAD_OF_DEPARTMENT |
 | `admin` | `admin123` | ADMINISTRATOR |
+| *(backend-only)* | — | AUDITOR |
 
 5 mock patients (from MIS mock):
 
@@ -445,6 +450,7 @@ chore: maintenance tasks
 | Enter vitals | ✗ | ✓ | ✗ | ✗ |
 | View patient data | ✓ | ✓ | ✓ | ✓ |
 | Audit log access | ✗ | ✗ | ✗ | ✓ |
+| AUDITOR read-only view | ✗ | ✗ | ✗ | ✗ |
 
 ---
 

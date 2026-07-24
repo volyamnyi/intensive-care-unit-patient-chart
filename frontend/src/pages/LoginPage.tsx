@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Box, Card, CardContent, TextField, Button, Typography, Alert, InputAdornment, IconButton } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../services/AuthContext';
@@ -13,6 +13,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleButtonClick = () => {
+    formRef.current?.requestSubmit();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +74,7 @@ export default function LoginPage() {
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          <Box component="form" onSubmit={handleSubmit}>
+          <Box component="form" onSubmit={handleSubmit} ref={formRef}>
             <TextField
               fullWidth label="Логін" value={loginField}
               onChange={(e) => setLoginField(e.target.value)}
@@ -94,6 +99,7 @@ export default function LoginPage() {
             />
             <Button
               fullWidth variant="contained" size="large" type="submit"
+              onClick={handleButtonClick}
             >
               Увійти
             </Button>

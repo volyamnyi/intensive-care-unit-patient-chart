@@ -19,4 +19,5 @@ export interface DashboardProps {
   isLocked: boolean;
   isNurse: boolean;
   onRefresh?: () => void;
+  onFeedback?: (message: string, severity: 'success' | 'error') => void;
 }

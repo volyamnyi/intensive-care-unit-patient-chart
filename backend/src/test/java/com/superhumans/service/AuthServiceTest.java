@@ -1,6 +1,5 @@
 package com.superhumans.service;
 
-import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.entity.User;
@@ -32,9 +31,6 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private JwtTokenProvider jwtTokenProvider;
-
-    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
@@ -60,18 +56,16 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_withValidCredentials_returnsToken() {
+    void login_withValidCredentials_returnsOk() {
         LoginRequest req = new LoginRequest("doctor1", "password123");
 
         when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPass")).thenReturn(true);
-        when(jwtTokenProvider.generateToken("doctor1", "DOCTOR", userId)).thenReturn("jwt-token");
 
         ResponseEntity<LoginResponse> response = authService.login(req);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getToken()).isEqualTo("jwt-token");
         assertThat(response.getBody().getUserId()).isEqualTo(userId);
         assertThat(response.getBody().getLogin()).isEqualTo("doctor1");
         assertThat(response.getBody().getRole()).isEqualTo("DOCTOR");
@@ -108,7 +102,6 @@ class AuthServiceTest {
 
         when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPass")).thenReturn(true);
-        when(jwtTokenProvider.generateToken("doctor1", "DOCTOR", userId)).thenReturn("jwt-token");
 
         authService.login(req, "10.0.0.1");
 

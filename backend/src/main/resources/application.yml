@@ -58,6 +58,9 @@ logging:
   level:
     com.superhumans: DEBUG
     org.springframework.security: INFO
+    org.springframework.web: DEBUG
+    org.springframework.aop.interceptor: DEBUG
+    org.springframework.orm.jpa: DEBUG
 
 ---
 spring:

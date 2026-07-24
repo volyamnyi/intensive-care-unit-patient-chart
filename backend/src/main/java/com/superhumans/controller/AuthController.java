@@ -1,5 +1,6 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.service.AuthService;
@@ -21,14 +22,19 @@ import lombok.experimental.FieldDefaults;
 public class AuthController {
 
     AuthService authService;
+    JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req, HttpServletRequest request) {
         ResponseEntity<LoginResponse> response = authService.login(req, request.getRemoteAddr());
-        if (response.getBody() == null || response.getBody().getToken() == null) {
+        if (response.getBody() == null) {
             return response;
         }
-        ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.getBody().getToken())
+        String token = jwtTokenProvider.generateToken(
+                response.getBody().getLogin(),
+                response.getBody().getRole(),
+                response.getBody().getUserId());
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
                 .httpOnly(true)
                 .secure(request.isSecure())
                 .sameSite("Lax")

@@ -29,6 +29,8 @@ export function useAutoSave({
   const savingRef = useRef(false);
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -47,23 +49,22 @@ export function useAutoSave({
       dirtyRef.current = false;
       setStatus('saved');
       setLastSavedAt(new Date());
-    } catch {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Помилка збереження';
       setStatus('error');
-      setError('Помилка збереження');
+      setError(msg);
     } finally {
       savingRef.current = false;
     }
   }, []);
 
   const markDirty = useCallback(() => {
-    if (!enabled) return;
+    if (!enabledRef.current) return;
     dirtyRef.current = true;
     clearTimer();
     timerRef.current = setTimeout(performSave, delay);
-    if (status === 'saved' || status === 'error') {
-      setStatus('idle');
-    }
-  }, [enabled, delay, clearTimer, performSave, status]);
+    setStatus((prev) => (prev === 'saved' || prev === 'error' ? 'idle' : prev));
+  }, [delay, clearTimer, performSave]);
 
   const saveNow = useCallback(async () => {
     clearTimer();

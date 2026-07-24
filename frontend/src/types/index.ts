@@ -2,7 +2,7 @@ export interface User {
   id: number;
   login: string;
   fullName: string;
-  role: 'DOCTOR' | 'NURSE' | 'HEAD_OF_DEPARTMENT' | 'ADMINISTRATOR';
+  role: 'DOCTOR' | 'NURSE' | 'HEAD_OF_DEPARTMENT' | 'ADMINISTRATOR' | 'AUDITOR';
   email: string;
   specialityCode: string;
   specialityName: string;
@@ -424,7 +424,6 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string;
   userId: number;
   login: string;
   fullName: string;

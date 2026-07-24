@@ -56,8 +56,8 @@ public abstract class AbstractIntegrationTest {
         LoginRequest req = new LoginRequest(login, password);
         ResponseEntity<LoginResponse> res = restTemplate.postForEntity(
                 "/api/auth/login", req, LoginResponse.class);
-        if (res.getBody() != null && res.getBody().getToken() != null) {
-            return res.getBody().getToken();
+        if (res.getBody() != null) {
+            return extractJwtCookie(res);
         }
         return null;
     }
