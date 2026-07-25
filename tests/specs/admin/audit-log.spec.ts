@@ -6,6 +6,8 @@ test.describe('Admin Audit Log', () => {
     await page.getByLabel('Логін').fill('admin');
     await page.getByLabel('Пароль').fill('admin123');
     await page.getByRole('button', { name: 'Увійти' }).click();
+    await expect(page).toHaveURL(/\/select/, { timeout: 10000 });
+    await page.goto('/admin');
     await expect(page).toHaveURL(/\/admin/, { timeout: 10000 });
   });
 
@@ -13,14 +15,11 @@ test.describe('Admin Audit Log', () => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
-    await page.getByRole('button', { name: 'Переглянути журнал аудиту' }).click();
+    await page.getByText('Журнал аудиту').click();
+    await page.getByRole('button', { name: 'Переглянути' }).click();
 
-    // Header columns prove the paginated `content` array rendered (regression F1:
-    // previous code crashed with `logs.map is not a function` because the API returns
-    // a PageResponse object, not a bare array).
     await expect(page.getByText('Сутність')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Дія')).toBeVisible({ timeout: 10000 });
-    // At least one data row must have rendered.
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
     expect(pageErrors).toEqual([]);
   });
@@ -29,7 +28,8 @@ test.describe('Admin Audit Log', () => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
-    await page.getByRole('button', { name: 'Переглянути журнал аудиту' }).click();
+    await page.getByText('Журнал аудиту').click();
+    await page.getByRole('button', { name: 'Переглянути' }).click();
     await expect(page.getByText('Сутність')).toBeVisible({ timeout: 10000 });
 
     const filter = page.getByLabel(/сутність|entity/i);
@@ -38,7 +38,6 @@ test.describe('Admin Audit Log', () => {
       await page.getByRole('button', { name: 'Пошук' }).click();
       await page.waitForTimeout(500);
     }
-    // No crash regardless of result shape.
     expect(pageErrors).toEqual([]);
   });
 
@@ -46,8 +45,8 @@ test.describe('Admin Audit Log', () => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
-    // Force an empty result by filtering on a non-existent entity.
-    await page.getByRole('button', { name: 'Переглянути журнал аудиту' }).click();
+    await page.getByText('Журнал аудиту').click();
+    await page.getByRole('button', { name: 'Переглянути' }).click();
     const filter = page.getByLabel(/сутність|entity/i);
     if (await filter.count()) {
       await filter.fill('NON_EXISTENT_ENTITY');

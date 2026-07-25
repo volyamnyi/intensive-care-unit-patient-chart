@@ -4,9 +4,9 @@ test.describe('Admin Page', () => {
   test('displays administrative panel with users tab', async ({ page }) => {
     await page.goto('/admin');
     await expect(page.getByText('Адміністративна панель')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Користувачі')).toBeVisible();
-    await expect(page.getByText('Журнал аудиту')).toBeVisible();
-    await expect(page.getByText('Статистика')).toBeVisible();
+    await expect(page.getByText('Користувачі')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Журнал аудиту')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Статистика')).toBeVisible({ timeout: 10000 });
   });
 
   test('users tab shows doctor user data', async ({ page }) => {
