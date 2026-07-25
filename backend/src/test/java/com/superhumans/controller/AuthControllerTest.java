@@ -47,7 +47,7 @@ class AuthControllerTest {
         when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
-        when(jwtTokenProvider.generateToken(anyString(), anyString(), any())).thenReturn("jwt-token");
+        when(jwtTokenProvider.generateToken(anyString(), anyString(), any(), anyString())).thenReturn("jwt-token");
     }
 
     @Test

@@ -16,6 +16,7 @@ import AdminPage from './pages/admin/AdminPage';
 import PrescriptionPage from './pages/prescription/PrescriptionPage';
 import PrescriptionDetailPage from './pages/prescription/PrescriptionDetailPage';
 import NursePrescriptionPage from './pages/prescription/NursePrescriptionPage';
+import AppSelectorPage from './pages/AppSelectorPage';
 
 function Guard({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { isAuthenticated, hasRole, user, loading } = useAuth();
@@ -32,7 +33,7 @@ function Guard({ children, roles }: { children: React.ReactNode; roles?: string[
       return;
     }
     if (roles && user === null) return;
-    if (roles && !hasRole(...roles) && location.pathname !== '/') {
+    if (roles && !hasRole(...roles) && location.pathname !== '/' && location.pathname !== '/select') {
       redirected.current = true;
       navigate('/', { replace: true });
     }
@@ -68,20 +69,13 @@ function LoginRoute() {
 function RoleRedirect() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const redirected = useRef(false);
 
   useEffect(() => {
     if (redirected.current) return;
     if (user) {
       redirected.current = true;
-      const target = user.role === 'NURSE' ? '/nurse'
-        : user.role === 'ADMINISTRATOR' ? '/admin'
-        : user.role === 'AUDITOR' ? '/admin'
-        : '/doctor';
-      if (location.pathname !== target) {
-        navigate(target, { replace: true });
-      }
+      navigate('/select', { replace: true });
     }
   });
 
@@ -93,6 +87,12 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
+
+      <Route path="/select" element={
+        <Guard>
+          <AppSelectorPage />
+        </Guard>
+      } />
 
       <Route path="/doctor" element={
         <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
@@ -107,8 +107,6 @@ function AppRoutes() {
         } />
         <Route path="create-card" element={<CreateCardPage />} />
         <Route path="episode/:episodeId" element={<PatientDayPage />} />
-        <Route path="prescriptions" element={<PrescriptionPage />} />
-        <Route path="prescription/:id" element={<PrescriptionDetailPage />} />
       </Route>
 
       <Route path="/nurse" element={
@@ -118,7 +116,24 @@ function AppRoutes() {
       }>
         <Route index element={<NurseDashboardPage />} />
         <Route path="episode/:episodeId" element={<PatientDayPage />} />
-        <Route path="prescriptions" element={<NursePrescriptionPage />} />
+      </Route>
+
+      <Route path="/prescriptions">
+        <Route path="doctor" element={
+          <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <PrescriptionPage />
+          </Guard>
+        } />
+        <Route path="doctor/:id" element={
+          <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <PrescriptionDetailPage />
+          </Guard>
+        } />
+        <Route path="nurse" element={
+          <Guard roles={['NURSE']}>
+            <NursePrescriptionPage />
+          </Guard>
+        } />
       </Route>
 
       <Route path="/admin" element={

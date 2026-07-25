@@ -33,7 +33,8 @@ public class AuthController {
         String token = jwtTokenProvider.generateToken(
                 response.getBody().getLogin(),
                 response.getBody().getRole(),
-                response.getBody().getUserId());
+                response.getBody().getUserId(),
+                response.getBody().getPermissions());
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
                 .httpOnly(true)
                 .secure(request.isSecure())

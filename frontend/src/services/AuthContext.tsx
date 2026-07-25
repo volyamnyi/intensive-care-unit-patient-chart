@@ -12,6 +12,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   hasRole: (...roles: string[]) => boolean;
+  hasPermission: (permission: string) => boolean;
+  selectApp: (app: 'icu' | 'prescriptions') => void;
+  clearApp: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -30,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     userApi.getMe()
-      .then((res) => setUser(res.data))
+      .then((res) => setUser((prev) => ({ ...res.data, permissions: '', app: (prev?.app ?? null) })))
       .catch(() => {
         localStorage.removeItem(SESSION_FLAG);
         setUser(null);
@@ -40,9 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     const res = await authApi.login(data);
-    const { userId, login: userName, fullName, role, email } = res.data;
+    const { userId, login: userName, fullName, role, email, permissions } = res.data;
     localStorage.setItem(SESSION_FLAG, '1');
-    setUser({ id: userId, login: userName, fullName, role: role as User['role'], email, specialityCode: '', specialityName: '', phone: '' });
+    setUser({
+      id: userId, login: userName, fullName, role: role as User['role'], email,
+      specialityCode: '', specialityName: '', phone: '',
+      permissions: permissions ?? '', app: null,
+    });
   };
 
   const logout = () => {
@@ -55,8 +62,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user ? roles.includes(user.role) : false;
   };
 
+  const hasPermission = (permission: string) => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.split(',').some((p) => p.trim().toUpperCase() === permission.toUpperCase());
+  };
+
+  const selectApp = (app: 'icu' | 'prescriptions') => {
+    setUser((prev) => prev ? { ...prev, app } : null);
+  };
+
+  const clearApp = () => {
+    setUser((prev) => prev ? { ...prev, app: null } : null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading, hasRole }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading, hasRole, hasPermission, selectApp, clearApp }}>
       {children}
     </AuthContext.Provider>
   );

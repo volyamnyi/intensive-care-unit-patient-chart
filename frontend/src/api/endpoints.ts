@@ -176,6 +176,16 @@ export const auditApi = {
     client.get<AuditLog>(`/audit/${id}`),
 };
 
+export const adminApi = {
+  getUsers: () => client.get<User[]>('/admin/users'),
+  getUser: (id: number) => client.get<User>(`/admin/users/${id}`),
+  updateRole: (id: number, role: string) => client.put<User>(`/admin/users/${id}/role`, { role }),
+  updatePermissions: (id: number, action: 'add' | 'remove', permission: string) =>
+    client.put<User>(`/admin/users/${id}/permissions`, { action, permission }),
+  deleteUser: (id: number) => client.delete(`/admin/users/${id}`),
+  getStats: () => client.get<Record<string, number>>('/admin/stats'),
+};
+
 export const prescriptionApi = {
   getByPatient: (patientId: number) =>
     client.get<PrescriptionList[]>('/prescriptions', { params: { patientId } }),

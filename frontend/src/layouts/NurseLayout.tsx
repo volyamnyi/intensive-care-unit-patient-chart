@@ -42,10 +42,10 @@ export default function NurseLayout() {
             Пацієнти
           </Button>
           <Button
-            component={RouterLink} to="/nurse/prescriptions"
+            component={RouterLink} to="/select"
             sx={{ color: theme.palette.text.secondary, mr: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 600, fontSize: 13, borderRadius: 50, px: 2, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }}
           >
-            Призначення
+            Додатки
           </Button>
 
           <IconButton

@@ -57,8 +57,34 @@ public class User {
     @Column(nullable = false)
     Integer version;
 
+    @Column(name = "permissions", length = 500)
+    String permissions;
+
     @Column(name = "is_deleted")
     Boolean deleted = false;
+
+    public boolean hasPermission(String permission) {
+        if (permissions == null || permissions.isBlank()) return false;
+        for (String p : permissions.split(",")) {
+            if (p.trim().equalsIgnoreCase(permission)) return true;
+        }
+        return false;
+    }
+
+    public void addPermission(String permission) {
+        if (permissions == null || permissions.isBlank()) {
+            permissions = permission;
+        } else if (!hasPermission(permission)) {
+            permissions += "," + permission;
+        }
+    }
+
+    public void removePermission(String permission) {
+        if (permissions == null) return;
+        var parts = new java.util.ArrayList<>(java.util.Arrays.asList(permissions.split(",")));
+        parts.removeIf(p -> p.trim().equalsIgnoreCase(permission));
+        permissions = String.join(",", parts);
+    }
 
     @PrePersist
     protected void onCreate() {

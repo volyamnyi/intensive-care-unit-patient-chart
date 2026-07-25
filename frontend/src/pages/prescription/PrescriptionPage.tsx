@@ -46,7 +46,7 @@ export default function PrescriptionPage() {
     setError(null);
     try {
       const res = await prescriptionApi.create({ patientId: String(patientId) });
-      navigate(`/doctor/prescription/${res.data.id}`);
+      navigate(`/prescriptions/doctor/${res.data.id}`);
     } catch (err) {
       setError(getErrorMessage(err, 'Не вдалося створити листок призначень'));
     } finally {
@@ -81,7 +81,7 @@ export default function PrescriptionPage() {
       ) : (
         <PrescriptionTable
           prescriptions={prescriptions}
-          onSelect={(p) => navigate(`/doctor/prescription/${p.id}`)}
+          onSelect={(p) => navigate(`/prescriptions/doctor/${p.id}`)}
         />
       )}
     </Box>

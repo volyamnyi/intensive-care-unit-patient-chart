@@ -7,6 +7,9 @@ export interface User {
   specialityCode: string;
   specialityName: string;
   phone: string;
+  permissions: string;
+  app: 'icu' | 'prescriptions' | null;
+  deleted?: boolean;
 }
 
 export interface PatientDto {
