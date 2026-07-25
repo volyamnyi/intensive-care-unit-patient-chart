@@ -427,11 +427,14 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
+  token: string;
   userId: number;
   login: string;
   fullName: string;
   role: string;
   email: string;
+  permissions: string;
+}
 }
 
 export interface DepartmentStats {
