@@ -32,6 +32,7 @@
 - **Unvalidated fields fixed**: Added `ClinicalConstants` for `PAIN_SCORE` (0–10), `ETCO2` (0–100), `FIO2` (0–1.0), `CVP` (0–30). Added `@Min`/`@Max`/`@DecimalMin`/`@DecimalMax` on entity fields + runtime checks in `validateClinicalRanges()`. Same annotations added to both DTOs.
 - **PatientDayPage.tsx fixed**: `.catch(() => {})` → `.catch((err) => { console.warn('Failed to load episode:', err); })`
 - **`setLoading(true)` imbalance** — determined NOT a bug: guard is at the top of the effect, `setLoading(true)` runs only when `episodeId` is truthy, so no spinner-hanging issue.
+- **3 failing PatientDayPage tests fixed**: Test mock `useAuth()` returned a new `user` object ref on every render, causing `useEffect([episodeId, user])` to refire with `setLoading(true)` — moved to stable `TEST_USER` constant with `as const`.
 - **5 GitHub issues created** (#8–#12) tracking DTO gap, unvalidated fields, missing tests, silent catch, seed encoding
 
 ### Still Pending

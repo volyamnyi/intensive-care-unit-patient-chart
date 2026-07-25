@@ -72,9 +72,11 @@ vi.mock('../../api/endpoints', () => ({
   },
 }));
 
+const TEST_USER = { id: 1, login: 'doctor1', fullName: 'Доктор', role: 'DOCTOR', email: '' } as const;
+
 vi.mock('../../services/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 1, login: 'doctor1', fullName: 'Доктор', role: 'DOCTOR', email: '' },
+    user: TEST_USER,
     token: 'mock-token',
     isAuthenticated: true,
     hasRole: (...roles: string[]) => roles.includes('DOCTOR'),
