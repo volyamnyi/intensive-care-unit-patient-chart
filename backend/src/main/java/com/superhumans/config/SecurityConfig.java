@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
                         // Episode management
                         .requestMatchers(HttpMethod.POST, "/api/episodes").hasAnyRole(PRESCRIBER_ROLES)
                         .requestMatchers("/api/episodes/**").hasAnyRole(CLINICAL_ROLES)

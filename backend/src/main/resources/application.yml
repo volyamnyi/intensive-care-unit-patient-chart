@@ -56,6 +56,14 @@ app:
     signing-window-start: 0
     signing-window-end: 23
 
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+
 logging:
   level:
     com.superhumans: DEBUG
@@ -69,6 +77,12 @@ spring:
   config:
     activate:
       on-profile: prod
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
 
 server:
   ssl:

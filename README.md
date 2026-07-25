@@ -197,6 +197,16 @@ cd backend && mvn spring-boot:run
 cd frontend && npm run dev
 ```
 
+### API Documentation (Swagger UI)
+
+Once the backend is running, access the interactive API documentation:
+
+- **Swagger UI**: http://localhost:8085/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:8085/api-docs
+- **OpenAPI YAML**: http://localhost:8085/api-docs.yaml
+
+> Note: API docs are disabled in the `prod` profile for security.
+
 ### Production
 
 ```bash
