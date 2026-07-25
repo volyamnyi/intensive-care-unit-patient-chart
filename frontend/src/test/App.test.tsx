@@ -16,6 +16,9 @@ vi.mock('../services/AuthContext', () => ({
     loading: mockLoading,
     logout: vi.fn(),
     hasRole: mockHasRole,
+    hasPermission: () => false,
+    selectApp: () => {},
+    clearApp: () => {},
   }),
 }));
 

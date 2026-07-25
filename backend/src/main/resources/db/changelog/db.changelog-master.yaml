@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: changesets/004-user-migration.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/005-user-permissions.sql
