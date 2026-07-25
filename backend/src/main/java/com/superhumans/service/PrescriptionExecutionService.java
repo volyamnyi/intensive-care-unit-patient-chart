@@ -20,7 +20,7 @@ public class PrescriptionExecutionService {
     private final DrugInteractionService drugInteractionService;
 
     @Transactional
-    public PrescriptionExecution execute(UUID dayPartId, UUID nurseId, String actualDose, boolean requires2p, UUID secondPersonId) {
+    public PrescriptionExecution execute(UUID dayPartId, Long nurseId, String actualDose, boolean requires2p, Long secondPersonId) {
         PrescriptionDayPart part = partRepository.findById(dayPartId)
                 .orElseThrow(() -> new NotFoundException("Day part not found: " + dayPartId));
 

@@ -91,7 +91,7 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionDayPart planDose(UUID dayPartId, String dose, UUID userId, String role) {
+    public PrescriptionDayPart planDose(UUID dayPartId, String dose, Long userId, String role) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setDose(dose);
         part.setIsPlanned(true);
@@ -101,7 +101,7 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionDayPart markCompleted(UUID dayPartId, UUID nurseId) {
+    public PrescriptionDayPart markCompleted(UUID dayPartId, Long nurseId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setIsCompleted(true);
         part.setNurseName(nurseId.toString());
@@ -110,7 +110,7 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionDayPart markCompletedFinished(UUID dayPartId, UUID userId) {
+    public PrescriptionDayPart markCompletedFinished(UUID dayPartId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setIsCompletedFinished(true);
         part.setUpdatedBy(userId);
