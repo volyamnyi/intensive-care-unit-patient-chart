@@ -113,6 +113,20 @@ jobs:
   backend-integration:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: icu_chart_test
+          POSTGRES_USER: icu_user
+          POSTGRES_PASSWORD: icu_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       
@@ -124,8 +138,12 @@ jobs:
           cache: maven
       
       - name: Run integration tests
-        run: mvn test -Pintegration-test
+        run: mvn test -Pintegration-test -Dspring.datasource.url=jdbc:postgresql://localhost:5432/icu_chart_test
         working-directory: backend
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/icu_chart_test
+          SPRING_DATASOURCE_USERNAME: icu_user
+          SPRING_DATASOURCE_PASSWORD: icu_pass
       
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
@@ -155,8 +173,8 @@ jobs:
         run: npm ci
         working-directory: frontend
       
-      - name: Run unit tests with coverage
-        run: npm test -- --coverage
+      - name: Run unit tests
+        run: npm test
         working-directory: frontend
       
       - name: Upload coverage report
