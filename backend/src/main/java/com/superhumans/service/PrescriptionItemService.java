@@ -1,11 +1,10 @@
 package com.superhumans.service;
 
 import com.superhumans.entity.*;
-import com.superhumans.exception.AppException;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -31,7 +30,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionItem addItem(UUID listId, String medicineName, String method, String regime, Long userId) {
         PrescriptionList list = listRepository.findById(listId)
-                .orElseThrow(() -> new AppException("List not found: " + listId, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("List not found: " + listId));
 
         int sortOrder = itemRepository.findByListId(listId).size();
 
@@ -79,7 +78,7 @@ public class PrescriptionItemService {
     @Transactional
     public void removeItem(UUID itemId, Long userId) {
         PrescriptionItem item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new AppException("Item not found: " + itemId, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
         item.setDeleted(true);
         item.setUpdatedBy(userId);
         itemRepository.save(item);
@@ -88,7 +87,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionDayPart getDayPart(UUID dayPartId) {
         return partRepository.findById(dayPartId)
-                .orElseThrow(() -> new AppException("Day part not found: " + dayPartId, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Day part not found: " + dayPartId));
     }
 
     @Transactional

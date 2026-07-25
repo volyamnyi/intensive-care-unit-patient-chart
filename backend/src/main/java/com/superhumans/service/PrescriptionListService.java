@@ -1,11 +1,11 @@
 package com.superhumans.service;
 
 import com.superhumans.entity.PrescriptionList;
-import com.superhumans.exception.AppException;
+import com.superhumans.exception.DocumentLockedException;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.repository.PrescriptionListRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ public class PrescriptionListService {
     @Transactional(readOnly = true)
     public PrescriptionList getById(UUID id) {
         return listRepository.findById(id)
-                .orElseThrow(() -> new AppException("Prescription list not found: " + id, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Prescription list not found: " + id));
     }
 
     @Transactional
@@ -60,10 +60,10 @@ public class PrescriptionListService {
     @Transactional
     public void acquireLock(PrescriptionList list, Long userId) {
         if (list.isFinished()) {
-            throw new AppException("Document is closed and cannot be edited", HttpStatus.CONFLICT);
+            throw new DocumentLockedException("Document is closed and cannot be edited");
         }
         if (list.isEditing() && !list.getEditingUserId().equals(userId)) {
-            throw new AppException("Document is being edited by another user", HttpStatus.CONFLICT);
+            throw new DocumentLockedException("Document is being edited by another user");
         }
         list.setEditingUserId(userId);
         list.setEditingStartedAt(LocalDateTime.now());

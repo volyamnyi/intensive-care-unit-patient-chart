@@ -1,11 +1,10 @@
 package com.superhumans.service;
 
 import com.superhumans.entity.*;
-import com.superhumans.exception.AppException;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -23,7 +22,7 @@ public class PrescriptionExecutionService {
     @Transactional
     public PrescriptionExecution execute(UUID dayPartId, UUID nurseId, String actualDose, boolean requires2p, UUID secondPersonId) {
         PrescriptionDayPart part = partRepository.findById(dayPartId)
-                .orElseThrow(() -> new AppException("Day part not found: " + dayPartId, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException("Day part not found: " + dayPartId));
 
         PrescriptionExecution exec = PrescriptionExecution.builder()
                 .dayPart(part)
