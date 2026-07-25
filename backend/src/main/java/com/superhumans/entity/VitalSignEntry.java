@@ -20,7 +20,6 @@ public class VitalSignEntry extends BaseEntity {
     @Column(nullable = false, length = 8)
     String period;
 
-    @Column(precision = 4, scale = 1)
     Double temperature;
 
     @Column(name = "systolic_bp")
