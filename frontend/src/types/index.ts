@@ -435,7 +435,6 @@ export interface LoginResponse {
   email: string;
   permissions: string;
 }
-}
 
 export interface DepartmentStats {
   activePatients: number;
