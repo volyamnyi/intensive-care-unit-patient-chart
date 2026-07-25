@@ -10,6 +10,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Generic REST client for MIS API.
+ * All calls go to POST /api/run with method name + parameters.
+ * <p>
+ * <b>POLICY: ICU Chart is READ-ONLY client of MIS.</b>
+ * Only read-methods (spzIB*Search, spzIB*Details, spzIB*Dictionary) are allowed.
+ * Write methods (spzIB*Save, spzIB*Create, etc.) MUST NEVER be called via this client.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor

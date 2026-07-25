@@ -39,6 +39,28 @@ All issues from the 2026-07-25 exploratory testing + Model QA audit are now reso
 - 2026-07-22: Controller tests fixed (106/106). BYTEA column fix. Seed data day_number swap. Checkstyle.
 - 2026-07-21: PDF layout (003-15/о) corrected. Two-column layout. Autosave. DayNumber ASC sorting.
 
+## MIS Data Policy (DO NOT VIOLATE)
+
+**The ICU Chart module is a READ-ONLY client of MIS.** Only data retrieval from MIS is permitted. The sole exception is sending generated PDF documents to the patient's document repository.
+
+| Operation | Status | MIS method |
+|---|---|---|
+| Search patients | ✅ ALLOWED (read) | `spzIBPatientSearch` |
+| Get patient by ID | ✅ ALLOWED (read) | `spzIBPatientSearch` |
+| Get hospitalization / schedule | ✅ ALLOWED (read) | `spzIBPatientScheduleList` |
+| Get user profile | ✅ ALLOWED (read) | `spzIBUserDetails` |
+| Get department users | ✅ ALLOWED (read) | `spzIBUserDetails` |
+| Get departments | ✅ ALLOWED (read) | `spzIBCompanyDetails` |
+| Get dictionaries | ✅ ALLOWED (read) | `spzIB*Dictionary` |
+| Send PDF to MIS | ✅ ALLOWED (exception) | `sendPdf()` (transfers immutable PDF, no record modification) |
+| Create patient | ❌ FORBIDDEN | `spzIBPatientCreate` — must never be called |
+| Create schedule/appointment | ❌ FORBIDDEN | `spzIBScheduleCreate` — must never be called |
+| Save agent/insurance | ❌ FORBIDDEN | `spzIBAgentSave` — must never be called |
+| Save institution/venue | ❌ FORBIDDEN | `spzIBInstitutionSave` — must never be called |
+| Any other MIS mutation | ❌ FORBIDDEN | All `*Save`, `*Create`, `*Update`, `*Delete` methods |
+
+**Rule:** The `MisApiClient` only supports GET-style calls to `/api/run`. Any MIS write endpoint must never be implemented or called. Violating this policy will corrupt MIS data integrity.
+
 ## Architecture
 
 ```
