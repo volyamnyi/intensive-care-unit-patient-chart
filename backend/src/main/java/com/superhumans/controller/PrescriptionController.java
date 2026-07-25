@@ -73,17 +73,17 @@ public class PrescriptionController {
 
     @PutMapping("/day-parts/{dayPartId}/plan")
     public PrescriptionDayPartResponse planDose(@PathVariable UUID dayPartId, @Valid @RequestBody PrescriptionDoseRequest req) {
-        return toPartResponse(itemService.planDose(dayPartId, req.getDose(), UUID.randomUUID(), "DOCTOR"));
+        return toPartResponse(itemService.planDose(dayPartId, req.getDose(), 0L, "DOCTOR"));
     }
 
     @PutMapping("/day-parts/{dayPartId}/complete")
     public PrescriptionDayPartResponse completeDose(@PathVariable UUID dayPartId) {
-        return toPartResponse(itemService.markCompleted(dayPartId, UUID.randomUUID()));
+        return toPartResponse(itemService.markCompleted(dayPartId, 0L));
     }
 
     @PostMapping("/day-parts/{dayPartId}/execute")
     public void executeDose(@PathVariable UUID dayPartId, @Valid @RequestBody PrescriptionExecuteRequest req) {
-        executionService.execute(dayPartId, UUID.randomUUID(), req.getActualDose(), req.isRequires2pAuth(), req.getSecondPersonId());
+        executionService.execute(dayPartId, 0L, req.getActualDose(), req.isRequires2pAuth(), req.getSecondPersonId());
     }
 
     @GetMapping("/{listId}/vital-signs")

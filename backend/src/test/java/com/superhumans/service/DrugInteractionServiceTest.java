@@ -58,6 +58,8 @@ class DrugInteractionServiceTest {
                 .ptgCodeA("1").ptgCodeB("2")
                 .severity("WARNING").description("test")
                 .build();
+        rule.setCreatedBy(0L);
+        rule.setUpdatedBy(0L);
         when(ruleRepository.findConflictsForPtgCode("1")).thenReturn(List.of(rule));
         when(ruleRepository.findConflictsForPtgCode("2")).thenReturn(List.of(rule));
 

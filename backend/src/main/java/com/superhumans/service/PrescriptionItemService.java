@@ -41,36 +41,35 @@ public class PrescriptionItemService {
                 .regime(regime)
                 .status("Active")
                 .sortOrder(sortOrder)
-                .createdBy(userId)
-                .updatedBy(userId)
                 .build();
+        item.setCreatedBy(userId);
+        item.setUpdatedBy(userId);
         item = itemRepository.save(item);
 
-        // Create 21-day schedule starting from today
         LocalDate startDate = LocalDate.now();
         for (int i = 0; i < 21; i++) {
             PrescriptionItemDay day = PrescriptionItemDay.builder()
                     .item(item)
                     .dayDate(startDate.plusDays(i))
-                    .createdBy(userId)
-                    .updatedBy(userId)
                     .build();
+            day.setCreatedBy(userId);
+            day.setUpdatedBy(userId);
             day = dayRepository.save(day);
 
             for (String period : List.of("morning", "day", "evening", "night")) {
-                partRepository.save(PrescriptionDayPart.builder()
+                PrescriptionDayPart part = PrescriptionDayPart.builder()
                         .day(day)
                         .period(period)
                         .isPlanned(false)
                         .isPlannedFinished(false)
                         .isCompleted(false)
                         .isCompletedFinished(false)
-                        .createdBy(userId)
-                        .updatedBy(userId)
-                        .build());
+                        .build();
+                part.setCreatedBy(userId);
+                part.setUpdatedBy(userId);
+                partRepository.save(part);
             }
         }
-
         log.info("Prescription item added: id={}, medicine={}, 21 days created", item.getId(), medicineName);
         return item;
     }

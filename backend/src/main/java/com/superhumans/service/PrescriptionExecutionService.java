@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -26,18 +25,17 @@ public class PrescriptionExecutionService {
 
         PrescriptionExecution exec = PrescriptionExecution.builder()
                 .dayPart(part)
-                .executedBy(nurseId)
                 .executedAt(LocalDateTime.now())
                 .actualDose(actualDose)
                 .status("Completed")
                 .requires2pAuth(requires2p)
                 .secondPersonId(secondPersonId)
-                .createdBy(nurseId)
-                .updatedBy(nurseId)
                 .build();
+        exec.setCreatedBy(nurseId);
+        exec.setUpdatedBy(nurseId);
+        exec.setExecutedBy(nurseId);
         exec = executionRepository.save(exec);
 
-        // Mark dose as completed in the day part
         part.setIsCompleted(true);
         part.setNurseName(nurseId.toString());
         if (secondPersonId != null) {

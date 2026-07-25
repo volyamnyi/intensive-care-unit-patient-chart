@@ -37,9 +37,9 @@ public class PrescriptionListService {
                 .patientId(patientId)
                 .documentName("Листок лікарських призначень")
                 .status("Saved")
-                .createdBy(userId)
-                .updatedBy(userId)
                 .build();
+        list.setCreatedBy(userId);
+        list.setUpdatedBy(userId);
         list = listRepository.save(list);
         log.info("Prescription list created: id={}, patientId={}", list.getId(), patientId);
         return list;

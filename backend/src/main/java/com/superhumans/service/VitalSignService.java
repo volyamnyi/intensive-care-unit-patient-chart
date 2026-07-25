@@ -28,32 +28,31 @@ public class VitalSignService {
                             .orElseThrow();
                     VitalSignList vitalList = VitalSignList.builder()
                             .prescriptionList(list)
-                            .createdBy(userId)
-                            .updatedBy(userId)
                             .build();
+                    vitalList.setCreatedBy(userId);
+                    vitalList.setUpdatedBy(userId);
                     vitalList = vitalListRepository.save(vitalList);
 
-                    // Create 21-day skeleton
                     LocalDate start = LocalDate.now();
                     for (int i = 0; i < 21; i++) {
                         VitalSignDay day = VitalSignDay.builder()
                                 .vitalList(vitalList)
                                 .dayDate(start.plusDays(i))
-                                .createdBy(userId)
-                                .updatedBy(userId)
                                 .build();
+                        day.setCreatedBy(userId);
+                        day.setUpdatedBy(userId);
                         day = vitalDayRepository.save(day);
 
                         for (String period : List.of("morning", "evening")) {
-                            vitalEntryRepository.save(VitalSignEntry.builder()
+                            VitalSignEntry entry = VitalSignEntry.builder()
                                     .day(day)
                                     .period(period)
-                                    .createdBy(userId)
-                                    .updatedBy(userId)
-                                    .build());
+                                    .build();
+                            entry.setCreatedBy(userId);
+                            entry.setUpdatedBy(userId);
+                            vitalEntryRepository.save(entry);
                         }
                     }
-                    log.info("Vital sign list created: id={}, prescriptionListId={}", vitalList.getId(), prescriptionListId);
                     return vitalList;
                 });
     }
@@ -70,8 +69,7 @@ public class VitalSignService {
 
     @Transactional
     public VitalSignEntry updateEntry(UUID entryId, VitalSignEntry update, Long userId) {
-        VitalSignEntry entry = vitalEntryRepository.findById(entryId)
-                .orElseThrow();
+        VitalSignEntry entry = vitalEntryRepository.findById(entryId).orElseThrow();
         entry.setTemperature(update.getTemperature());
         entry.setSystolicBp(update.getSystolicBp());
         entry.setDiastolicBp(update.getDiastolicBp());
