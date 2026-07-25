@@ -26,6 +26,10 @@ public class JwtTokenProvider {
         this.expirationMs = expirationMs;
     }
 
+    public String generateToken(String login, String role, Long userId) {
+        return generateToken(login, role, userId, null);
+    }
+
     public String generateToken(String login, String role, Long userId, String permissions) {
         Date now = new Date();
         return Jwts.builder()
