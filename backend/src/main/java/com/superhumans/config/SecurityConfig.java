@@ -82,6 +82,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/prescriptions/items/*").hasAnyRole(PRESCRIBER_ROLES)
                         .requestMatchers(HttpMethod.DELETE, "/api/prescriptions/*").hasAnyRole(PRESCRIBER_ROLES)
                         .requestMatchers("/api/prescriptions/**").hasAnyRole(CLINICAL_ROLES)
+                        .requestMatchers("/api/vital-signs/**").hasAnyRole(CLINICAL_ROLES)
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

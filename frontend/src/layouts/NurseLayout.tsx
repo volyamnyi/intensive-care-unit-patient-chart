@@ -1,5 +1,5 @@
-import { Outlet, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Box, Container, IconButton, Menu, MenuItem, useTheme } from '@mui/material';
+import { Outlet, useNavigate, Link as RouterLink } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Box, Container, IconButton, Menu, MenuItem, Button, useTheme } from '@mui/material';
 import { AccountCircle, DarkMode, LightMode } from '@mui/icons-material';
 import { useState } from 'react';
 import { useAuth } from '../services/AuthContext';
@@ -34,6 +34,19 @@ export default function NurseLayout() {
               </Typography>
             </Box>
           </Box>
+
+          <Button
+            component={RouterLink} to="/nurse"
+            sx={{ color: theme.palette.text.secondary, mr: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 600, fontSize: 13, borderRadius: 50, px: 2, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }}
+          >
+            Пацієнти
+          </Button>
+          <Button
+            component={RouterLink} to="/nurse/prescriptions"
+            sx={{ color: theme.palette.text.secondary, mr: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 600, fontSize: 13, borderRadius: 50, px: 2, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }}
+          >
+            Призначення
+          </Button>
 
           <IconButton
             aria-label="Переключити тему"

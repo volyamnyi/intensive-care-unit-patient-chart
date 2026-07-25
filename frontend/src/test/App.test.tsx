@@ -106,6 +106,18 @@ vi.mock('../pages/admin/AdminPage', () => ({
   default: () => <div>Admin Page</div>,
 }));
 
+vi.mock('../pages/prescription/PrescriptionPage', () => ({
+  default: () => <div>Prescription Page</div>,
+}));
+
+vi.mock('../pages/prescription/PrescriptionDetailPage', () => ({
+  default: () => <div>Prescription Detail Page</div>,
+}));
+
+vi.mock('../pages/prescription/NursePrescriptionPage', () => ({
+  default: () => <div>Nurse Prescription Page</div>,
+}));
+
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();

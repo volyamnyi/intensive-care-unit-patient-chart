@@ -2,6 +2,9 @@ package com.superhumans.controller;
 
 import com.superhumans.dto.*;
 import com.superhumans.entity.*;
+import com.superhumans.mis.MisService;
+import com.superhumans.mis.dto.AllergyMisDTO;
+import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ public class PrescriptionController {
     private final PrescriptionItemService itemService;
     private final PrescriptionExecutionService executionService;
     private final VitalSignService vitalSignService;
+    private final MisService misService;
 
     @GetMapping
     public List<PrescriptionListResponse> getByPatient(@RequestParam Long patientId) {
@@ -83,6 +87,20 @@ public class PrescriptionController {
         executionService.execute(dayPartId, UUID.randomUUID(), req.getActualDose(), req.isRequires2pAuth(), req.getSecondPersonId());
     }
 
+    @GetMapping("/allergies")
+    public List<AllergyResponse> getAllergies(@RequestParam Long patientId) {
+        return misService.getPatientAllergies(patientId).stream()
+                .map(this::toAllergyResponse)
+                .toList();
+    }
+
+    @GetMapping("/medicine-catalog")
+    public List<MedicineCatalogResponse> searchMedicineCatalog(@RequestParam(required = false) String keyword) {
+        return misService.searchMedicineCatalog(keyword == null ? "" : keyword).stream()
+                .map(this::toMedicineResponse)
+                .toList();
+    }
+
     private PrescriptionListResponse toResponse(PrescriptionList l) {
         return PrescriptionListResponse.builder()
                 .id(l.getId()).patientId(l.getPatientId())
@@ -106,5 +124,24 @@ public class PrescriptionController {
                 .isCompleted(p.getIsCompleted()).isCompletedFinished(p.getIsCompletedFinished())
                 .doctorName(p.getDoctorName()).nurseName(p.getNurseName())
                 .build();
+    }
+
+    private AllergyResponse toAllergyResponse(AllergyMisDTO dto) {
+        return new AllergyResponse(
+                dto.getPatientId() + "-" + dto.getAllergenName(),
+                dto.getPatientId(),
+                dto.getAllergenName(),
+                dto.getSourceDocumentId()
+        );
+    }
+
+    private MedicineCatalogResponse toMedicineResponse(MedicineMisDTO dto) {
+        return new MedicineCatalogResponse(
+                dto.getId(),
+                dto.getName(),
+                dto.getCategoryRef(),
+                dto.getPtgCode(),
+                false
+        );
     }
 }

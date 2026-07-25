@@ -80,4 +80,22 @@ public class VitalSignService {
         entry.setUpdatedBy(0L);
         return vitalEntryRepository.save(entry);
     }
+
+    @Transactional
+    public VitalSignEntry saveNextEntry(UUID prescriptionListId, VitalSignEntry update) {
+        VitalSignList list = getOrCreate(prescriptionListId);
+        List<VitalSignDay> days = getDays(list.getId());
+        for (VitalSignDay day : days) {
+            List<VitalSignEntry> entries = getEntries(day.getId());
+            for (VitalSignEntry entry : entries) {
+                if (entry.getTemperature() == null && entry.getSystolicBp() == null
+                        && entry.getDiastolicBp() == null && entry.getSpo2() == null
+                        && entry.getPulse() == null && entry.getStool() == null
+                        && entry.getPainScore() == null) {
+                    return updateEntry(entry.getId(), update);
+                }
+            }
+        }
+        throw new IllegalStateException("No empty vital sign entry slot available");
+    }
 }

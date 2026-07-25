@@ -13,6 +13,9 @@ import PatientDayPage from './pages/doctor/PatientDayPage';
 import DepartmentDashboardPage from './pages/doctor/DepartmentDashboardPage';
 import NurseDashboardPage from './pages/nurse/NurseDashboardPage';
 import AdminPage from './pages/admin/AdminPage';
+import PrescriptionPage from './pages/prescription/PrescriptionPage';
+import PrescriptionDetailPage from './pages/prescription/PrescriptionDetailPage';
+import NursePrescriptionPage from './pages/prescription/NursePrescriptionPage';
 
 function Guard({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { isAuthenticated, hasRole, user, loading } = useAuth();
@@ -104,6 +107,8 @@ function AppRoutes() {
         } />
         <Route path="create-card" element={<CreateCardPage />} />
         <Route path="episode/:episodeId" element={<PatientDayPage />} />
+        <Route path="prescriptions" element={<PrescriptionPage />} />
+        <Route path="prescription/:id" element={<PrescriptionDetailPage />} />
       </Route>
 
       <Route path="/nurse" element={
@@ -113,6 +118,7 @@ function AppRoutes() {
       }>
         <Route index element={<NurseDashboardPage />} />
         <Route path="episode/:episodeId" element={<PatientDayPage />} />
+        <Route path="prescriptions" element={<NursePrescriptionPage />} />
       </Route>
 
       <Route path="/admin" element={

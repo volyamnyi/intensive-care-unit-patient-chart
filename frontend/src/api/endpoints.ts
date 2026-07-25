@@ -14,6 +14,11 @@ import type {
   LabResult, LabResultCreateRequest,
   VentilationSettings, VentilationCreateRequest,
   PatientStateAssessment, PatientStateCreateRequest,
+  PrescriptionList, PrescriptionListCreateRequest,
+  PrescriptionItem, PrescriptionItemAddRequest,
+  PrescriptionDayPart, PrescriptionExecutionCreateRequest,
+  MedicineCatalogItem, AllergyItem,
+  VitalSignEntry, VitalSignDay, VitalSignEntryCreateRequest,
 } from '../types';
 
 export const authApi = {
@@ -171,4 +176,41 @@ export const auditApi = {
     client.get<AuditLog>(`/audit/${id}`),
 };
 
+export const prescriptionApi = {
+  getByPatient: (patientId: number) =>
+    client.get<PrescriptionList[]>('/prescriptions', { params: { patientId } }),
+  getById: (id: string) =>
+    client.get<PrescriptionList>(`/prescriptions/${id}`),
+  create: (data: PrescriptionListCreateRequest) =>
+    client.post<PrescriptionList>('/prescriptions', data),
+  delete: (id: string) =>
+    client.delete(`/prescriptions/${id}`),
+  close: (id: string) =>
+    client.post<PrescriptionList>(`/prescriptions/${id}/close`),
+  getItems: (listId: string) =>
+    client.get<PrescriptionItem[]>(`/prescriptions/${listId}/items`),
+  addItem: (listId: string, data: PrescriptionItemAddRequest) =>
+    client.post<PrescriptionItem>(`/prescriptions/${listId}/items`, data),
+  removeItem: (itemId: string) =>
+    client.delete(`/prescriptions/items/${itemId}`),
+  planDose: (dayPartId: string, dose: string) =>
+    client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/plan`, { dose }),
+  completeDose: (dayPartId: string) =>
+    client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/complete`),
+  executeDose: (dayPartId: string, data: PrescriptionExecutionCreateRequest) =>
+    client.post<void>(`/prescriptions/day-parts/${dayPartId}/execute`, data),
+  getAllergies: (patientId: number) =>
+    client.get<AllergyItem[]>('/prescriptions/allergies', { params: { patientId } }),
+  getMedicineCatalog: (keyword?: string, signal?: AbortSignal) =>
+    client.get<MedicineCatalogItem[]>('/prescriptions/medicine-catalog', { params: { keyword }, signal }),
+};
+
+export const vitalSignApi = {
+  getByPrescriptionList: (prescriptionListId: string) =>
+    client.get<VitalSignDay[]>(`/vital-signs`, { params: { prescriptionListId } }),
+  getEntries: (dayId: string) =>
+    client.get<VitalSignEntry[]>(`/vital-signs/days/${dayId}/entries`),
+  create: (data: VitalSignEntryCreateRequest) =>
+    client.post<VitalSignEntry>('/vital-signs', data),
+};
 

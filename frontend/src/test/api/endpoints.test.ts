@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   authApi, patientApi, episodeApi, clinicalDayApi, hourlyRecordApi,
   medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi,
-  fluidBalanceApi, pdfApi, userApi, auditApi,
+  fluidBalanceApi, pdfApi, userApi, auditApi, prescriptionApi, vitalSignApi,
 } from '../../api/endpoints';
 
 const { mockClient } = vi.hoisted(() => ({
@@ -10,6 +10,8 @@ const { mockClient } = vi.hoisted(() => ({
     post: vi.fn(),
     get: vi.fn(),
     patch: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -140,5 +142,74 @@ describe('auditApi', () => {
   it('list calls /audit with params', () => {
     auditApi.list({ page: 0, size: 10 });
     expect(mockClient.get).toHaveBeenCalledWith('/audit', { params: { page: 0, size: 10 } });
+  });
+});
+
+describe('prescriptionApi', () => {
+  it('getByPatient calls /prescriptions with patientId', () => {
+    prescriptionApi.getByPatient(1001);
+    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions', { params: { patientId: 1001 } });
+  });
+
+  it('create posts to /prescriptions', () => {
+    prescriptionApi.create({ patientId: '1001' });
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions', { patientId: '1001' });
+  });
+
+  it('getItems calls /prescriptions/:id/items', () => {
+    prescriptionApi.getItems('list-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/list-1/items');
+  });
+
+  it('addItem posts to /prescriptions/:id/items', () => {
+    prescriptionApi.addItem('list-1', { medicineName: 'Penicillin' });
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/list-1/items', { medicineName: 'Penicillin' });
+  });
+
+  it('removeItem deletes /prescriptions/items/:id', () => {
+    prescriptionApi.removeItem('item-1');
+    expect(mockClient.delete).toHaveBeenCalledWith('/prescriptions/items/item-1');
+  });
+
+  it('close posts to /prescriptions/:id/close', () => {
+    prescriptionApi.close('list-1');
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/list-1/close');
+  });
+
+  it('planDose puts to /prescriptions/day-parts/:id/plan', () => {
+    prescriptionApi.planDose('part-1', '10mg');
+    expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/plan', { dose: '10mg' });
+  });
+
+  it('completeDose puts to /prescriptions/day-parts/:id/complete', () => {
+    prescriptionApi.completeDose('part-1');
+    expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/complete');
+  });
+
+  it('executeDose posts to /prescriptions/day-parts/:id/execute', () => {
+    prescriptionApi.executeDose('part-1', { actualDose: '5mg', requires2pAuth: false });
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/execute', { actualDose: '5mg', requires2pAuth: false });
+  });
+
+  it('getAllergies calls /prescriptions/allergies', () => {
+    prescriptionApi.getAllergies(1001);
+    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/allergies', { params: { patientId: 1001 } });
+  });
+
+  it('getMedicineCatalog calls /prescriptions/medicine-catalog', () => {
+    prescriptionApi.getMedicineCatalog('Penicillin');
+    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/medicine-catalog', { params: { keyword: 'Penicillin' }, signal: undefined });
+  });
+});
+
+describe('vitalSignApi', () => {
+  it('getByPrescriptionList calls /vital-signs', () => {
+    vitalSignApi.getByPrescriptionList('list-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/vital-signs', { params: { prescriptionListId: 'list-1' } });
+  });
+
+  it('create posts to /vital-signs', () => {
+    vitalSignApi.create({ pulse: 80 });
+    expect(mockClient.post).toHaveBeenCalledWith('/vital-signs', { pulse: 80 });
   });
 });
