@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: changesets/002-add-missing-columns.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/003-prescription-module.sql

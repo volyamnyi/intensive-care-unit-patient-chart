@@ -39,4 +39,16 @@ public interface MisService {
      * The PDF is immutable — no existing MIS records are modified.
      */
     boolean sendPdf(UUID clinicalDayId, byte[] pdfContent, String fileName, int version);
+
+    /**
+     * Searches medicine catalog from MIS.
+     * Results are cached locally in medicine_catalog_cache table.
+     */
+    List<MedicineMisDTO> searchMedicineCatalog(String keyword);
+
+    /**
+     * Retrieves patient allergies from MIS.
+     * Results are cached locally in allergy_cache table.
+     */
+    List<AllergyMisDTO> getPatientAllergies(Long patientId);
 }

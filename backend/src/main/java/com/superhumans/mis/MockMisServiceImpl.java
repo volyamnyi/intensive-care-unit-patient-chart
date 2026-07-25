@@ -36,12 +36,16 @@ public class MockMisServiceImpl implements MisService {
     final Map<Long, UserMisDTO> users = new LinkedHashMap<>();
     final Map<Long, DepartmentDTO> departments = new LinkedHashMap<>();
     final Map<Long, List<UserMisDTO>> departmentUsers = new LinkedHashMap<>();
+    final List<MedicineMisDTO> medicineCatalog = new ArrayList<>();
+    final Map<Long, List<AllergyMisDTO>> allergyData = new LinkedHashMap<>();
 
     @PostConstruct
     public void init() {
         initPatients();
         initUsers();
         initDepartments();
+        initMedicineCatalog();
+        initAllergies();
     }
 
     void initPatients() {
@@ -255,6 +259,41 @@ public class MockMisServiceImpl implements MisService {
                 users.get(11L), users.get(15L)));
     }
 
+    void initMedicineCatalog() {
+        medicineCatalog.addAll(List.of(
+                new MedicineMisDTO(1L, "Paracetamol", 1, "1"),
+                new MedicineMisDTO(2L, "Ibuprofen", 1, "2"),
+                new MedicineMisDTO(3L, "Morphine", 14, "4"),
+                new MedicineMisDTO(4L, "Fentanyl", 14, "4"),
+                new MedicineMisDTO(5L, "Ceftriaxone", 2, "6"),
+                new MedicineMisDTO(6L, "Metronidazole", 2, "2,3"),
+                new MedicineMisDTO(7L, "Omeprazole", 3, "1"),
+                new MedicineMisDTO(8L, "Heparin", 5, "5"),
+                new MedicineMisDTO(9L, "Norepinephrine", 13, "3"),
+                new MedicineMisDTO(10L, "Dopamine", 13, "3"),
+                new MedicineMisDTO(11L, "NaCl 0.9%", 8, null),
+                new MedicineMisDTO(12L, "Glucose 5%", 8, null),
+                new MedicineMisDTO(13L, "Midazolam", 14, "4"),
+                new MedicineMisDTO(14L, "Propofol", 14, "4"),
+                new MedicineMisDTO(15L, "Dexamethasone", 1, "1"),
+                new MedicineMisDTO(16L, "Insulin", 6, null),
+                new MedicineMisDTO(17L, "Amlodipine", 7, "2"),
+                new MedicineMisDTO(18L, "Metoclopramide", 4, "1"),
+                new MedicineMisDTO(19L, "Ondansetron", 4, "2"),
+                new MedicineMisDTO(20L, "Pantoprazole", 3, "1")
+        ));
+    }
+
+    void initAllergies() {
+        allergyData.put(1001L, List.of(
+                new AllergyMisDTO(1001L, "Penicillin", 100),
+                new AllergyMisDTO(1001L, "Aspirin", 101)
+        ));
+        allergyData.put(1002L, List.of(
+                new AllergyMisDTO(1002L, "Iodine", 200)
+        ));
+    }
+
     Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getCredentials() instanceof Long id) {
@@ -386,5 +425,25 @@ public class MockMisServiceImpl implements MisService {
         checkErrors();
         auditService.logAction("MIS", clinicalDayId, "SEND_PDF", getCurrentUserId());
         return true;
+    }
+
+    @Override
+    public List<MedicineMisDTO> searchMedicineCatalog(String keyword) {
+        checkErrors();
+        auditService.logAction("MIS", null, "SEARCH_MEDICINE_CATALOG", getCurrentUserId());
+        if (keyword == null || keyword.isBlank()) {
+            return medicineCatalog;
+        }
+        String lower = keyword.toLowerCase();
+        return medicineCatalog.stream()
+                .filter(m -> m.getName().toLowerCase().contains(lower))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<AllergyMisDTO> getPatientAllergies(Long patientId) {
+        checkErrors();
+        auditService.logAction("MIS", null, "GET_ALLERGIES", getCurrentUserId());
+        return allergyData.getOrDefault(patientId, List.of());
     }
 }

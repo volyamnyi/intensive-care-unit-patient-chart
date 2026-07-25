@@ -155,6 +155,20 @@ public class WireMockMisServiceImpl implements MisService {
         return true;
     }
 
+    @Override
+    public List<MedicineMisDTO> searchMedicineCatalog(String keyword) {
+        log.info("MEDICINE_CATALOG search via MIS not available with WireMock. Use MockMIS mode.");
+        auditService.logAction("MIS", null, "SEARCH_MEDICINE_CATALOG", getUserId());
+        return List.of();
+    }
+
+    @Override
+    public List<AllergyMisDTO> getPatientAllergies(Long patientId) {
+        log.info("ALLERGY lookup via MIS not available with WireMock. Use MockMIS mode.");
+        auditService.logAction("MIS", null, "GET_ALLERGIES", getUserId());
+        return List.of();
+    }
+
     private Optional<PatientDTO> parsePatient(JsonNode response) {
         List<PatientDTO> patients = parsePatientList(response);
         return patients.isEmpty() ? Optional.empty() : Optional.of(patients.get(0));
