@@ -1,0 +1,5 @@
+export const patientsData = [
+  { id: 1, name: "Name1" },
+  { id: 2, name: "Name2" },
+  { id: 3, nName: "Name3" },
+];
