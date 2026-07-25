@@ -20,7 +20,7 @@ public class PrescriptionExecutionService {
     private final DrugInteractionService drugInteractionService;
 
     @Transactional
-    public PrescriptionExecution execute(UUID dayPartId, Long nurseId, String actualDose, boolean requires2p, Long secondPersonId) {
+    public PrescriptionExecution execute(UUID dayPartId, UUID nurseId, String actualDose, boolean requires2p, UUID secondPersonId) {
         PrescriptionDayPart part = partRepository.findById(dayPartId)
                 .orElseThrow(() -> new NotFoundException("Day part not found: " + dayPartId));
 
@@ -32,8 +32,8 @@ public class PrescriptionExecutionService {
                 .requires2pAuth(requires2p)
                 .secondPersonId(secondPersonId)
                 .build();
-        exec.setCreatedBy(nurseId);
-        exec.setUpdatedBy(nurseId);
+        exec.setCreatedBy(0L);
+        exec.setUpdatedBy(0L);
         exec.setExecutedBy(nurseId);
         exec = executionRepository.save(exec);
 
@@ -42,7 +42,7 @@ public class PrescriptionExecutionService {
         if (secondPersonId != null) {
             part.setNurseName(nurseId + "/2P:" + secondPersonId);
         }
-        part.setUpdatedBy(nurseId);
+        part.setUpdatedBy(0L);
         partRepository.save(part);
 
         log.info("Dose executed: dayPartId={}, nurseId={}, requires2p={}", dayPartId, nurseId, requires2p);

@@ -20,7 +20,6 @@ public class PrescriptionItemService {
     private final PrescriptionItemDayRepository dayRepository;
     private final PrescriptionDayPartRepository partRepository;
     private final PrescriptionListRepository listRepository;
-    private final DrugInteractionService drugInteractionService;
 
     @Transactional(readOnly = true)
     public List<PrescriptionItem> getByList(UUID listId) {
@@ -28,7 +27,7 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionItem addItem(UUID listId, String medicineName, String method, String regime, Long userId) {
+    public PrescriptionItem addItem(UUID listId, String medicineName, String method, String regime) {
         PrescriptionList list = listRepository.findById(listId)
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
 
@@ -42,8 +41,8 @@ public class PrescriptionItemService {
                 .status("Active")
                 .sortOrder(sortOrder)
                 .build();
-        item.setCreatedBy(userId);
-        item.setUpdatedBy(userId);
+        item.setCreatedBy(0L);
+        item.setUpdatedBy(0L);
         item = itemRepository.save(item);
 
         LocalDate startDate = LocalDate.now();
@@ -52,8 +51,8 @@ public class PrescriptionItemService {
                     .item(item)
                     .dayDate(startDate.plusDays(i))
                     .build();
-            day.setCreatedBy(userId);
-            day.setUpdatedBy(userId);
+            day.setCreatedBy(0L);
+            day.setUpdatedBy(0L);
             day = dayRepository.save(day);
 
             for (String period : List.of("morning", "day", "evening", "night")) {
@@ -65,8 +64,8 @@ public class PrescriptionItemService {
                         .isCompleted(false)
                         .isCompletedFinished(false)
                         .build();
-                part.setCreatedBy(userId);
-                part.setUpdatedBy(userId);
+                part.setCreatedBy(0L);
+                part.setUpdatedBy(0L);
                 partRepository.save(part);
             }
         }
@@ -75,11 +74,11 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public void removeItem(UUID itemId, Long userId) {
+    public void removeItem(UUID itemId) {
         PrescriptionItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
         item.setDeleted(true);
-        item.setUpdatedBy(userId);
+        item.setUpdatedBy(0L);
         itemRepository.save(item);
     }
 
@@ -90,39 +89,33 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionDayPart planDose(UUID dayPartId, String dose, Long userId, String role) {
+    public PrescriptionDayPart planDose(UUID dayPartId, String dose, UUID doctorId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setDose(dose);
         part.setIsPlanned(true);
-        part.setDoctorName(userId.toString());
-        part.setUpdatedBy(userId);
+        part.setDoctorName(doctorId.toString());
+        part.setUpdatedBy(0L);
         return partRepository.save(part);
     }
 
     @Transactional
-    public PrescriptionDayPart markCompleted(UUID dayPartId, Long nurseId) {
+    public PrescriptionDayPart markCompleted(UUID dayPartId, UUID nurseId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setIsCompleted(true);
         part.setNurseName(nurseId.toString());
-        part.setUpdatedBy(nurseId);
+        part.setUpdatedBy(0L);
         return partRepository.save(part);
     }
 
     @Transactional
-    public PrescriptionDayPart markCompletedFinished(UUID dayPartId, Long userId) {
+    public PrescriptionDayPart markCompletedFinished(UUID dayPartId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setIsCompletedFinished(true);
-        part.setUpdatedBy(userId);
+        part.setUpdatedBy(0L);
         return partRepository.save(part);
     }
 
-    @Transactional
     public List<PrescriptionItemDay> getDays(UUID itemId) {
         return dayRepository.findByItemIdOrderByDayDateAsc(itemId);
-    }
-
-    @Transactional
-    public List<PrescriptionDayPart> getDayParts(UUID dayId) {
-        return partRepository.findByDayId(dayId);
     }
 }

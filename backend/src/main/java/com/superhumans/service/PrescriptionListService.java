@@ -18,7 +18,6 @@ import java.util.UUID;
 public class PrescriptionListService {
 
     private final PrescriptionListRepository listRepository;
-    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public List<PrescriptionList> getByPatient(Long patientId) {
@@ -32,33 +31,31 @@ public class PrescriptionListService {
     }
 
     @Transactional
-    public PrescriptionList create(Long patientId, Long userId) {
+    public PrescriptionList create(Long patientId) {
         PrescriptionList list = PrescriptionList.builder()
                 .patientId(patientId)
-                .documentName("Листок лікарських призначень")
+                .documentName("\u041B\u0438\u0441\u0442\u043E\u043A \u043B\u0456\u043A\u0430\u0440\u0441\u044C\u043A\u0438\u0445 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u044C")
                 .status("Saved")
                 .build();
-        list.setCreatedBy(userId);
-        list.setUpdatedBy(userId);
+        list.setCreatedBy(0L);
+        list.setUpdatedBy(0L);
         list = listRepository.save(list);
         log.info("Prescription list created: id={}, patientId={}", list.getId(), patientId);
         return list;
     }
 
     @Transactional
-    public PrescriptionList update(UUID id, String documentName, Long userId) {
+    public PrescriptionList update(UUID id, String documentName) {
         PrescriptionList list = getById(id);
-        acquireLock(list, userId);
         if (documentName != null) {
             list.setDocumentName(documentName);
         }
-        list.setUpdatedBy(userId);
-        list = listRepository.save(list);
-        return list;
+        list.setUpdatedBy(0L);
+        return listRepository.save(list);
     }
 
     @Transactional
-    public void acquireLock(PrescriptionList list, Long userId) {
+    public void acquireLock(PrescriptionList list, UUID userId) {
         if (list.isFinished()) {
             throw new DocumentLockedException("Document is closed and cannot be edited");
         }
@@ -71,24 +68,24 @@ public class PrescriptionListService {
     }
 
     @Transactional
-    public void releaseLock(UUID id, Long userId) {
+    public void releaseLock(UUID id, UUID userId) {
         PrescriptionList list = getById(id);
         if (userId.equals(list.getEditingUserId())) {
             list.setEditingUserId(null);
             list.setEditingStartedAt(null);
             list.setStatus("Saved");
-            list.setUpdatedBy(userId);
+            list.setUpdatedBy(0L);
             listRepository.save(list);
         }
     }
 
     @Transactional
-    public void close(UUID id, Long userId) {
+    public void close(UUID id) {
         PrescriptionList list = getById(id);
         list.setStatus("Finished");
         list.setEditingUserId(null);
         list.setEditingStartedAt(null);
-        list.setUpdatedBy(userId);
+        list.setUpdatedBy(0L);
         listRepository.save(list);
         log.info("Prescription list closed: id={}", id);
     }

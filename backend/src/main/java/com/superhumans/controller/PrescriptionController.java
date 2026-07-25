@@ -24,9 +24,7 @@ public class PrescriptionController {
 
     @GetMapping
     public List<PrescriptionListResponse> getByPatient(@RequestParam Long patientId) {
-        return listService.getByPatient(patientId).stream()
-                .map(this::toResponse)
-                .toList();
+        return listService.getByPatient(patientId).stream().map(this::toResponse).toList();
     }
 
     @GetMapping("/{id}")
@@ -37,7 +35,7 @@ public class PrescriptionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PrescriptionListResponse create(@Valid @RequestBody PrescriptionListCreateRequest req) {
-        return toResponse(listService.create(Long.parseLong(req.getPatientId()), 0L));
+        return toResponse(listService.create(Long.parseLong(req.getPatientId())));
     }
 
     @DeleteMapping("/{id}")
@@ -48,48 +46,41 @@ public class PrescriptionController {
 
     @PostMapping("/{id}/close")
     public PrescriptionListResponse close(@PathVariable UUID id) {
-        listService.close(id, 0L);
+        listService.close(id);
         return toResponse(listService.getById(id));
     }
 
     @GetMapping("/{listId}/items")
     public List<PrescriptionItemResponse> getItems(@PathVariable UUID listId) {
-        return itemService.getByList(listId).stream()
-                .map(this::toItemResponse)
-                .toList();
+        return itemService.getByList(listId).stream().map(this::toItemResponse).toList();
     }
 
     @PostMapping("/{listId}/items")
     @ResponseStatus(HttpStatus.CREATED)
     public PrescriptionItemResponse addItem(@PathVariable UUID listId, @Valid @RequestBody PrescriptionItemAddRequest req) {
-        return toItemResponse(itemService.addItem(listId, req.getMedicineName(), req.getMedicineMethod(), req.getRegime(), 0L));
+        return toItemResponse(itemService.addItem(listId, req.getMedicineName(), req.getMedicineMethod(), req.getRegime()));
     }
 
     @DeleteMapping("/items/{itemId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeItem(@PathVariable UUID itemId) {
-        itemService.removeItem(itemId, 0L);
+        itemService.removeItem(itemId);
     }
 
     @PutMapping("/day-parts/{dayPartId}/plan")
     public PrescriptionDayPartResponse planDose(@PathVariable UUID dayPartId, @Valid @RequestBody PrescriptionDoseRequest req) {
-        return toPartResponse(itemService.planDose(dayPartId, req.getDose(), 0L, "DOCTOR"));
+        UUID dummyId = UUID.randomUUID();
+        return toPartResponse(itemService.planDose(dayPartId, req.getDose(), dummyId));
     }
 
     @PutMapping("/day-parts/{dayPartId}/complete")
     public PrescriptionDayPartResponse completeDose(@PathVariable UUID dayPartId) {
-        return toPartResponse(itemService.markCompleted(dayPartId, 0L));
+        return toPartResponse(itemService.markCompleted(dayPartId, UUID.randomUUID()));
     }
 
     @PostMapping("/day-parts/{dayPartId}/execute")
     public void executeDose(@PathVariable UUID dayPartId, @Valid @RequestBody PrescriptionExecuteRequest req) {
-        executionService.execute(dayPartId, 0L, req.getActualDose(), req.isRequires2pAuth(), req.getSecondPersonId());
-    }
-
-    @GetMapping("/{listId}/vital-signs")
-    public List<PrescriptionDayPartResponse> getVitalList(@PathVariable UUID listId) {
-        VitalSignList vs = vitalSignService.getOrCreate(listId, 0L);
-        return vs.getPrescriptionList().getId().equals(listId) ? List.of() : List.of();
+        executionService.execute(dayPartId, UUID.randomUUID(), req.getActualDose(), req.isRequires2pAuth(), req.getSecondPersonId());
     }
 
     private PrescriptionListResponse toResponse(PrescriptionList l) {
