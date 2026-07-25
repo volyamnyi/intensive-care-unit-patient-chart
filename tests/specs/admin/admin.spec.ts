@@ -1,20 +1,21 @@
 import { test, expect } from '../../fixtures/index';
 
 test.describe('Admin Page', () => {
-  test('displays doctors and nurses tables', async ({ page }) => {
+  test('displays administrative panel with users tab', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByText('Користувачі системи')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Лікарі')).toBeVisible();
-    await expect(page.getByText('Медсестри')).toBeVisible();
+    await expect(page.getByText('Адміністративна панель')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Користувачі')).toBeVisible();
+    await expect(page.getByText('Журнал аудиту')).toBeVisible();
+    await expect(page.getByText('Статистика')).toBeVisible();
   });
 
-  test('doctor table shows user details', async ({ page }) => {
+  test('users tab shows doctor user data', async ({ page }) => {
     await page.goto('/admin');
     await expect(page.getByText('doctor1')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('doctor2')).toBeVisible();
   });
 
-  test('nurse table shows user details', async ({ page }) => {
+  test('users tab shows nurse user data', async ({ page }) => {
     await page.goto('/admin');
     await expect(page.getByText('nurse1')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('nurse2')).toBeVisible();

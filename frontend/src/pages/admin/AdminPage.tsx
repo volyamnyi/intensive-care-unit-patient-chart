@@ -94,7 +94,7 @@ export default function AdminPage() {
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button component="a" href="/select" variant="outlined" size="small">Додатки</Button>
-          <IconButton aria-label="Меню" onClick={(e) => setAnchorEl(e.currentTarget)}>
+          <IconButton aria-label="Меню користувача" onClick={(e) => setAnchorEl(e.currentTarget)}>
             <AccountCircle />
           </IconButton>
         </Box>
