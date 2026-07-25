@@ -25,6 +25,15 @@ ON CONFLICT (login) DO UPDATE SET
   speciality_name = EXCLUDED.speciality_name,
   phone = EXCLUDED.phone;
 
+-- Clinical scales seed data
+INSERT INTO clinical_scales (id, name, description, is_automatic, status, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c1111111-1111-1111-1111-111111111101', 'GCS (Глазго)', 'Шкала коми Глазго — оцінка рівня свідомості', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111102', 'RASS', 'Richmond Agitation-Sedation Scale — оцінка рівня седації', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111103', 'SOFA', 'Sequential Organ Failure Assessment — оцінка поліорганної недостатності', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111104', 'APACHE II', 'Acute Physiology And Chronic Health Evaluation II', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0)
+ON CONFLICT (id) DO NOTHING;
+
 -- Reset seed data to prevent data pollution from prior test runs
 -- CASCADE handles all FK-dependent tables (clinical_days, hourly_records, etc.)
 TRUNCATE episodes CASCADE;

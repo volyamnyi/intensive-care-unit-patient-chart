@@ -70,9 +70,11 @@ public class HourlyRecord extends BaseEntity {
     @Column(name = "cvp")
     Double cvp;
 
+    @DecimalMin(ClinicalConstants.URINE_OUTPUT_MIN_STR)
     @Column(name = "urine_output")
     Double urineOutput;
 
+    @DecimalMin(ClinicalConstants.DRAIN_OUTPUT_MIN_STR)
     @Column(name = "drain_output")
     Double drainOutput;
 
@@ -108,6 +110,10 @@ public class HourlyRecord extends BaseEntity {
             throw new IllegalArgumentException("Respiratory rate must be between " + ClinicalConstants.RESPIRATORY_RATE_MIN + " and " + ClinicalConstants.RESPIRATORY_RATE_MAX + " breaths/min");
         if (glucose != null && (glucose < ClinicalConstants.GLUCOSE_MIN || glucose > ClinicalConstants.GLUCOSE_MAX))
             throw new IllegalArgumentException("Glucose must be between " + ClinicalConstants.GLUCOSE_MIN + " and " + ClinicalConstants.GLUCOSE_MAX + " mmol/L");
+        if (urineOutput != null && urineOutput < ClinicalConstants.URINE_OUTPUT_MIN)
+            throw new IllegalArgumentException("Urine output must be at least " + ClinicalConstants.URINE_OUTPUT_MIN);
+        if (drainOutput != null && drainOutput < ClinicalConstants.DRAIN_OUTPUT_MIN)
+            throw new IllegalArgumentException("Drain output must be at least " + ClinicalConstants.DRAIN_OUTPUT_MIN);
     }
 
 }

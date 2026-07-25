@@ -31,6 +31,7 @@ export default function PatientDayPage() {
 
   useEffect(() => {
     if (!episodeId) return;
+    setLoading(true);
     Promise.all([
       episodeApi.getById(episodeId),
       episodeApi.getClinicalDays(episodeId),
@@ -42,6 +43,8 @@ export default function PatientDayPage() {
         ? daysRes.data.find(d => d.status === 'NURSE_SIGNED')
         : daysRes.data.find(d => d.status === 'OPEN' || d.status === 'REOPENED');
       setSelectedDay(target || daysRes.data[0] || null);
+    }).catch(() => {
+      // Episode not found — component renders "Епізод не знайдено" via !episode state
     }).finally(() => setLoading(false));
   }, [episodeId, user]);
 

@@ -29,4 +29,10 @@ public final class ClinicalConstants {
     public static final double GLUCOSE_MAX = 30.0;
     public static final String GLUCOSE_MIN_STR = "1.0";
     public static final String GLUCOSE_MAX_STR = "30.0";
+
+    public static final double URINE_OUTPUT_MIN = 0.0;
+    public static final String URINE_OUTPUT_MIN_STR = "0.0";
+
+    public static final double DRAIN_OUTPUT_MIN = 0.0;
+    public static final String DRAIN_OUTPUT_MIN_STR = "0.0";
 }
