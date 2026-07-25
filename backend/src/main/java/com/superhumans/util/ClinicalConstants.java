@@ -35,4 +35,26 @@ public final class ClinicalConstants {
 
     public static final double DRAIN_OUTPUT_MIN = 0.0;
     public static final String DRAIN_OUTPUT_MIN_STR = "0.0";
+
+    // painScore
+    public static final int PAIN_SCORE_MIN = 0;
+    public static final int PAIN_SCORE_MAX = 10;
+
+    // etco2 (end-tidal CO2, mmHg)
+    public static final double ETCO2_MIN = 0.0;
+    public static final double ETCO2_MAX = 100.0;
+    public static final String ETCO2_MIN_STR = "0.0";
+    public static final String ETCO2_MAX_STR = "100.0";
+
+    // fio2 (fraction of inspired oxygen, 0.21-1.0)
+    public static final double FIO2_MIN = 0.0;
+    public static final double FIO2_MAX = 1.0;
+    public static final String FIO2_MIN_STR = "0.0";
+    public static final String FIO2_MAX_STR = "1.0";
+
+    // cvp (central venous pressure, mmHg)
+    public static final double CVP_MIN = 0.0;
+    public static final double CVP_MAX = 30.0;
+    public static final String CVP_MIN_STR = "0.0";
+    public static final String CVP_MAX_STR = "30.0";
 }

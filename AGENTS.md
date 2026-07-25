@@ -2,15 +2,41 @@
 
 ## Current Session
 
-**CI test failure fixes after sidebar refactor (2026-07-24):**
-- **Backend `LoginResponse.java`** — restored `token` field that was removed during sidebar refactor. `AuthController.java.login()` now sets token on loginResponse before returning. Fixed 21 frontend tests that were silently failing (couldn't read token from login response body).
-- **`sideBar-resize.spec.ts`** — added `.first()` to 3 locators for "Петренко Іван Сергійович" (appears in both sidebar header `<p>` and dashboard heading `<h6>`).
-- **`clinical-day-reopen.spec.ts`** — updated for Paper-based reopen UI (sidebar refactor replaced `<Dialog>` with `<Paper>`).
-- **`vitals.spec.ts`** — removed invalid test "nurse edits a vital sign cell inline" (nurses cannot edit vital signs, only loss rows, by design in `IntensiveCareCard.tsx:104`).
-- **Oxlint warnings cleaned up (9→0)**: `notifyParent` wrapped in `useRef` in `IntensiveCareCard.tsx`, missing `useEffect` deps added in 3 files, fast-refresh export warnings suppressed.
-- **Follow-up CI catch**: `notifyParent` still used in `onError` prop on line 594 → changed to `notifyParentRef.current`. Frontend build now passes CI.
-- **Verification**: Backend 291/291 tests, `mvn clean verify` BUILD SUCCESS (0 Checkstyle violations), Frontend 276/276 Vitest, `npm run build` clean.
-- **Commits**: `40054db` → `8f45145` → `8cf71f8`
+**Exploratory testing + Model QA audit — 5 bugs fixed, 5+ new gaps found (2026-07-25):**
+
+### SBTM Exploratory Testing Session (2h)
+- **5 bugs found via Tours**: Saboteur (negative values), Garbage Collector (missing validation), Landmark (scales), Failure (error handling), FedEx (data integrity)
+- **Bug 1+2**: `urineOutput`/`drainOutput` accept negative values — added `@DecimalMin` annotations + `@PrePersist` runtime checks in `HourlyRecord.java`
+- **Bug 3**: Duplicate `record_hour` — already fixed (service-layer check + `@UniqueConstraint` + 409 handler)
+- **Bug 4**: Clinical scales `GET /api/scales` returns `[]` — added 4 scales (GCS, RASS, SOFA, APACHE II) to `data.sql`
+- **Bug 5**: 9+ unhandled promise rejections on invalid episode UUID — added `.catch()` in `PatientDayPage.tsx`
+- **Verification**: `mvn test` 291/291 pass, `npm run build` clean
+- **Commit**: `3ec3672`
+
+### Model QA Specialist Audit (Grade: B)
+- **DTO-layer validation gap (Medium)**: `HourlyRecordCreateRequest`/`HourlyRecordPatchRequest` lack `@DecimalMin` on `urineOutput`/`drainOutput` — validation only fires at entity `@PrePersist` level, giving worse error UX (DTO fields need annotations)
+- **Unvalidated numeric fields (Medium)**: `painScore` (no 0–10 bounds), `etco2`, `fio2`, `cvp` have no validation annotations
+- **No automated tests (Medium)**: 0 tests added alongside the 5 fixes — urineOutput/drainOutput validation, scale API, UUID error handling all lack regression tests
+- **Bug 5 `.catch(() => {})` swallows errors silently** — should log with `console.warn`
+- **Imbalance risk**: `setLoading(true)` called before `if (!episodeId) return;` — could leave spinner hanging
+
+### Follow-up ET Session (Live API Testing)
+- **Bug 1/2 confirmed NOT FIRING on running server** — negative values `-50.0`/`-30.0` accepted because DTOs lack validation annotations and server may be stale
+- **Bug 3 ✅ PASS** — 409 Conflict on duplicate hour
+- **Bug 4 ⚠️ Root cause discovered**: `clinical_scales` table was empty despite `data.sql` — likely UTF-8 encoding issue with Ukrainian text (`"Шкала коми Глазго"`) on Windows PostgreSQL `spring.sql.init` connection
+- **Bug 5** — not yet tested
+- **Pre-existing anomaly**: HourlyRecord `79782047-...` has `urineOutput: -999999.0` in DB
+
+### Fixes Applied (This Session)
+- **DTO validation gap fixed**: Added `@DecimalMin("0.0")` on `urineOutput`/`drainOutput` + all entity-consistent annotations (`@DecimalMin`/`@DecimalMax` for temperature, spo2; `@Min`/`@Max` for heartRate, respiratoryRate, systolicBP, diastolicBP, painScore) in both `HourlyRecordCreateRequest.java` and `HourlyRecordPatchRequest.java`
+- **Unvalidated fields fixed**: Added `ClinicalConstants` for `PAIN_SCORE` (0–10), `ETCO2` (0–100), `FIO2` (0–1.0), `CVP` (0–30). Added `@Min`/`@Max`/`@DecimalMin`/`@DecimalMax` on entity fields + runtime checks in `validateClinicalRanges()`. Same annotations added to both DTOs.
+- **PatientDayPage.tsx fixed**: `.catch(() => {})` → `.catch((err) => { console.warn('Failed to load episode:', err); })`
+- **`setLoading(true)` imbalance** — determined NOT a bug: guard is at the top of the effect, `setLoading(true)` runs only when `episodeId` is truthy, so no spinner-hanging issue.
+- **5 GitHub issues created** (#8–#12) tracking DTO gap, unvalidated fields, missing tests, silent catch, seed encoding
+
+### Still Pending
+- Write unit tests for urineOutput/drainOutput validation (at boundary, below min, valid, null)
+- Test Bug 5 on running server (invalid UUID console errors)
 
 **Previous sessions (condensed):**
 - 2026-07-23: Frontend error display — `getErrorMessage()` helper (extracts `err.response?.data?.message`), used in all 8 API catch blocks. `OrderInlineForm` `onError` prop. `InvalidDataAccessApiUsageException` caught in `GlobalExceptionHandler` → 400.

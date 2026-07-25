@@ -61,12 +61,15 @@ public class HourlyRecord extends BaseEntity {
     @DecimalMin(ClinicalConstants.GLUCOSE_MIN_STR) @DecimalMax(ClinicalConstants.GLUCOSE_MAX_STR)
     Double glucose;
 
+    @DecimalMin(ClinicalConstants.ETCO2_MIN_STR) @DecimalMax(ClinicalConstants.ETCO2_MAX_STR)
     @Column(name = "etco2")
     Double etco2;
 
+    @DecimalMin(ClinicalConstants.FIO2_MIN_STR) @DecimalMax(ClinicalConstants.FIO2_MAX_STR)
     @Column(name = "fio2")
     Double fio2;
 
+    @DecimalMin(ClinicalConstants.CVP_MIN_STR) @DecimalMax(ClinicalConstants.CVP_MAX_STR)
     @Column(name = "cvp")
     Double cvp;
 
@@ -84,6 +87,7 @@ public class HourlyRecord extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     String vomit;
 
+    @Min(ClinicalConstants.PAIN_SCORE_MIN) @Max(ClinicalConstants.PAIN_SCORE_MAX)
     @Column(name = "pain_score")
     Integer painScore;
 
@@ -114,6 +118,14 @@ public class HourlyRecord extends BaseEntity {
             throw new IllegalArgumentException("Urine output must be at least " + ClinicalConstants.URINE_OUTPUT_MIN);
         if (drainOutput != null && drainOutput < ClinicalConstants.DRAIN_OUTPUT_MIN)
             throw new IllegalArgumentException("Drain output must be at least " + ClinicalConstants.DRAIN_OUTPUT_MIN);
+        if (painScore != null && (painScore < ClinicalConstants.PAIN_SCORE_MIN || painScore > ClinicalConstants.PAIN_SCORE_MAX))
+            throw new IllegalArgumentException("Pain score must be between " + ClinicalConstants.PAIN_SCORE_MIN + " and " + ClinicalConstants.PAIN_SCORE_MAX);
+        if (etco2 != null && (etco2 < ClinicalConstants.ETCO2_MIN || etco2 > ClinicalConstants.ETCO2_MAX))
+            throw new IllegalArgumentException("ETCO2 must be between " + ClinicalConstants.ETCO2_MIN + " and " + ClinicalConstants.ETCO2_MAX + " mmHg");
+        if (fio2 != null && (fio2 < ClinicalConstants.FIO2_MIN || fio2 > ClinicalConstants.FIO2_MAX))
+            throw new IllegalArgumentException("FiO2 must be between " + ClinicalConstants.FIO2_MIN + " and " + ClinicalConstants.FIO2_MAX);
+        if (cvp != null && (cvp < ClinicalConstants.CVP_MIN || cvp > ClinicalConstants.CVP_MAX))
+            throw new IllegalArgumentException("CVP must be between " + ClinicalConstants.CVP_MIN + " and " + ClinicalConstants.CVP_MAX + " mmHg");
     }
 
 }

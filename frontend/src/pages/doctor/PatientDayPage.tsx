@@ -43,7 +43,8 @@ export default function PatientDayPage() {
         ? daysRes.data.find(d => d.status === 'NURSE_SIGNED')
         : daysRes.data.find(d => d.status === 'OPEN' || d.status === 'REOPENED');
       setSelectedDay(target || daysRes.data[0] || null);
-    }).catch(() => {
+    }).catch((err) => {
+      console.warn('Failed to load episode:', err);
       // Episode not found — component renders "Епізод не знайдено" via !episode state
     }).finally(() => setLoading(false));
   }, [episodeId, user]);
