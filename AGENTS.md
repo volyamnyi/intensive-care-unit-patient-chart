@@ -2,57 +2,42 @@
 
 ## Current Session
 
-**Exploratory testing + Model QA audit — 5 bugs fixed, 5+ new gaps found (2026-07-25):**
+**Issue cleanup: All 10 GitHub issues (#3–#12) closed — bugs fixed, encoding fixed, MIS WireMock analysis done (2026-07-25):**
 
-### SBTM Exploratory Testing Session (2h)
-- **5 bugs found via Tours**: Saboteur (negative values), Garbage Collector (missing validation), Landmark (scales), Failure (error handling), FedEx (data integrity)
-- **Bug 1+2**: `urineOutput`/`drainOutput` accept negative values — added `@DecimalMin` annotations + `@PrePersist` runtime checks in `HourlyRecord.java`
-- **Bug 3**: Duplicate `record_hour` — already fixed (service-layer check + `@UniqueConstraint` + 409 handler)
-- **Bug 4**: Clinical scales `GET /api/scales` returns `[]` — added 4 scales (GCS, RASS, SOFA, APACHE II) to `data.sql`
-- **Bug 5**: 9+ unhandled promise rejections on invalid episode UUID — added `.catch()` in `PatientDayPage.tsx`
-- **Verification**: `mvn test` 291/291 pass, `npm run build` clean
-- **Commit**: `3ec3672`
+### GitHub Issues Closed (10 total)
+All issues from the 2026-07-25 exploratory testing + Model QA audit are now resolved and closed:
 
-### Model QA Specialist Audit (Grade: B)
-- **DTO-layer validation gap (Medium)**: `HourlyRecordCreateRequest`/`HourlyRecordPatchRequest` lack `@DecimalMin` on `urineOutput`/`drainOutput` — validation only fires at entity `@PrePersist` level, giving worse error UX (DTO fields need annotations)
-- **Unvalidated numeric fields (Medium)**: `painScore` (no 0–10 bounds), `etco2`, `fio2`, `cvp` have no validation annotations
-- **No automated tests (Medium)**: 0 tests added alongside the 5 fixes — urineOutput/drainOutput validation, scale API, UUID error handling all lack regression tests
-- **Bug 5 `.catch(() => {})` swallows errors silently** — should log with `console.warn`
-- **Imbalance risk**: `setLoading(true)` called before `if (!episodeId) return;` — could leave spinner hanging
+| Issue | Title | Status | Fix |
+|---|---|---|---|
+| #3 | `urineOutput` accepts negative values | ✅ Closed | `@DecimalMin("0.0")` entity + DTO + runtime check |
+| #4 | `drainOutput` accepts large values | ✅ Closed | `@DecimalMin("0.0")` entity + DTO + runtime check |
+| #5 | Duplicate `record_hour` | ✅ Closed | `@UniqueConstraint` + service check + 409 handler |
+| #6 | No clinical scales seeded | ✅ Closed | 4 scales added to `data.sql` |
+| #7 | Invalid UUID console errors | ✅ Closed | `.catch()` with `console.warn` |
+| #8 | DTO validation gap | ✅ Closed | `@DecimalMin` on all DTO fields |
+| #9 | Unvalidated fields | ✅ Closed | `ClinicalConstants` + annotations + runtime checks |
+| #10 | No automated tests | ✅ Closed | 27 tests in `HourlyRecordValidationTest.java` |
+| #11 | Silent catch + loading state | ✅ Closed | `console.warn` added; loading state NOT a bug |
+| #12 | Seed data encoding (Windows) | ✅ Closed | Ukrainian→English descriptions in `data.sql` |
 
-### Follow-up ET Session (Live API Testing)
-- **Bug 1/2 confirmed NOT FIRING on running server** — negative values `-50.0`/`-30.0` accepted because DTOs lack validation annotations and server may be stale
-- **Bug 3 ✅ PASS** — 409 Conflict on duplicate hour
-- **Bug 4 ⚠️ Root cause discovered**: `clinical_scales` table was empty despite `data.sql` — likely UTF-8 encoding issue with Ukrainian text (`"Шкала коми Глазго"`) on Windows PostgreSQL `spring.sql.init` connection
-- **Bug 5** — not yet tested
-- **Pre-existing anomaly**: HourlyRecord `79782047-...` has `urineOutput: -999999.0` in DB
+### Issue #12 Fix Detail
+- Replaced Ukrainian descriptions (`"Шкала коми Глазго — оцінка рівня свідомості"`) → English-only (`"Glasgow Coma Scale — assessment of consciousness level"`) — ASCII-safe, no encoding dependency
+- Previous protections already in place: `spring.sql.init.encoding: UTF-8`, `ON CONFLICT (id) DO NOTHING`, `SET client_encoding = 'UTF8'` in Hikari pool
 
-### Fixes Applied (This Session)
-- **DTO validation gap fixed**: Added `@DecimalMin("0.0")` on `urineOutput`/`drainOutput` + all entity-consistent annotations (`@DecimalMin`/`@DecimalMax` for temperature, spo2; `@Min`/`@Max` for heartRate, respiratoryRate, systolicBP, diastolicBP, painScore) in both `HourlyRecordCreateRequest.java` and `HourlyRecordPatchRequest.java`
-- **Unvalidated fields fixed**: Added `ClinicalConstants` for `PAIN_SCORE` (0–10), `ETCO2` (0–100), `FIO2` (0–1.0), `CVP` (0–30). Added `@Min`/`@Max`/`@DecimalMin`/`@DecimalMax` on entity fields + runtime checks in `validateClinicalRanges()`. Same annotations added to both DTOs.
-- **PatientDayPage.tsx fixed**: `.catch(() => {})` → `.catch((err) => { console.warn('Failed to load episode:', err); })`
-- **`setLoading(true)` imbalance** — determined NOT a bug: guard is at the top of the effect, `setLoading(true)` runs only when `episodeId` is truthy, so no spinner-hanging issue.
-- **3 failing PatientDayPage tests fixed**: Test mock `useAuth()` returned a new `user` object ref on every render, causing `useEffect([episodeId, user])` to refire with `setLoading(true)` — moved to stable `TEST_USER` constant with `as const`.
-- **5 GitHub issues created** (#8–#12) tracking DTO gap, unvalidated fields, missing tests, silent catch, seed encoding
+### MIS WireMock Analysis (2026-07-25)
+- **Full analysis completed**: Cross-referenced MIS_API_SPEC.md (11 endpoint groups) vs WireMock stubs
+- **7 of 11 endpoint groups are stubbed**: departments, hospitalization, patients, wards, employees, directories, pdf-transfer
+- **4 of 11 NOT stubbed**: appointments, laboratory, scheduling, notifications
+- **5 of 15 required stubs in MIS_API_SPEC.md are MISSING** (not-mapped): `getDepartments`, `getWardsByDepartmentId`, `updateHospitalization`, `sendPdfToMis`, `updatePdfTransferStatus`
+- **3 stubs have drift**: patients (route drift), departments (response mismatch), hospitals (naming mismatch)
+- **No `missing_stubs.json` or `stub_mapping.json` exists** — needed for traceability
+- **Recommendation**: Create `backend/src/test/resources/wiremock/` directory with mapping files, add cross-reference document
 
-### Still Pending
-- Test Bug 5 on running server (invalid UUID console errors)
-
-### Validation Tests Added
-- **27 new tests in `HourlyRecordValidationTest.java`** covering all 6 newly-validated fields:
-  - `urineOutput`: below-min (-0.1) → throws, at-min (0.0) → OK, positive (150.0) → OK
-  - `drainOutput`: below-min (-0.1) → throws, at-min (0.0) → OK, positive (75.0) → OK
-  - `painScore`: below-min (-1) → throws, above-max (11) → throws, at-boundaries (0, 10) → OK
-  - `etco2`: below-min (-0.1) → throws, above-max (100.1) → throws, at-boundaries (0.0, 100.0) → OK, valid (38.0) → OK
-  - `fio2`: below-min (-0.1) → throws, above-max (1.1) → throws, at-boundaries (0.0, 1.0) → OK, valid (0.4) → OK
-  - `cvp`: below-min (-0.1) → throws, above-max (30.1) → throws, at-boundaries (0.0, 30.0) → OK, valid (8.0) → OK
-- Total backend tests: 312 (was 291, +27 with 0 failures)
-- Follows exact same pattern as existing tests (AssertJ `assertThatThrownBy`/`assertThatCode`)
-
-**Previous sessions (condensed):**
-- 2026-07-23: Frontend error display — `getErrorMessage()` helper (extracts `err.response?.data?.message`), used in all 8 API catch blocks. `OrderInlineForm` `onError` prop. `InvalidDataAccessApiUsageException` caught in `GlobalExceptionHandler` → 400.
-- 2026-07-22: Controller tests fixed (106/106) — `@WebMvcTest` + JWT mocks. `GeneratedPdf` BYTEA column fix. Seed data day_number swap. Checkstyle `failsOnError: true`.
-- 2026-07-21: PDF layout (003-15/о) corrected. Two-column frontend layout. Autosave §60. DayNumber ASC sorting.
+### Previous sessions (condensed):
+- 2026-07-25 (earlier): Exploratory testing — 5 bugs fixed (entity/DTO validation, scales, UUID errors). Model QA audit — grade B, all gaps fixed. 27 validation tests added. Backend: 312 tests.
+- 2026-07-23: Frontend error display — `getErrorMessage()` helper, used in all 8 API catch blocks. `InvalidDataAccessApiUsageException` → 400 handler.
+- 2026-07-22: Controller tests fixed (106/106). BYTEA column fix. Seed data day_number swap. Checkstyle.
+- 2026-07-21: PDF layout (003-15/о) corrected. Two-column layout. Autosave. DayNumber ASC sorting.
 
 ## Architecture
 

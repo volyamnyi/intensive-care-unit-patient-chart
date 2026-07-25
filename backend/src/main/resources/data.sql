@@ -28,9 +28,9 @@ ON CONFLICT (login) DO UPDATE SET
 -- Clinical scales seed data
 INSERT INTO clinical_scales (id, name, description, is_automatic, status, created_at, created_by, updated_at, updated_by, version)
 VALUES
-('c1111111-1111-1111-1111-111111111101', 'GCS (Глазго)', 'Шкала коми Глазго — оцінка рівня свідомості', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
-('c1111111-1111-1111-1111-111111111102', 'RASS', 'Richmond Agitation-Sedation Scale — оцінка рівня седації', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
-('c1111111-1111-1111-1111-111111111103', 'SOFA', 'Sequential Organ Failure Assessment — оцінка поліорганної недостатності', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111101', 'GCS', 'Glasgow Coma Scale — assessment of consciousness level', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111102', 'RASS', 'Richmond Agitation-Sedation Scale — assessment of sedation level', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111103', 'SOFA', 'Sequential Organ Failure Assessment — assessment of organ failure', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
 ('c1111111-1111-1111-1111-111111111104', 'APACHE II', 'Acute Physiology And Chronic Health Evaluation II', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0)
 ON CONFLICT (id) DO NOTHING;
 
