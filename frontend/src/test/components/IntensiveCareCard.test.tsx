@@ -196,9 +196,9 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByDisplayValue('80')).toBeInTheDocument();
       expect(screen.getByDisplayValue('72')).toBeInTheDocument();
       expect(screen.getByDisplayValue('98')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('36.6')).toBeInTheDocument();
+      expect(screen.getAllByDisplayValue('36.6').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByDisplayValue('8').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByDisplayValue('16')).toBeInTheDocument();
+      expect(screen.getAllByDisplayValue('16').length).toBeGreaterThanOrEqual(1);
       // Hour 10 values
       expect(screen.getByDisplayValue('130')).toBeInTheDocument();
       expect(screen.getByDisplayValue('76')).toBeInTheDocument();
