@@ -296,6 +296,30 @@ java -jar backend/target/patient-chart-backend-*.jar
 | `GET` | `/api/users/doctors` | Admin | List doctors |
 | `GET` | `/api/users/nurses` | Admin | List nurses |
 
+### Prescriptions (Листок лікарських призначень)
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/prescriptions?patientId=` | Yes | List prescriptions for patient |
+| `GET` | `/api/prescriptions/{id}` | Yes | Get prescription by ID |
+| `POST` | `/api/prescriptions` | Doctor/HOD | Create prescription list |
+| `DELETE` | `/api/prescriptions/{id}` | Doctor/HOD | Delete prescription |
+| `POST` | `/api/prescriptions/{id}/close` | Doctor/HOD | Close prescription |
+| `GET` | `/api/prescriptions/{listId}/items` | Yes | List prescription items |
+| `POST` | `/api/prescriptions/{listId}/items` | Doctor/HOD | Add medicine item |
+| `DELETE` | `/api/prescriptions/items/{itemId}` | Doctor/HOD | Remove item |
+| `PUT` | `/api/prescriptions/day-parts/{id}/plan` | Doctor/HOD | Plan dose for day part |
+| `PUT` | `/api/prescriptions/day-parts/{id}/complete` | Nurse/HOD | Complete day part |
+| `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose |
+| `GET` | `/api/prescriptions/allergies?patientId=` | Yes | Patient allergies (from MIS) |
+| `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
+
+### Vital Signs
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/vital-signs?prescriptionListId=` | Yes | Get vital sign days |
+| `GET` | `/api/vital-signs/days/{dayId}/entries` | Yes | Get entries for day |
+| `POST` | `/api/vital-signs` | Yes | Create vital sign entry |
+
 ### Audit
 | Method | URL | Auth | Description |
 |---|---|---|---|
@@ -417,13 +441,16 @@ icu-patient-chart/
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
 
 ### Testing Summary
-- **Backend unit tests**: 151 tests (14 classes) — `mvn test`
+- **Backend unit tests**: 319 tests (22 classes) — `mvn test`
 - **Backend integration tests**: 79 tests via Testcontainers (13 classes) — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: ~190 tests (22 files)
-- **E2E Playwright tests**: 38 spec files, 7 projects
+- **Frontend Vitest tests**: 316 tests (38 files)
+- **E2E Playwright tests**: 40 spec files, 7 projects
+- **Total**: 754+ tests
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
 > **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.
+
+> **Testing Guide:** See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for comprehensive testing documentation.
 
 ### Commit Conventions
 
