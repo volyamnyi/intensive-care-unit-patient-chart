@@ -134,9 +134,11 @@ describe('App', () => {
     mockHasRole = (...roles: string[]) => roles.includes('DOCTOR') || roles.includes('HEAD_OF_DEPARTMENT');
   });
 
-  it('renders without crashing', () => {
-    const { container } = render(<App />);
-    expect(container).toBeDefined();
+  it('renders without crashing', async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('App Selector')).toBeInTheDocument();
+    });
   });
 
   it('renders doctor layout for DOCTOR user at /doctor', async () => {
