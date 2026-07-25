@@ -6,7 +6,7 @@ test.describe('Login', () => {
     await page.getByLabel('Логін').fill('doctor1');
     await page.getByLabel('Пароль').fill('doctor123');
     await page.getByRole('button', { name: 'Увійти' }).click();
-    await expect(page).toHaveURL(/\/doctor/);
+    await expect(page).toHaveURL(/\/select/);
   });
 
   test('nurse can login with valid credentials', async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe('Login', () => {
     await page.getByLabel('Логін').fill('nurse1');
     await page.getByLabel('Пароль').fill('nurse123');
     await page.getByRole('button', { name: 'Увійти' }).click();
-    await expect(page).toHaveURL(/\/nurse/);
+    await expect(page).toHaveURL(/\/select/);
   });
 
   test('invalid credentials show error', async ({ page }) => {
