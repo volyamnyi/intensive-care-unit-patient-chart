@@ -36,8 +36,18 @@
 - **5 GitHub issues created** (#8–#12) tracking DTO gap, unvalidated fields, missing tests, silent catch, seed encoding
 
 ### Still Pending
-- Write unit tests for urineOutput/drainOutput validation (at boundary, below min, valid, null)
 - Test Bug 5 on running server (invalid UUID console errors)
+
+### Validation Tests Added
+- **27 new tests in `HourlyRecordValidationTest.java`** covering all 6 newly-validated fields:
+  - `urineOutput`: below-min (-0.1) → throws, at-min (0.0) → OK, positive (150.0) → OK
+  - `drainOutput`: below-min (-0.1) → throws, at-min (0.0) → OK, positive (75.0) → OK
+  - `painScore`: below-min (-1) → throws, above-max (11) → throws, at-boundaries (0, 10) → OK
+  - `etco2`: below-min (-0.1) → throws, above-max (100.1) → throws, at-boundaries (0.0, 100.0) → OK, valid (38.0) → OK
+  - `fio2`: below-min (-0.1) → throws, above-max (1.1) → throws, at-boundaries (0.0, 1.0) → OK, valid (0.4) → OK
+  - `cvp`: below-min (-0.1) → throws, above-max (30.1) → throws, at-boundaries (0.0, 30.0) → OK, valid (8.0) → OK
+- Total backend tests: 312 (was 291, +27 with 0 failures)
+- Follows exact same pattern as existing tests (AssertJ `assertThatThrownBy`/`assertThatCode`)
 
 **Previous sessions (condensed):**
 - 2026-07-23: Frontend error display — `getErrorMessage()` helper (extracts `err.response?.data?.message`), used in all 8 API catch blocks. `OrderInlineForm` `onError` prop. `InvalidDataAccessApiUsageException` caught in `GlobalExceptionHandler` → 400.
