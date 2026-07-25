@@ -29,6 +29,7 @@ public class SecurityConfig {
     private static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR"};
     private static final String[] PRESCRIBER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
     private static final String[] SIGNER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
+    private static final String[] EXECUTOR_ROLES = {"NURSE", "HEAD_OF_DEPARTMENT"};
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -71,6 +72,16 @@ public class SecurityConfig {
                         .requestMatchers("/api/patients/**").hasAnyRole(CLINICAL_ROLES)
                         // Users
                         .requestMatchers("/api/users/**").hasAnyRole(CLINICAL_ROLES)
+                        // Prescription module
+                        .requestMatchers(HttpMethod.POST, "/api/prescriptions").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers(HttpMethod.POST, "/api/prescriptions/*/items").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers(HttpMethod.PUT, "/api/prescriptions/day-parts/*/plan").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers(HttpMethod.PUT, "/api/prescriptions/day-parts/*/complete").hasAnyRole(EXECUTOR_ROLES)
+                        .requestMatchers(HttpMethod.POST, "/api/prescriptions/day-parts/*/execute").hasAnyRole(EXECUTOR_ROLES)
+                        .requestMatchers(HttpMethod.POST, "/api/prescriptions/*/close").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers(HttpMethod.DELETE, "/api/prescriptions/items/*").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers(HttpMethod.DELETE, "/api/prescriptions/*").hasAnyRole(PRESCRIBER_ROLES)
+                        .requestMatchers("/api/prescriptions/**").hasAnyRole(CLINICAL_ROLES)
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

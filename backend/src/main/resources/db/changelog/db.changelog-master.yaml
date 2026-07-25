@@ -8,3 +8,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: changesets/003-prescription-module.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/004-user-migration.sql

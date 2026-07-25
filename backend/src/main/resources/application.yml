@@ -48,6 +48,8 @@ app:
   mis:
     mock-enabled: true
     wiremock-enabled: false
+  ldap:
+    enabled: false
   scheduling:
     day-close-hour: 7
     escalation-hour: 9
