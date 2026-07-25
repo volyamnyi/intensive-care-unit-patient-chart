@@ -1,0 +1,38 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "url": "/api/run",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$[?(@.name == 'spzIBUserDetails')]" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "userList": [
+        {
+          "userID": 11,
+          "userLogin": "doctor1",
+          "userName": "Олександр Мельник",
+          "userShortName": "Мельник О.",
+          "userSpecialityCode": "101",
+          "userSpecialityName": "Лікар-анестезіолог",
+          "userEmail": "melnyk@hospital.ua",
+          "userPhone": "380501111111"
+        },
+        {
+          "userID": 13,
+          "userLogin": "nurse1",
+          "userName": "Олена Ткаченко",
+          "userShortName": "Ткаченко О.",
+          "userSpecialityCode": "201",
+          "userSpecialityName": "Медична сестра ВАІТ",
+          "userEmail": "tkachenko@hospital.ua",
+          "userPhone": "380503333333"
+        }
+      ]
+    },
+    "headers": { "Content-Type": "application/json" }
+  }
+}

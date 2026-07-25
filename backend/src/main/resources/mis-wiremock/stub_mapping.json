@@ -1,0 +1,197 @@
+{
+  "$schema": "stub-mapping/v1",
+  "description": "Cross-reference: MIS_API_SPEC methods → WireMock stubs → MisService API methods",
+  "generated": "2026-07-25",
+  "wiremockBaseUrl": "http://localhost:9090/api/run",
+  "summary": {
+    "totalMisApiMethods": 50,
+    "totalStubbed": 7,
+    "totalNotStubbed": 43,
+    "appRelevantNotStubbed": 4,
+    "driftedStubs": 0,
+    "fixedDrift": "2026-07-25 — company_details enhanced with address/email/phone fields"
+  },
+  "mappings": [
+    {
+      "misApiMethod": "spzIBCompanyDetails",
+      "wiremockMapping": "mis-wiremock/mappings/company_details.json",
+      "wiremockBody": "mis-wiremock/__files/company_details.json",
+      "misServiceMethod": "getDepartments()",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "stubbed",
+      "description": "Returns department/company list. Enhanced 2026-07-25 with address, email, phone fields per MIS_API_SPEC.",
+      "responseRoot": "companyList",
+      "fields": ["companyGUID", "companyName", "companyShortName", "companyAddress", "companyEmail", "companyPhone", "companyExternalID1", "companyExternalID2"]
+    },
+    {
+      "misApiMethod": "spzIBUserDetails",
+      "wiremockMapping": "mis-wiremock/mappings/user_details.json",
+      "wiremockBody": "mis-wiremock/__files/user_details.json",
+      "misServiceMethod": "getUser(), getDepartmentUsers()",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "stubbed",
+      "description": "Returns user/doctor list with specialties. 6 users seeded (IDs 11-16).",
+      "responseRoot": "userList",
+      "fields": ["userID", "userLogin", "userName", "userShortName", "userSpecialityCode", "userSpecialityName", "userEmail", "userPhone"]
+    },
+    {
+      "misApiMethod": "spzIBPatientSearch",
+      "wiremockMapping": "mis-wiremock/mappings/patient_search.json",
+      "wiremockBody": "mis-wiremock/__files/patients_50.json",
+      "misServiceMethod": "getPatient(), searchPatients()",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "stubbed",
+      "description": "Returns 50 patients. Priority 3 (lowest) to allow name-parameter-specific matchers to override.",
+      "responseRoot": "patientList",
+      "fields": ["patientID", "patientName", "patientBirthDate", "patientSexCode", "patientAddress", "patientPhone", "patientEmail", "patientExternalID1", "patientExternalID2"]
+    },
+    {
+      "misApiMethod": "spzIBPatientScheduleList",
+      "wiremockMapping": "mis-wiremock/mappings/patient_schedule.json",
+      "wiremockBody": "mis-wiremock/__files/patient_schedule.json",
+      "misServiceMethod": "getHospitalization()",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "stubbed",
+      "description": "Returns hospitalization schedule data. Currently returns single record for patientID 1001.",
+      "responseRoot": "scheduleList",
+      "fields": ["patientID", "patientName", "departmentName", "room", "bed", "admissionDate", "diagnosis"]
+    },
+    {
+      "misApiMethod": "spzIBBookingStatusDictionary",
+      "wiremockMapping": "mis-wiremock/mappings/booking_status_dictionary.json",
+      "wiremockBody": "mis-wiremock/__files/booking_status_dictionary.json",
+      "misServiceMethod": "getDictionary(\"bookingStatus\")",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "stubbed",
+      "description": "Returns 5 booking statuses (PLANNED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED).",
+      "responseRoot": "bookingStatusList",
+      "fields": ["bookingStatusCode", "bookingStatusName"]
+    },
+    {
+      "misApiMethod": "spzIBBookingPaymentStatusDictionary",
+      "wiremockMapping": "mis-wiremock/mappings/booking_payment_status_dictionary.json",
+      "wiremockBody": "mis-wiremock/__files/booking_payment_status_dictionary.json",
+      "misServiceMethod": "getDictionary(\"paymentStatus\")",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "stubbed",
+      "description": "Returns payment status dictionary.",
+      "responseRoot": "bookingPaymentStatusList",
+      "fields": ["bookingPaymentStatusCode", "bookingPaymentStatusName"]
+    },
+    {
+      "misApiMethod": "spzIBScheduleStatusDictionary",
+      "wiremockMapping": "mis-wiremock/mappings/schedule_status_dictionary.json",
+      "wiremockBody": "mis-wiremock/__files/schedule_status_dictionary.json",
+      "misServiceMethod": "getDictionary(\"scheduleStatus\")",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "stubbed",
+      "description": "Returns schedule status dictionary.",
+      "responseRoot": "scheduleStatusList",
+      "fields": ["scheduleStatusCode", "scheduleStatusName"]
+    },
+    {
+      "misApiMethod": "spzIBVenueDetails",
+      "wiremockMapping": "mis-wiremock/mappings/venue_details.json",
+      "wiremockBody": "mis-wiremock/__files/venue_details.json",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "stubbed_ready",
+      "description": "Returns wards/cabinets list. Stub created 2026-07-25 for future use. No current MisService method calls this.",
+      "responseRoot": "venueList",
+      "fields": ["venueID", "venueName", "companyGUID", "companyName"]
+    },
+    {
+      "misApiMethod": "N/A (PDF upload endpoint)",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "sendPdf()",
+      "misServiceClass": "WireMockMisServiceImpl.java",
+      "status": "not_needed",
+      "description": "sendPdf() returns true without API call. Real integration would require a POST endpoint for PDF upload to MIS.",
+      "actionRequired": "Implement when real PDF transfer to MIS is needed"
+    },
+    {
+      "misApiMethod": "spzIBPatientCreate",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "not_stubbed",
+      "description": "MIS_API_SPEC method for creating patients. Not used by ICU chart app.",
+      "actionRequired": "None — app does not create MIS patients"
+    },
+    {
+      "misApiMethod": "spzIBScheduleCreate",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "not_stubbed",
+      "description": "MIS_API_SPEC method for creating appointments/schedules. Not used by ICU chart app.",
+      "actionRequired": "None — app does not manage MIS schedules"
+    },
+    {
+      "misApiMethod": "spzIBScheduleList",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "not_stubbed",
+      "description": "MIS_API_SPEC method for listing appointments. Not used by ICU chart app.",
+      "actionRequired": "None"
+    },
+    {
+      "misApiMethod": "spzIBPatientIDByLogin",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "not_stubbed",
+      "description": "MIS_API_SPEC method for patient lookup by login. Not used by ICU chart app.",
+      "actionRequired": "None"
+    },
+    {
+      "misApiMethod": "spzIBDocumentList",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "not_stubbed",
+      "description": "MIS_API_SPEC method for listing patient documents. Not used by ICU chart app.",
+      "actionRequired": "None"
+    },
+    {
+      "misApiMethod": "spzIBServiceList",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "not_stubbed",
+      "description": "MIS_API_SPEC method for listing services. Not used by ICU chart app.",
+      "actionRequired": "None"
+    },
+    {
+      "misApiMethod": "spzIBAgentList",
+      "wiremockMapping": "NOT STUBBED",
+      "wiremockBody": "NOT STUBBED",
+      "misServiceMethod": "NOT IMPLEMENTED",
+      "misServiceClass": "N/A",
+      "status": "not_stubbed",
+      "description": "MIS_API_SPEC method for listing agents. Not used by ICU chart app.",
+      "actionRequired": "None"
+    }
+  ],
+  "endpointGroups": {
+    "departments": { "stubbed": true, "method": "spzIBCompanyDetails", "note": "Enhanced 2026-07-25 with full fields" },
+    "hospitalization": { "stubbed": true, "method": "spzIBPatientScheduleList", "note": "Returns schedule + hospital data" },
+    "patients": { "stubbed": true, "method": "spzIBPatientSearch", "note": "50 patients, full demographic data" },
+    "wards": { "stubbed": true, "method": "spzIBVenueDetails", "note": "Stub created 2026-07-25, not yet called by app" },
+    "employees": { "stubbed": true, "method": "spzIBUserDetails", "note": "6 staff users" },
+    "directories": { "stubbed": true, "methods": ["spzIBBookingStatusDictionary", "spzIBBookingPaymentStatusDictionary", "spzIBScheduleStatusDictionary"], "note": "3 dictionaries + 3 hardcoded in code" },
+    "pdf-transfer": { "stubbed": false, "method": "N/A", "note": "sendPdf() returns true without API call" },
+    "appointments": { "stubbed": false, "note": "Not used by ICU chart app" },
+    "laboratory": { "stubbed": false, "note": "Not in MIS_API_SPEC" },
+    "scheduling": { "stubbed": true, "method": "spzIBPatientScheduleList", "note": "Partial — only hospitalization schedule" },
+    "notifications": { "stubbed": false, "note": "Webhooks only — not used by ICU chart app" }
+  }
+}

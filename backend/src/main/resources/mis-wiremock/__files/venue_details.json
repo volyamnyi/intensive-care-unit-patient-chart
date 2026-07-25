@@ -1,0 +1,49 @@
+{
+  "venueList": [
+    {
+      "venueID": 101,
+      "venueName": "Палата інтенсивної терапії №1",
+      "companyGUID": "a0111111-1111-1111-1111-111111111101",
+      "companyName": "Відділення анестезіології та інтенсивної терапії",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15",
+      "companyCity": "Київ",
+      "venueExternalID": "WARD-ICU-001"
+    },
+    {
+      "venueID": 102,
+      "venueName": "Палата інтенсивної терапії №2",
+      "companyGUID": "a0111111-1111-1111-1111-111111111101",
+      "companyName": "Відділення анестезіології та інтенсивної терапії",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15",
+      "companyCity": "Київ",
+      "venueExternalID": "WARD-ICU-002"
+    },
+    {
+      "venueID": 103,
+      "venueName": "Палата інтенсивної терапії №3",
+      "companyGUID": "a0111111-1111-1111-1111-111111111101",
+      "companyName": "Відділення анестезіології та інтенсивної терапії",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15",
+      "companyCity": "Київ",
+      "venueExternalID": "WARD-ICU-003"
+    },
+    {
+      "venueID": 201,
+      "venueName": "Хірургічна палата №1",
+      "companyGUID": "a0111111-1111-1111-1111-111111111102",
+      "companyName": "Хірургічне відділення",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15, корпус 2",
+      "companyCity": "Київ",
+      "venueExternalID": "WARD-SURG-001"
+    },
+    {
+      "venueID": 301,
+      "venueName": "Терапевтична палата №1",
+      "companyGUID": "a0111111-1111-1111-1111-111111111103",
+      "companyName": "Терапевтичне відділення",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15, корпус 3",
+      "companyCity": "Київ",
+      "venueExternalID": "WARD-THER-001"
+    }
+  ]
+}

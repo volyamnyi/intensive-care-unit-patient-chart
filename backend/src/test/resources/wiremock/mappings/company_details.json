@@ -1,0 +1,24 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "url": "/api/run",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$[?(@.name == 'spzIBCompanyDetails')]" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "companyList": [
+        {
+          "companyGUID": "a0111111-1111-1111-1111-111111111101",
+          "companyName": "Відділення анестезіології та інтенсивної терапії",
+          "companyShortName": "ВАІТ",
+          "companyAddress": "м. Київ, вул. Хрещатик, 15"
+        }
+      ]
+    },
+    "headers": { "Content-Type": "application/json" }
+  }
+}
