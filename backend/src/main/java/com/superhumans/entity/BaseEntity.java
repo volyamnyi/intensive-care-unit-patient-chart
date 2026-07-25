@@ -49,6 +49,12 @@ public abstract class BaseEntity {
         if (updatedAt == null) {
             updatedAt = now;
         }
+        if (createdBy == null) {
+            createdBy = 0L;
+        }
+        if (updatedBy == null) {
+            updatedBy = 0L;
+        }
         if (version == null) {
             version = 0;
         }
