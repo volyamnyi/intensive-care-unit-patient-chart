@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @Configuration
 @ComponentScan("com.superhumans.medicationsheet")
-@EnableJpaRepositories("com.superhumans.medicationsheet.repository")
-@EntityScan("com.superhumans.medicationsheet.entity")
+@EnableJpaRepositories({"com.superhumans.medicationsheet.repository", "com.superhumans.repository"})
+@EntityScan({"com.superhumans.medicationsheet.entity", "com.superhumans.entity"})
 public class MedicationSheetConfig {
 }
