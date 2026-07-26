@@ -19,7 +19,8 @@ import java.util.List;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
     "spring.sql.init.mode=never",
     "app.scheduling.signing-window-start=0",
-    "app.scheduling.signing-window-end=23"
+    "app.scheduling.signing-window-end=23",
+    "app.scheduling.signing-window-enabled=false"
 })
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test.sql")
 public abstract class AbstractIntegrationTest {

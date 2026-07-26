@@ -43,6 +43,9 @@ public class ClinicalDayService {
     @Value("${app.scheduling.signing-window-end:9}")
     private int signingWindowEndHour;
 
+    @Value("${app.scheduling.signing-window-enabled:true}")
+    private boolean signingWindowEnabled;
+
     public ClinicalDayResponse getClinicalDay(UUID id) {
         ClinicalDay day = clinicalDayRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Clinical day not found: " + id));
@@ -114,6 +117,7 @@ public class ClinicalDayService {
     }
 
     private void assertSigningWindow() {
+        if (!signingWindowEnabled) return;
         LocalTime now = signingWindowNow();
         LocalTime start = LocalTime.of(signingWindowStartHour, 0);
         LocalTime end = LocalTime.of(signingWindowEndHour, 0);
