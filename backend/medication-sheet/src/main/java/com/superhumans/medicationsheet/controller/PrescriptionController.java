@@ -1,10 +1,8 @@
 package com.superhumans.medicationsheet.controller;
 
 import com.superhumans.medicationsheet.dto.*;
-import com.superhumans.medicationsheet.entity.*;
+import com.superhumans.medicationsheet.mapper.*;
 import com.superhumans.mis.MisService;
-import com.superhumans.mis.dto.AllergyMisDTO;
-import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.medicationsheet.service.PrescriptionExecutionService;
 import com.superhumans.medicationsheet.service.PrescriptionItemService;
 import com.superhumans.medicationsheet.service.PrescriptionListService;
@@ -34,6 +32,11 @@ public class PrescriptionController {
     private final PrescriptionExecutionService executionService;
     private final VitalSignService vitalSignService;
     private final MisService misService;
+    private final PrescriptionListMapper prescriptionListMapper;
+    private final PrescriptionItemMapper prescriptionItemMapper;
+    private final PrescriptionDayPartMapper prescriptionDayPartMapper;
+    private final AllergyMapper allergyMapper;
+    private final MedicineCatalogMapper medicineCatalogMapper;
 
     @GetMapping
     @Operation(summary = "Get prescriptions by patient ID", description = "Retrieves all prescription lists for a specific patient")
@@ -43,7 +46,7 @@ public class PrescriptionController {
     })
     public List<PrescriptionListResponse> getByPatient(
             @Parameter(description = "Patient ID from MIS") @RequestParam Long patientId) {
-        return listService.getByPatient(patientId).stream().map(this::toResponse).toList();
+        return listService.getByPatient(patientId).stream().map(prescriptionListMapper::toResponse).toList();
     }
 
     @GetMapping("/{id}")
@@ -54,7 +57,7 @@ public class PrescriptionController {
     })
     public PrescriptionListResponse getById(
             @Parameter(description = "Prescription list UUID") @PathVariable UUID id) {
-        return toResponse(listService.getById(id));
+        return prescriptionListMapper.toResponse(listService.getById(id));
     }
 
     @PostMapping
@@ -67,7 +70,7 @@ public class PrescriptionController {
     })
     public PrescriptionListResponse create(
             @Valid @RequestBody PrescriptionListCreateRequest req) {
-        return toResponse(listService.create(Long.parseLong(req.getPatientId())));
+        return prescriptionListMapper.toResponse(listService.create(Long.parseLong(req.getPatientId())));
     }
 
     @DeleteMapping("/{id}")
@@ -89,7 +92,7 @@ public class PrescriptionController {
     })
     public PrescriptionListResponse close(@PathVariable UUID id) {
         listService.close(id);
-        return toResponse(listService.getById(id));
+        return prescriptionListMapper.toResponse(listService.getById(id));
     }
 
     @GetMapping("/{listId}/items")
@@ -99,7 +102,7 @@ public class PrescriptionController {
             @ApiResponse(responseCode = "404", description = "Prescription list not found")
     })
     public List<PrescriptionItemResponse> getItems(@PathVariable UUID listId) {
-        return itemService.getByList(listId).stream().map(this::toItemResponse).toList();
+        return itemService.getByList(listId).stream().map(prescriptionItemMapper::toResponse).toList();
     }
 
     @PostMapping("/{listId}/items")
@@ -112,7 +115,7 @@ public class PrescriptionController {
     public PrescriptionItemResponse addItem(
             @PathVariable UUID listId,
             @Valid @RequestBody PrescriptionItemAddRequest req) {
-        return toItemResponse(itemService.addItem(listId, req.getMedicineName(), req.getMedicineMethod(), req.getRegime()));
+        return prescriptionItemMapper.toResponse(itemService.addItem(listId, req.getMedicineName(), req.getMedicineMethod(), req.getRegime()));
     }
 
     @DeleteMapping("/items/{itemId}")
@@ -136,7 +139,7 @@ public class PrescriptionController {
             @PathVariable UUID dayPartId,
             @Valid @RequestBody PrescriptionDoseRequest req) {
         UUID dummyId = UUID.randomUUID();
-        return toPartResponse(itemService.planDose(dayPartId, req.getDose(), dummyId));
+        return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), dummyId));
     }
 
     @PutMapping("/day-parts/{dayPartId}/complete")
@@ -145,7 +148,7 @@ public class PrescriptionController {
             @ApiResponse(responseCode = "200", description = "Day part completed successfully")
     })
     public PrescriptionDayPartResponse completeDose(@PathVariable UUID dayPartId) {
-        return toPartResponse(itemService.markCompleted(dayPartId, UUID.randomUUID()));
+        return prescriptionDayPartMapper.toResponse(itemService.markCompleted(dayPartId, UUID.randomUUID()));
     }
 
     @PostMapping("/day-parts/{dayPartId}/execute")
@@ -168,7 +171,7 @@ public class PrescriptionController {
     public List<AllergyResponse> getAllergies(
             @Parameter(description = "Patient ID from MIS") @RequestParam Long patientId) {
         return misService.getPatientAllergies(patientId).stream()
-                .map(this::toAllergyResponse)
+                .map(allergyMapper::toResponse)
                 .toList();
     }
 
@@ -180,51 +183,7 @@ public class PrescriptionController {
     public List<MedicineCatalogResponse> searchMedicineCatalog(
             @Parameter(description = "Search keyword (optional)") @RequestParam(required = false) String keyword) {
         return misService.searchMedicineCatalog(keyword == null ? "" : keyword).stream()
-                .map(this::toMedicineResponse)
+                .map(medicineCatalogMapper::toResponse)
                 .toList();
-    }
-
-    private PrescriptionListResponse toResponse(PrescriptionList l) {
-        return PrescriptionListResponse.builder()
-                .id(l.getId()).patientId(l.getPatientId())
-                .hospitalizationId(l.getHospitalizationId()).departmentId(l.getDepartmentId())
-                .documentName(l.getDocumentName()).status(l.getStatus()).editingUserId(l.getEditingUserId())
-                .build();
-    }
-
-    private PrescriptionItemResponse toItemResponse(PrescriptionItem i) {
-        return PrescriptionItemResponse.builder()
-                .id(i.getId()).listId(i.getList().getId()).medicineName(i.getMedicineName())
-                .medicineMethod(i.getMedicineMethod()).regime(i.getRegime())
-                .status(i.getStatus()).sortOrder(i.getSortOrder())
-                .build();
-    }
-
-    private PrescriptionDayPartResponse toPartResponse(PrescriptionDayPart p) {
-        return PrescriptionDayPartResponse.builder()
-                .id(p.getId()).dayId(p.getDay().getId()).period(p.getPeriod()).dose(p.getDose())
-                .isPlanned(p.getIsPlanned()).isPlannedFinished(p.getIsPlannedFinished())
-                .isCompleted(p.getIsCompleted()).isCompletedFinished(p.getIsCompletedFinished())
-                .doctorName(p.getDoctorName()).nurseName(p.getNurseName())
-                .build();
-    }
-
-    private AllergyResponse toAllergyResponse(AllergyMisDTO dto) {
-        return new AllergyResponse(
-                dto.getPatientId() + "-" + dto.getAllergenName(),
-                dto.getPatientId(),
-                dto.getAllergenName(),
-                dto.getSourceDocumentId()
-        );
-    }
-
-    private MedicineCatalogResponse toMedicineResponse(MedicineMisDTO dto) {
-        return new MedicineCatalogResponse(
-                dto.getId(),
-                dto.getName(),
-                dto.getCategoryRef(),
-                dto.getPtgCode(),
-                false
-        );
     }
 }

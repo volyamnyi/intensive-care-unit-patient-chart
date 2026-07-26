@@ -2,6 +2,7 @@ package com.superhumans.medicationsheet.controller;
 
 import com.superhumans.medicationsheet.dto.*;
 import com.superhumans.medicationsheet.entity.*;
+import com.superhumans.medicationsheet.mapper.*;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.AllergyMisDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +29,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(PrescriptionController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import({
+    PrescriptionListMapperImpl.class,
+    PrescriptionItemMapperImpl.class,
+    PrescriptionDayPartMapperImpl.class,
+    AllergyMapperImpl.class,
+    MedicineCatalogMapperImpl.class
+})
 class PrescriptionControllerTest {
 
     @Autowired
