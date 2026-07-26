@@ -1,8 +1,22 @@
 # ICU Patient Chart — AI Agent Guide
 
+## CI-ONLY RULE (DO NOT VIOLATE)
+
+**TESTS MUST NEVER BE RUN LOCALLY.** The only valid testing workflow is:
+
+```
+GitHub Issue → implement → commit → push to main → CI workflow runs → poll for results
+```
+
+CI runs ALL test suites: unit tests, integration tests, Playwright E2E.
+Local `mvn test` is FORBIDDEN. Local `mvn compile` is permitted for verifying compilation only.
+This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
+
+---
+
 ## Current Session
 
-**2026-07-26: Phase 1 — Multi-module backend + Vite workspace frontend**
+**2026-07-26: Medication Sheet backend — Phase 0+1 completed**
 
 ### What was done
 - **Backend**: Restructured from single-module Maven → multi-module (parent POM + `common` + `medication-sheet` + `icu-chart`)
@@ -66,10 +80,10 @@
 ## Architecture
 
 ```
-frontend/  (React 19 + TS 6 + Vite 8 + MUI 9, Vite workspace)
-  apps/icu-chart/           ← existing ICU chart app (port 5173)
-  apps/medication-sheet/    ← new medication-sheet app (port 5174)
-  packages/shared/          ← shared auth/DTOs/API client factory
+frontend/  (React 19 + TS 6 + Vite 8 + MUI 9, single app)
+  src/icu-chart/            ← ICU chart feature module
+  src/medication-sheet/     ← Medication sheet (prescriptions) feature module
+  src/shared/               ← shared types, API client, components, auth
 backend/   (Spring Boot 3.2.5 + Java 17 + Maven, multi-module)
   pom.xml                   ← parent POM (pom packaging, 3 modules)
   common/                   ← shared entities, JWT/security, base classes
@@ -77,6 +91,11 @@ backend/   (Spring Boot 3.2.5 + Java 17 + Maven, multi-module)
   medication-sheet/         ← new module (auto-scanned under com.superhumans)
 tests/     (Playwright 1.61)
 ```
+
+After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Routes are prefixed per sub-app:
+- `/doctor/*`, `/nurse/*` → ICU chart
+- `/prescriptions/doctor/*`, `/prescriptions/nurse/*` → Medication sheet
+- `/admin/*` → Admin
 
 - JWT auth stored in `localStorage`.
 - Backend port: **8085** (`application.yml`).
