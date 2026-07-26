@@ -96,7 +96,7 @@ jobs:
         if: always()
         with:
           name: jacoco-report
-          path: backend/target/site/jacoco/
+          path: backend/icu-chart/target/site/jacoco/
           retention-days: 7
       
       - name: Upload test results
@@ -104,7 +104,7 @@ jobs:
         if: failure()
         with:
           name: backend-test-results
-          path: backend/target/surefire-reports/
+          path: backend/*/target/surefire-reports/
           retention-days: 7
 
   # ============================================================================
@@ -150,7 +150,7 @@ jobs:
         if: failure()
         with:
           name: backend-integration-results
-          path: backend/target/surefire-reports/
+          path: backend/*/target/surefire-reports/
           retention-days: 7
 
   # ============================================================================
@@ -233,12 +233,12 @@ jobs:
             frontend/package-lock.json
       
       - name: Build backend
-        run: mvn clean package -DskipTests
+        run: mvn clean package -DskipTests -pl icu-chart -am
         working-directory: backend
       
       - name: Start backend
         run: |
-          java -jar target/patient-chart-backend-*.jar &
+          java -jar icu-chart/target/icu-chart-*.jar &
           echo "Waiting for backend..."
           timeout 60 bash -c 'until curl -s http://localhost:8085/api/auth/login > /dev/null 2>&1; do sleep 2; done'
           echo "Backend is ready"
@@ -312,7 +312,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       
       - name: Build backend JAR
-        run: mvn clean package -DskipTests
+        run: mvn clean package -DskipTests -pl icu-chart -am
         working-directory: backend
       
       - name: Build frontend
@@ -325,7 +325,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
-          path: backend/target/patient-chart-backend-*.jar
+          path: backend/icu-chart/target/icu-chart-*.jar
           retention-days: 30
       
       - name: Upload frontend build

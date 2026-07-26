@@ -2,27 +2,29 @@
 
 ## Current Session
 
-**Issue cleanup: All 10 GitHub issues (#3–#12) closed — bugs fixed, encoding fixed, MIS WireMock analysis done (2026-07-25):**
+**2026-07-26: Phase 1 — Multi-module backend + Vite workspace frontend**
 
-### GitHub Issues Closed (10 total)
-All issues from the 2026-07-25 exploratory testing + Model QA audit are now resolved and closed:
+### What was done
+- **Backend**: Restructured from single-module Maven → multi-module (parent POM + `common` + `medication-sheet` + `icu-chart`)
+  - `backend/pom.xml` — spring-boot-starter-parent, pom packaging, 3 child modules
+  - `backend/common/` — shared entities, JWT/security, base classes (depends on spring-boot-starter-data-jpa/web/security/validation, jjwt)
+  - `backend/medication-sheet/` — new module scaffold for "Листок лікарських призначень" (depends on common)
+  - `backend/icu-chart/` — existing app, now depends on both common + medication-sheet for single-deployment JAR
+  - `mvn compile` passes all 4 modules; `mvn test` passes **395 tests, 0 failures**
+- **Frontend**: Restructured from standalone Vite → Vite workspace with 2 sub-apps + shared package
+  - `frontend/package.json` — workspace root with `apps/*` + `packages/*`
+  - `frontend/apps/icu-chart/` — existing app moved here (src/, public/, index.html, vite.config.ts)
+  - `frontend/apps/medication-sheet/` — new scaffold app (port 5174)
+  - `frontend/packages/shared/` — shared auth types, API client factory (`@patient-chart/shared`)
+  - Workspace scripts: `dev:icu-chart`, `dev:medication-sheet`, `build:icu-chart`, `build:medication-sheet`
+- **CI**: Updated `.github/workflows/playwright.yml` for multi-module paths (jacoco coverage, surefire reports, JAR artifact)
+- **Single deployment**: `icu-chart` has `@SpringBootApplication`; medication-sheet beans are auto-scanned under `com.superhumans` package
 
-| Issue | Title | Status | Fix |
-|---|---|---|---|
-| #3 | `urineOutput` accepts negative values | ✅ Closed | `@DecimalMin("0.0")` entity + DTO + runtime check |
-| #4 | `drainOutput` accepts large values | ✅ Closed | `@DecimalMin("0.0")` entity + DTO + runtime check |
-| #5 | Duplicate `record_hour` | ✅ Closed | `@UniqueConstraint` + service check + 409 handler |
-| #6 | No clinical scales seeded | ✅ Closed | 4 scales added to `data.sql` |
-| #7 | Invalid UUID console errors | ✅ Closed | `.catch()` with `console.warn` |
-| #8 | DTO validation gap | ✅ Closed | `@DecimalMin` on all DTO fields |
-| #9 | Unvalidated fields | ✅ Closed | `ClinicalConstants` + annotations + runtime checks |
-| #10 | No automated tests | ✅ Closed | 27 tests in `HourlyRecordValidationTest.java` |
-| #11 | Silent catch + loading state | ✅ Closed | `console.warn` added; loading state NOT a bug |
-| #12 | Seed data encoding (Windows) | ✅ Closed | Ukrainian→English descriptions in `data.sql` |
-
-### Issue #12 Fix Detail
-- Replaced Ukrainian descriptions (`"Шкала коми Глазго — оцінка рівня свідомості"`) → English-only (`"Glasgow Coma Scale — assessment of consciousness level"`) — ASCII-safe, no encoding dependency
-- Previous protections already in place: `spring.sql.init.encoding: UTF-8`, `ON CONFLICT (id) DO NOTHING`, `SET client_encoding = 'UTF8'` in Hikari pool
+### Next
+- Extract shared backend code (BaseEntity, User, JWT/security, AuditLog) into `common` module
+- Extract shared frontend code (auth, API endpoints, common components) into `packages/shared/`
+- Move medication-sheet reference code from `merge_the_project_with_current/` into both modules
+- Fix for `#85` pending: `@Builder.Default` on `AuditLog.isDeleted` and `User.role`
 
 ### MIS WireMock Analysis (2026-07-25)
 - **Full analysis completed**: Cross-referenced MIS_API_SPEC.md (11 endpoint groups) vs WireMock stubs
@@ -64,13 +66,19 @@ All issues from the 2026-07-25 exploratory testing + Model QA audit are now reso
 ## Architecture
 
 ```
-frontend/  (React 19 + TS 6 + Vite 8 + MUI 9)
-backend/   (Spring Boot 3.2.5 + Java 17 + Maven)
+frontend/  (React 19 + TS 6 + Vite 8 + MUI 9, Vite workspace)
+  apps/icu-chart/           ← existing ICU chart app (port 5173)
+  apps/medication-sheet/    ← new medication-sheet app (port 5174)
+  packages/shared/          ← shared auth/DTOs/API client factory
+backend/   (Spring Boot 3.2.5 + Java 17 + Maven, multi-module)
+  pom.xml                   ← parent POM (pom packaging, 3 modules)
+  common/                   ← shared entities, JWT/security, base classes
+  icu-chart/                ← existing app (@SpringBootApplication, single-deployment JAR)
+  medication-sheet/         ← new module (auto-scanned under com.superhumans)
 tests/     (Playwright 1.61)
 ```
 
-- Monorepo with three independent packages (no workspace orchestration).
-- JWT auth stored in `localStorage`. API base URL: `frontend/src/api/client.ts` → `http://localhost:8085/api`.
+- JWT auth stored in `localStorage`.
 - Backend port: **8085** (`application.yml`).
 - DB: PostgreSQL 16, `ddl-auto: update` — schema auto-created by Hibernate.
 - Seed data: `backend/src/main/resources/data.sql` (6 users, 3 episodes + 3 open clinical days, `spring.sql.init.mode: always`).
@@ -83,7 +91,7 @@ tests/     (Playwright 1.61)
 
 | Test type | CI job | Trigger |
 |---|---|---|
-| Backend unit (151) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend unit (395) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
 | Frontend Vitest (~190) | `test` → `npm test` | Same |
 | Playwright E2E (38 spec files) | `test` → `npx playwright test` | Same |
@@ -99,7 +107,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run 151 unit tests (excludes integration) |
+| `mvn test` | Run 395 unit tests (excludes integration) |
 | `mvn test -Pintegration-test` | Run 79 integration tests (requires Docker/PostgreSQL) |
 | `mvn verify` | Run all + JaCoCo coverage check + Checkstyle |
 
@@ -121,7 +129,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 
 ## Testing
 
-- **Backend**: 151 unit tests (14 classes) + 79 integration tests (13 classes, Testcontainers PostgreSQL) = 35 total test files. JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Backend**: 395 unit tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: ~190 Vitest tests across 22 files (pages, components, AuthContext, endpoints). Run with `npm t`.
 - **E2E**: 38 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 

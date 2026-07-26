@@ -1,8 +1,9 @@
 node_modules/
-backend/target/
-backend/*.log
-frontend/dist/
+**/target/
+**/dist/
 *.log
+playwright-test-results/
+backend-integration-results/
 .env
 .env.local
 .env.*.local
