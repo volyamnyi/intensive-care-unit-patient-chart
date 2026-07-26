@@ -9,11 +9,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
-
 @Component
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtTokenProvider {
 
     SecretKey key;

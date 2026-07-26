@@ -20,17 +20,13 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
-
 @Component
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    JwtTokenProvider jwtTokenProvider;
-    AuditLogRepository auditLogRepository;
-    AuditService auditService;
+    final JwtTokenProvider jwtTokenProvider;
+    final AuditLogRepository auditLogRepository;
+    final AuditService auditService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

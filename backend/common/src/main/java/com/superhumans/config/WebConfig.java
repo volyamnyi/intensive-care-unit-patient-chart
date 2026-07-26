@@ -14,11 +14,6 @@ import java.util.List;
 @EnableAsync
 public class WebConfig implements WebMvcConfigurer {
 
-    // Ensures JSON responses declare a UTF-8 charset so that non-browser
-    // clients (e.g. API tests, external integrators) decode Cyrillic text
-    // correctly instead of falling back to the platform default codepage.
-    // We only adjust the existing Jackson converter so the ObjectMapper
-    // configured by Spring Boot (date formatting, etc.) is preserved.
     @Override
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         for (HttpMessageConverter<?> converter : converters) {
