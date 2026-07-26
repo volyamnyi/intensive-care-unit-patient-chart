@@ -5,6 +5,7 @@ import './styles/animations.css';
 import { AuthProvider, useAuth } from './services/AuthContext';
 import { useEffect, useRef } from 'react';
 import LoginPage from './pages/LoginPage';
+import GlobalLayout from './layouts/GlobalLayout';
 import DoctorLayout from './layouts/DoctorLayout';
 import NurseLayout from './layouts/NurseLayout';
 import DashboardPage from './pages/doctor/DashboardPage';
@@ -88,65 +89,67 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
 
-      <Route path="/select" element={
-        <Guard>
-          <AppSelectorPage />
-        </Guard>
-      } />
-
-      <Route path="/doctor" element={
-        <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
-          <DoctorLayout />
-        </Guard>
-      }>
-        <Route index element={<DashboardPage />} />
-        <Route path="department" element={
-          <Guard roles={['HEAD_OF_DEPARTMENT']}>
-            <DepartmentDashboardPage />
+      <Route element={<GlobalLayout />}>
+        <Route path="/select" element={
+          <Guard>
+            <AppSelectorPage />
           </Guard>
         } />
-        <Route path="create-card" element={<CreateCardPage />} />
-        <Route path="episode/:episodeId" element={<PatientDayPage />} />
-      </Route>
 
-      <Route path="/nurse" element={
-        <Guard roles={['NURSE']}>
-          <NurseLayout />
-        </Guard>
-      }>
-        <Route index element={<NurseDashboardPage />} />
-        <Route path="episode/:episodeId" element={<PatientDayPage />} />
-      </Route>
-
-      <Route path="/prescriptions">
-        <Route path="doctor" element={
+        <Route path="/doctor" element={
           <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
-            <PrescriptionPage />
+            <DoctorLayout />
           </Guard>
-        } />
-        <Route path="doctor/:id" element={
-          <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
-            <PrescriptionDetailPage />
-          </Guard>
-        } />
-        <Route path="nurse" element={
+        }>
+          <Route index element={<DashboardPage />} />
+          <Route path="department" element={
+            <Guard roles={['HEAD_OF_DEPARTMENT']}>
+              <DepartmentDashboardPage />
+            </Guard>
+          } />
+          <Route path="create-card" element={<CreateCardPage />} />
+          <Route path="episode/:episodeId" element={<PatientDayPage />} />
+        </Route>
+
+        <Route path="/nurse" element={
           <Guard roles={['NURSE']}>
-            <NursePrescriptionPage />
+            <NurseLayout />
+          </Guard>
+        }>
+          <Route index element={<NurseDashboardPage />} />
+          <Route path="episode/:episodeId" element={<PatientDayPage />} />
+        </Route>
+
+        <Route path="/prescriptions">
+          <Route path="doctor" element={
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+              <PrescriptionPage />
+            </Guard>
+          } />
+          <Route path="doctor/:id" element={
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+              <PrescriptionDetailPage />
+            </Guard>
+          } />
+          <Route path="nurse" element={
+            <Guard roles={['NURSE']}>
+              <NursePrescriptionPage />
+            </Guard>
+          } />
+        </Route>
+
+        <Route path="/admin" element={
+          <Guard roles={['ADMINISTRATOR', 'AUDITOR']}>
+            <AdminPage />
+          </Guard>
+        } />
+
+        <Route path="/" element={
+          <Guard>
+            <RoleRedirect />
           </Guard>
         } />
       </Route>
-
-      <Route path="/admin" element={
-        <Guard roles={['ADMINISTRATOR', 'AUDITOR']}>
-          <AdminPage />
-        </Guard>
-      } />
-
-      <Route path="/" element={
-        <Guard>
-          <RoleRedirect />
-        </Guard>
-      } />
     </Routes>
   );
 }

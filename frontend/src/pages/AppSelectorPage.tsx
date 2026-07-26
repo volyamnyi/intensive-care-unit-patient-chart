@@ -46,7 +46,7 @@ export default function AppSelectorPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'grey.100',
+        bgcolor: 'background.default',
         p: 3,
       }}
     >

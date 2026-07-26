@@ -92,8 +92,7 @@ export default function AdminPage() {
         <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700 }}>
           Адміністративна панель
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button component="a" href="/select" variant="outlined" size="small">Додатки</Button>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <IconButton aria-label="Меню користувача" onClick={(e) => setAnchorEl(e.currentTarget)}>
             <AccountCircle />
           </IconButton>

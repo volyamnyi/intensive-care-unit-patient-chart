@@ -8,12 +8,12 @@ The project uses a multi-layered testing strategy:
 
 | Layer | Technology | Count | Location |
 |-------|-----------|-------|----------|
-| Backend Unit Tests | JUnit 5 + Mockito | 319 | `backend/src/test/java/` |
-| Backend Integration Tests | Testcontainers + PostgreSQL | 79 | `backend/src/test/java/` (integration package) |
-| Frontend Unit Tests | Vitest + React Testing Library | 316 | `frontend/src/test/` |
-| E2E Tests | Playwright | 40 specs | `tests/specs/` |
+| Backend Unit Tests | JUnit 5 + Mockito | 422 | `backend/*/src/test/java/` |
+| Backend Integration Tests | PostgreSQL | 101 | `backend/icu-chart/src/test/java/` (integration package) |
+| Frontend Unit Tests | Vitest + React Testing Library | ~190 | `frontend/src/test/` |
+| E2E Tests | Playwright | 38 specs | `tests/specs/` |
 
-**Total: 754+ tests**
+**Total: 750+ tests**
 
 ## Running Tests
 
@@ -22,10 +22,10 @@ The project uses a multi-layered testing strategy:
 ```bash
 cd backend
 
-# Run all unit tests (319 tests)
+# Run all unit tests (422 tests: medication-sheet 88 + icu-chart 312 + common 22)
 mvn test
 
-# Run integration tests (79 tests, requires Docker)
+# Run integration tests (101 tests: medicaiton-sheet 22 + icu-chart 79)
 mvn test -Pintegration-test
 
 # Run specific test class
@@ -84,23 +84,30 @@ npx playwright show-report
 ### Backend Test Organization
 
 ```
-backend/src/test/java/com/superhumans/
-├── service/                          # Service layer tests
-│   ├── PrescriptionListServiceTest.java    (15 tests)
-│   ├── PrescriptionItemServiceTest.java    (13 tests)
-│   ├── PrescriptionExecutionServiceTest.java (7 tests)
-│   ├── VitalSignServiceTest.java           (9 tests)
-│   ├── MedicineCatalogServiceTest.java     (7 tests)
-│   ├── LogNotificationServiceTest.java     (5 tests)
-│   └── ... (other service tests)
-├── controller/                       # Controller layer tests
-│   ├── PrescriptionControllerTest.java     (14 tests)
-│   ├── VitalSignControllerTest.java        (6 tests)
-│   └── ... (other controller tests)
-├── integration/                      # Integration tests
-│   ├── PrescriptionRepositoryTest.java
-│   └── ... (other repository tests)
-└── TestSecurityHelper.java           # JWT mocking utilities
+backend/
+├── medication-sheet/src/test/java/com/superhumans/medicationsheet/
+│   ├── service/                          # Service layer tests (88 tests)
+│   │   ├── PrescriptionListServiceTest.java    (15)
+│   │   ├── PrescriptionItemServiceTest.java    (13)
+│   │   ├── PrescriptionExecutionServiceTest.java (7)
+│   │   ├── VitalSignServiceTest.java           (9)
+│   │   ├── MedicineCatalogServiceTest.java     (7)
+│   │   ├── LogNotificationServiceTest.java     (5)
+│   │   ├── LogEmailServiceTest.java            (5)
+│   │   ├── PrescriptionSchedulerServiceTest.java (5)
+│   │   ├── DrugInteractionServiceTest.java     (7)
+│   ├── controller/                       # Controller layer tests (15 tests)
+│   │   ├── PrescriptionControllerTest.java     (12)
+│   │   ├── VitalSignControllerTest.java        (3)
+│   └── TestSecurityHelper.java           # JWT mocking utilities
+├── icu-chart/src/test/java/com/superhumans/
+│   ├── controller/                       # ICU chart controller tests
+│   ├── service/                          # ICU chart service tests (312 total)
+│   ├── integration/                      # Integration tests (101 total)
+│   │   ├── PrescriptionIntegrationTest.java   (18)
+│   │   ├── VitalSignIntegrationTest.java      (4)
+│   │   └── ... (other integration tests)
+│   └── ...
 ```
 
 ### Frontend Test Organization

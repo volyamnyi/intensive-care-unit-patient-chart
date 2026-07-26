@@ -3,6 +3,7 @@ package com.superhumans.medicationsheet.dto;
 import lombok.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import java.util.List;
 import java.util.UUID;
 
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
@@ -15,4 +16,5 @@ public class PrescriptionItemResponse {
     String regime;
     String status;
     Integer sortOrder;
+    List<PrescriptionDayPartNested> dayParts;
 }

@@ -29,7 +29,7 @@ public class PrescriptionItemService {
 
     @Transactional(readOnly = true)
     public List<PrescriptionItem> getByList(UUID listId) {
-        return itemRepository.findByListIdOrderBySortOrderAsc(listId);
+        return itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId);
     }
 
     @Transactional
@@ -37,7 +37,7 @@ public class PrescriptionItemService {
         PrescriptionList list = listRepository.findById(listId)
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
 
-        int sortOrder = itemRepository.findByListId(listId).size();
+        int sortOrder = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId).size();
 
         PrescriptionItem item = PrescriptionItem.builder()
                 .list(list)

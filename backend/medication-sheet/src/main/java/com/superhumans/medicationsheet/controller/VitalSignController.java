@@ -11,6 +11,7 @@ import com.superhumans.medicationsheet.service.VitalSignService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,6 +42,7 @@ public class VitalSignController {
                 .toList();
     }
 
+    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT','DOCTOR')")
     @PostMapping
     public VitalSignEntryResponse create(@Valid @RequestBody VitalSignEntryRequest req) {
         VitalSignEntry entry = vitalSignEntryMapper.toEntity(req);

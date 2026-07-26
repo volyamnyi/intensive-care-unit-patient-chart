@@ -11,11 +11,11 @@ describe('ThemeModeProvider', () => {
     localStorage.clear();
   });
 
-  it('defaults to dark mode when no localStorage value', () => {
+  it('defaults to light mode when no localStorage value', () => {
     const { result } = renderHook(() => useThemeMode(), {
       wrapper: ThemeModeProvider,
     });
-    expect(result.current.mode).toBe('dark');
+    expect(result.current.mode).toBe('light');
   });
 
   it('reads light mode from localStorage', () => {
@@ -34,12 +34,12 @@ describe('ThemeModeProvider', () => {
     expect(result.current.mode).toBe('dark');
   });
 
-  it('ignores invalid localStorage values and defaults to dark', () => {
+  it('ignores invalid localStorage values and defaults to light', () => {
     localStorage.setItem('themeMode', 'invalid');
     const { result } = renderHook(() => useThemeMode(), {
       wrapper: ThemeModeProvider,
     });
-    expect(result.current.mode).toBe('dark');
+    expect(result.current.mode).toBe('light');
   });
 
   it('toggles from dark to light', () => {
@@ -74,11 +74,11 @@ describe('ThemeModeProvider', () => {
     expect(result.current.theme.palette).toBeDefined();
   });
 
-  it('dark mode theme has dark primary background', () => {
+  it('light mode theme has light primary background (default)', () => {
     const { result } = renderHook(() => useThemeMode(), {
       wrapper: ThemeModeProvider,
     });
-    expect(result.current.theme.palette.background.default).toBe('#0D0D0D');
+    expect(result.current.theme.palette.background.default).toBe('#FAFAF8');
   });
 
   it('light mode theme has light primary background', () => {

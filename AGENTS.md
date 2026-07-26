@@ -16,29 +16,37 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-07-26: Medication Sheet backend — Phase 0+1 completed**
+**2026-07-26: Medication Sheet backend — Phase 6 complete (E2E + Docs), Issues #64-#67 closed**
 
-### What was done
-- **Backend**: Restructured from single-module Maven → multi-module (parent POM + `common` + `medication-sheet` + `icu-chart`)
-  - `backend/pom.xml` — spring-boot-starter-parent, pom packaging, 3 child modules
-  - `backend/common/` — shared entities, JWT/security, base classes (depends on spring-boot-starter-data-jpa/web/security/validation, jjwt)
-  - `backend/medication-sheet/` — new module scaffold for "Листок лікарських призначень" (depends on common)
-  - `backend/icu-chart/` — existing app, now depends on both common + medication-sheet for single-deployment JAR
-  - `mvn compile` passes all 4 modules; `mvn test` passes **395 tests, 0 failures**
-- **Frontend**: Restructured from standalone Vite → Vite workspace with 2 sub-apps + shared package
-  - `frontend/package.json` — workspace root with `apps/*` + `packages/*`
-  - `frontend/apps/icu-chart/` — existing app moved here (src/, public/, index.html, vite.config.ts)
-  - `frontend/apps/medication-sheet/` — new scaffold app (port 5174)
-  - `frontend/packages/shared/` — shared auth types, API client factory (`@patient-chart/shared`)
-  - Workspace scripts: `dev:icu-chart`, `dev:medication-sheet`, `build:icu-chart`, `build:medication-sheet`
-- **CI**: Updated `.github/workflows/playwright.yml` for multi-module paths (jacoco coverage, surefire reports, JAR artifact)
-- **Single deployment**: `icu-chart` has `@SpringBootApplication`; medication-sheet beans are auto-scanned under `com.superhumans` package
+### What was done — Phase 3: Services (Issue #64)
+- **EmailService** interface + `LogEmailService` stub (logs instead of sending), `@ConditionalOnMissingBean`
+- **PrescriptionSchedulerService** — `@Scheduled(fixedRate=300000)` auto-creates lists for new patients, gated by `app.scheduling.auto-create-prescriptions-enabled` (disabled by default)
+- 5 service-layer tests: `LogEmailServiceTest` (5), `PrescriptionSchedulerServiceTest` (5)
 
-### Next
-- Extract shared backend code (BaseEntity, User, JWT/security, AuditLog) into `common` module
-- Extract shared frontend code (auth, API endpoints, common components) into `packages/shared/`
-- Move medication-sheet reference code from `merge_the_project_with_current/` into both modules
-- Fix for `#85` pending: `@Builder.Default` on `AuditLog.isDeleted` and `User.role`
+### Phase 4: Controllers + Security (Issue #65)
+- **`@PreAuthorize`** added to `PrescriptionController` (prescribe → DOCTOR/HOD, execute → NURSE/HOD) and `VitalSignController` (POST → NURSE/HOD/DOCTOR)
+- **`ADJACENT_SPECIALIST`** role added to `UserRole` enum — read-only access to prescriptions via CLINICAL_ROLES
+- **`@EnableMethodSecurity`** enabled on `SecurityConfig`
+- **`TestSecurityHelper`** expanded with `hod()` and `adjacentSpecialist()` request post-processors
+
+### Phase 5: Integration Tests (Issue #66)
+- **2 integration test classes**: `PrescriptionIntegrationTest` (18 tests), `VitalSignIntegrationTest` (4 tests)
+- **data-test.sql** extended with medication-sheet tables and seed data (2 lists, 1 item, 1 day, 4 day-parts, 1 vital-list, 1 vital-day, 2 vital-entries)
+- Integration tests cover full API surface: CRUD, role-based access control, forbidden checks
+
+### Phase 6: Documentation (Issue #67)
+- E2E tests already exist: `doctor/prescription-workflow.spec.ts` (4 tests), `nurse/prescription-execution.spec.ts` (3 tests)
+- Documentation updated: AGENTS.md, README.md, TESTING_GUIDE.md
+
+### Test summary
+| Module | Tests | Type |
+|---|---|---|
+| medication-sheet | 88 | Unit (service + controller) |
+| medication-sheet | 22 | Integration (in icu-chart) |
+| icu-chart | 312 | Unit |
+| **Backend total** | **422** | |
+| Frontend | ~190 | Vitest |
+| E2E | 38 | Playwright specs |
 
 ### MIS WireMock Analysis (2026-07-25)
 - **Full analysis completed**: Cross-referenced MIS_API_SPEC.md (11 endpoint groups) vs WireMock stubs
@@ -110,7 +118,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 | Test type | CI job | Trigger |
 |---|---|---|
-| Backend unit (395) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend unit + integration (419) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
 | Frontend Vitest (~190) | `test` → `npm test` | Same |
 | Playwright E2E (38 spec files) | `test` → `npx playwright test` | Same |
@@ -126,7 +134,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run 395 unit tests (excludes integration) |
+| `mvn test` | Run unit tests (excludes integration) |
 | `mvn test -Pintegration-test` | Run 79 integration tests (requires Docker/PostgreSQL) |
 | `mvn verify` | Run all + JaCoCo coverage check + Checkstyle |
 
@@ -148,7 +156,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 
 ## Testing
 
-- **Backend**: 395 unit tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Backend**: 419 total tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: ~190 Vitest tests across 22 files (pages, components, AuthContext, endpoints). Run with `npm t`.
 - **E2E**: 38 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 

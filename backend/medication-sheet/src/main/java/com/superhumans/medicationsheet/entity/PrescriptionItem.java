@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "prescription_items")
@@ -31,4 +33,9 @@ public class PrescriptionItem extends BaseEntity {
 
     @Column(name = "sort_order")
     Integer sortOrder;
+
+    @OneToMany(mappedBy = "item", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("dayDate ASC")
+    @Builder.Default
+    List<PrescriptionItemDay> days = new ArrayList<>();
 }

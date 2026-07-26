@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,13 +21,14 @@ import lombok.experimental.FieldDefaults;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SecurityConfig {
 
     JwtAuthenticationFilter jwtAuthFilter;
 
-    private static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR"};
+    private static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR", "ADJACENT_SPECIALIST"};
     private static final String[] PRESCRIBER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
     private static final String[] SIGNER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
     private static final String[] EXECUTOR_ROLES = {"NURSE", "HEAD_OF_DEPARTMENT"};
@@ -85,6 +87,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/prescriptions/**").hasAnyRole(CLINICAL_ROLES)
                         .requestMatchers("/api/vital-signs/**").hasAnyRole(CLINICAL_ROLES)
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMINISTRATOR")
+                        .requestMatchers("/api/**").hasAnyRole(CLINICAL_ROLES)
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

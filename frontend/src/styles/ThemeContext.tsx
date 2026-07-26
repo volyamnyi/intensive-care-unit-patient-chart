@@ -189,7 +189,7 @@ function createThemeWithMode(mode: ThemeMode): Theme {
 export function ThemeModeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('themeMode');
-    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
+    return (saved === 'light' || saved === 'dark') ? saved : 'light';
   });
 
   const theme = createThemeWithMode(mode);

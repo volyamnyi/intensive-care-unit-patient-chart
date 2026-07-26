@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
@@ -60,6 +61,7 @@ public class PrescriptionController {
         return prescriptionListMapper.toResponse(listService.getById(id));
     }
 
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create prescription list", description = "Creates a new prescription list for a patient. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
@@ -73,6 +75,7 @@ public class PrescriptionController {
         return prescriptionListMapper.toResponse(listService.create(Long.parseLong(req.getPatientId())));
     }
 
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete prescription list", description = "Soft-deletes a prescription list. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
@@ -84,6 +87,7 @@ public class PrescriptionController {
         listService.delete(id);
     }
 
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
     @PostMapping("/{id}/close")
     @Operation(summary = "Close prescription list", description = "Marks a prescription list as closed. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
@@ -105,6 +109,7 @@ public class PrescriptionController {
         return itemService.getByList(listId).stream().map(prescriptionItemMapper::toResponse).toList();
     }
 
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
     @PostMapping("/{listId}/items")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add medicine item", description = "Adds a new medicine item to the prescription list. Creates 21-day grid automatically.")
@@ -118,6 +123,7 @@ public class PrescriptionController {
         return prescriptionItemMapper.toResponse(itemService.addItem(listId, req.getMedicineName(), req.getMedicineMethod(), req.getRegime()));
     }
 
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
     @DeleteMapping("/items/{itemId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove medicine item", description = "Removes a medicine item from the prescription list")
@@ -129,6 +135,7 @@ public class PrescriptionController {
         itemService.removeItem(itemId);
     }
 
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
     @PutMapping("/day-parts/{dayPartId}/plan")
     @Operation(summary = "Plan dose for day part", description = "Plans a specific dose for a day part. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
@@ -142,6 +149,7 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), dummyId));
     }
 
+    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
     @PutMapping("/day-parts/{dayPartId}/complete")
     @Operation(summary = "Complete day part", description = "Marks a day part as completed. Requires NURSE or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
@@ -151,6 +159,7 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.markCompleted(dayPartId, UUID.randomUUID()));
     }
 
+    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
     @PostMapping("/day-parts/{dayPartId}/execute")
     @Operation(summary = "Execute dose", description = "Executes a dose for a day part. Requires NURSE or HEAD_OF_DEPARTMENT role. May require 2-person authentication for high-risk medicines.")
     @ApiResponses(value = {

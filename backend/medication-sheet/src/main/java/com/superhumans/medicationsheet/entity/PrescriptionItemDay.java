@@ -7,6 +7,8 @@ import lombok.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "prescription_item_days")
@@ -20,4 +22,8 @@ public class PrescriptionItemDay extends BaseEntity {
 
     @Column(name = "day_date", nullable = false)
     LocalDate dayDate;
+
+    @OneToMany(mappedBy = "day", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    List<PrescriptionDayPart> dayParts = new ArrayList<>();
 }

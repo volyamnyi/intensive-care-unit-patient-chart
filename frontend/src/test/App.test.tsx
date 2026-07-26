@@ -85,6 +85,12 @@ vi.mock('../layouts/NurseLayout', () => ({
   default: () => <div>Nurse Layout</div>,
 }));
 
+import { Outlet } from 'react-router-dom';
+
+vi.mock('../layouts/GlobalLayout', () => ({
+  default: () => <div>Global Layout<Outlet /></div>,
+}));
+
 vi.mock('../pages/doctor/DashboardPage', () => ({
   default: () => <div>Doctor Dashboard</div>,
 }));

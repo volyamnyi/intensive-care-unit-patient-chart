@@ -49,4 +49,26 @@ public final class TestSecurityHelper {
             return req;
         };
     }
+
+    public static RequestPostProcessor hod() {
+        return request -> {
+            MockHttpServletRequest req = (MockHttpServletRequest)
+                    authentication(new UsernamePasswordAuthenticationToken(
+                            "user", 4L, List.of(new SimpleGrantedAuthority("ROLE_HEAD_OF_DEPARTMENT"))))
+                            .postProcessRequest(request);
+            req.addHeader("Authorization", "Bearer test-hod-token");
+            return req;
+        };
+    }
+
+    public static RequestPostProcessor adjacentSpecialist() {
+        return request -> {
+            MockHttpServletRequest req = (MockHttpServletRequest)
+                    authentication(new UsernamePasswordAuthenticationToken(
+                            "user", 5L, List.of(new SimpleGrantedAuthority("ROLE_ADJACENT_SPECIALIST"))))
+                            .postProcessRequest(request);
+            req.addHeader("Authorization", "Bearer test-adjacent-token");
+            return req;
+        };
+    }
 }

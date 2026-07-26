@@ -62,7 +62,7 @@ class PrescriptionItemServiceTest {
 
     @Test
     void getByList_returnsItems() {
-        when(itemRepository.findByListIdOrderBySortOrderAsc(listId)).thenReturn(List.of(testItem));
+        when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)).thenReturn(List.of(testItem));
 
         var result = service.getByList(listId);
 
@@ -72,7 +72,7 @@ class PrescriptionItemServiceTest {
 
     @Test
     void getByList_returnsEmpty() {
-        when(itemRepository.findByListIdOrderBySortOrderAsc(listId)).thenReturn(List.of());
+        when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)).thenReturn(List.of());
 
         assertThat(service.getByList(listId)).isEmpty();
     }
@@ -82,7 +82,7 @@ class PrescriptionItemServiceTest {
     @Test
     void addItem_createsItemWith21DaysAnd4PartsEach() {
         when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
-        when(itemRepository.findByListId(listId)).thenReturn(List.of());
+        when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)).thenReturn(List.of());
         when(itemRepository.save(any(PrescriptionItem.class))).thenReturn(testItem);
         when(dayRepository.save(any(PrescriptionItemDay.class))).thenAnswer(inv -> {
             PrescriptionItemDay d = inv.getArgument(0);
@@ -112,7 +112,7 @@ class PrescriptionItemServiceTest {
         PrescriptionItem existing = PrescriptionItem.builder().medicineName("Existing").build();
         existing.setId(UUID.randomUUID());
         when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
-        when(itemRepository.findByListId(listId)).thenReturn(List.of(existing));
+        when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)).thenReturn(List.of(existing));
         when(itemRepository.save(any(PrescriptionItem.class))).thenReturn(testItem);
         when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
         when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -134,7 +134,7 @@ class PrescriptionItemServiceTest {
     @Test
     void addItem_createsDayPartsForAllFourPeriods() {
         when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
-        when(itemRepository.findByListId(listId)).thenReturn(List.of());
+        when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)).thenReturn(List.of());
         when(itemRepository.save(any())).thenReturn(testItem);
         when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
         when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

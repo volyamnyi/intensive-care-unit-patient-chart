@@ -5,5 +5,6 @@ public enum UserRole {
     NURSE,
     HEAD_OF_DEPARTMENT,
     ADMINISTRATOR,
-    AUDITOR
+    AUDITOR,
+    ADJACENT_SPECIALIST
 }

@@ -55,6 +55,7 @@ app:
     escalation-hour: 9
     signing-window-start: 0
     signing-window-end: 23
+    auto-create-prescriptions-enabled: false
 
 springdoc:
   api-docs:

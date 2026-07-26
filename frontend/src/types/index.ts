@@ -516,7 +516,8 @@ export interface PrescriptionItemAddRequest {
 
 export interface PrescriptionDayPart {
   id: string;
-  dayId: string;
+  dayId?: string;
+  dayDate?: string;
   period: string;
   dose: string | null;
   isPlanned: boolean;

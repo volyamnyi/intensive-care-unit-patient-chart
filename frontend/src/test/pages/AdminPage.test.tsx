@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import AdminPage from '../../pages/admin/AdminPage';
 
 const theme = createTheme({});
@@ -42,9 +43,11 @@ const mockUsers = [
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
-      <AdminPage />
-    </ThemeProvider>
+    <ThemeModeProvider>
+      <ThemeProvider theme={theme}>
+        <AdminPage />
+      </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

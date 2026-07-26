@@ -306,7 +306,7 @@ java -jar backend/target/patient-chart-backend-*.jar
 | `GET` | `/api/users/doctors` | Admin | List doctors |
 | `GET` | `/api/users/nurses` | Admin | List nurses |
 
-### Prescriptions (Листок лікарських призначень)
+### Prescriptions — Medication Sheet (Листок лікарських призначень)
 | Method | URL | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/prescriptions?patientId=` | Yes | List prescriptions for patient |
@@ -315,11 +315,11 @@ java -jar backend/target/patient-chart-backend-*.jar
 | `DELETE` | `/api/prescriptions/{id}` | Doctor/HOD | Delete prescription |
 | `POST` | `/api/prescriptions/{id}/close` | Doctor/HOD | Close prescription |
 | `GET` | `/api/prescriptions/{listId}/items` | Yes | List prescription items |
-| `POST` | `/api/prescriptions/{listId}/items` | Doctor/HOD | Add medicine item |
+| `POST` | `/api/prescriptions/{listId}/items` | Doctor/HOD | Add medicine item (auto-creates 21-day grid) |
 | `DELETE` | `/api/prescriptions/items/{itemId}` | Doctor/HOD | Remove item |
 | `PUT` | `/api/prescriptions/day-parts/{id}/plan` | Doctor/HOD | Plan dose for day part |
 | `PUT` | `/api/prescriptions/day-parts/{id}/complete` | Nurse/HOD | Complete day part |
-| `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose |
+| `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (with optional 2P auth) |
 | `GET` | `/api/prescriptions/allergies?patientId=` | Yes | Patient allergies (from MIS) |
 | `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
 
@@ -369,19 +369,23 @@ java -jar backend/target/patient-chart-backend-*.jar
 ```
 icu-patient-chart/
 ├── backend/
-│   ├── pom.xml
-│   └── src/main/java/com/superhumans/
-│       ├── SuperhumansApplication.java
-│       ├── auth/             # JWT authentication (filter + token provider)
-│       ├── config/           # Security, CORS
-│       ├── controller/       # REST controllers (18)
-│       ├── dto/              # Request/response DTOs (48 total)
-│       ├── entity/           # JPA entities (25 including enums)
-│       ├── exception/        # Domain exceptions + global handler
-│       ├── mapper/           # Entity ↔ DTO mappers
-│       ├── mis/              # MIS integration (mock + interface)
-│       ├── repository/       # Spring Data repositories (18)
-│       └── service/          # Business logic services (17 implementation + 2 interfaces)
+│   ├── pom.xml               ← parent POM (3 modules: common, medication-sheet, icu-chart)
+│   ├── common/               ← shared entities, JWT/security, base classes
+│   ├── medication-sheet/     ← prescriptions module (entities, services, controllers)
+│   └── icu-chart/
+│       ├── pom.xml
+│       └── src/main/java/com/superhumans/
+│           ├── SuperhumansApplication.java
+│           ├── auth/             # JWT authentication (filter + token provider)
+│           ├── config/           # Security, CORS
+│           ├── controller/       # REST controllers (18)
+│           ├── dto/              # Request/response DTOs (48 total)
+│           ├── entity/           # JPA entities (25 including enums)
+│           ├── exception/        # Domain exceptions + global handler
+│           ├── mapper/           # Entity ↔ DTO mappers
+│           ├── mis/              # MIS integration (mock + interface)
+│           ├── repository/       # Spring Data repositories (18)
+│           └── service/          # Business logic services (17 implementation + 2 interfaces)
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts
@@ -415,8 +419,8 @@ icu-patient-chart/
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (151) |
-| `mvn test -Pintegration-test` | Run integration tests (79) — requires Docker |
+| `mvn test` | Run unit tests (422) |
+| `mvn test -Pintegration-test` | Run integration tests (101) — requires Docker |
 
 #### Frontend
 | Command | Action |
@@ -451,11 +455,11 @@ icu-patient-chart/
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
 
 ### Testing Summary
-- **Backend unit tests**: 319 tests (22 classes) — `mvn test`
-- **Backend integration tests**: 79 tests via Testcontainers (13 classes) — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 316 tests (38 files)
-- **E2E Playwright tests**: 40 spec files, 7 projects
-- **Total**: 754+ tests
+- **Backend unit tests**: 422 tests — medication-sheet (88) + icu-chart (312) + common (22 skippable) — `mvn test`
+- **Backend integration tests**: 101 tests — medication-sheet (22) + icu-chart (79) — `mvn test -Pintegration-test`
+- **Frontend Vitest tests**: ~190 tests
+- **E2E Playwright tests**: 38 spec files, 7 projects
+- **Total**: 750+ tests
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
 > **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.
