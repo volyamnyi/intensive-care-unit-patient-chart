@@ -15,7 +15,7 @@ test.describe('Admin Audit Log', () => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
-    await page.getByText('Журнал аудиту').click();
+    await page.getByRole('tab', { name: 'Журнал аудиту' }).click();
     await page.getByRole('button', { name: 'Переглянути' }).click();
 
     await expect(page.getByText('Сутність')).toBeVisible({ timeout: 10000 });
@@ -28,7 +28,7 @@ test.describe('Admin Audit Log', () => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
-    await page.getByText('Журнал аудиту').click();
+    await page.getByRole('tab', { name: 'Журнал аудиту' }).click();
     await page.getByRole('button', { name: 'Переглянути' }).click();
     await expect(page.getByText('Сутність')).toBeVisible({ timeout: 10000 });
 
@@ -45,7 +45,7 @@ test.describe('Admin Audit Log', () => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
-    await page.getByText('Журнал аудиту').click();
+    await page.getByRole('tab', { name: 'Журнал аудиту' }).click();
     await page.getByRole('button', { name: 'Переглянути' }).click();
     const filter = page.getByLabel(/сутність|entity/i);
     if (await filter.count()) {
