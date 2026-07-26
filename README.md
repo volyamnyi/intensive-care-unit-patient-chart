@@ -30,6 +30,8 @@
 - **Clinical Day Timeline** — Visual timeline of all clinical days per episode with status (OPEN, NURSE_SIGNED, DOCTOR_SIGNED, REOPENED)
 - **Hourly Vital Signs** — Full 24-hour vital sign tables with color-coded completion status
 - **Prescription Management** — Create and cancel medication/lab orders with dose, route, frequency
+- **Prescription Dashboard** — Department toggle (Хірургія/Реабілітація), sortable patient table, search filter, 40 seed patients
+- **Prescription Grid** — Inline 21-day spreadsheet with 7-day scroll window, color-coded cells (blue=planned, green=completed, purple=cancelled), click-to-edit dose editing
 - **Clinical Scale Assessments** — Record and view APACHE II, SOFA, RASS, CAM-ICU, Braden scores
 - **Medical Notes** — Add typed clinical notes per day
 - **Digital Sign-Off** — Two-stage signing workflow (nurse → doctor/HOD), triggers PDF generation
@@ -43,6 +45,12 @@
 - **Hour Selector** — Visual 24-hour strip with color-coded completed/missed/current hours
 - **Fluid Balance** — View intake, output, daily and cumulative balance
 - **Nurse Sign-Off** — First stage of the two-stage signing workflow
+- **Prescription Execution** — Execute medication doses inline with 2-factor authorization popover
+
+### Global UI
+- **GlobalLayout** — Unified AppBar header with dynamic route-based titles for all pages
+- **Dark/Light Theme** — Default light mode with global toggle in header
+- **App Selector** — Choose between ICU Chart and Prescription modules
 
 ### Automated
 - **Audit Logging** — All entity operations are logged with user, timestamp, and diff
@@ -429,7 +437,7 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (~190 across 22 files) |
+| `npm t` | Run Vitest tests (300 across 38 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
@@ -457,10 +465,16 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 ### Testing Summary
 - **Backend unit tests**: 422 tests — medication-sheet (88) + icu-chart (312) + common (22 skippable) — `mvn test`
 - **Backend integration tests**: 101 tests — medication-sheet (22) + icu-chart (79) — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: ~190 tests
+- **Frontend Vitest tests**: 300 tests (38 files, 0 failures)
 - **E2E Playwright tests**: 38 spec files, 7 projects
-- **Total**: 750+ tests
+- **Total**: ~860 tests
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
+
+### Known Issues (from exploratory testing — #71-#74)
+- [#71](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/71) (HIGH): Cyrillic text in `data.sql` stored as Windows-1251 in UTF-8 file
+- [#72](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/72) (MEDIUM): MockMIS patient names have department prefix
+- [#73](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/73) (MEDIUM): Nurse detail view — missing route and grid does not render
+- [#74](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/74) (LOW): Ghost empty button in doctor dashboard table
 
 > **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.
 

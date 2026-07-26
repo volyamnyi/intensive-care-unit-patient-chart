@@ -16,27 +16,55 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-07-26: Medication Sheet backend — Phase 6 complete (E2E + Docs), Issues #64-#67 closed**
+**2026-07-26: Prescription seed data, global theme/layout, exploratory testing**
 
-### What was done — Phase 3: Services (Issue #64)
-- **EmailService** interface + `LogEmailService` stub (logs instead of sending), `@ConditionalOnMissingBean`
-- **PrescriptionSchedulerService** — `@Scheduled(fixedRate=300000)` auto-creates lists for new patients, gated by `app.scheduling.auto-create-prescriptions-enabled` (disabled by default)
-- 5 service-layer tests: `LogEmailServiceTest` (5), `PrescriptionSchedulerServiceTest` (5)
+### Seed data — 40 patients (2001-2040)
+- Generator script: `scripts/generate-prescription-seed.cjs`
+- **200 prescription items** (5 per patient) with realistic ICU meds
+- **4,200 day records** (21 days: 2026-07-22 to 2026-08-11)
+- **16,800 day-part entries** (4 periods: morning/day/evening/night)
+- Surgery patients (2001-2020): Цефтріаксон, Метронідазол, NaCl 0.9%, Морфін, Омепразол, Гепарин, Дексаметазон, Пропофол, Інсулін, Ондансетрон
+- Rehab patients (2021-2040): Пантопразол, NaCl 0.9%, Дексаметазон, Цефтріаксон, Омепразол, Метронідазол, Глюкоза 5%, Парацетамол, Мідозолам, Ондансетрон
+- State simulation: days 0-2 completed+finished, days 3-4 completed, days 5-20 planned
+- 40 prescription_lists + 40 MockMIS patients (2001-2040)
+- `scripts/prescription-seed.sql` — 8MB generated SQL, integrated into `data.sql`
 
-### Phase 4: Controllers + Security (Issue #65)
-- **`@PreAuthorize`** added to `PrescriptionController` (prescribe → DOCTOR/HOD, execute → NURSE/HOD) and `VitalSignController` (POST → NURSE/HOD/DOCTOR)
-- **`ADJACENT_SPECIALIST`** role added to `UserRole` enum — read-only access to prescriptions via CLINICAL_ROLES
-- **`@EnableMethodSecurity`** enabled on `SecurityConfig`
-- **`TestSecurityHelper`** expanded with `hod()` and `adjacentSpecialist()` request post-processors
+### Frontend — global theme
+- **Default theme changed to light mode** (`dark` → `light` in ThemeContext)
+- **ThemeToggle** shared component (`components/common/ThemeToggle.tsx`) — DarkMode/LightMode icon + tooltip
+- Added to: DoctorLayout, NurseLayout, PrescriptionPage, PrescriptionDetailPage, NursePrescriptionPage, AdminPage, AppSelectorPage
+- Theme tests updated (11 tests pass)
 
-### Phase 5: Integration Tests (Issue #66)
-- **2 integration test classes**: `PrescriptionIntegrationTest` (18 tests), `VitalSignIntegrationTest` (4 tests)
-- **data-test.sql** extended with medication-sheet tables and seed data (2 lists, 1 item, 1 day, 4 day-parts, 1 vital-list, 1 vital-day, 2 vital-entries)
-- Integration tests cover full API surface: CRUD, role-based access control, forbidden checks
+### Frontend — GlobalLayout
+- **GlobalLayout** (`layouts/GlobalLayout.tsx`) — unified AppBar header for all authenticated routes
+- Dynamic title/subtitle based on route (`useAppInfo()`):
+  - `/doctor/*`, `/nurse/*` → "ВАІТ" / "Карта інтенсивної терапії"
+  - `/prescriptions/*` → "Призначення" / "Листок лікарських призначень"
+  - `/admin/*` → "Адмін" / "Адміністративна панель"
+  - `/select` → "Superhumans Lviv" / "Вибір додатку"
+- Smart nav: Пацієнти, Призначення (doctor/nurse), Відділення (HOD only), Додатки
+- DoctorLayout/NurseLayout simplified to outlet-only wrappers
+- Login page outside GlobalLayout (still standalone)
 
-### Phase 6: Documentation (Issue #67)
-- E2E tests already exist: `doctor/prescription-workflow.spec.ts` (4 tests), `nurse/prescription-execution.spec.ts` (3 tests)
-- Documentation updated: AGENTS.md, README.md, TESTING_GUIDE.md
+### Frontend — PrescriptionGrid
+- `PrescriptionGrid.tsx` — inline 21-day spreadsheet (510 lines)
+- Doctor mode: click to plan dose, middle-click to cancel
+- Nurse mode: click to execute dose with popover (dose + 2-factor auth)
+- 7-day scroll window, color-coded cells (blue=planned, green=completed, purple=cancelled)
+- Add/remove medicine with allergy check, delete confirmation popover
+- Used by: PrescriptionDetailPage (doctor), NursePrescriptionPage (nurse)
+
+### Frontend — PrescriptionPage (dashboard)
+- Department toggle: Хірургія (2001-2020) / Реабілітація (2021-2040)
+- Sortable patient table (name, document), search filter (name, ID, card number)
+- Create/Open buttons per patient
+
+### Exploratory testing
+- 4 bugs found → Issues #71-#74 created
+- #71 (HIGH): Cyrillic text in data.sql stored as Windows-1251 in UTF-8 file
+- #72 (MEDIUM): MockMIS patient names have department prefix (e.g. "Хірург Бойко...")
+- #73 (MEDIUM): Nurse detail view — missing route + grid does not render
+- #74 (LOW): Ghost empty button in doctor dashboard table
 
 ### Test summary
 | Module | Tests | Type |
@@ -45,20 +73,12 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 | medication-sheet | 22 | Integration (in icu-chart) |
 | icu-chart | 312 | Unit |
 | **Backend total** | **422** | |
-| Frontend | ~190 | Vitest |
+| Frontend | 300 | Vitest (38 files, 0 failures) |
 | E2E | 38 | Playwright specs |
 
-### MIS WireMock Analysis (2026-07-25)
-- **Full analysis completed**: Cross-referenced MIS_API_SPEC.md (11 endpoint groups) vs WireMock stubs
-- **7 of 11 endpoint groups are stubbed**: departments, hospitalization, patients, wards, employees, directories, pdf-transfer
-- **4 of 11 NOT stubbed**: appointments, laboratory, scheduling, notifications
-- **5 of 15 required stubs in MIS_API_SPEC.md are MISSING** (not-mapped): `getDepartments`, `getWardsByDepartmentId`, `updateHospitalization`, `sendPdfToMis`, `updatePdfTransferStatus`
-- **3 stubs have drift**: patients (route drift), departments (response mismatch), hospitals (naming mismatch)
-- **No `missing_stubs.json` or `stub_mapping.json` exists** — needed for traceability
-- **Recommendation**: Create `backend/src/test/resources/wiremock/` directory with mapping files, add cross-reference document
-
 ### Previous sessions (condensed):
-- 2026-07-25 (earlier): Exploratory testing — 5 bugs fixed (entity/DTO validation, scales, UUID errors). Model QA audit — grade B, all gaps fixed. 27 validation tests added. Backend: 312 tests.
+- 2026-07-26 (earlier): Medication Sheet backend — Phase 3-6 complete (EmailService, PrescriptionSchedulerService, controllers + security, integration tests, docs). 422 backend tests.
+- 2026-07-25: Exploratory testing — 5 bugs fixed (entity/DTO validation, scales, UUID errors). Model QA audit — grade B, all gaps fixed. 27 validation tests added. Backend: 312 tests.
 - 2026-07-23: Frontend error display — `getErrorMessage()` helper, used in all 8 API catch blocks. `InvalidDataAccessApiUsageException` → 400 handler.
 - 2026-07-22: Controller tests fixed (106/106). BYTEA column fix. Seed data day_number swap. Checkstyle.
 - 2026-07-21: PDF layout (003-15/о) corrected. Two-column layout. Autosave. DayNumber ASC sorting.
