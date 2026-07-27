@@ -39,9 +39,9 @@ VALUES
 ('cccc0001-0001-0001-0001-000000000001', 1001, NULL, 'Test Prescription', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE),
 ('cccc0002-0002-0002-0002-000000000002', 1002, NULL, 'Second Prescription', 'Finished', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE);
 
-INSERT INTO prescription_items (id, list_id, medicine_name, medicine_method, regime, status, sort_order, created_at, created_by, updated_at, updated_by, version)
+INSERT INTO prescription_items (id, list_id, medicine_name, medicine_method, regime, status, sort_order, created_at, created_by, updated_at, updated_by, version, is_deleted)
 VALUES
-('dddd0001-0001-0001-0001-000000000001', 'cccc0001-0001-0001-0001-000000000001', 'Aspirin', 'PO', 'BID', 'Active', 0, NOW(), 11, NOW(), 11, 0);
+('dddd0001-0001-0001-0001-000000000001', 'cccc0001-0001-0001-0001-000000000001', 'Aspirin', 'PO', 'BID', 'Active', 0, NOW(), 11, NOW(), 11, 0, FALSE);
 
 INSERT INTO prescription_item_days (id, item_id, day_date, created_at, created_by, updated_at, updated_by, version)
 VALUES
