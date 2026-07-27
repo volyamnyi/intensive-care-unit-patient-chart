@@ -11,6 +11,7 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.EpisodeMapper;
 import com.superhumans.mis.MisService;
+import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.EpisodeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,9 @@ class EpisodeServiceTest {
 
     @Mock
     private EpisodeMapper episodeMapper;
+
+    @Mock
+    private ClinicalDayRepository clinicalDayRepository;
 
     @InjectMocks
     private EpisodeService episodeService;
@@ -152,6 +156,7 @@ class EpisodeServiceTest {
                 .status(EpisodeStatus.ACTIVE)
                 .build();
         when(episodeMapper.toResponse(any(Episode.class))).thenReturn(expected);
+        when(clinicalDayRepository.save(any())).thenReturn(null);
 
         EpisodeResponse res = episodeService.createEpisode(req, userId);
 

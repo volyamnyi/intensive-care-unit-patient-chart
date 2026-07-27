@@ -34,10 +34,10 @@ VALUES
 ('b3333333-3333-3333-3333-333333333333', 'a3333333-3333-3333-3333-333333333333', 1, DATE_TRUNC('day', NOW()) + INTERVAL '8 hours', DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '1 day', 'OPEN', false, false, NOW(), 12, NOW(), 12, 0),
 ('b4444444-4444-4444-4444-444444444444', 'a2222222-2222-2222-2222-222222222222', 2, DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours', DATE_TRUNC('day', NOW()) + INTERVAL '8 hours', 'NURSE_SIGNED', false, true, NOW(), 11, NOW(), 11, 0);
 
-INSERT INTO prescription_lists (id, patient_id, document_name, status, created_at, created_by, updated_at, updated_by, version)
+INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted)
 VALUES
-('cccc0001-0001-0001-0001-000000000001', 1001, 'Test Prescription', 'Saved', NOW(), 11, NOW(), 11, 0),
-('cccc0002-0002-0002-0002-000000000002', 1002, 'Second Prescription', 'Finished', NOW(), 11, NOW(), 11, 0);
+('cccc0001-0001-0001-0001-000000000001', 1001, NULL, 'Test Prescription', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE),
+('cccc0002-0002-0002-0002-000000000002', 1002, NULL, 'Second Prescription', 'Finished', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE);
 
 INSERT INTO prescription_items (id, list_id, medicine_name, medicine_method, regime, status, sort_order, created_at, created_by, updated_at, updated_by, version)
 VALUES
@@ -108,11 +108,12 @@ BEGIN
     FOR p_id IN 2001..2040 LOOP
         -- 1 prescription list per patient
         list_id := gen_random_uuid();
-        INSERT INTO prescription_lists (id, patient_id, document_name, status, created_at, created_by, updated_at, updated_by, version)
+        INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted)
         VALUES (list_id, p_id,
+            CASE WHEN p_id <= 2020 THEN 2 ELSE 1 END,
             CASE WHEN p_id <= 2020 THEN 'Листок призначень - Хірургія'
                  ELSE 'Листок призначень - Реабілітація' END,
-            'Saved', NOW(), 11, NOW(), 11, 0);
+            'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE);
 
         -- 2-5 items per list (varies by patient_id)
         items_count := 2 + (p_id % 4);
