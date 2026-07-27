@@ -56,7 +56,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/orders", HttpMethod.POST, entity,
                 String.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
