@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.SqlConfig;
 import java.util.List;
 
 
@@ -23,6 +24,8 @@ import java.util.List;
     "app.scheduling.signing-window-enabled=false"
 })
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test.sql")
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-prescription.sql",
+     config = @SqlConfig(separator = "GO"))
 public abstract class AbstractIntegrationTest {
 
     @LocalServerPort
