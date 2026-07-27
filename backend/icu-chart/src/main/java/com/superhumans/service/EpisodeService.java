@@ -4,6 +4,8 @@ import com.superhumans.dto.EpisodeCloseRequest;
 import com.superhumans.dto.EpisodeCreateRequest;
 import com.superhumans.dto.EpisodePatchRequest;
 import com.superhumans.dto.EpisodeResponse;
+import com.superhumans.entity.ClinicalDay;
+import com.superhumans.entity.ClinicalDayStatus;
 import com.superhumans.entity.Episode;
 import com.superhumans.entity.EpisodeStatus;
 import com.superhumans.exception.EpisodeAlreadyActiveException;
@@ -11,11 +13,13 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.EpisodeMapper;
 import com.superhumans.mis.MisService;
+import com.superhumans.repository.ClinicalDayRepository;
 import com.superhumans.repository.EpisodeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -28,6 +32,7 @@ import lombok.experimental.FieldDefaults;
 public class EpisodeService {
 
     EpisodeRepository episodeRepository;
+    ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
     MisService misService;
     EpisodeMapper episodeMapper;
@@ -76,6 +81,21 @@ public class EpisodeService {
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
         auditService.logCreate("Episode", episode.getId(), userId);
+
+        ClinicalDay day = ClinicalDay.builder()
+                .episode(episode)
+                .dayNumber(1)
+                .startDateTime(request.getAdmissionDate())
+                .endDateTime(request.getAdmissionDate().plusDays(1))
+                .status(ClinicalDayStatus.OPEN)
+                .doctorSigned(false)
+                .nurseSigned(false)
+                .build();
+        day.setCreatedBy(userId);
+        day.setUpdatedBy(userId);
+        clinicalDayRepository.save(day);
+        auditService.logCreate("ClinicalDay", day.getId(), userId);
+
         return episodeMapper.toResponse(episode);
     }
 

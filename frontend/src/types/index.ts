@@ -26,6 +26,7 @@ export interface PatientDto {
   weight: number | null;
   bloodGroup: string;
   rhFactor: string;
+  departmentId?: number;
 }
 
 export interface EpisodeCreateRequest {

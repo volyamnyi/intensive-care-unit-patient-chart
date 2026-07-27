@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom';
 import { Box, Typography, Button, CircularProgress, Alert, Divider, useTheme } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import { prescriptionApi, vitalSignApi } from '../../api/endpoints';
-import PrescriptionGrid from '../../components/prescription/PrescriptionGrid';
+import { useAuth } from '../../services/AuthContext';
+import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid';
 import VitalSignForm from '../../components/prescription/VitalSignForm';
 import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog';
 import { getErrorMessage } from '../../utils/errorMessage';
@@ -12,6 +13,8 @@ import type { PrescriptionList, PrescriptionItem, AllergyItem, VitalSignEntry } 
 export default function PrescriptionDetailPage() {
   const theme = useTheme();
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const isNurseUser = user?.role === 'NURSE';
 
   const [prescription, setPrescription] = useState<PrescriptionList | null>(null);
   const [items, setItems] = useState<PrescriptionItem[]>([]);
@@ -77,13 +80,13 @@ export default function PrescriptionDetailPage() {
     }
   };
 
-  const handleComplete = async (dayPartId: string) => {
+  const handleCancel = async (dayPartId: string) => {
     setError(null);
     try {
-      await prescriptionApi.completeDose(dayPartId);
+      await prescriptionApi.cancelDose(dayPartId);
       if (id) await loadItems(id);
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося завершити'));
+      setError(getErrorMessage(err, 'Не вдалося скасувати дозу'));
     }
   };
 
@@ -120,6 +123,16 @@ export default function PrescriptionDetailPage() {
     }
   };
 
+  const handleExecute: GridProps['onExecute'] = async (dayPartId, actualDose, requires2p, secondPersonId) => {
+    setError(null);
+    try {
+      await prescriptionApi.executeDose(dayPartId, { actualDose, requires2pAuth: requires2p, secondPersonId });
+      if (id) await loadItems(id);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Не вдалося виконати дозу'));
+    }
+  };
+
   const handleClose = async () => {
     if (!id) return;
     setClosing(true);
@@ -149,42 +162,63 @@ export default function PrescriptionDetailPage() {
             Пацієнт ID: {prescription.patientId} · Статус: {prescription.status === 'Finished' ? 'Закрито' : 'Відкрито'}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {!isFinished && (
-            <Button variant="contained" color="warning" startIcon={<Close />} onClick={() => setCloseDialogOpen(true)}>
-              Закрити листок
-            </Button>
-          )}
-        </Box>
+        {!isNurseUser && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {!isFinished && (
+              <Button variant="contained" color="warning" startIcon={<Close />} onClick={() => setCloseDialogOpen(true)}>
+                Закрити листок
+              </Button>
+            )}
+          </Box>
+        )}
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          action={
+            /(modified|conflict|version|змінено|конфлікт|edited)/i.test(error) ? (
+              <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+                Оновити сторінку
+              </Button>
+            ) : undefined
+          }
+        >
+          {error}
+        </Alert>
+      )}
 
       <PrescriptionGrid
         items={items}
         canEdit={!isFinished}
-        isDoctor
-        isNurse={false}
+        isDoctor={!isNurseUser}
+        isNurse={isNurseUser}
         onPlan={handlePlan}
-        onComplete={handleComplete}
-        onAddItem={handleAddItem}
-        onRemoveItem={handleRemoveItem}
+        onCancel={handleCancel}
+        onExecute={isNurseUser ? handleExecute : undefined}
+        onAddItem={isNurseUser ? async () => {} : handleAddItem}
+        onRemoveItem={isNurseUser ? async () => {} : handleRemoveItem}
         onSearchMedicine={(keyword) => prescriptionApi.getMedicineCatalog(keyword).then(r => r.data)}
-        allergies={allergies}
+        allergies={isNurseUser ? [] : allergies}
         loading={loading}
       />
 
-      <Divider sx={{ my: 3 }} />
+      {!isNurseUser && (
+        <>
+          <Divider sx={{ my: 3 }} />
 
-      <VitalSignForm latest={latestVitalSign} onSubmit={handleVitalSignSubmit} disabled={isFinished} />
+          <VitalSignForm latest={latestVitalSign} onSubmit={handleVitalSignSubmit} disabled={isFinished} />
 
-      <ClosePrescriptionDialog
-        open={closeDialogOpen}
-        onClose={() => setCloseDialogOpen(false)}
-        onConfirm={handleClose}
-        allCompleted={false}
-        closing={closing}
-      />
+          <ClosePrescriptionDialog
+            open={closeDialogOpen}
+            onClose={() => setCloseDialogOpen(false)}
+            onConfirm={handleClose}
+            allCompleted={false}
+            closing={closing}
+          />
+        </>
+      )}
     </Box>
   );
 }

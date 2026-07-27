@@ -41,7 +41,7 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
             <TableCell>Дата госпіталізації</TableCell>
             <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Дата виписки</TableCell>
             <TableCell>Статус</TableCell>
-            <TableCell></TableCell>
+            <TableCell>Дії</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

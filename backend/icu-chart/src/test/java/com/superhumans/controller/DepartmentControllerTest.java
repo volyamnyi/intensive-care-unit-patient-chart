@@ -17,11 +17,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
-import static org.mockito.ArgumentMatchers.anyString;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.mockito.ArgumentMatchers.*;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(DepartmentController.class)
@@ -57,7 +55,7 @@ class DepartmentControllerTest {
                 .totalBeds(12)
                 .build();
 
-        when(departmentService.getStats()).thenReturn(stats);
+        when(departmentService.getStats(isNull())).thenReturn(stats);
 
         mockMvc.perform(get("/api/department/stats").with(doctor()))
                 .andExpect(status().isOk())
@@ -72,7 +70,7 @@ class DepartmentControllerTest {
                 .patientName("Test Patient")
                 .build();
 
-        when(departmentService.getPatients()).thenReturn(List.of(patient));
+        when(departmentService.getPatients(isNull())).thenReturn(List.of(patient));
 
         mockMvc.perform(get("/api/department/patients").with(doctor()))
                 .andExpect(status().isOk())
@@ -81,7 +79,7 @@ class DepartmentControllerTest {
 
     @Test
     void getPatients_emptyList_returnsOk() throws Exception {
-        when(departmentService.getPatients()).thenReturn(List.of());
+        when(departmentService.getPatients(isNull())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/department/patients").with(doctor()))
                 .andExpect(status().isOk())

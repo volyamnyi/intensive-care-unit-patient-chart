@@ -43,8 +43,8 @@ export default function PrescriptionPage() {
     try {
       const res = await patientApi.search('');
       const deptPatients = res.data.filter(p => {
-        if (dept === 'surgery') return p.fullName.startsWith('Хірург');
-        return p.fullName.startsWith('Реабілітація');
+        if (dept === 'surgery') return p.departmentId === 2;
+        return p.departmentId === 1;
       });
 
       setRows(deptPatients.map(p => ({ patient: p, list: null, loading: false })));
@@ -168,7 +168,7 @@ export default function PrescriptionPage() {
                   </TableSortLabel>
                 </TableCell>
                 <TableCell sx={{ width: 100 }}>Статус</TableCell>
-                <TableCell sx={{ width: 140 }}></TableCell>
+                <TableCell sx={{ width: 140 }}>Дії</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -186,7 +186,7 @@ export default function PrescriptionPage() {
                     <TableCell>{row.patient.id}</TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {row.patient.fullName.replace(/^(Хірург |Реабілітація )/, '')}
+                        {row.patient.fullName}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {row.patient.externalId1}

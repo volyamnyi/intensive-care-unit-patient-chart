@@ -18,6 +18,11 @@ public interface EpisodeRepository extends JpaRepository<Episode, UUID> {
     List<Episode> findByAdmissionDateBetween(LocalDateTime start, LocalDateTime end);
     long countByStatus(EpisodeStatus status);
 
+    long countByDepartmentIdAndStatus(UUID departmentId, EpisodeStatus status);
+
     @Query("SELECT e FROM Episode e WHERE e.status = 'ACTIVE' ORDER BY e.createdAt DESC")
     List<Episode> findAllActive();
+
+    @Query("SELECT e FROM Episode e WHERE e.departmentId = :departmentId AND e.status = 'ACTIVE' ORDER BY e.createdAt DESC")
+    List<Episode> findAllActiveByDepartmentId(@Param("departmentId") UUID departmentId);
 }

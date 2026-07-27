@@ -21,4 +21,5 @@ public class PatientDTO {
     Integer weight;
     String bloodGroup;
     String rhFactor;
+    Long departmentId;
 }

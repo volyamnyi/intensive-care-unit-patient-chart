@@ -1,6 +1,7 @@
 package com.superhumans.controller;
 
 import com.superhumans.entity.User;
+import com.superhumans.exception.BadRequestException;
 import com.superhumans.repository.UserRepository;
 import com.superhumans.service.AuditService;
 import lombok.RequiredArgsConstructor;
@@ -70,11 +71,15 @@ public class AdminController {
 
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication auth) {
+        Long currentUserId = getUserId(auth);
+        if (currentUserId.equals(id)) {
+            throw new BadRequestException("Неможливо видалити власний обліковий запис");
+        }
         return userRepository.findById(id).map(user -> {
             user.setDeleted(true);
-            user.setUpdatedBy(getUserId(auth));
+            user.setUpdatedBy(currentUserId);
             userRepository.save(user);
-            auditService.logAction("User", null, "ADMIN_DELETE_USER:soft-deleted", getUserId(auth));
+            auditService.logAction("User", null, "ADMIN_DELETE_USER:soft-deleted", currentUserId);
             return ResponseEntity.status(HttpStatus.NO_CONTENT).<Void>build();
         }).orElse(ResponseEntity.notFound().build());
     }

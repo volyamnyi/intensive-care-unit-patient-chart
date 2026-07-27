@@ -159,6 +159,16 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.markCompleted(dayPartId, UUID.randomUUID()));
     }
 
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PutMapping("/day-parts/{dayPartId}/cancel")
+    @Operation(summary = "Cancel planned dose", description = "Marks a planned day part as cancelled (isPlannedFinished). Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Planned dose cancelled successfully")
+    })
+    public PrescriptionDayPartResponse cancelDose(@PathVariable UUID dayPartId) {
+        return prescriptionDayPartMapper.toResponse(itemService.markPlannedFinished(dayPartId, UUID.randomUUID()));
+    }
+
     @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
     @PostMapping("/day-parts/{dayPartId}/execute")
     @Operation(summary = "Execute dose", description = "Executes a dose for a day part. Requires NURSE or HEAD_OF_DEPARTMENT role. May require 2-person authentication for high-risk medicines.")

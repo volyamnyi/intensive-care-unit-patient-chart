@@ -55,6 +55,8 @@ const out = [];
 
 for (let pid = 2001; pid <= 2040; pid++) {
   const isSrg = pid <= 2020;
+  const deptId = isSrg ? 2 : 1;
+  out.push(`INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('${lid(pid)}', ${pid}, ${deptId}, 'Листок лікарських призначень', 'Active', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;`);
   const pool = isSrg ? surgeryMeds : rehabMeds;
   const cnt = 5; // fixed 5 items per patient for manageable seed size
   const used = new Set();

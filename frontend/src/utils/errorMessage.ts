@@ -5,3 +5,11 @@ export function getErrorMessage(err: unknown, fallback: string): string {
   }
   return err instanceof Error ? err.message : fallback;
 }
+
+export function isConflictError(err: unknown): boolean {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const axiosErr = err as { response?: { status?: number } };
+    return axiosErr.response?.status === 409;
+  }
+  return false;
+}

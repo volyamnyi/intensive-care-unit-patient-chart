@@ -16,7 +16,7 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-07-26: Prescription seed data, global theme/layout, exploratory testing**
+**2026-07-27: FK fix — prescription_lists seed data for startup**
 
 ### Seed data — 40 patients (2001-2040)
 - Generator script: `scripts/generate-prescription-seed.cjs`
@@ -28,6 +28,13 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 - State simulation: days 0-2 completed+finished, days 3-4 completed, days 5-20 planned
 - 40 prescription_lists + 40 MockMIS patients (2001-2040)
 - `scripts/prescription-seed.sql` — 8MB generated SQL, integrated into `data.sql`
+
+### FK fix — startup failure
+- `data.sql` had 200 `prescription_items`, 4,200 `prescription_item_days`, and 16,800 `prescription_day_parts` rows but **zero** `prescription_lists` rows
+- Spring Boot `ddl-auto: update` creates FK constraints → `data.sql` INSERTs fail on FK reference to `prescription_lists.id`
+- **Fix**: Generated 40 deterministic-UUID `INSERT INTO prescription_lists` rows (patients 2001–2040, department 2 for Хірургія/1 for Реабілітація, `hospitalization_id = NULL`, `editing_user_id = NULL`)
+- Generator script updated to emit `prescription_lists` rows alongside items/days/parts
+- `prescription_lists` INSERTs placed immediately before the first `prescription_items` INSERT in `data.sql`
 
 ### Frontend — global theme
 - **Default theme changed to light mode** (`dark` → `light` in ThemeContext)

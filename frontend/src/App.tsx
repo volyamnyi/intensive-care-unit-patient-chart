@@ -136,6 +136,11 @@ function AppRoutes() {
               <NursePrescriptionPage />
             </Guard>
           } />
+          <Route path="nurse/:id" element={
+            <Guard roles={['NURSE']}>
+              <PrescriptionDetailPage />
+            </Guard>
+          } />
         </Route>
 
         <Route path="/admin" element={

@@ -121,6 +121,15 @@ public class PrescriptionItemService {
         return partRepository.save(part);
     }
 
+    @Transactional
+    public PrescriptionDayPart markPlannedFinished(UUID dayPartId, UUID doctorId) {
+        PrescriptionDayPart part = getDayPart(dayPartId);
+        part.setIsPlannedFinished(true);
+        part.setDoctorName(doctorId.toString());
+        part.setUpdatedBy(0L);
+        return partRepository.save(part);
+    }
+
     public List<PrescriptionItemDay> getDays(UUID itemId) {
         return dayRepository.findByItemIdOrderByDayDateAsc(itemId);
     }

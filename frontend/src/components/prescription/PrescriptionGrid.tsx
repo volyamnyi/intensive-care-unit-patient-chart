@@ -57,7 +57,7 @@ export interface GridProps {
   isDoctor: boolean;
   isNurse: boolean;
   onPlan: (dayPartId: string, dose: string) => Promise<void>;
-  onComplete: (dayPartId: string) => Promise<void>;
+  onCancel: (dayPartId: string) => Promise<void>;
   onExecute?: (dayPartId: string, actualDose: string, requires2p: boolean, secondPersonId?: string) => Promise<void>;
   onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
   onRemoveItem: (itemId: string) => Promise<void>;
@@ -91,7 +91,7 @@ const fallbackCatalog: MedicineCatalogItem[] = [
 
 export default function PrescriptionGrid({
   items, canEdit, isDoctor, isNurse,
-  onPlan, onComplete, onExecute,
+  onPlan, onCancel, onExecute,
   onAddItem, onRemoveItem,
   onSearchMedicine, allergies, loading,
 }: GridProps) {
@@ -153,7 +153,7 @@ export default function PrescriptionGrid({
 
   const doctorCancel = async (dp: PrescriptionDayPart) => {
     if (!canEdit || !isDoctor || !dp.isPlanned || dp.isCompleted) return;
-    await onComplete(dp.id); // marks isPlannedFinished
+    await onCancel(dp.id);
   };
 
   // ── nurse: execute popover ──────────────────────────────────────

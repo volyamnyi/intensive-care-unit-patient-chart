@@ -3,6 +3,8 @@ package com.superhumans.medicationsheet.entity;
 import com.superhumans.entity.BaseEntity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.*;
@@ -22,6 +24,7 @@ public class VitalSignEntry extends BaseEntity {
     @Column(nullable = false, length = 8)
     String period;
 
+    @DecimalMin("34.0") @DecimalMax("42.0")
     Double temperature;
 
     @Column(name = "systolic_bp")

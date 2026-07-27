@@ -4,11 +4,13 @@ import {
   Box, Typography, IconButton, Menu, MenuItem,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress,
   Button, TextField, Tabs, Tab, Select, Chip, Dialog, DialogTitle, DialogContent, DialogActions,
+  Alert, Snackbar,
 } from '@mui/material';
 import { AccountCircle, History, Refresh } from '@mui/icons-material';
 import { useAuth } from '../../services/AuthContext';
 import { auditApi, adminApi } from '../../api/endpoints';
 import AuditLogTable from '../../components/common/AuditLogTable';
+import { getErrorMessage } from '../../utils/errorMessage';
 import type { User, AuditLog } from '../../types';
 
 export default function AdminPage() {
@@ -26,6 +28,7 @@ export default function AdminPage() {
   const [auditFilterEntity, setAuditFilterEntity] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -76,11 +79,14 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (userId: number) => {
+    setError(null);
     try {
       await adminApi.deleteUser(userId);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
       setDialogOpen(false);
-    } catch { /* */ }
+    } catch (err) {
+      setError(getErrorMessage(err, 'Не вдалося видалити користувача'));
+    }
   };
 
   const hasPerm = (u: User, perm: string) =>
@@ -217,6 +223,11 @@ export default function AdminPage() {
           </Box>
         </Paper>
       )}
+
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="error" onClose={() => setError(null)} sx={{ width: '100%' }}>{error}</Alert>
+      </Snackbar>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
         <DialogTitle>Підтвердження видалення</DialogTitle>

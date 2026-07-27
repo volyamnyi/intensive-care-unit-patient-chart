@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, TextField, CircularProgress, Alert, InputAdornment, useTheme, Paper, Grid, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import { Search as SearchIcon, People, Assignment, HowToReg, GppBad, TaskAlt, TableChart, Dashboard as DashboardIcon, MedicalServices, Hotel, Group } from '@mui/icons-material';
+import { Box, Typography, TextField, CircularProgress, Alert, InputAdornment, useTheme, Paper, Grid, ToggleButtonGroup, ToggleButton, IconButton, Tooltip } from '@mui/material';
+import { Search as SearchIcon, People, Assignment, HowToReg, GppBad, TaskAlt, TableChart, Dashboard as DashboardIcon, MedicalServices, Hotel, Group, Refresh } from '@mui/icons-material';
 import { departmentApi } from '../../api/endpoints';
 import EpisodeTable from '../../components/common/EpisodeTable';
 import DepartmentPatientCard from '../../components/common/DepartmentPatientCard';
@@ -27,12 +27,10 @@ export default function DepartmentDashboardPage() {
   const [search, setSearch] = useState('');
   const [stats, setStats] = useState<DepartmentStats>(initialStats);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    document.title = 'ВАІТ — Завідувач відділення';
-  }, []);
-
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     Promise.all([
       departmentApi.getPatients(),
       departmentApi.getStats(),
@@ -40,12 +38,25 @@ export default function DepartmentDashboardPage() {
       .then(([patRes, statsRes]) => {
         setPatients(patRes.data);
         setStats(statsRes.data);
+        setLastUpdated(new Date());
       })
       .catch(() => {
         setPatients([]);
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    document.title = 'ВАІТ — Завідувач відділення';
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    timerRef.current = setInterval(fetchData, 30000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [fetchData]);
 
   const filteredPatients = patients.filter((p) =>
     (p.patientName ?? '').toLowerCase().includes(search.toLowerCase())
@@ -69,9 +80,22 @@ export default function DepartmentDashboardPage() {
       <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary, mb: 0.5 }}>
         Відділення анестезіології та інтенсивної терапії
       </Typography>
-      <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 3 }}>
-        Оглядова панель завідувача
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+          Оглядова панель завідувача
+        </Typography>
+        <Box sx={{ flex: 1 }} />
+        {lastUpdated && (
+          <Typography variant="caption" sx={{ color: theme.palette.text.disabled }}>
+            Оновлено: {lastUpdated.toLocaleTimeString('uk-UA')}
+          </Typography>
+        )}
+        <Tooltip title="Оновити дані">
+          <IconButton size="small" onClick={fetchData}>
+            <Refresh fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {statCards.map((card) => (

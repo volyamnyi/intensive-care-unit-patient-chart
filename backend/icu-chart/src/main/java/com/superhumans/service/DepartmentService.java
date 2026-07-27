@@ -32,20 +32,25 @@ public class DepartmentService {
     UserRepository userRepository;
     MisService misService;
 
-    public DepartmentStatsResponse getStats() {
-        long activePatients = episodeRepository.countByStatus(EpisodeStatus.ACTIVE);
+    public DepartmentStatsResponse getStats(UUID departmentId) {
+        long activeEpisodesCount;
+        if (departmentId != null) {
+            activeEpisodesCount = episodeRepository.countByDepartmentIdAndStatus(departmentId, EpisodeStatus.ACTIVE);
+        } else {
+            activeEpisodesCount = episodeRepository.countByStatus(EpisodeStatus.ACTIVE);
+        }
         long openDays = clinicalDayRepository.countByStatus(ClinicalDayStatus.OPEN)
                 + clinicalDayRepository.countByStatus(ClinicalDayStatus.REOPENED);
         long nurseSignedDays = clinicalDayRepository.countByStatus(ClinicalDayStatus.NURSE_SIGNED);
         long doctorSignedDays = clinicalDayRepository.countByStatus(ClinicalDayStatus.DOCTOR_SIGNED);
         long closedDays = clinicalDayRepository.countByStatus(ClinicalDayStatus.CLOSED);
-        long occupiedBeds = episodeRepository.countByStatus(EpisodeStatus.ACTIVE);
+        long occupiedBeds = activeEpisodesCount;
         long activeDoctors = userRepository.findByRole(UserRole.DOCTOR).size()
                 + userRepository.findByRole(UserRole.HEAD_OF_DEPARTMENT).size();
         long activeNurses = userRepository.findByRole(UserRole.NURSE).size();
 
         return DepartmentStatsResponse.builder()
-                .activePatients(activePatients)
+                .activePatients(activeEpisodesCount)
                 .openDays(openDays)
                 .nurseSignedDays(nurseSignedDays)
                 .doctorSignedDays(doctorSignedDays)
@@ -57,8 +62,13 @@ public class DepartmentService {
                 .build();
     }
 
-    public List<DepartmentPatientResponse> getPatients() {
-        List<Episode> activeEpisodes = episodeRepository.findAllActive();
+    public List<DepartmentPatientResponse> getPatients(UUID departmentId) {
+        List<Episode> activeEpisodes;
+        if (departmentId != null) {
+            activeEpisodes = episodeRepository.findAllActiveByDepartmentId(departmentId);
+        } else {
+            activeEpisodes = episodeRepository.findAllActive();
+        }
 
         Map<Long, String> doctorNames = userRepository.findByRole(UserRole.DOCTOR).stream()
                 .collect(Collectors.toMap(
