@@ -48,7 +48,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull().isNotEmpty();
-        assertThat(res.getBody().get(0).getId()).isEqualTo(SEED_LIST_ID.toString());
+        assertThat(res.getBody().get(0).getId()).isEqualTo(SEED_LIST_ID);
     }
 
     @Test
@@ -60,7 +60,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getId()).isEqualTo(SEED_LIST_ID.toString());
+        assertThat(res.getBody().getId()).isEqualTo(SEED_LIST_ID);
     }
 
     @Test

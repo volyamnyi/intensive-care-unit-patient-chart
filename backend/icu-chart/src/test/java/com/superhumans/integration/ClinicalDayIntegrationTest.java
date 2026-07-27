@@ -44,25 +44,23 @@ class ClinicalDayIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void createClinicalDay_createsSuccessfully() {
+    void createEpisode_autoCreatesClinicalDay() {
         EpisodeCreateRequest epReq = new EpisodeCreateRequest(
                 1020L, null, null, LocalDateTime.now(), null, null, null, null, null);
         var epEntity = authEntity(epReq, getDoctorToken());
         var epRes = restTemplate.exchange("/api/episodes", HttpMethod.POST, epEntity, EpisodeResponse.class);
         UUID newEpisodeId = epRes.getBody().getId();
 
-        ClinicalDayCreateRequest req = new ClinicalDayCreateRequest(
-                newEpisodeId, LocalDateTime.now(), LocalDateTime.now().plusDays(1), null);
+        var getEntity = authGet(getDoctorToken());
+        var daysRes = restTemplate.exchange(
+                "/api/episodes/{id}/clinical-days", HttpMethod.GET, getEntity,
+                new org.springframework.core.ParameterizedTypeReference<java.util.List<ClinicalDayResponse>>() {},
+                newEpisodeId);
 
-        var entity = authEntity(req, getDoctorToken());
-
-        var res = restTemplate.exchange(
-                "/api/clinical-days", HttpMethod.POST, entity,
-                ClinicalDayResponse.class);
-
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getEpisodeId()).isEqualTo(newEpisodeId);
+        assertThat(daysRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(daysRes.getBody()).isNotNull().hasSize(1);
+        assertThat(daysRes.getBody().get(0).getEpisodeId()).isEqualTo(newEpisodeId);
+        assertThat(daysRes.getBody().get(0).getStatus()).isEqualTo(ClinicalDayStatus.OPEN);
     }
 
     @Test

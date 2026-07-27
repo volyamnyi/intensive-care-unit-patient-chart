@@ -23,6 +23,8 @@ class VitalSignIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID PRESCRIPTION_LIST_ID =
             UUID.fromString("cccc0001-0001-0001-0001-000000000001");
+    private static final UUID FINISHED_LIST_ID =
+            UUID.fromString("cccc0002-0002-0002-0002-000000000002");
     private static final UUID VITAL_LIST_ID =
             UUID.fromString("bbbb0001-0001-0001-0001-000000000001");
     private static final UUID VITAL_DAY_ID =
@@ -81,7 +83,7 @@ class VitalSignIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createEntry_fillsEmptyEveningSlot() {
         VitalSignEntryRequest req = new VitalSignEntryRequest();
-        req.setPrescriptionListId(PRESCRIPTION_LIST_ID.toString());
+        req.setPrescriptionListId(FINISHED_LIST_ID.toString());
         req.setTemperature(36.8);
         req.setSystolicBp(118);
         req.setDiastolicBp(78);
