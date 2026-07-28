@@ -14,7 +14,7 @@ import { getErrorMessage } from '../../utils/errorMessage';
 import type { User, AuditLog } from '../../types';
 
 export default function AdminPage() {
-  useEffect(() => { document.title = 'ВАІТ — Адміністратор'; }, []);
+  useEffect(() => { document.title = 'Адмін — Superhumans Lviv'; }, []);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

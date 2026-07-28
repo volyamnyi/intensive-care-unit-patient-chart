@@ -493,6 +493,8 @@ export interface PrescriptionList {
   documentName: string;
   status: PrescriptionListStatus;
   editingUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PrescriptionListCreateRequest {

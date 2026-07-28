@@ -12,6 +12,7 @@ import type { PrescriptionList, PrescriptionItem, AllergyItem } from '../../type
 
 export default function PrescriptionDetailPage() {
   const theme = useTheme();
+  useEffect(() => { document.title = 'Призначення — Деталі'; }, []);
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const isNurseUser = user?.role === 'NURSE';

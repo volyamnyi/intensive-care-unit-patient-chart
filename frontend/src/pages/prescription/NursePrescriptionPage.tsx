@@ -22,6 +22,7 @@ type SortKey = 'id' | 'name' | 'room' | 'bed' | 'doctor' | 'status';
 export default function NursePrescriptionPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'Призначення — Медсестра'; }, []);
 
   const [dept, setDept] = useState<Department>(
     () => (localStorage.getItem('nursePrescDept') as Department) || 'surgery',

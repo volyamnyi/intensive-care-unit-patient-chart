@@ -1,8 +1,8 @@
 package com.superhumans.medicationsheet.dto;
 
 import lombok.*;
-import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
@@ -15,4 +15,6 @@ public class PrescriptionListResponse {
     String documentName;
     String status;
     UUID editingUserId;
+    LocalDateTime createdAt;
+    LocalDateTime updatedAt;
 }

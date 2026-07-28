@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Card, CardContent, CardActionArea, Typography } from '@mui/material';
 import { LocalHospital, ReceiptLong, AdminPanelSettings } from '@mui/icons-material';
@@ -25,6 +26,7 @@ const cards = [
 export default function AppSelectorPage() {
   const { user, selectApp, hasRole } = useAuth();
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'Вибір додатку — Superhumans Lviv'; }, []);
 
   const handleSelect = (card: (typeof cards)[0]) => {
     selectApp(card.app);

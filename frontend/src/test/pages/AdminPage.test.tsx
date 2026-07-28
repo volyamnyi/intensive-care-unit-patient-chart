@@ -60,7 +60,7 @@ describe('AdminPage', () => {
 
   it('sets document title on mount', () => {
     renderPage();
-    expect(document.title).toBe('ВАІТ — Адміністратор');
+    expect(document.title).toBe('Адмін — Superhumans Lviv');
   });
 
   it('renders the page title', () => {

@@ -10,7 +10,7 @@ const platformApps = [
 ];
 
 export default function LoginPage() {
-  useEffect(() => { document.title = 'ВАІТ — Вхід'; }, []);
+  useEffect(() => { document.title = 'Вхід — Superhumans Lviv'; }, []);
   const { login } = useAuth();
   const { mode } = useThemeMode();
   const isDark = mode === 'dark';
@@ -88,12 +88,12 @@ export default function LoginPage() {
             alt="Superhumans"
             sx={{ height: 40, width: 'auto', mb: 2.5 }}
           />
-          <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, mb: 2.5, color: isDark ? '#FFFFFF' : '#1F1F1F', letterSpacing: '-1px' }}>
-            Медична інформаційна система
+          <Typography sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700, fontSize: 15, lineHeight: 1.4, mb: 2.5, color: isDark ? '#FFFFFF' : '#1F1F1F' }}>
+            Веб додаток до Медичної інформаційної системи
           </Typography>
 
           <Typography variant="caption" sx={{ color: isDark ? '#707070' : '#8A8A8A', fontWeight: 600, mb: 1.5, letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: 10 }}>
-            Додатки платформи
+            Модулі платформи
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
             {platformApps.map((app) => (
@@ -130,7 +130,7 @@ export default function LoginPage() {
             >
               <Add sx={{ fontSize: 20, color: isDark ? '#5A5A5A' : '#A0A0A0' }} />
               <Typography variant="body2" sx={{ fontSize: 12, color: isDark ? '#5A5A5A' : '#A0A0A0', fontStyle: 'italic' }}>
-                Ще більше додатків
+                Ще більше модулів
               </Typography>
             </Paper>
           </Box>
