@@ -27,7 +27,7 @@ function formatDate(iso: string) {
 
 function cellBg(part: PrescriptionDayPart | undefined) {
   if (!part) return '#fff';
-  if (part.isCompletedFinished) return '#A5D6A7';
+  if (part.isCompletedFinished) return '#C8E6C9';
   if (part.isCompleted) return '#C8E6C9';
   if (part.isPlannedFinished) return '#E1BEE7';
   if (part.isPlanned) return '#BBDEFB';
@@ -36,7 +36,7 @@ function cellBg(part: PrescriptionDayPart | undefined) {
 
 function cellLabel(part: PrescriptionDayPart | undefined) {
   if (!part) return '';
-  if (part.isCompletedFinished) return '✓✓';
+  if (part.isCompletedFinished) return '✓';
   if (part.isCompleted) return '✓';
   if (part.isPlannedFinished) return '✕';
   if (part.isPlanned) return part.dose ?? '+';
@@ -305,7 +305,6 @@ export default function PrescriptionGrid({
             ['#BBDEFB', 'Заплановано'],
             ['#C8E6C9', 'Виконано'],
             ['#E1BEE7', 'Відмінено'],
-            ['#A5D6A7', 'Завершено'],
           ].map(([color, label]) => (
             <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <Box sx={{ width: 14, height: 14, bgcolor: color, border: '1px solid #ccc', borderRadius: 0.5 }} />

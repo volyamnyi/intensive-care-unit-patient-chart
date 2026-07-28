@@ -184,7 +184,7 @@ export default function VitalSignGrid({
                       return (
                         <Box component="td" key={cellKey} sx={{
                           width: 68, height: 32, cursor: canEdit && isDoctor ? 'pointer' : 'default',
-                          bgcolor: value ? '#BBDEFB' : '#fff',
+                          bgcolor: '#fff',
                           textAlign: 'center', verticalAlign: 'middle',
                           position: 'relative',
                         }} onClick={onClick}>
