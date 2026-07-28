@@ -1,4 +1,6 @@
 package com.superhumans.medicationsheet.service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.medicationsheet.repository.PrescriptionListRepository;
@@ -15,6 +17,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.scheduling.auto-create-prescriptions-enabled", havingValue = "true")
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionSchedulerService {
 
     private final MisService misService;

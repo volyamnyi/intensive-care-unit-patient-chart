@@ -1,4 +1,6 @@
 package com.superhumans.medicationsheet.service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.MedicineMisDTO;
@@ -14,6 +16,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MedicineCatalogService {
 
     private final MedicineCatalogCacheRepository cacheRepository;

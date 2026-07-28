@@ -52,6 +52,8 @@ public class SecurityConfig {
                         response.getWriter().write("{\"error\":\"Forbidden\"}");
                     }))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .requiresChannel(channel -> channel
+                        .anyRequest().requiresSecure())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()

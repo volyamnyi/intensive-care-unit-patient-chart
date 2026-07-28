@@ -1,4 +1,6 @@
 package com.superhumans.medicationsheet.controller;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.medicationsheet.dto.VitalSignDayResponse;
 import com.superhumans.medicationsheet.dto.VitalSignEntryPatchRequest;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/vital-signs")
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class VitalSignController {
 
     private final VitalSignService vitalSignService;

@@ -1,4 +1,6 @@
 package com.superhumans.mis;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.superhumans.mis.dto.*;
@@ -18,6 +20,7 @@ import java.util.stream.StreamSupport;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.mis.wiremock-enabled", havingValue = "true", matchIfMissing = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class WireMockMisServiceImpl implements MisService {
 
     private final MisApiClient misApiClient;

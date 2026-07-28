@@ -1,4 +1,6 @@
 package com.superhumans.exception;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.dto.ErrorResponse;
 import jakarta.persistence.OptimisticLockException;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)

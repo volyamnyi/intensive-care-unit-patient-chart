@@ -1,4 +1,6 @@
 package com.superhumans.config;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -8,6 +10,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override

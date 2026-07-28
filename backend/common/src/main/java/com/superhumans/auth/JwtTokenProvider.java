@@ -1,4 +1,6 @@
 package com.superhumans.auth;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
@@ -10,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtTokenProvider {
 
     SecretKey key;

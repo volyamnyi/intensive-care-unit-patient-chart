@@ -1,4 +1,6 @@
 package com.superhumans.config;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -6,6 +8,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 @Component
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SpringContext implements ApplicationContextAware {
     private static ApplicationContext context;
 

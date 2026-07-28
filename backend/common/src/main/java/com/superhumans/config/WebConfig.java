@@ -1,4 +1,6 @@
 package com.superhumans.config;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -12,6 +14,7 @@ import java.util.List;
 
 @Configuration
 @EnableAsync
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class WebConfig implements WebMvcConfigurer {
 
     @Override

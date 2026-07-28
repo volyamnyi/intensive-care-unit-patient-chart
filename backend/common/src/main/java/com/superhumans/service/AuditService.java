@@ -1,4 +1,6 @@
 package com.superhumans.service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.entity.AuditLog;
@@ -17,6 +19,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuditService {
 
     final AuditLogRepository auditLogRepository;

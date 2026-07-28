@@ -1,4 +1,6 @@
 package com.superhumans.config;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -15,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 @Configuration
 @ConditionalOnProperty(name = "app.ldap.enabled", havingValue = "true")
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class LdapConfig {
 
     public LdapConfig() {

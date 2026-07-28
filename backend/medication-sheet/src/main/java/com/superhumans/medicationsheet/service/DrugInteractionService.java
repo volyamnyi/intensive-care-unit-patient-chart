@@ -1,4 +1,6 @@
 package com.superhumans.medicationsheet.service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.medicationsheet.entity.DrugInteractionRule;
 import com.superhumans.medicationsheet.repository.DrugInteractionRuleRepository;
@@ -10,6 +12,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class DrugInteractionService {
 
     private final DrugInteractionRuleRepository ruleRepository;

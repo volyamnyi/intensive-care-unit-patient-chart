@@ -1,4 +1,6 @@
 package com.superhumans.config;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
@@ -11,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class OpenApiConfig {
 
     @Bean

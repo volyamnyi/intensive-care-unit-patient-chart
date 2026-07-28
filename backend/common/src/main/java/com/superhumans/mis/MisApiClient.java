@@ -1,4 +1,6 @@
 package com.superhumans.mis;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MisApiClient {
 
     private final RestTemplate restTemplate;

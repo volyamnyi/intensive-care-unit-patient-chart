@@ -1,4 +1,6 @@
 package com.superhumans.mis.config;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "app.mis.wiremock-enabled", havingValue = "true", matchIfMissing = true)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class WireMockServerConfig {
 
     @Getter

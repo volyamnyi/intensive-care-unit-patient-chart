@@ -1,4 +1,6 @@
 package com.superhumans.medicationsheet.service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -12,6 +14,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @ConditionalOnMissingBean(name = "telegramNotificationService")
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class LogNotificationService implements NotificationService {
 
     @Override

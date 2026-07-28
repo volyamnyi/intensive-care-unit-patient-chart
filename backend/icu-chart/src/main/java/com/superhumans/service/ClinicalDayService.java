@@ -1,4 +1,6 @@
 package com.superhumans.service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.dto.*;
 import com.superhumans.entity.*;
@@ -24,6 +26,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ClinicalDayService {
 
     private final ClinicalDayRepository clinicalDayRepository;

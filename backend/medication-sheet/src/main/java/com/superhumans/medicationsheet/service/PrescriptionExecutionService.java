@@ -1,4 +1,6 @@
 package com.superhumans.medicationsheet.service;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.entity.User;
 import com.superhumans.entity.UserRole;
@@ -19,6 +21,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionExecutionService {
 
     private final PrescriptionExecutionRepository executionRepository;
@@ -34,14 +37,18 @@ public class PrescriptionExecutionService {
 
         // Authenticate second person
         User secondPerson = userRepository.findByLogin(secondPersonLogin)
-                .orElseThrow(() -> new IllegalArgumentException("Другу особу не знайдено: " + secondPersonLogin));
+                .orElseThrow(() -> new IllegalArgumentException("Помилка автентифікації другої особи"));
 
         if (!passwordEncoder.matches(secondPersonPassword, secondPerson.getPasswordHash())) {
-            throw new IllegalArgumentException("Невірний пароль для другої особи");
+            throw new IllegalArgumentException("Помилка автентифікації другої особи");
         }
 
         if (secondPerson.getRole() != UserRole.NURSE) {
-            throw new IllegalArgumentException("Друга особа повинна мати роль медсестри/медичного брата");
+            throw new IllegalArgumentException("Помилка автентифікації другої особи");
+        }
+
+        if (secondPerson.getId().equals(currentUserId)) {
+            throw new IllegalArgumentException("Друга особа не може бути тією ж, що виконує призначення");
         }
 
         if (secondPerson.getId().equals(currentUserId)) {

@@ -1,4 +1,6 @@
 package com.superhumans.medicationsheet.controller;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.medicationsheet.dto.*;
 import com.superhumans.medicationsheet.mapper.*;
@@ -27,6 +29,7 @@ import java.util.UUID;
 @RequestMapping("/api/prescriptions")
 @RequiredArgsConstructor
 @Tag(name = "Prescriptions", description = "Prescription management - листок лікарських призначень (Form 003-15/о)")
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionController {
 
     private final PrescriptionListService listService;
@@ -41,6 +44,7 @@ public class PrescriptionController {
     private final MedicineCatalogMapper medicineCatalogMapper;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
     @Operation(summary = "Get prescriptions by patient ID", description = "Retrieves all prescription lists for a specific patient")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved prescription lists"),
@@ -52,6 +56,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
     @Operation(summary = "Get prescription list by ID", description = "Retrieves a specific prescription list by its UUID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved prescription list"),
@@ -101,6 +106,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/{listId}/items")
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
     @Operation(summary = "Get prescription items", description = "Retrieves all medicine items for a prescription list")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved items"),
@@ -146,8 +152,10 @@ public class PrescriptionController {
     public PrescriptionDayPartResponse planDose(
             @PathVariable UUID dayPartId,
             @Valid @RequestBody PrescriptionDoseRequest req) {
-        UUID dummyId = UUID.randomUUID();
-        return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), dummyId));
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        UUID currentUserUuid = UUID.nameUUIDFromBytes(currentUserId.toString().getBytes());
+        return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), currentUserUuid));
     }
 
     @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
@@ -157,7 +165,10 @@ public class PrescriptionController {
             @ApiResponse(responseCode = "200", description = "Day part completed successfully")
     })
     public PrescriptionDayPartResponse completeDose(@PathVariable UUID dayPartId) {
-        return prescriptionDayPartMapper.toResponse(itemService.markCompleted(dayPartId, UUID.randomUUID()));
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        UUID currentUserUuid = UUID.nameUUIDFromBytes(currentUserId.toString().getBytes());
+        return prescriptionDayPartMapper.toResponse(itemService.markCompleted(dayPartId, currentUserUuid));
     }
 
     @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
@@ -167,7 +178,10 @@ public class PrescriptionController {
             @ApiResponse(responseCode = "200", description = "Planned dose cancelled successfully")
     })
     public PrescriptionDayPartResponse cancelDose(@PathVariable UUID dayPartId) {
-        return prescriptionDayPartMapper.toResponse(itemService.markPlannedFinished(dayPartId, UUID.randomUUID()));
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        UUID currentUserUuid = UUID.nameUUIDFromBytes(currentUserId.toString().getBytes());
+        return prescriptionDayPartMapper.toResponse(itemService.markPlannedFinished(dayPartId, currentUserUuid));
     }
 
     @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
@@ -188,6 +202,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/allergies")
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
     @Operation(summary = "Get patient allergies", description = "Retrieves allergy information from MIS for a specific patient")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved allergies")
@@ -200,6 +215,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/medicine-catalog")
+    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
     @Operation(summary = "Search medicine catalog", description = "Searches the medicine catalog from MIS. Returns empty list if no keyword provided.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved medicine catalog")

@@ -1,4 +1,6 @@
 package com.superhumans.auth;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
 import com.superhumans.entity.AuditLog;
 import com.superhumans.repository.AuditLogRepository;
@@ -22,6 +24,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     final JwtTokenProvider jwtTokenProvider;
