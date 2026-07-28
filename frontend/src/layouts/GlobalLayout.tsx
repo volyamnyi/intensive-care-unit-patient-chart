@@ -53,8 +53,6 @@ export default function GlobalLayout() {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  const isDoctorNurse = hasRole('DOCTOR') || hasRole('HEAD_OF_DEPARTMENT') || hasRole('NURSE');
-
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: theme.palette.background.default }}>
       <AppBar position="static">
@@ -76,24 +74,6 @@ export default function GlobalLayout() {
             </Box>
           </Box>
 
-          {isDoctorNurse && (
-            <Button
-              component={RouterLink}
-              to={hasRole('NURSE') ? '/nurse' : '/doctor'}
-              sx={{ color: theme.palette.text.secondary, mr: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 600, fontSize: 13, borderRadius: 50, px: 2, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }}
-            >
-              Пацієнти
-            </Button>
-          )}
-          {isDoctorNurse && (
-            <Button
-              component={RouterLink}
-              to={hasRole('NURSE') ? '/prescriptions/nurse' : '/prescriptions/doctor'}
-              sx={{ color: theme.palette.text.secondary, mr: 1, fontFamily: '"Rubik", sans-serif', fontWeight: 600, fontSize: 13, borderRadius: 50, px: 2, '&:hover': { color: '#FF8C66', bgcolor: 'rgba(255, 95, 51, 0.08)' } }}
-            >
-              Призначення
-            </Button>
-          )}
           {hasRole('HEAD_OF_DEPARTMENT') && (
             <Button
               component={RouterLink} to="/doctor/department"

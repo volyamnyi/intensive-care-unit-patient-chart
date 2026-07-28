@@ -45,14 +45,117 @@ for (let i = 0; i < 21; i++) {
 }
 
 function lid(pid) {
-  const n = pid - 2000;
+  if (pid >= 2001) {
+    const n = pid - 2000;
+    const ns = String(n).padStart(3, '0');
+    const paddedPid = String(pid);
+    return `cccc${paddedPid}-${paddedPid}-${paddedPid}-${paddedPid}-000000000${ns}`;
+  }
+  const n = pid - 1000;
   const ns = String(n).padStart(3, '0');
   const paddedPid = String(pid);
-  return `cccc${paddedPid}-${paddedPid}-${paddedPid}-${paddedPid}-000000000${ns}`;
+  return `bbbb${paddedPid}-${paddedPid}-${paddedPid}-${paddedPid}-000000000${ns}`;
 }
 
 const out = [];
 
+// Surgery patients 1001-1025 (dept 2)
+for (let pid = 1001; pid <= 1025; pid++) {
+  out.push(`INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('${lid(pid)}', ${pid}, 2, 'Листок лікарських призначень', 'Active', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;`);
+  const cnt = 5;
+  const used = new Set();
+  const chosen = [];
+
+  for (let mi = 0; mi < cnt; mi++) {
+    let idx;
+    do { idx = (pid * 13 + mi * 7) % surgeryMeds.length; } while (used.has(idx));
+    used.add(idx);
+    chosen.push({ ...surgeryMeds[idx], ti: mi });
+  }
+
+  for (const med of chosen) {
+    const itemId = iid(pid, med.ti);
+    const periods = med.p.split(',');
+
+    out.push(`INSERT INTO prescription_items (id, list_id, medicine_name, medicine_method, regime, status, sort_order, created_at, created_by, updated_at, updated_by, version) VALUES ('${itemId}', '${lid(pid)}', '${med.n}', '${med.m}', '${med.r}', 'Active', ${med.ti}, NOW(), 11, NOW(), 11, 0) ON CONFLICT (id) DO NOTHING;`);
+
+    const dayVals = [];
+    for (let d = 0; d < 21; d++) {
+      dayVals.push(`('${did(pid,med.ti,d)}', '${itemId}', '${dates[d]}', NOW(), 11, NOW(), 11, 0)`);
+    }
+    out.push(`INSERT INTO prescription_item_days (id, item_id, day_date, created_at, created_by, updated_at, updated_by, version) VALUES ${dayVals.join(', ')} ON CONFLICT DO NOTHING;`);
+
+    for (let d = 0; d < 21; d++) {
+      const parts = [];
+      for (const per of PERIODS) {
+        const active = periods.includes(per);
+        const dose = active ? med.d : null;
+        const ds = dose ? `'${dose}'` : 'NULL';
+
+        let ip = active;
+        let ic = false, icf = false;
+        if (active) {
+          if (d < 3) { ic = true; icf = true; }
+          else if (d < 5) { ic = true; }
+        }
+
+        parts.push(`('${pid2(pid,med.ti,d,per)}', '${did(pid,med.ti,d)}', '${per}', ${ds}, ${ip}, FALSE, ${ic}, ${icf}, NOW(), 11, NOW(), 11, 0)`);
+      }
+      out.push(`INSERT INTO prescription_day_parts (id, day_id, period, dose, is_planned, is_planned_finished, is_completed, is_completed_finished, created_at, created_by, updated_at, updated_by, version) VALUES ${parts.join(', ')} ON CONFLICT DO NOTHING;`);
+    }
+    out.push('');
+  }
+}
+
+// Rehab patients 1026-1050 (dept 1)
+for (let pid = 1026; pid <= 1050; pid++) {
+  out.push(`INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('${lid(pid)}', ${pid}, 1, 'Листок лікарських призначень', 'Active', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;`);
+  const cnt = 5;
+  const used = new Set();
+  const chosen = [];
+
+  for (let mi = 0; mi < cnt; mi++) {
+    let idx;
+    do { idx = (pid * 13 + mi * 7) % rehabMeds.length; } while (used.has(idx));
+    used.add(idx);
+    chosen.push({ ...rehabMeds[idx], ti: mi });
+  }
+
+  for (const med of chosen) {
+    const itemId = iid(pid, med.ti);
+    const periods = med.p.split(',');
+
+    out.push(`INSERT INTO prescription_items (id, list_id, medicine_name, medicine_method, regime, status, sort_order, created_at, created_by, updated_at, updated_by, version) VALUES ('${itemId}', '${lid(pid)}', '${med.n}', '${med.m}', '${med.r}', 'Active', ${med.ti}, NOW(), 11, NOW(), 11, 0) ON CONFLICT (id) DO NOTHING;`);
+
+    const dayVals = [];
+    for (let d = 0; d < 21; d++) {
+      dayVals.push(`('${did(pid,med.ti,d)}', '${itemId}', '${dates[d]}', NOW(), 11, NOW(), 11, 0)`);
+    }
+    out.push(`INSERT INTO prescription_item_days (id, item_id, day_date, created_at, created_by, updated_at, updated_by, version) VALUES ${dayVals.join(', ')} ON CONFLICT DO NOTHING;`);
+
+    for (let d = 0; d < 21; d++) {
+      const parts = [];
+      for (const per of PERIODS) {
+        const active = periods.includes(per);
+        const dose = active ? med.d : null;
+        const ds = dose ? `'${dose}'` : 'NULL';
+
+        let ip = active;
+        let ic = false, icf = false;
+        if (active) {
+          if (d < 3) { ic = true; icf = true; }
+          else if (d < 5) { ic = true; }
+        }
+
+        parts.push(`('${pid2(pid,med.ti,d,per)}', '${did(pid,med.ti,d)}', '${per}', ${ds}, ${ip}, FALSE, ${ic}, ${icf}, NOW(), 11, NOW(), 11, 0)`);
+      }
+      out.push(`INSERT INTO prescription_day_parts (id, day_id, period, dose, is_planned, is_planned_finished, is_completed, is_completed_finished, created_at, created_by, updated_at, updated_by, version) VALUES ${parts.join(', ')} ON CONFLICT DO NOTHING;`);
+    }
+    out.push('');
+  }
+}
+
+// Existing patients 2001-2040
 for (let pid = 2001; pid <= 2040; pid++) {
   const isSrg = pid <= 2020;
   const deptId = isSrg ? 2 : 1;
@@ -107,4 +210,10 @@ for (let pid = 2001; pid <= 2040; pid++) {
   }
 }
 
-console.log(out.join('\n'));
+const fs = require('fs');
+const outputPath = process.argv[2];
+if (outputPath) {
+  fs.writeFileSync(outputPath, out.join('\n'), 'utf8');
+} else {
+  process.stdout.write(out.join('\n'), 'utf8');
+}

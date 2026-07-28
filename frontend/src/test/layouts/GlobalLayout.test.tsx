@@ -75,14 +75,14 @@ describe('GlobalLayout - header', () => {
     expect(img).toBeInTheDocument();
   });
 
-  it('renders Пацієнти link for doctor/nurse', () => {
+  it('does not render Пацієнти link', () => {
     renderLayout();
-    expect(screen.getByText('Пацієнти')).toBeInTheDocument();
+    expect(screen.queryByText('Пацієнти')).not.toBeInTheDocument();
   });
 
-  it('renders Призначення link for doctor/nurse', () => {
+  it('does not render Призначення link', () => {
     renderLayout();
-    expect(screen.getByText('Призначення')).toBeInTheDocument();
+    expect(screen.queryByText('Призначення')).not.toBeInTheDocument();
   });
 
   it('renders Додатки link', () => {

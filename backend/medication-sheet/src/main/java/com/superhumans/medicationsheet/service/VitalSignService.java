@@ -49,7 +49,7 @@ public class VitalSignService {
                         day.setUpdatedBy(0L);
                         day = vitalDayRepository.save(day);
 
-                        for (String period : List.of("morning", "evening")) {
+                        for (String period : List.of("morning", "day", "evening", "night")) {
                             VitalSignEntry entry = VitalSignEntry.builder()
                                     .day(day)
                                     .period(period)
@@ -76,15 +76,30 @@ public class VitalSignService {
     @Transactional
     public VitalSignEntry updateEntry(UUID entryId, VitalSignEntry update) {
         VitalSignEntry entry = vitalEntryRepository.findById(entryId).orElseThrow();
-        entry.setTemperature(update.getTemperature());
-        entry.setSystolicBp(update.getSystolicBp());
-        entry.setDiastolicBp(update.getDiastolicBp());
-        entry.setSpo2(update.getSpo2());
-        entry.setPulse(update.getPulse());
-        entry.setStool(update.getStool());
-        entry.setPainScore(update.getPainScore());
+        if (update.getTemperature() != null) entry.setTemperature(update.getTemperature());
+        if (update.getSystolicBp() != null) entry.setSystolicBp(update.getSystolicBp());
+        if (update.getDiastolicBp() != null) entry.setDiastolicBp(update.getDiastolicBp());
+        if (update.getSpo2() != null) entry.setSpo2(update.getSpo2());
+        if (update.getPulse() != null) entry.setPulse(update.getPulse());
+        if (update.getStool() != null) entry.setStool(update.getStool());
+        if (update.getPainScore() != null) entry.setPainScore(update.getPainScore());
         entry.setUpdatedBy(0L);
         return vitalEntryRepository.save(entry);
+    }
+
+    @Transactional
+    public VitalSignEntry getOrCreateEntry(UUID dayId, String period) {
+        return vitalEntryRepository.findByDayIdAndPeriod(dayId, period)
+                .orElseGet(() -> {
+                    VitalSignDay day = vitalDayRepository.findById(dayId).orElseThrow();
+                    VitalSignEntry entry = VitalSignEntry.builder()
+                            .day(day)
+                            .period(period)
+                            .build();
+                    entry.setCreatedBy(0L);
+                    entry.setUpdatedBy(0L);
+                    return vitalEntryRepository.save(entry);
+                });
     }
 
     @Transactional

@@ -5,10 +5,10 @@ import { Close } from '@mui/icons-material';
 import { prescriptionApi, vitalSignApi } from '../../api/endpoints';
 import { useAuth } from '../../services/AuthContext';
 import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid';
-import VitalSignForm from '../../components/prescription/VitalSignForm';
+import VitalSignGrid from '../../components/prescription/VitalSignGrid';
 import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog';
 import { getErrorMessage } from '../../utils/errorMessage';
-import type { PrescriptionList, PrescriptionItem, AllergyItem, VitalSignEntry } from '../../types';
+import type { PrescriptionList, PrescriptionItem, AllergyItem } from '../../types';
 
 export default function PrescriptionDetailPage() {
   const theme = useTheme();
@@ -19,8 +19,9 @@ export default function PrescriptionDetailPage() {
   const [prescription, setPrescription] = useState<PrescriptionList | null>(null);
   const [items, setItems] = useState<PrescriptionItem[]>([]);
   const [allergies, setAllergies] = useState<AllergyItem[]>([]);
-  const [latestVitalSign, setLatestVitalSign] = useState<VitalSignEntry | null>(null);
+  const [vitalDays, setVitalDays] = useState<{ id: string; dayDate: string; entries: import('../../types').VitalSignEntry[] }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [vitalLoading, setVitalLoading] = useState(false);
   const [closing, setClosing] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,14 +46,15 @@ export default function PrescriptionDetailPage() {
     }
   }, []);
 
-  const loadLatestVitalSign = useCallback(async (listId: string) => {
+  const loadVitalGrid = useCallback(async (listId: string) => {
     try {
-      const daysRes = await vitalSignApi.getByPrescriptionList(listId);
-      if (daysRes.data.length === 0) return;
-      const entriesRes = await vitalSignApi.getEntries(daysRes.data[0].id);
-      const filled = entriesRes.data.filter((e) => e.temperature != null || e.systolicBp != null || e.pulse != null);
-      if (filled.length > 0) setLatestVitalSign(filled[filled.length - 1]);
-    } catch { /* vital signs optional */ }
+      setVitalLoading(true);
+      const res = await vitalSignApi.getGrid(listId);
+      setVitalDays(res.data);
+    } catch { /* vital signs optional */
+    } finally {
+      setVitalLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -64,11 +66,11 @@ export default function PrescriptionDetailPage() {
         setPrescription(res.data);
         void loadItems(res.data.id);
         void loadAllergies(res.data.patientId);
-        void loadLatestVitalSign(res.data.id);
+        void loadVitalGrid(res.data.id);
       })
       .catch((err) => setError(getErrorMessage(err, 'Не вдалося завантажити листок призначень')))
       .finally(() => setLoading(false));
-  }, [id, loadItems, loadAllergies, loadLatestVitalSign]);
+  }, [id, loadItems, loadAllergies, loadVitalGrid]);
 
   const handlePlan = async (dayPartId: string, dose: string) => {
     setError(null);
@@ -112,14 +114,18 @@ export default function PrescriptionDetailPage() {
     }
   };
 
-  const handleVitalSignSubmit = async (data: { temperature?: number; systolicBp?: number; diastolicBp?: number; spo2?: number; pulse?: number; stool?: string; painScore?: number }) => {
+  const handleCellUpdate = async (dayId: string, period: string, paramKey: string, value: string) => {
     if (!id) return;
     setError(null);
+    const numericKey = paramKey !== 'stool';
+    const numValue = numericKey ? (value ? Number(value) : null) : (value || null);
     try {
-      await vitalSignApi.create({ ...data, prescriptionListId: id });
-      await loadLatestVitalSign(id);
+      await vitalSignApi.updateCell(dayId, period, {
+        [paramKey]: numValue,
+      } as Record<string, unknown> as { temperature?: number; systolicBp?: number; diastolicBp?: number; spo2?: number; pulse?: number; stool?: string; painScore?: number });
+      await loadVitalGrid(id);
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося зберегти показники'));
+      setError(getErrorMessage(err, 'Не вдалося зберегти показник'));
     }
   };
 
@@ -208,7 +214,16 @@ export default function PrescriptionDetailPage() {
         <>
           <Divider sx={{ my: 3 }} />
 
-          <VitalSignForm latest={latestVitalSign} onSubmit={handleVitalSignSubmit} disabled={isFinished} />
+          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>
+            Життєві показники
+          </Typography>
+          <VitalSignGrid
+            days={vitalDays}
+            canEdit={!isFinished}
+            isDoctor={true}
+            onCellUpdate={handleCellUpdate}
+            loading={vitalLoading}
+          />
 
           <ClosePrescriptionDialog
             open={closeDialogOpen}

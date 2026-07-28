@@ -330,6 +330,12 @@ public class MockMisServiceImpl implements MisService {
                 "м. Львів, вул. Реабілітаційна, 20", "380504040040", "z.voloshyna@mail.com",
                 "МК-2040", "040720252040", 157, 50, "O(I)", "Rh+");
 
+        for (long pid = 1001; pid <= 1025; pid++) {
+            if (patients.containsKey(pid)) patients.get(pid).setDepartmentId(2L);
+        }
+        for (long pid = 1026; pid <= 1050; pid++) {
+            if (patients.containsKey(pid)) patients.get(pid).setDepartmentId(1L);
+        }
         for (long pid = 2001; pid <= 2020; pid++) {
             if (patients.containsKey(pid)) patients.get(pid).setDepartmentId(2L);
         }

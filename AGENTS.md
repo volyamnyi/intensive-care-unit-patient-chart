@@ -16,25 +16,23 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-07-27: FK fix — prescription_lists seed data for startup**
+**2026-07-28: Bug fix round — issues #82, #83, #84 resolved**
 
-### Seed data — 40 patients (2001-2040)
-- Generator script: `scripts/generate-prescription-seed.cjs`
-- **200 prescription items** (5 per patient) with realistic ICU meds
-- **4,200 day records** (21 days: 2026-07-22 to 2026-08-11)
-- **16,800 day-part entries** (4 periods: morning/day/evening/night)
-- Surgery patients (2001-2020): Цефтріаксон, Метронідазол, NaCl 0.9%, Морфін, Омепразол, Гепарин, Дексаметазон, Пропофол, Інсулін, Ондансетрон
-- Rehab patients (2021-2040): Пантопразол, NaCl 0.9%, Дексаметазон, Цефтріаксон, Омепразол, Метронідазол, Глюкоза 5%, Парацетамол, Мідозолам, Ондансетрон
-- State simulation: days 0-2 completed+finished, days 3-4 completed, days 5-20 planned
-- 40 prescription_lists + 40 MockMIS patients (2001-2040)
-- `scripts/prescription-seed.sql` — 8MB generated SQL, integrated into `data.sql`
+### Issue #84 — Remove nav buttons from GlobalLayout header
+- Removed "Пацієнти" and "Призначення" buttons from `GlobalLayout.tsx` header
+- Nav now only shows "Відділення" (HOD) and "Додатки" (all users)
+- Updated GlobalLayout tests (14 pass): Пацієнти/Призначення verified as absent
 
-### FK fix — startup failure
-- `data.sql` had 200 `prescription_items`, 4,200 `prescription_item_days`, and 16,800 `prescription_day_parts` rows but **zero** `prescription_lists` rows
-- Spring Boot `ddl-auto: update` creates FK constraints → `data.sql` INSERTs fail on FK reference to `prescription_lists.id`
-- **Fix**: Generated 40 deterministic-UUID `INSERT INTO prescription_lists` rows (patients 2001–2040, department 2 for Хірургія/1 for Реабілітація, `hospitalization_id = NULL`, `editing_user_id = NULL`)
-- Generator script updated to emit `prescription_lists` rows alongside items/days/parts
-- `prescription_lists` INSERTs placed immediately before the first `prescription_items` INSERT in `data.sql`
+### Issue #83 — Nurse prescription patient list
+- Rewrote `NursePrescriptionPage.tsx` to display sortable department-based patient table (Хірургія/Реабілітація toggle)
+- Search, sort, and open prescription list per patient — same UX as `PrescriptionPage`
+- Previously showed only PatientSearch field; now shows full patient list by default
+
+### Issue #82 — Cyrillic encoding fix
+- Converted `scripts/prescription-seed.sql` and `scripts/prescription-seed-1000.sql` from UTF-16LE to UTF-8
+- Fixed `scripts/generate-prescription-seed.cjs` to write UTF-8 (via `fs.writeFileSync`/`process.stdout.write`)
+- Changed `data.sql` prescription_lists `ON CONFLICT (id) DO NOTHING` → `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` (90 rows) to auto-heal existing corrupted databases
+- All 390 frontend Vitest tests pass, backend compiles clean
 
 ### Frontend — global theme
 - **Default theme changed to light mode** (`dark` → `light` in ThemeContext)
@@ -147,7 +145,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 |---|---|---|
 | Backend unit + integration (419) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
-| Frontend Vitest (~190) | `test` → `npm test` | Same |
+| Frontend Vitest (~390) | `test` → `npm test` | Same |
 | Playwright E2E (38 spec files) | `test` → `npx playwright test` | Same |
 | Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
 
@@ -172,7 +170,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (~190 across 20 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (~390 across 38 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
@@ -184,7 +182,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 ## Testing
 
 - **Backend**: 419 total tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: ~190 Vitest tests across 22 files (pages, components, AuthContext, endpoints). Run with `npm t`.
+- **Frontend**: ~390 Vitest tests across 38 files (pages, components, AuthContext, endpoints). Run with `npm t`.
 - **E2E**: 38 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
@@ -503,7 +501,7 @@ All endpoints prefixed with `/api`.
 - **Routing**: `/doctor/*` for DOCTOR/HOD, `/nurse/*` for NURSE, `/admin/*` for ADMINISTRATOR
 - **DB**: `ddl-auto: update` — never write manual DDL; schema auto-created by Hibernate from entity annotations
 - **Data seeding**: Only via `data.sql` (`spring.sql.init.mode: always`)
-- **Test seed data**: Integration tests use `data-test.sql` (in `src/test/resources/`) with plain INSERTs on a fresh Testcontainers PostgreSQL database. The production `data.sql` keeps `ON CONFLICT (id) DO NOTHING` for local dev resilience but modified data may persist across restarts. Reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
+- **Test seed data**: Integration tests use `data-test.sql` (in `src/test/resources/`) with plain INSERTs on a fresh Testcontainers PostgreSQL database. The production `data.sql` keeps `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). Modified data may persist across restarts. Reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 
 ## Project Files (kept in repo)
 

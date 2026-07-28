@@ -585,3 +585,10 @@ export interface VitalSignEntryCreateRequest {
   painScore?: number;
 }
 
+export interface VitalGridDay {
+  id: string;
+  dayDate: string;
+  vitalListId: string;
+  entries: VitalSignEntry[];
+}
+

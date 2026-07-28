@@ -63,7 +63,7 @@ CREATE TABLE prescription_item_days (
 CREATE TABLE prescription_day_parts (
     id UUID NOT NULL,
     day_id UUID NOT NULL,
-    period VARCHAR(8) NOT NULL CHECK (period IN ('morning','day','evening','night')),
+    period VARCHAR(8) NOT NULL CHECK (period IN ('morning','evening')),
     dose VARCHAR(100),
     is_planned BOOLEAN DEFAULT FALSE,
     is_planned_finished BOOLEAN DEFAULT FALSE,
@@ -262,3 +262,17 @@ CREATE INDEX idx_medicine_catalog_name ON medicine_catalog_cache(name);
 --rollback DROP INDEX IF EXISTS idx_prescription_items_list;
 --rollback DROP INDEX IF EXISTS idx_prescription_lists_status;
 --rollback DROP INDEX IF EXISTS idx_prescription_lists_patient;
+
+--changeset phase-1:15
+ALTER TABLE prescription_day_parts DROP CONSTRAINT IF EXISTS prescription_day_parts_period_check;
+ALTER TABLE prescription_day_parts ADD CONSTRAINT prescription_day_parts_period_check CHECK (period IN ('morning','day','evening','night'));
+
+--rollback ALTER TABLE prescription_day_parts DROP CONSTRAINT IF EXISTS prescription_day_parts_period_check;
+--rollback ALTER TABLE prescription_day_parts ADD CONSTRAINT prescription_day_parts_period_check CHECK (period IN ('morning','evening'));
+
+--changeset phase-1:16
+ALTER TABLE vital_sign_entries DROP CONSTRAINT IF EXISTS vital_sign_entries_period_check;
+ALTER TABLE vital_sign_entries ADD CONSTRAINT vital_sign_entries_period_check CHECK (period IN ('morning','day','evening','night'));
+
+--rollback ALTER TABLE vital_sign_entries DROP CONSTRAINT IF EXISTS vital_sign_entries_period_check;
+--rollback ALTER TABLE vital_sign_entries ADD CONSTRAINT vital_sign_entries_period_check CHECK (period IN ('morning','evening'));

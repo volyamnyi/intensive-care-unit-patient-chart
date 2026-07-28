@@ -1,5 +1,6 @@
 package com.superhumans.medicationsheet.mapper;
 
+import com.superhumans.medicationsheet.dto.VitalSignEntryPatchRequest;
 import com.superhumans.medicationsheet.dto.VitalSignEntryRequest;
 import com.superhumans.medicationsheet.dto.VitalSignEntryResponse;
 import com.superhumans.medicationsheet.entity.VitalSignEntry;
@@ -15,4 +16,6 @@ public interface VitalSignEntryMapper {
     VitalSignEntryResponse toResponse(VitalSignEntry entry);
 
     VitalSignEntry toEntity(VitalSignEntryRequest request);
+
+    VitalSignEntry toEntity(VitalSignEntryPatchRequest request);
 }

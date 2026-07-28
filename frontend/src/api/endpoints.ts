@@ -18,7 +18,7 @@ import type {
   PrescriptionItem, PrescriptionItemAddRequest,
   PrescriptionDayPart, PrescriptionExecutionCreateRequest,
   MedicineCatalogItem, AllergyItem,
-  VitalSignEntry, VitalSignDay, VitalSignEntryCreateRequest,
+  VitalSignEntry, VitalSignDay, VitalSignEntryCreateRequest, VitalGridDay,
 } from '../types';
 
 export const authApi = {
@@ -222,7 +222,13 @@ export const vitalSignApi = {
     client.get<VitalSignDay[]>(`/vital-signs`, { params: { prescriptionListId } }),
   getEntries: (dayId: string) =>
     client.get<VitalSignEntry[]>(`/vital-signs/days/${dayId}/entries`),
+  getGrid: (prescriptionListId: string) =>
+    client.get<VitalGridDay[]>(`/vital-signs/grid`, { params: { prescriptionListId } }),
   create: (data: VitalSignEntryCreateRequest) =>
     client.post<VitalSignEntry>('/vital-signs', data),
+  updateEntry: (entryId: string, data: { temperature?: number; systolicBp?: number; diastolicBp?: number; spo2?: number; pulse?: number; stool?: string; painScore?: number }) =>
+    client.put<VitalSignEntry>(`/vital-signs/entries/${entryId}`, data),
+  updateCell: (dayId: string, period: string, data: { temperature?: number; systolicBp?: number; diastolicBp?: number; spo2?: number; pulse?: number; stool?: string; painScore?: number }) =>
+    client.put<VitalSignEntry>(`/vital-signs/cells?dayId=${dayId}&period=${period}`, data),
 };
 
