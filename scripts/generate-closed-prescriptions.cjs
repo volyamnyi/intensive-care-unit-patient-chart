@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const PREFIXES = ['dddd', 'eeee', 'ffff', 'gggg', 'hhhh'];
+const PREFIXES = ['dddd', 'eeee', 'ffff', 'cccc', 'bbbb'];
 const OUTPUT = path.join(__dirname, 'closed-prescription-seed.sql');
 
 const patients = [];
