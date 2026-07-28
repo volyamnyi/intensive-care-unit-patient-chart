@@ -1,4 +1,4 @@
-﻿-- Seed data for the new domain model
+-- Seed data for the new domain model
 -- Users use Long IDs referenced from MockMisServiceImpl
 
 -- System settings
