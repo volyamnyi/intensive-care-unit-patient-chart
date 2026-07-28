@@ -20,7 +20,8 @@ for (const p of patients) {
   for (let j = 0; j < count; j++) {
     const prefix = PREFIXES[j];
     const seq = String(p.id).slice(-4) + String(j + 1).padStart(2, '0');
-    const id = `${prefix}${p.id}-${p.id}-${p.id}-${p.id}-${seq}`;
+    const lastSegment = seq.padEnd(12, '0');
+    const id = `${prefix}${p.id}-${p.id}-${p.id}-${p.id}-${lastSegment}`;
     const docName = `Листок лікарських призначень №${j + 2}`;
     const createdAt = `NOW() - INTERVAL '${count - j} days'`;
     lines.push(
