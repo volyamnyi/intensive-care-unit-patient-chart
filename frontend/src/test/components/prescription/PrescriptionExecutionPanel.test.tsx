@@ -41,28 +41,59 @@ describe('PrescriptionExecutionPanel', () => {
     expect(screen.getByText('Немає запланованих доз для виконання')).toBeInTheDocument();
   });
 
-  it('calls onExecute with actual dose', async () => {
-    const onExecute = vi.fn();
+  it('opens 2FA dialog with login fields on execute click', async () => {
+    const onExecute = vi.fn().mockResolvedValue(undefined);
     renderPanel({ onExecute });
     const inputs = screen.getAllByLabelText('Фактична доза');
     await userEvent.type(inputs[0], '5mg');
     await userEvent.click(screen.getAllByText('Виконати')[0]);
+
     await waitFor(() => {
-      expect(onExecute).toHaveBeenCalledWith('dp1', '5mg', false, undefined);
+      expect(screen.getByText('2-факторна авторизація')).toBeInTheDocument();
+      expect(screen.getByLabelText('Логін другої особи')).toBeInTheDocument();
+      expect(screen.getByLabelText('Пароль')).toBeInTheDocument();
     });
   });
 
-  it('calls onExecute with 2P auth when enabled', async () => {
-    const onExecute = vi.fn();
+  it('calls onExecute with login+password when confirmed', async () => {
+    const onExecute = vi.fn().mockResolvedValue(undefined);
     renderPanel({ onExecute });
     const inputs = screen.getAllByLabelText('Фактична доза');
     await userEvent.type(inputs[0], '5mg');
-    const checkboxes = screen.getAllByLabelText('Потрібна');
-    await userEvent.click(checkboxes[0]);
-    await userEvent.type(screen.getAllByLabelText('ID другої особи')[0], 'user-2');
     await userEvent.click(screen.getAllByText('Виконати')[0]);
+
     await waitFor(() => {
-      expect(onExecute).toHaveBeenCalledWith('dp1', '5mg', true, 'user-2');
+      expect(screen.getByText('2-факторна авторизація')).toBeInTheDocument();
+    });
+
+    await userEvent.type(screen.getByLabelText('Логін другої особи'), 'nurse2');
+    await userEvent.type(screen.getByLabelText('Пароль'), 'nurse123');
+    await userEvent.click(screen.getByText('Підтвердити'));
+
+    await waitFor(() => {
+      expect(onExecute).toHaveBeenCalledWith('dp1', '5mg', 'nurse2', 'nurse123');
+    });
+  });
+
+  it('shows error when onExecute rejects', async () => {
+    const onExecute = vi.fn().mockRejectedValue({
+      response: { data: { message: 'Invalid credentials' } },
+    });
+    renderPanel({ onExecute });
+    const inputs = screen.getAllByLabelText('Фактична доза');
+    await userEvent.type(inputs[0], '5mg');
+    await userEvent.click(screen.getAllByText('Виконати')[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('2-факторна авторизація')).toBeInTheDocument();
+    });
+
+    await userEvent.type(screen.getByLabelText('Логін другої особи'), 'nurse2');
+    await userEvent.type(screen.getByLabelText('Пароль'), 'wrong');
+    await userEvent.click(screen.getByText('Підтвердити'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
     });
   });
 });

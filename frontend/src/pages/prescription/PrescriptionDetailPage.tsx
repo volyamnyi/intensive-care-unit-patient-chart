@@ -129,13 +129,13 @@ export default function PrescriptionDetailPage() {
     }
   };
 
-  const handleExecute: GridProps['onExecute'] = async (dayPartId, actualDose, requires2p, secondPersonId) => {
+  const handleExecute: GridProps['onExecute'] = async (dayPartId, actualDose, secondPersonLogin, secondPersonPassword) => {
     setError(null);
     try {
-      await prescriptionApi.executeDose(dayPartId, { actualDose, requires2pAuth: requires2p, secondPersonId });
+      await prescriptionApi.executeDose(dayPartId, { actualDose, secondPersonLogin, secondPersonPassword });
       if (id) await loadItems(id);
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося виконати дозу'));
+      throw err;
     }
   };
 

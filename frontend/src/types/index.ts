@@ -531,8 +531,8 @@ export interface PrescriptionDayPart {
 
 export interface PrescriptionExecutionCreateRequest {
   actualDose: string;
-  requires2pAuth: boolean;
-  secondPersonId?: string;
+  secondPersonLogin: string;
+  secondPersonPassword: string;
 }
 
 export interface MedicineCatalogItem {

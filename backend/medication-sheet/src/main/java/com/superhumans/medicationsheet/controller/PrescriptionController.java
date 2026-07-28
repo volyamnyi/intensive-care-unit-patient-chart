@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
@@ -171,15 +172,19 @@ public class PrescriptionController {
 
     @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
     @PostMapping("/day-parts/{dayPartId}/execute")
-    @Operation(summary = "Execute dose", description = "Executes a dose for a day part. Requires NURSE or HEAD_OF_DEPARTMENT role. May require 2-person authentication for high-risk medicines.")
+    @Operation(summary = "Execute dose", description = "Executes a dose for a day part. Requires NURSE or HEAD_OF_DEPARTMENT role. Requires 2-person authentication with a different nurse's credentials.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Dose executed successfully"),
-            @ApiResponse(responseCode = "400", description = "Execution failed - invalid state or missing 2-person auth")
+            @ApiResponse(responseCode = "400", description = "Execution failed - invalid second-person credentials or same person")
     })
     public void executeDose(
             @PathVariable UUID dayPartId,
             @Valid @RequestBody PrescriptionExecuteRequest req) {
-        executionService.execute(dayPartId, UUID.randomUUID(), req.getActualDose(), req.isRequires2pAuth(), req.getSecondPersonId());
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        String currentUserLogin = (String) auth.getPrincipal();
+        executionService.execute(dayPartId, currentUserId, currentUserLogin,
+                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword());
     }
 
     @GetMapping("/allergies")

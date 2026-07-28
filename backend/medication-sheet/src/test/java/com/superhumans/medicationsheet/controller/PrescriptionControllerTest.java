@@ -201,15 +201,18 @@ class PrescriptionControllerTest {
 
     @Test
     void executeDose_returnsOk() throws Exception {
-        // Execute endpoint requires NURSE role (EXECUTOR_ROLES)
+        // Execute endpoint requires NURSE role
         when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
         when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(2L);
 
         mockMvc.perform(post("/api/prescriptions/day-parts/{dayPartId}/execute", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"actualDose\":\"45mg\",\"requires2pAuth\":false}")
-                        .header("Authorization", "Bearer test-token"))
+                        .content("{\"actualDose\":\"45mg\",\"secondPersonLogin\":\"nurse2\",\"secondPersonPassword\":\"nurse123\"}")
+                        .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isOk());
+
+        verify(executionService).execute(eq(dayPartId), eq(2L), eq("user"),
+                eq("45mg"), eq("nurse2"), eq("nurse123"));
     }
 
     @Test

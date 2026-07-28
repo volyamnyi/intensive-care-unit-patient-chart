@@ -187,8 +187,8 @@ describe('prescriptionApi', () => {
   });
 
   it('executeDose posts to /prescriptions/day-parts/:id/execute', () => {
-    prescriptionApi.executeDose('part-1', { actualDose: '5mg', requires2pAuth: false });
-    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/execute', { actualDose: '5mg', requires2pAuth: false });
+    prescriptionApi.executeDose('part-1', { actualDose: '5mg', secondPersonLogin: 'nurse2', secondPersonPassword: 'nurse123' });
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/execute', { actualDose: '5mg', secondPersonLogin: 'nurse2', secondPersonPassword: 'nurse123' });
   });
 
   it('getAllergies calls /prescriptions/allergies', () => {

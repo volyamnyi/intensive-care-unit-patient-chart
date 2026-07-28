@@ -28,11 +28,33 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 - Search, sort, and open prescription list per patient — same UX as `PrescriptionPage`
 - Previously showed only PatientSearch field; now shows full patient list by default
 
+### PostgreSQL 18 — ICU locale configuration
+- Windows `psql` displayed Ukrainian as garbage (`������`, `РџРћРњРР›РљРђ`)
+- Root cause was **not** the database — `SERVER_ENCODING` was already UTF8
+- Problem: PostgreSQL used `libc` locale with `Ukrainian_Ukraine.1251` — CP1251 collation in a UTF-8 console
+- Fixed `lc_messages`: `ALTER SYSTEM SET lc_messages = 'English_United States.1252'` → clean English output
+- Created new database with **ICU locale**: `LOCALE_PROVIDER icu`, `ICU_LOCALE 'uk-UA'`, `ENCODING 'UTF8'` (requires `TEMPLATE template0` since `template1` uses libc)
+- Verified: `datlocprovider = i` (ICU), `datlocale = uk-UA`; Ukrainian text + emoji (🚀) store and display correctly
+- `spring.datasource.url` stays standard — no `characterEncoding=UTF-8` (MySQL-specific)
+- Migration path: `pg_dump` from libc DB → `psql` restore into new ICU DB
+
 ### Issue #82 — Cyrillic encoding fix
-- Converted `scripts/prescription-seed.sql` and `scripts/prescription-seed-1000.sql` from UTF-16LE to UTF-8
-- Fixed `scripts/generate-prescription-seed.cjs` to write UTF-8 (via `fs.writeFileSync`/`process.stdout.write`)
-- Changed `data.sql` prescription_lists `ON CONFLICT (id) DO NOTHING` → `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` (90 rows) to auto-heal existing corrupted databases
+
+**Root cause:** `scripts/generate-prescription-seed.cjs` used `console.log()` to output SQL. On Windows PowerShell, `console.log` pipes through `process.stdout` which defaults to UTF-16LE encoding (the PowerShell console code page). The generated `prescription-seed.sql` and `prescription-seed-1000.sql` were therefore UTF-16LE files. When these files were concatenated into `data.sql` (a UTF-8 file), the UTF-16LE BOM (`FF FE`) and embedded null bytes between ASCII characters caused PostgreSQL to store `document_name` as garbled text.
+
+**Fix (3 layers):**
+
+1. **Generator script** (`scripts/generate-prescription-seed.cjs` lines 213-219): Replaced `console.log(output)` with `fs.writeFileSync(path, output, 'utf8')` for file output and `process.stdout.write(output, 'utf8')` for stdout. These use Node.js Buffer with explicit UTF-8 encoding instead of the console's code-page-dependent encoding.
+
+2. **Seed files**: Converted `scripts/prescription-seed.sql` and `scripts/prescription-seed-1000.sql` from UTF-16LE to UTF-8 (stripped BOM, re-encoded). File sizes dropped ~50% due to null byte removal.
+
+3. **Auto-heal existing DB** (`data.sql`): Changed 90 `prescription_lists` INSERTs from `ON CONFLICT (id) DO NOTHING` to `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name`. This overwrites garbage Cyrillic in any database that was seeded with the corrupted files, without requiring a full `DROP SCHEMA`.
+
+**Verification:**
+- `file scripts/prescription-seed.sql` reports "UTF-8 Unicode text" (was "Little-endian UTF-16 Unicode text")
+- `hexdump -C | head` shows no BOM and single-byte ASCII characters
 - All 390 frontend Vitest tests pass, backend compiles clean
+- Running this against a corrupted DB will auto-correct the 90 document names on next startup
 
 ### Frontend — global theme
 - **Default theme changed to light mode** (`dark` → `light` in ThemeContext)
@@ -502,6 +524,17 @@ All endpoints prefixed with `/api`.
 - **DB**: `ddl-auto: update` — never write manual DDL; schema auto-created by Hibernate from entity annotations
 - **Data seeding**: Only via `data.sql` (`spring.sql.init.mode: always`)
 - **Test seed data**: Integration tests use `data-test.sql` (in `src/test/resources/`) with plain INSERTs on a fresh Testcontainers PostgreSQL database. The production `data.sql` keeps `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). Modified data may persist across restarts. Reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
+
+## Encoding Policy
+
+**All SQL seed files and generated SQL must be UTF-8** — never UTF-16LE, never Windows-1251.
+
+- **Generator scripts** (`scripts/*.cjs`): Use `fs.writeFileSync(path, content, 'utf8')` for file output and `process.stdout.write(content, 'utf8')` for stdout. **Never use `console.log()`** to generate file content — on Windows PowerShell, `console.log` pipes through `process.stdout` which defaults to UTF-16LE, producing a UTF-16LE BOM and null-byte interleaved ASCII that PostgreSQL cannot decode.
+- **Verification commands**:
+  - `file scripts/*.sql` should report "UTF-8 Unicode text", never "Little-endian UTF-16 Unicode text"
+  - `hexdump -C scripts/*.sql | head -3` should show no BOM (`FF FE`) and single-byte (not zero-interleaved) ASCII
+- **`data.sql`**: Must be UTF-8. Any seed SQL file concatenated into `data.sql` must be explicitly written as UTF-8. If a corrupted file was already concatenated, convert it with `Set-Content -Encoding UTF8` or `iconv -f UTF-16 -t UTF-8` and re-insert.
+- **Auto-heal**: If corrupted `document_name` values already exist in the database, the `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` clause on `prescription_lists` INSERTs will overwrite them with clean UTF-8 text on the next `data.sql` execution.
 
 ## Project Files (kept in repo)
 

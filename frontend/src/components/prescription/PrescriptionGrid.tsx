@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   Box, Typography, IconButton, TextField, Button, Autocomplete,
-  Paper, Tooltip, CircularProgress, Checkbox, FormControlLabel, Popover,
+  Paper, Tooltip, CircularProgress, Checkbox, FormControlLabel, Popover, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import {
   Add, Delete, ArrowBackIosNew, ArrowForwardIos,
@@ -58,7 +58,7 @@ export interface GridProps {
   isNurse: boolean;
   onPlan: (dayPartId: string, dose: string) => Promise<void>;
   onCancel: (dayPartId: string) => Promise<void>;
-  onExecute?: (dayPartId: string, actualDose: string, requires2p: boolean, secondPersonId?: string) => Promise<void>;
+  onExecute?: (dayPartId: string, actualDose: string, secondPersonLogin: string, secondPersonPassword: string) => Promise<void>;
   onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
   onRemoveItem: (itemId: string) => Promise<void>;
   onSearchMedicine: (keyword: string) => Promise<MedicineCatalogItem[]>;
@@ -156,33 +156,55 @@ export default function PrescriptionGrid({
     await onCancel(dp.id);
   };
 
-  // ── nurse: execute popover ──────────────────────────────────────
+  // ── nurse: execute popover + 2FA dialog ─────────────────────────
 
   const [execAnchor, setExecAnchor] = useState<HTMLElement | null>(null);
   const [execDp, setExecDp] = useState<PrescriptionDayPart | null>(null);
   const [execDose, setExecDose] = useState('');
-  const [exec2p, setExec2p] = useState(false);
-  const [exec2pId, setExec2pId] = useState('');
   const [executing, setExecuting] = useState(false);
+
+  // second-person auth step
+  const [show2fa, setShow2fa] = useState(false);
+  const [secondPersonLogin, setSecondPersonLogin] = useState('');
+  const [secondPersonPassword, setSecondPersonPassword] = useState('');
+  const [secondPersonError, setSecondPersonError] = useState('');
 
   const openExecute = (dp: PrescriptionDayPart, el: HTMLElement) => {
     if (!canEdit || !isNurse || !dp.isPlanned || dp.isCompleted) return;
     setExecDp(dp);
     setExecDose(dp.dose ?? '');
-    setExec2p(false);
-    setExec2pId('');
     setExecuting(false);
+    setShow2fa(false);
+    setSecondPersonLogin('');
+    setSecondPersonPassword('');
+    setSecondPersonError('');
     setExecAnchor(el);
   };
 
-  const closeExecute = () => { setExecAnchor(null); setExecDp(null); };
+  const closeExecute = () => {
+    setExecAnchor(null);
+    setExecDp(null);
+    setShow2fa(false);
+    setSecondPersonError('');
+  };
+
+  const proceedTo2fa = () => {
+    if (!execDose.trim()) return;
+    setSecondPersonLogin('');
+    setSecondPersonPassword('');
+    setSecondPersonError('');
+    setShow2fa(true);
+  };
 
   const commitExecute = async () => {
     if (!execDp || !onExecute) return;
     setExecuting(true);
+    setSecondPersonError('');
     try {
-      await onExecute(execDp.id, execDose, exec2p, exec2p ? exec2pId : undefined);
+      await onExecute(execDp.id, execDose, secondPersonLogin, secondPersonPassword);
       closeExecute();
+    } catch (err: any) {
+      setSecondPersonError(err?.response?.data?.message || err?.message || 'Помилка 2FA');
     } finally {
       setExecuting(false);
     }
@@ -455,36 +477,57 @@ export default function PrescriptionGrid({
         </Paper>
       )}
 
-      {/* ── nurse: execute popover ── */}
+      {/* ── nurse: execute popover (step 1: dose) ── */}
       <Popover
-        open={Boolean(execAnchor)}
+        open={Boolean(execAnchor) && !show2fa}
         anchorEl={execAnchor}
         onClose={closeExecute}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <Box sx={{ p: 2, minWidth: 240, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Box sx={{ p: 2, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <Typography variant="subtitle2">
             {execDp ? `${PERIOD_FULL[execDp.period]}: ${execDp.dose ?? '—'}` : 'Виконання дози'}
           </Typography>
           <TextField size="small" label="Фактична доза" value={execDose}
             onChange={e => setExecDose(e.target.value)} autoFocus />
-          <FormControlLabel
-            control={<Checkbox size="small" checked={exec2p} onChange={e => setExec2p(e.target.checked)} />}
-            label={<Typography variant="body2">2-факторна авторизація</Typography>}
-          />
-          {exec2p && (
-            <TextField size="small" label="ID другої особи" value={exec2pId}
-              onChange={e => setExec2pId(e.target.value)} />
-          )}
           <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-            <Button size="small" onClick={closeExecute} disabled={executing}>Скасувати</Button>
+            <Button size="small" onClick={closeExecute}>Скасувати</Button>
             <Button size="small" variant="contained" color="success"
-              disabled={executing || !execDose.trim()}
-              onClick={commitExecute}>Виконати</Button>
+              disabled={!execDose.trim()}
+              onClick={proceedTo2fa}>Продовжити</Button>
           </Box>
         </Box>
       </Popover>
+
+      {/* ── nurse: 2FA dialog (step 2: second nurse login) ── */}
+      <Dialog open={show2fa} onClose={() => { if (!executing) setShow2fa(false); }}
+        maxWidth="xs" fullWidth>
+        <DialogTitle>2-факторна авторизація</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Для виконання призначення необхідне підтвердження іншою медсестрою.
+            Увійдіть під обліковим записом другої особи.
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+            <TextField size="small" label="Логін другої особи" value={secondPersonLogin}
+              onChange={e => setSecondPersonLogin(e.target.value)}
+              disabled={executing} autoFocus />
+            <TextField size="small" label="Пароль" type="password" value={secondPersonPassword}
+              onChange={e => setSecondPersonPassword(e.target.value)}
+              disabled={executing} />
+            {secondPersonError && (
+              <Typography variant="caption" color="error">{secondPersonError}</Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button size="small" onClick={() => setShow2fa(false)} disabled={executing}>Скасувати</Button>
+          <Button size="small" variant="contained" color="success"
+            disabled={executing || !secondPersonLogin.trim() || !secondPersonPassword.trim()}
+            onClick={commitExecute}>Підтвердити</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── delete confirmation popover ── */}
       <Popover
