@@ -16,7 +16,7 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-07-28: Bug fix round — issues #82, #83, #84 resolved**
+**2026-07-28: Bug fix round — issues #82, #83, #84, #87 resolved**
 
 ### Issue #84 — Remove nav buttons from GlobalLayout header
 - Removed "Пацієнти" and "Призначення" buttons from `GlobalLayout.tsx` header
@@ -55,6 +55,15 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 - `hexdump -C | head` shows no BOM and single-byte ASCII characters
 - All 390 frontend Vitest tests pass, backend compiles clean
 - Running this against a corrupted DB will auto-correct the 90 document names on next startup
+
+### Issue #87 — Prescription list dropdown for patients with multiple lists
+- 90 patients have prescription lists (1001-1025 surgery, 1026-1050 rehab, 2001-2020 surgery, 2021-2040 rehab) — existing seed in `data.sql` has one `Active` list each
+- No backend changes needed: `GET /api/prescriptions?patientId=X` already returns all lists regardless of status
+- Added `'Active'` to `PrescriptionListStatus` type in `frontend/src/types/index.ts`
+- Rewrote `PrescriptionPage.tsx` and `NursePrescriptionPage.tsx`: `PatientRow.lists: PrescriptionList[]` replaces single `list`; Відкрити button and patient name link show MUI dropdown Menu when multiple lists exist
+- Generated `scripts/generate-closed-prescriptions.cjs` → `scripts/closed-prescription-seed.sql` (270 `Finished` lists, 1-5 per patient); appended to `data.sql`
+- `getStatusText`/`getRowStyle` evaluate across all lists: any non-Finished → "В ході", all Finished → "Завершено", none → "Заплановано"
+- Frontend: 39 test files, 310 tests, 0 failures. Backend compile + frontend typecheck pass
 
 ### Frontend — global theme
 - **Default theme changed to light mode** (`dark` → `light` in ThemeContext)
@@ -100,7 +109,7 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 | medication-sheet | 22 | Integration (in icu-chart) |
 | icu-chart | 312 | Unit |
 | **Backend total** | **422** | |
-| Frontend | 300 | Vitest (38 files, 0 failures) |
+| Frontend | 310 | Vitest (39 files, 0 failures) |
 | E2E | 38 | Playwright specs |
 
 ### Previous sessions (condensed):

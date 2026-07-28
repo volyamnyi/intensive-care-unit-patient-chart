@@ -26,4 +26,7 @@ public class PatientDTO {
     String bloodGroup;
     String rhFactor;
     Long departmentId;
+    String room;
+    String bed;
+    String doctorName;
 }

@@ -342,6 +342,47 @@ public class MockMisServiceImpl implements MisService {
         for (long pid = 2021; pid <= 2040; pid++) {
             if (patients.containsKey(pid)) patients.get(pid).setDepartmentId(1L);
         }
+
+        // Assign room/bed/doctor for prescription dashboard inpatients
+        String[] surgeryRooms = {"Палата 501", "Палата 502", "Палата 503", "Палата 504", "Палата 505",
+                "Палата 506", "Палата 507", "Палата 508", "Палата 509", "Палата 510",
+                "Палата 511", "Палата 512", "Палата 513", "Палата 514", "Палата 515",
+                "Палата 516", "Палата 517", "Палата 518", "Палата 519", "Палата 520"};
+        String[] rehabRooms = {"Палата 701", "Палата 702", "Палата 703", "Палата 704", "Палата 705",
+                "Палата 706", "Палата 707", "Палата 708", "Палата 709", "Палата 710",
+                "Палата 711", "Палата 712", "Палата 713", "Палата 714", "Палата 715",
+                "Палата 716", "Палата 717", "Палата 718", "Палата 719", "Палата 720"};
+        String[] beds = {"Ліжко №1", "Ліжко №2", "Ліжко №3", "Ліжко №4"};
+        String[] surgeryDoctors = {"Олександр Мельник", "Наталія Бойко", "Василь Гончарук"};
+        String[] rehabDoctors = {"Олександр Мельник", "Василь Гончарук"};
+
+        for (long pid = 2001; pid <= 2020; pid++) {
+            PatientDTO p = patients.get(pid);
+            if (p != null) {
+                int idx = (int)(pid - 2001);
+                p.setRoom(surgeryRooms[idx]);
+                p.setBed(beds[idx % beds.length]);
+                p.setDoctorName(surgeryDoctors[idx % surgeryDoctors.length]);
+            }
+        }
+        for (long pid = 2021; pid <= 2040; pid++) {
+            PatientDTO p = patients.get(pid);
+            if (p != null) {
+                int idx = (int)(pid - 2021);
+                p.setRoom(rehabRooms[idx]);
+                p.setBed(beds[idx % beds.length]);
+                p.setDoctorName(rehabDoctors[idx % rehabDoctors.length]);
+            }
+        }
+        // Original seed patients (1001-1050) — minimal data
+        for (long pid = 1001; pid <= 1050; pid++) {
+            PatientDTO p = patients.get(pid);
+            if (p != null) {
+                p.setRoom("Палата 101");
+                p.setBed("Ліжко №" + ((pid - 1001) % 4 + 1));
+                p.setDoctorName("Олександр Мельник");
+            }
+        }
     }
 
     void addPatient(Long id, String name, LocalDate birthDate, String sex, String address,

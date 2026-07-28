@@ -27,6 +27,9 @@ export interface PatientDto {
   bloodGroup: string;
   rhFactor: string;
   departmentId?: number;
+  room?: string;
+  bed?: string;
+  doctorName?: string;
 }
 
 export interface EpisodeCreateRequest {
@@ -480,7 +483,7 @@ export interface PageResponse<T> {
   size?: number;
 }
 
-export type PrescriptionListStatus = 'Saved' | 'Finished';
+export type PrescriptionListStatus = 'Active' | 'Saved' | 'Finished';
 
 export interface PrescriptionList {
   id: string;

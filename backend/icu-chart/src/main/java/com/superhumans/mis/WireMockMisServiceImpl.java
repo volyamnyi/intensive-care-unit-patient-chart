@@ -192,6 +192,9 @@ public class WireMockMisServiceImpl implements MisService {
                     .email(node.has("patientEmail") ? node.get("patientEmail").asText() : null)
                     .externalId1(node.has("patientExternalID1") ? node.get("patientExternalID1").asText() : null)
                     .externalId2(node.has("patientExternalID2") ? node.get("patientExternalID2").asText() : null)
+                    .room(node.has("patientRoomNumber") ? node.get("patientRoomNumber").asText() : null)
+                    .bed(node.has("patientBedNumber") ? node.get("patientBedNumber").asText() : null)
+                    .doctorName(node.has("patientDoctor") ? node.get("patientDoctor").asText() : null)
                     .build();
             result.add(patient);
         }
