@@ -7,7 +7,7 @@ import {
   Drawer, IconButton, Chip, List, ListItem, ListItemButton, ListItemText,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material';
-import { Add, Close, Delete, Edit, OpenInNew, ArticleOutlined } from '@mui/icons-material';
+import { Close, Delete, Edit, OpenInNew, ArticleOutlined } from '@mui/icons-material';
 import { patientApi, prescriptionApi } from '../../api/endpoints';
 import { getErrorMessage } from '../../utils/errorMessage';
 import type { PatientDto, PrescriptionList } from '../../types';
@@ -32,7 +32,6 @@ export default function PrescriptionPage() {
   );
   const [rows, setRows] = useState<PatientRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -98,20 +97,6 @@ export default function PrescriptionPage() {
     if (!val) return;
     setDept(val);
     localStorage.setItem('prescDept', val);
-  };
-
-  const handleCreate = async (patientId: number) => {
-    setCreating(patientId);
-    setError(null);
-    try {
-      const res = await prescriptionApi.create({ patientId: String(patientId) });
-      handleCloseDrawer();
-      navigate(`/prescriptions/doctor/${res.data.id}`);
-    } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося створити листок'));
-    } finally {
-      setCreating(null);
-    }
   };
 
   const handleCloseList = async (list: PrescriptionList) => {
@@ -319,22 +304,16 @@ export default function PrescriptionPage() {
                     <TableCell>{row.patient.bed || '—'}</TableCell>
                     <TableCell>{row.patient.doctorName || '—'}</TableCell>
                     <TableCell>{getStatusText(row.lists)}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        {row.lists.length > 0 && (
-                          <Button size="small" variant="outlined"
-                            onClick={() => handleOpenDrawer(row.patient, row.lists)}>
-                            Відкрити
-                          </Button>
-                        )}
-                        <Button size="small" variant="contained"
-                          startIcon={<Add />}
-                          disabled={creating === row.patient.id}
-                          onClick={() => handleCreate(row.patient.id)}>
-                          {creating === row.patient.id ? '...' : 'Новий'}
-                        </Button>
-                      </Box>
-                    </TableCell>
+                     <TableCell>
+                       <Box sx={{ display: 'flex', gap: 0.5 }}>
+                         {row.lists.length > 0 && (
+                           <Button size="small" variant="outlined"
+                             onClick={() => handleOpenDrawer(row.patient, row.lists)}>
+                             Відкрити
+                           </Button>
+                         )}
+                       </Box>
+                     </TableCell>
                   </TableRow>
                 ))
               )}
@@ -422,17 +401,9 @@ export default function PrescriptionPage() {
                 ))}
               </List>
             )}
-          </Box>
-
-          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Button fullWidth variant="contained" startIcon={<Add />}
-              disabled={creating === drawerPatient?.id}
-              onClick={() => drawerPatient && handleCreate(drawerPatient.id)}>
-              {creating === drawerPatient?.id ? 'Створення...' : 'Новий листок'}
-            </Button>
-          </Box>
-        </Box>
-      </Drawer>
+           </Box>
+         </Box>
+       </Drawer>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Видалити листок?</DialogTitle>
