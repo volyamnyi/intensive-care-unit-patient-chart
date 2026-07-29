@@ -1,4 +1,5 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Typography, Box } from '@mui/material';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Episode } from '../../types';
 
 interface EpisodeTableProps {
@@ -7,11 +8,11 @@ interface EpisodeTableProps {
   loading?: boolean;
 }
 
-const statusColors: Record<string, 'default' | 'success' | 'info' | 'warning'> = {
+const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'> = {
   DRAFT: 'default',
-  ACTIVE: 'success',
-  COMPLETED: 'info',
-  ARCHIVED: 'warning',
+  ACTIVE: 'default',
+  COMPLETED: 'secondary',
+  ARCHIVED: 'outline',
 };
 
 const statusLabels: Record<string, string> = {
@@ -23,74 +24,70 @@ const statusLabels: Record<string, string> = {
 
 export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTableProps) {
   if (loading) {
-    return <Typography color="text.secondary">Завантаження...</Typography>;
+    return <p className="text-muted-foreground font-mulish">Завантаження...</p>;
   }
 
   if (episodes.length === 0) {
-    return <Typography color="text.secondary">Немає даних</Typography>;
+    return <p className="text-muted-foreground font-mulish">Немає даних</p>;
   }
 
   return (
-    <TableContainer sx={{ overflowX: 'auto' }}>
-      <Table size="small" sx={{ minWidth: 650 }}>
-        <TableHead>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell>Пацієнт</TableCell>
-            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Палата/Ліжко</TableCell>
-            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Діагноз</TableCell>
-            <TableCell>Дата госпіталізації</TableCell>
-            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Дата виписки</TableCell>
-            <TableCell>Статус</TableCell>
-            <TableCell>Дії</TableCell>
+            <TableHead>Пацієнт</TableHead>
+            <TableHead className="hidden sm:table-cell">Палата/Ліжко</TableHead>
+            <TableHead className="hidden md:table-cell">Діагноз</TableHead>
+            <TableHead>Дата госпіталізації</TableHead>
+            <TableHead className="hidden sm:table-cell">Дата виписки</TableHead>
+            <TableHead>Статус</TableHead>
+            <TableHead>Дії</TableHead>
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
           {episodes.map((ep) => (
             <TableRow
               key={ep.id}
-              hover={!!onSelect}
+              className={onSelect ? 'cursor-pointer' : ''}
               onClick={() => onSelect?.(ep)}
-              sx={{ cursor: onSelect ? 'pointer' : 'default' }}
             >
-              <TableCell sx={{ fontWeight: 600 }}>
+              <TableCell className="font-semibold">
                 {ep.patientName || ep.patientId}
               </TableCell>
-              <TableCell sx={{ fontSize: 12, display: { xs: 'none', sm: 'table-cell' } }}>
+              <TableCell className="hidden text-xs sm:table-cell">
                 {[ep.ward, ep.bedNumber].filter(Boolean).join(' / ') || '—'}
               </TableCell>
-              <TableCell sx={{ fontSize: 12, display: { xs: 'none', md: 'table-cell' }, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <TableCell className="hidden max-w-[200px] truncate text-xs md:table-cell">
                 {ep.admissionDiagnosis || '—'}
               </TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+              <TableCell className="whitespace-nowrap">
                 {new Date(ep.admissionDate).toLocaleDateString('uk-UA')}
               </TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, whiteSpace: 'nowrap' }}>
+              <TableCell className="hidden whitespace-nowrap sm:table-cell">
                 {ep.dischargeDate ? new Date(ep.dischargeDate).toLocaleDateString('uk-UA') : '-'}
               </TableCell>
               <TableCell>
-                <Chip
-                  label={statusLabels[ep.status] || ep.status}
-                  color={statusColors[ep.status] || 'default'}
-                  size="small"
-                />
+                <Badge variant={statusColors[ep.status] || 'default'}>
+                  {statusLabels[ep.status] || ep.status}
+                </Badge>
               </TableCell>
               <TableCell>
                 {onSelect && (
-                  <Box
-                    sx={{ color: '#FF8C66', fontWeight: 600, fontSize: 13, cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
+                    className="flex min-h-[44px] cursor-pointer items-center text-[13px] font-semibold border-none bg-transparent p-0"
+                    style={{ color: '#FF8C66' }}
                     onClick={(e) => { e.stopPropagation(); onSelect(ep); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onSelect(ep); } }}
                   >
                     Відкрити
-                  </Box>
+                  </button>
                 )}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }

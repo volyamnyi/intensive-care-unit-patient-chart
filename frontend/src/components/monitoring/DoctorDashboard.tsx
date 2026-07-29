@@ -1,4 +1,5 @@
-import { Box, Typography, Paper, Chip, useTheme } from '@mui/material';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import ClinicalDayTimeline from '../common/ClinicalDayTimeline';
 import IntensiveCareCard from './IntensiveCareCard';
 import type { DashboardProps } from './dashboardTypes';
@@ -10,65 +11,77 @@ export default function DoctorDashboard(props: DashboardProps) {
     isLocked, isNurse, user, onRefresh, onFeedback,
   } = props;
 
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const bd = `1px solid ${isDark ? '#2A2A2A' : '#E0DED9'}`;
-  const paperSx = {
-    p: 1.5, border: bd, borderRadius: 2,
-    bgcolor: isDark ? '#141414' : '#FFFFFF',
-    boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.03)',
+  const dayBadgeVariant = (status: string): 'default' | 'secondary' | 'outline' | null => {
+    if (status === 'OPEN' || status === 'REOPENED') return 'default';
+    if (status === 'NURSE_SIGNED') return 'secondary';
+    if (status === 'DOCTOR_SIGNED') return 'default';
+    return 'outline';
   };
 
-  const dayChipColor = (status: string) => {
-    if (status === 'OPEN' || status === 'REOPENED') return 'warning';
-    if (status === 'NURSE_SIGNED') return 'info';
-    if (status === 'DOCTOR_SIGNED') return 'success';
-    return 'default';
-  };
+  const badgeStyle = { fontWeight: 600, fontSize: 11 };
 
   return (
-    <Box>
+    <div>
       {/* Top bar: episode + day info */}
-      <Paper sx={{ ...paperSx, mb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, fontSize: 16 }}>
+      <div
+        className="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-1.5 mb-1.5 flex justify-between items-center flex-wrap gap-1"
+      >
+        <div className="flex items-center gap-1.5">
+          <h2 className="font-rubik font-extrabold text-base">
             {episode.patientName || 'Patient'}
-          </Typography>
+          </h2>
           {selectedDay?.weightKg && (
-            <Chip label={`${selectedDay.weightKg} kg`} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11 }} />
+            <Badge variant="outline" className="font-semibold text-xs" style={badgeStyle}>
+              {`${selectedDay.weightKg} kg`}
+            </Badge>
           )}
           {episode.heightCm && (
-            <Chip label={`${episode.heightCm} cm`} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11 }} />
+            <Badge variant="outline" className="font-semibold text-xs" style={badgeStyle}>
+              {`${episode.heightCm} cm`}
+            </Badge>
           )}
           {episode.ward && (
-            <Chip label={[episode.ward, episode.bedNumber].filter(Boolean).join(' / ')} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11 }} />
+            <Badge variant="outline" className="font-semibold text-xs" style={badgeStyle}>
+              {[episode.ward, episode.bedNumber].filter(Boolean).join(' / ')}
+            </Badge>
           )}
           {episode.admissionDiagnosis && (
-            <Chip label={episode.admissionDiagnosis} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11, maxWidth: 200 }} />
+            <Badge variant="outline" className="font-semibold text-xs max-w-[200px]" style={badgeStyle}>
+              {episode.admissionDiagnosis}
+            </Badge>
           )}
           {selectedDay && (
-            <Chip label={`День ${selectedDay.dayNumber}`} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 12 }} />
+            <Badge variant="outline" className="font-semibold text-xs" style={badgeStyle}>
+              {`День ${selectedDay.dayNumber}`}
+            </Badge>
           )}
-          <Chip
-            label={selectedDay?.status === 'OPEN' ? 'Відкритий'
+          <Badge
+            variant={dayBadgeVariant(selectedDay?.status ?? '')}
+            className={cn(
+              'font-semibold text-xs',
+              (selectedDay?.status === 'OPEN' || selectedDay?.status === 'REOPENED') && 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
+              selectedDay?.status === 'DOCTOR_SIGNED' && 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
+            )}
+            style={badgeStyle}
+          >
+            {selectedDay?.status === 'OPEN' ? 'Відкритий'
               : selectedDay?.status === 'NURSE_SIGNED' ? 'Підписано медсестрою'
               : selectedDay?.status === 'DOCTOR_SIGNED' ? 'Підписано лікарем'
               : selectedDay?.status === 'REOPENED' ? 'Відкрито повторно'
               : 'Закрито'}
-            color={dayChipColor(selectedDay?.status ?? '')}
-            size="small"
-            sx={{ fontWeight: 600, fontSize: 11 }}
-          />
-        </Box>
-        <Typography variant="caption" color="text.secondary">
+          </Badge>
+        </div>
+        <span className="text-xs text-muted-foreground">
           {'Епізод #' + episode.id?.slice(0, 8)}
-        </Typography>
-      </Paper>
+        </span>
+      </div>
 
       {/* Clinical day timeline */}
-      <Paper sx={{ ...paperSx, mb: 1.5 }}>
+      <div
+        className="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-1.5 mb-1.5"
+      >
         <ClinicalDayTimeline days={clinicalDays} selectedDayId={selectedDay?.id} onSelectDay={onSelectDay} />
-      </Paper>
+      </div>
 
       {/* Single dynamic ICU card — all hourly inputs inline */}
       <IntensiveCareCard
@@ -83,6 +96,6 @@ export default function DoctorDashboard(props: DashboardProps) {
         onRefresh={onRefresh}
         onFeedback={onFeedback}
       />
-    </Box>
+    </div>
   );
 }

@@ -2,6 +2,7 @@ package com.superhumans.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.Where;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import java.util.UUID;
 @Table(name = "audit_logs")
 @Where(clause = "is_deleted IS NULL OR is_deleted = false")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuditLog {
 
     @Id

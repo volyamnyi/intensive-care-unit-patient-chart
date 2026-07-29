@@ -55,7 +55,7 @@ test.describe('HOD Clinical Day Reopen', () => {
     await expect(hodPage.getByRole('button', { name: 'Перевідкрити' })).toBeVisible({ timeout: 10000 });
 
     await hodPage.getByRole('button', { name: 'Перевідкрити' }).click();
-    const reasonInput = hodPage.getByLabel(/причин/i);
+    const reasonInput = hodPage.getByPlaceholder('Причина');
     await expect(reasonInput).toBeVisible();
 
     const submit = hodPage.getByRole('button', { name: 'Перевідкрити' });

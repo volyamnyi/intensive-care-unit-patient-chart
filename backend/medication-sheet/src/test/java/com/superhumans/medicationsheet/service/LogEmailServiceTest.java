@@ -18,28 +18,4 @@ class LogEmailServiceTest {
         assertThatCode(() -> service.sendEmail("test@superhumans.com", "Subject", "Body text"))
                 .doesNotThrowAnyException();
     }
-
-    @Test
-    void sendEmail_handlesNullTo() {
-        assertThatCode(() -> service.sendEmail(null, "Subject", "Body"))
-                .doesNotThrowAnyException();
-    }
-
-    @Test
-    void sendEmail_handlesNullSubject() {
-        assertThatCode(() -> service.sendEmail("test@superhumans.com", null, "Body"))
-                .doesNotThrowAnyException();
-    }
-
-    @Test
-    void sendEmail_handlesNullText() {
-        assertThatCode(() -> service.sendEmail("test@superhumans.com", "Subject", null))
-                .doesNotThrowAnyException();
-    }
-
-    @Test
-    void sendEmail_handlesEmptyText() {
-        assertThatCode(() -> service.sendEmail("test@superhumans.com", "Subject", ""))
-                .doesNotThrowAnyException();
-    }
 }

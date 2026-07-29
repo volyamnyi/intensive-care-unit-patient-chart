@@ -1,5 +1,12 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Typography, Box } from '@mui/material';
-import type { PrescriptionList } from '../../types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+
+interface PrescriptionList {
+  id: string;
+  documentName: string;
+  patientId: string;
+  status: string;
+}
 
 interface PrescriptionTableProps {
   prescriptions: PrescriptionList[];
@@ -7,9 +14,9 @@ interface PrescriptionTableProps {
   loading?: boolean;
 }
 
-const statusColors: Record<string, 'default' | 'success' | 'info' | 'warning'> = {
-  Saved: 'info',
-  Finished: 'success',
+const statusVariant: Record<string, 'secondary' | 'default' | 'outline'> = {
+  Saved: 'secondary',
+  Finished: 'default',
 };
 
 const statusLabels: Record<string, string> = {
@@ -19,58 +26,55 @@ const statusLabels: Record<string, string> = {
 
 export default function PrescriptionTable({ prescriptions, onSelect, loading }: PrescriptionTableProps) {
   if (loading) {
-    return <Typography color="text.secondary">Завантаження...</Typography>;
+    return <p className="text-muted-foreground">Завантаження...</p>;
   }
 
   if (prescriptions.length === 0) {
-    return <Typography color="text.secondary">Немає призначень</Typography>;
+    return <p className="text-muted-foreground">Немає призначень</p>;
   }
 
   return (
-    <TableContainer sx={{ overflowX: 'auto' }}>
-      <Table size="small" sx={{ minWidth: 600 }}>
-        <TableHead>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell>Документ</TableCell>
-            <TableCell>Пацієнт ID</TableCell>
-            <TableCell>Статус</TableCell>
-            <TableCell></TableCell>
+            <TableHead>Документ</TableHead>
+            <TableHead>Пацієнт ID</TableHead>
+            <TableHead>Статус</TableHead>
+            <TableHead></TableHead>
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
           {prescriptions.map((prescription) => (
             <TableRow
               key={prescription.id}
-              hover={!!onSelect}
+              className={onSelect ? 'cursor-pointer hover:bg-accent' : ''}
               onClick={() => onSelect?.(prescription)}
-              sx={{ cursor: onSelect ? 'pointer' : 'default' }}
             >
-              <TableCell sx={{ fontWeight: 600 }}>{prescription.documentName}</TableCell>
+              <TableCell className="font-semibold">{prescription.documentName}</TableCell>
               <TableCell>{prescription.patientId}</TableCell>
               <TableCell>
-                <Chip
-                  label={statusLabels[prescription.status] || prescription.status}
-                  color={statusColors[prescription.status] || 'default'}
-                  size="small"
-                />
+                <Badge variant={statusVariant[prescription.status] || 'outline'}>
+                  {statusLabels[prescription.status] || prescription.status}
+                </Badge>
               </TableCell>
               <TableCell>
                 {onSelect && (
-                  <Box
-                    sx={{ color: '#FF8C66', fontWeight: 600, fontSize: 13, cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}
+                  <span
+                    className="text-primary font-semibold text-xs cursor-pointer flex items-center min-h-11"
                     role="button"
                     tabIndex={0}
                     onClick={(e) => { e.stopPropagation(); onSelect(prescription); }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onSelect(prescription); } }}
                   >
                     Відкрити
-                  </Box>
+                  </span>
                 )}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }

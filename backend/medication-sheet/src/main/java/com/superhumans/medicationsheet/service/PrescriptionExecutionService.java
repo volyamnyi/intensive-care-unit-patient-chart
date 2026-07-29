@@ -51,10 +51,6 @@ public class PrescriptionExecutionService {
             throw new IllegalArgumentException("Друга особа не може бути тією ж, що виконує призначення");
         }
 
-        if (secondPerson.getId().equals(currentUserId)) {
-            throw new IllegalArgumentException("Друга особа не може бути тією ж, що виконує призначення");
-        }
-
         // Deterministic UUIDs from logins for audit trail
         UUID firstPersonUuid = UUID.nameUUIDFromBytes(currentUserLogin.getBytes());
         UUID secondPersonUuid = UUID.nameUUIDFromBytes(secondPersonLogin.getBytes());

@@ -33,7 +33,7 @@ test.describe('Create Card', () => {
     await expect(page.getByText('Нова карта інтенсивної терапії')).toBeVisible();
 
     await page.getByLabel('ПІБ, телефон або № медкарти').fill('Бондаренко');
-    const option = page.getByRole('option', { name: /Бондаренко Тетяна/ });
+    const option = page.getByText(/Бондаренко Тетяна/);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
 
@@ -55,7 +55,7 @@ test.describe('Create Card', () => {
 
     await page.goto('/doctor/create-card');
     await page.getByLabel('ПІБ, телефон або № медкарти').fill('Бондаренко');
-    const option = page.getByRole('option', { name: /Бондаренко Тетяна/ });
+    const option = page.getByText(/Бондаренко Тетяна/);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
     await expect(page.getByText('Дані пацієнта (з МІС)')).toBeVisible();

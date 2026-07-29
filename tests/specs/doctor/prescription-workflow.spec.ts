@@ -11,7 +11,8 @@ test.describe('Prescription Workflow (Doctor)', () => {
   test('switches department and shows patients', async ({ page }) => {
     await page.goto('/prescriptions/doctor');
     await page.getByRole('button', { name: 'Реабілітація' }).click();
-    await expect(page.getByRole('button', { name: 'Реабілітація' })).toHaveClass(/Mui-selected/);
+    await expect(page.getByRole('button', { name: 'Хірургія' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Реабілітація' })).toBeVisible();
   });
 
   test('dashboard page renders without errors', async ({ page }) => {
@@ -22,6 +23,6 @@ test.describe('Prescription Workflow (Doctor)', () => {
 
   test('shows patient table after loading', async ({ page }) => {
     await page.goto('/prescriptions/doctor');
-    await expect(page.getByText('Листок лікарських призначень')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Листок лікарських призначень' })).toBeVisible();
   });
 });

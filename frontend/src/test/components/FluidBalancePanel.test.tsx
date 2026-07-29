@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import FluidBalancePanel from '../../components/common/FluidBalancePanel';
 import type { FluidBalanceItem } from '../../types';
 
@@ -29,11 +30,13 @@ const mockItems: FluidBalanceItem[] = [
 
 function renderPanel(props: Partial<React.ComponentProps<typeof FluidBalancePanel>> = {}) {
   return render(
-    <FluidBalancePanel
-      items={props.items ?? []}
-      onRecalculate={props.onRecalculate}
-      loading={props.loading}
-    />
+    <ThemeModeProvider>
+      <FluidBalancePanel
+        items={props.items ?? []}
+        onRecalculate={props.onRecalculate}
+        loading={props.loading}
+      />
+    </ThemeModeProvider>
   );
 }
 

@@ -38,7 +38,7 @@ test.describe('HOD Dashboard', () => {
     await page.goto('/doctor/create-card');
     await page.getByLabel('ПІБ, телефон або № медкарти').fill('Ткачук');
 
-    const option = page.getByRole('option', { name: /Ткачук Андрій/ });
+    const option = page.getByText(/Ткачук Андрій/);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
 

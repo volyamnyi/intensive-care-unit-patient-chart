@@ -1,21 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import PrescriptionTable from '../../../components/prescription/PrescriptionTable';
-import type { PrescriptionList } from '../../../types';
-
-const theme = createTheme({});
-const mockPrescriptions: PrescriptionList[] = [
-  { id: 'p1', patientId: 1001, hospitalizationId: null, departmentId: null, documentName: 'Листок 1', status: 'Saved', editingUserId: null },
-  { id: 'p2', patientId: 1002, hospitalizationId: null, departmentId: null, documentName: 'Листок 2', status: 'Finished', editingUserId: null },
+const mockPrescriptions = [
+  { id: 'p1', documentName: 'Листок 1', patientId: '1001', status: 'Saved' },
+  { id: 'p2', documentName: 'Листок 2', patientId: '1002', status: 'Finished' },
 ];
 
 function renderTable(props: Partial<React.ComponentProps<typeof PrescriptionTable>> = {}) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <PrescriptionTable prescriptions={props.prescriptions ?? mockPrescriptions} onSelect={props.onSelect} loading={props.loading} />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

@@ -1,198 +1,199 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { Box, Typography, Button, CircularProgress, Alert, Divider, useTheme } from '@mui/material';
-import { Close } from '@mui/icons-material';
-import { prescriptionApi, vitalSignApi } from '../../api/endpoints';
-import { useAuth } from '../../services/AuthContext';
-import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid';
-import VitalSignGrid from '../../components/prescription/VitalSignGrid';
-import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog';
-import { getErrorMessage } from '../../utils/errorMessage';
-import type { PrescriptionList, PrescriptionItem, AllergyItem } from '../../types';
+import { useEffect, useState, useCallback } from 'react'
+import { useParams } from 'react-router-dom'
+import { Loader2, X, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertAction } from '@/components/ui/alert'
+import { Separator } from '@/components/ui/separator'
+
+import { prescriptionApi, vitalSignApi } from '../../api/endpoints'
+import { useAuth } from '../../services/AuthContext'
+import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid'
+import VitalSignGrid from '../../components/prescription/VitalSignGrid'
+import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog'
+import { getErrorMessage } from '../../utils/errorMessage'
+import type { PrescriptionList, PrescriptionItem, AllergyItem } from '../../types'
 
 export default function PrescriptionDetailPage() {
-  const theme = useTheme();
-  useEffect(() => { document.title = 'Призначення — Деталі'; }, []);
-  const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const isNurseUser = user?.role === 'NURSE';
+  useEffect(() => { document.title = 'Призначення — Деталі' }, [])
+  const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
+  const isNurseUser = user?.role === 'NURSE'
 
-  const [prescription, setPrescription] = useState<PrescriptionList | null>(null);
-  const [items, setItems] = useState<PrescriptionItem[]>([]);
-  const [allergies, setAllergies] = useState<AllergyItem[]>([]);
-  const [vitalDays, setVitalDays] = useState<{ id: string; dayDate: string; entries: import('../../types').VitalSignEntry[] }[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [vitalLoading, setVitalLoading] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [prescription, setPrescription] = useState<PrescriptionList | null>(null)
+  const [items, setItems] = useState<PrescriptionItem[]>([])
+  const [allergies, setAllergies] = useState<AllergyItem[]>([])
+  const [vitalDays, setVitalDays] = useState<{ id: string; dayDate: string; entries: import('../../types').VitalSignEntry[] }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [vitalLoading, setVitalLoading] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const isFinished = prescription?.status === 'Finished';
+  const isFinished = prescription?.status === 'Finished'
 
   const loadItems = useCallback(async (listId: string) => {
     try {
-      const res = await prescriptionApi.getItems(listId);
-      setItems(res.data);
+      const res = await prescriptionApi.getItems(listId)
+      setItems(res.data)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося завантажити препарати'));
+      setError(getErrorMessage(err, 'Не вдалося завантажити препарати'))
     }
-  }, []);
+  }, [])
 
   const loadAllergies = useCallback(async (patientId: number) => {
     try {
-      const res = await prescriptionApi.getAllergies(patientId);
-      setAllergies(res.data);
+      const res = await prescriptionApi.getAllergies(patientId)
+      setAllergies(res.data)
     } catch {
       // allergies are optional
     }
-  }, []);
+  }, [])
 
   const loadVitalGrid = useCallback(async (listId: string) => {
     try {
-      setVitalLoading(true);
-      const res = await vitalSignApi.getGrid(listId);
-      setVitalDays(res.data);
+      setVitalLoading(true)
+      const res = await vitalSignApi.getGrid(listId)
+      setVitalDays(res.data)
     } catch { /* vital signs optional */
     } finally {
-      setVitalLoading(false);
+      setVitalLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
+    if (!id) return
+    setLoading(true)
+    setError(null)
     prescriptionApi.getById(id)
       .then((res) => {
-        setPrescription(res.data);
-        void loadItems(res.data.id);
-        void loadAllergies(res.data.patientId);
-        void loadVitalGrid(res.data.id);
+        setPrescription(res.data)
+        void loadItems(res.data.id)
+        void loadAllergies(res.data.patientId)
+        void loadVitalGrid(res.data.id)
       })
       .catch((err) => setError(getErrorMessage(err, 'Не вдалося завантажити листок призначень')))
-      .finally(() => setLoading(false));
-  }, [id, loadItems, loadAllergies, loadVitalGrid]);
+      .finally(() => setLoading(false))
+  }, [id, loadItems, loadAllergies, loadVitalGrid])
 
   const handlePlan = async (dayPartId: string, dose: string) => {
-    setError(null);
+    setError(null)
     try {
-      await prescriptionApi.planDose(dayPartId, dose);
-      if (id) await loadItems(id);
+      await prescriptionApi.planDose(dayPartId, dose)
+      if (id) await loadItems(id)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося запланувати дозу'));
+      setError(getErrorMessage(err, 'Не вдалося запланувати дозу'))
     }
-  };
+  }
 
   const handleCancel = async (dayPartId: string) => {
-    setError(null);
+    setError(null)
     try {
-      await prescriptionApi.cancelDose(dayPartId);
-      if (id) await loadItems(id);
+      await prescriptionApi.cancelDose(dayPartId)
+      if (id) await loadItems(id)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося скасувати дозу'));
+      setError(getErrorMessage(err, 'Не вдалося скасувати дозу'))
     }
-  };
+  }
 
   const handleAddItem = async (data: { medicineName: string; medicineMethod?: string; regime?: string }) => {
-    if (!id) return;
-    setError(null);
+    if (!id) return
+    setError(null)
     try {
-      await prescriptionApi.addItem(id, data);
-      await loadItems(id);
+      await prescriptionApi.addItem(id, data)
+      await loadItems(id)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося додати препарат'));
+      setError(getErrorMessage(err, 'Не вдалося додати препарат'))
     }
-  };
+  }
 
   const handleRemoveItem = async (itemId: string) => {
-    setError(null);
+    setError(null)
     try {
-      await prescriptionApi.removeItem(itemId);
-      const item = items.find(i => i.id === itemId);
-      if (item && id) await loadItems(id);
+      await prescriptionApi.removeItem(itemId)
+      const item = items.find(i => i.id === itemId)
+      if (item && id) await loadItems(id)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося видалити препарат'));
+      setError(getErrorMessage(err, 'Не вдалося видалити препарат'))
     }
-  };
+  }
 
   const handleCellUpdate = async (dayId: string, period: string, paramKey: string, value: string) => {
-    if (!id) return;
-    setError(null);
-    const numericKey = paramKey !== 'stool';
-    const numValue = numericKey ? (value ? Number(value) : null) : (value || null);
+    if (!id) return
+    setError(null)
+    const numericKey = paramKey !== 'stool'
+    const numValue = numericKey ? (value ? Number(value) : null) : (value || null)
     try {
       await vitalSignApi.updateCell(dayId, period, {
         [paramKey]: numValue,
-      } as Record<string, unknown> as { temperature?: number; systolicBp?: number; diastolicBp?: number; spo2?: number; pulse?: number; stool?: string; painScore?: number });
-      await loadVitalGrid(id);
+      } as Record<string, unknown> as { temperature?: number; systolicBp?: number; diastolicBp?: number; spo2?: number; pulse?: number; stool?: string; painScore?: number })
+      await loadVitalGrid(id)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося зберегти показник'));
+      setError(getErrorMessage(err, 'Не вдалося зберегти показник'))
     }
-  };
+  }
 
   const handleExecute: GridProps['onExecute'] = async (dayPartId, actualDose, secondPersonLogin, secondPersonPassword) => {
-    setError(null);
+    setError(null)
     try {
-      await prescriptionApi.executeDose(dayPartId, { actualDose, secondPersonLogin, secondPersonPassword });
-      if (id) await loadItems(id);
+      await prescriptionApi.executeDose(dayPartId, { actualDose, secondPersonLogin, secondPersonPassword })
+      if (id) await loadItems(id)
     } catch (err) {
-      throw err;
+      throw err
     }
-  };
+  }
 
   const handleClose = async () => {
-    if (!id) return;
-    setClosing(true);
-    setError(null);
+    if (!id) return
+    setClosing(true)
+    setError(null)
     try {
-      const res = await prescriptionApi.close(id);
-      setPrescription(res.data);
-      setCloseDialogOpen(false);
+      const res = await prescriptionApi.close(id)
+      setPrescription(res.data)
+      setCloseDialogOpen(false)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося закрити листок'));
+      setError(getErrorMessage(err, 'Не вдалося закрити листок'))
     } finally {
-      setClosing(false);
+      setClosing(false)
     }
-  };
+  }
 
-  if (loading && !prescription) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
-  if (!prescription) return <Alert severity="info">Листок призначень не знайдено</Alert>;
+  if (loading && !prescription) return <Loader2 className="mx-auto mt-4 size-6 animate-spin text-primary" />
+  if (!prescription) return <Alert>Листок призначень не знайдено</Alert>
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary }}>
+    <div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="font-rubik text-2xl font-extrabold text-foreground">
             {prescription.documentName}
-          </Typography>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
+          </h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Пацієнт ID: {prescription.patientId} · Статус: {prescription.status === 'Finished' ? 'Закрито' : 'Відкрито'}
-          </Typography>
-        </Box>
+          </p>
+        </div>
         {!isNurseUser && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <div className="flex items-center gap-1">
             {!isFinished && (
-              <Button variant="contained" color="warning" startIcon={<Close />} onClick={() => setCloseDialogOpen(true)}>
+              <Button variant="secondary" onClick={() => setCloseDialogOpen(true)}>
+                <X />
                 Закрити листок
               </Button>
             )}
-          </Box>
+          </div>
         )}
-      </Box>
+      </div>
 
       {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-          action={
-            /(modified|conflict|version|змінено|конфлікт|edited)/i.test(error) ? (
-              <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+        <Alert variant="destructive" className="mb-2">
+          {error}
+          {/(modified|conflict|version|змінено|конфлікт|edited)/i.test(error) && (
+            <AlertAction>
+              <Button variant="ghost" size="xs" onClick={() => window.location.reload()}>
+                <RefreshCw />
                 Оновити сторінку
               </Button>
-            ) : undefined
-          }
-        >
-          {error}
+            </AlertAction>
+          )}
         </Alert>
       )}
 
@@ -213,11 +214,11 @@ export default function PrescriptionDetailPage() {
 
       {!isNurseUser && (
         <>
-          <Divider sx={{ my: 3 }} />
+          <Separator className="my-3" />
 
-          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1.5 }}>
+          <h2 className="font-rubik text-lg font-semibold mb-1.5">
             Життєві показники
-          </Typography>
+          </h2>
           <VitalSignGrid
             days={vitalDays}
             canEdit={!isFinished}
@@ -235,6 +236,6 @@ export default function PrescriptionDetailPage() {
           />
         </>
       )}
-    </Box>
-  );
+    </div>
+  )
 }

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import {
-  Box, Typography, TextField, Button, MenuItem, Stack, Paper, CircularProgress,
-} from '@mui/material';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 import type { PatientStateAssessment, PatientStateCreateRequest } from '../../types';
 
 const CONSCIOUSNESS = ['alert', 'drowsy', 'sopor', 'coma', 'sedation'];
@@ -68,59 +69,70 @@ export default function PatientStatePanel({
   };
 
   const SelectField = ({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (v: string) => void }) => (
-    <TextField fullWidth size="small" select label={label} value={value} onChange={(e) => { onChange(e.target.value); }} sx={{ mb: 1 }}>
-      {options.map((opt) => (
-        <MenuItem key={opt} value={opt}>{optionLabels[opt] || opt}</MenuItem>
-      ))}
-    </TextField>
+    <div className="mb-1">
+      <p className="mb-0.5 text-xs font-medium text-muted-foreground font-mulish">{label}</p>
+      <Select value={value} onValueChange={(v: string | null) => { if (v !== null) onChange(v); }}>
+        <SelectTrigger aria-label={label} className="h-7 w-full">
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt}>{optionLabels[opt] || opt}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 
   return (
-    <Box>
+    <div>
       {!isLocked && (
-        <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
-          <TextField fullWidth size="small" type="number" label={'Година'} value={form.recordHour}
-            onChange={(e) => setForm((prev) => ({ ...prev, recordHour: Number(e.target.value) }))} sx={{ mb: 1 }} />
+        <div className="mb-3 rounded-xl border bg-card p-3 text-card-foreground shadow-sm">
+          <Input type="number" placeholder="Година" value={form.recordHour}
+            onChange={(e) => setForm((prev) => ({ ...prev, recordHour: Number(e.target.value) }))} className="mb-1 h-7" />
           <SelectField label={'Свідомість'} options={CONSCIOUSNESS} value={form.consciousness} onChange={(v) => set('consciousness', v)} />
           <SelectField label={'Шкіра'} options={SKIN} value={form.skin} onChange={(v) => set('skin', v)} />
           <SelectField label={'Набряки'} options={EDEMA} value={form.edema} onChange={(v) => set('edema', v)} />
           <SelectField label={'Слизові'} options={MUCOSA} value={form.mucousMembranes} onChange={(v) => set('mucousMembranes', v)} />
           <SelectField label={'Периферійний кровообіг'} options={CIRCULATION} value={form.peripheralCirculation} onChange={(v) => set('peripheralCirculation', v)} />
           <SelectField label={'Перистальтика'} options={BOWEL} value={form.bowelSounds} onChange={(v) => set('bowelSounds', v)} />
-          <TextField fullWidth size="small" label={'Загальний стан'} value={form.generalCondition}
-            onChange={(e) => setForm((prev) => ({ ...prev, generalCondition: e.target.value }))} sx={{ mb: 1 }} />
-          <TextField fullWidth size="small" label={'Примітки'} value={form.additionalNotes}
-            onChange={(e) => setForm((prev) => ({ ...prev, additionalNotes: e.target.value }))} sx={{ mb: 1 }} multiline minRows={2} />
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Button variant="contained" size="small" onClick={handleAdd} disabled={saving}>
-              {saving ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : null}
+          <Input placeholder={'Загальний стан'} value={form.generalCondition}
+            onChange={(e) => setForm((prev) => ({ ...prev, generalCondition: e.target.value }))} className="mb-1 h-7" />
+          <textarea placeholder={'Примітки'} value={form.additionalNotes}
+            onChange={(e) => setForm((prev) => ({ ...prev, additionalNotes: e.target.value }))}
+            className="mb-1 h-7 w-full min-h-[2.5rem] rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+            rows={2}
+          />
+          <div className="flex flex-row gap-1 items-center">
+            <Button size="sm" onClick={handleAdd} disabled={saving}>
+              {saving ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
               {saving ? 'Зберігається...' : 'Додати'}
             </Button>
-          </Stack>
-        </Paper>
+          </div>
+        </div>
       )}
 
       {assessments.length === 0 ? (
-        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає оцінок'}</Typography>
+        <p className="text-xs text-muted-foreground font-mulish">{'Немає оцінок'}</p>
       ) : (
-        <Stack spacing={0.75}>
+        <div className="flex flex-col gap-[3px]">
           {assessments.map((a) => (
-            <Paper key={a.id} variant="outlined" sx={{ p: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-              <Box sx={{ fontSize: 12 }}>
-                <Typography sx={{ fontWeight: 600 }}>{a.recordHour}:00</Typography>
-                <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
+            <div key={a.id} className="flex items-start justify-between gap-1 rounded-xl border bg-card p-2 text-card-foreground shadow-sm">
+              <div className="text-xs">
+                <p className="font-semibold font-rubik">{a.recordHour}:00</p>
+                <p className="text-[11px] text-muted-foreground font-mulish">
                   {[
                     `Свідомість: ${optionLabels[a.consciousness] || a.consciousness}`,
                     `Шкіра: ${optionLabels[a.skin] || a.skin}`,
                     `Набряки: ${optionLabels[a.edema] || a.edema}`,
                   ].join(' · ')}
                   {a.generalCondition ? ` · ${a.generalCondition}` : ''}
-                </Typography>
-              </Box>
-            </Paper>
+                </p>
+              </div>
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

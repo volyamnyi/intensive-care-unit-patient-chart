@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material';
-const theme = createTheme({});
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import NurseDashboardPage from '../../pages/nurse/NurseDashboardPage';
 
 const mockSearch = vi.fn();
@@ -15,11 +14,11 @@ const mockEpisode = { id: 'ep-1', patientName: 'Петренко Іван Сер
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <MemoryRouter>
         <NurseDashboardPage />
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

@@ -1,12 +1,12 @@
 package com.superhumans.mis;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -23,20 +23,20 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class MisApiClient {
 
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    final RestTemplate restTemplate;
+    final ObjectMapper objectMapper;
 
     @Value("${app.mis.wiremock-url:http://localhost:9090}")
-    private String misBaseUrl;
+    String misBaseUrl;
 
     @Value("${app.mis.installation-guid:00000000-0000-0000-0000-000000000000}")
-    private String installationGuid;
+    String installationGuid;
 
     @Value("${app.mis.login:integration}")
-    private String login;
+    String login;
 
     public JsonNode callMethod(String methodName, Param... params) {
         try {

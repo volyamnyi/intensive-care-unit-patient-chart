@@ -3,7 +3,7 @@ import { test, expect } from '../../fixtures/index';
 test.describe('Admin Page', () => {
   test('displays administrative panel with users tab', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByText('Адміністративна панель')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Адміністративна панель' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('tab', { name: 'Користувачі' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('tab', { name: 'Журнал аудиту' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('tab', { name: 'Статистика' })).toBeVisible({ timeout: 10000 });
@@ -23,6 +23,6 @@ test.describe('Admin Page', () => {
 
   test('page title is set correctly', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page).toHaveTitle('ВАІТ — Адміністратор');
+    await expect(page).toHaveTitle('Адмін — Superhumans Lviv');
   });
 });

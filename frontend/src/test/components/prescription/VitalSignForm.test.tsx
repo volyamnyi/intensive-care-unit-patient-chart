@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import VitalSignForm from '../../../components/prescription/VitalSignForm';
 import type { VitalSignEntry } from '../../../types';
 
-const theme = createTheme({});
 const latest: VitalSignEntry = {
   id: 'vs1', dayId: 'd1', period: 'morning',
   temperature: 36.6, systolicBp: 120, diastolicBp: 80, spo2: 98, pulse: 72, stool: 'normal', painScore: 2,
@@ -13,9 +12,9 @@ const latest: VitalSignEntry = {
 
 function renderForm(props: Partial<React.ComponentProps<typeof VitalSignForm>> = {}) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <VitalSignForm onSubmit={props.onSubmit ?? vi.fn()} latest={props.latest ?? latest} disabled={props.disabled} saving={props.saving} />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

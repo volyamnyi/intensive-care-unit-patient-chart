@@ -1,5 +1,6 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Typography } from '@mui/material';
-import { Delete } from '@mui/icons-material';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 import type { PrescriptionItem } from '../../types';
 
 interface PrescriptionItemTableProps {
@@ -10,43 +11,44 @@ interface PrescriptionItemTableProps {
 
 export default function PrescriptionItemTable({ items, onDelete, canEdit }: PrescriptionItemTableProps) {
   if (items.length === 0) {
-    return <Typography color="text.secondary">Немає препаратів у призначенні</Typography>;
+    return <p className="text-muted-foreground">Немає препаратів у призначенні</p>;
   }
 
   return (
-    <TableContainer sx={{ overflowX: 'auto' }}>
-      <Table size="small" sx={{ minWidth: 500 }}>
-        <TableHead>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell>Препарат</TableCell>
-            <TableCell>Метод</TableCell>
-            <TableCell>Режим</TableCell>
-            <TableCell>Статус</TableCell>
-            {canEdit && onDelete && <TableCell></TableCell>}
+            <TableHead>Препарат</TableHead>
+            <TableHead>Метод</TableHead>
+            <TableHead>Режим</TableHead>
+            <TableHead>Статус</TableHead>
+            {canEdit && onDelete && <TableHead></TableHead>}
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
           {items.map((item) => (
             <TableRow key={item.id}>
-              <TableCell sx={{ fontWeight: 600 }}>{item.medicineName}</TableCell>
+              <TableCell className="font-semibold">{item.medicineName}</TableCell>
               <TableCell>{item.medicineMethod || '—'}</TableCell>
               <TableCell>{item.regime || '—'}</TableCell>
               <TableCell>{item.status}</TableCell>
               {canEdit && onDelete && (
                 <TableCell>
-                  <IconButton
-                    size="small"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     aria-label={`Видалити ${item.medicineName}`}
                     onClick={() => onDelete(item)}
                   >
-                    <Delete />
-                  </IconButton>
+                    <Trash2 className="size-4" />
+                  </Button>
                 </TableCell>
               )}
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }

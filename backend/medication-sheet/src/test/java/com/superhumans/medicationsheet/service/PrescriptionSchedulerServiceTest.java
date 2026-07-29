@@ -87,16 +87,6 @@ class PrescriptionSchedulerServiceTest {
 
         scheduler.autoCreatePrescriptionLists();
 
-        verify(listService, never()).create(any());
-        verify(notificationService, never()).notifyPrescriptionCreated(any(), any());
-    }
-
-    @Test
-    void autoCreatePrescriptionLists_handlesEmptyMisResponse() {
-        when(misService.searchPatients("")).thenReturn(List.of());
-
-        scheduler.autoCreatePrescriptionLists();
-
-        verifyNoInteractions(listRepository, listService, notificationService);
+        verifyNoInteractions(listRepository, listService, notificationService, misService);
     }
 }

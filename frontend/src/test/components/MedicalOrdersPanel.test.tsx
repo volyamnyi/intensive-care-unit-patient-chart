@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import MedicalOrdersPanel from '../../components/common/MedicalOrdersPanel';
 import type { MedicalOrder } from '../../types';
 
@@ -27,14 +28,16 @@ const mockOrders: MedicalOrder[] = [mockOrder];
 
 function renderPanel(props: Partial<React.ComponentProps<typeof MedicalOrdersPanel>> = {}) {
   return render(
-    <MedicalOrdersPanel
-      orders={props.orders ?? []}
-      onCreateOrder={props.onCreateOrder}
-      onExecuteOrder={props.onExecuteOrder}
-      onCancelOrder={props.onCancelOrder}
-      canCreate={props.canCreate}
-      canExecute={props.canExecute}
-    />
+    <ThemeModeProvider>
+      <MedicalOrdersPanel
+        orders={props.orders ?? []}
+        onCreateOrder={props.onCreateOrder}
+        onExecuteOrder={props.onExecuteOrder}
+        onCancelOrder={props.onCancelOrder}
+        canCreate={props.canCreate}
+        canExecute={props.canExecute}
+      />
+    </ThemeModeProvider>
   );
 }
 
@@ -70,10 +73,10 @@ describe('MedicalOrdersPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('Нове призначення')).toBeInTheDocument();
     });
-    const drugInput = screen.getByLabelText('Препарат');
-    const doseInput = screen.getByLabelText('Доза');
-    await userEvent.type(drugInput, 'Норадреналін');
-    await userEvent.type(doseInput, '10');
+    const inputs = screen.getAllByPlaceholderText('Препарат');
+    const doseInputs = screen.getAllByPlaceholderText('Доза');
+    await userEvent.type(inputs[0], 'Норадреналін');
+    await userEvent.type(doseInputs[0], '10');
     await userEvent.click(screen.getByText('Створити'));
     await waitFor(() => {
       expect(onCreateOrder).toHaveBeenCalledWith(

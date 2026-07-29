@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import DayPartPlanner from '../../../components/prescription/DayPartPlanner';
 import { allDayPartsCompleted } from '../../../utils/prescriptionDayParts';
 import type { PrescriptionDayPart } from '../../../types';
 
-const theme = createTheme({});
 const mockParts: PrescriptionDayPart[] = [
   { id: 'dp1', dayId: 'd1', period: 'morning', dose: null, isPlanned: false, isPlannedFinished: false, isCompleted: false, isCompletedFinished: false, doctorName: null, nurseName: null },
   { id: 'dp2', dayId: 'd1', period: 'evening', dose: '5mg', isPlanned: true, isPlannedFinished: false, isCompleted: false, isCompletedFinished: false, doctorName: null, nurseName: null },
@@ -15,7 +14,7 @@ const mockParts: PrescriptionDayPart[] = [
 
 function renderPlanner(props: Partial<React.ComponentProps<typeof DayPartPlanner>> = {}) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <DayPartPlanner
         dayParts={props.dayParts ?? mockParts}
         onPlan={props.onPlan ?? vi.fn()}
@@ -23,7 +22,7 @@ function renderPlanner(props: Partial<React.ComponentProps<typeof DayPartPlanner
         canPlan={props.canPlan ?? true}
         canComplete={props.canComplete ?? true}
       />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 
@@ -47,7 +46,7 @@ describe('DayPartPlanner', () => {
   it('calls onPlan with dose', async () => {
     const onPlan = vi.fn();
     renderPlanner({ onPlan });
-    const doseInput = screen.getAllByLabelText('Доза')[0];
+    const doseInput = screen.getAllByPlaceholderText('Доза')[0];
     await userEvent.type(doseInput, '15mg');
     await userEvent.click(screen.getAllByText('Запланувати')[0]);
     await waitFor(() => {

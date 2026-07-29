@@ -48,6 +48,12 @@ class PrescriptionExecutionServiceTest {
     private static final String CURRENT_USER_LOGIN = "nurse1";
     private static final String SECOND_USER_LOGIN = "nurse2";
     private static final String SECOND_USER_PASSWORD = "nurse123";
+    private static final String TEST_DOSE = "45mg";
+    private static final String TEST_DOSE_NOT_FOUND = "10mg";
+    private static final String UNKNOWN_USER_LOGIN = "unknown";
+    private static final String WRONG_PASSWORD = "wrong";
+    private static final String DOCTOR_LOGIN = "doctor1";
+    private static final String DOCTOR_PASSWORD = "pwd";
 
     @BeforeEach
     void setUp() {
@@ -85,11 +91,11 @@ class PrescriptionExecutionServiceTest {
 
         PrescriptionExecution result = service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                "45mg", SECOND_USER_LOGIN, SECOND_USER_PASSWORD);
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD);
 
         verify(executionRepository).save(execCaptor.capture());
         PrescriptionExecution exec = execCaptor.getValue();
-        assertThat(exec.getActualDose()).isEqualTo("45mg");
+        assertThat(exec.getActualDose()).isEqualTo(TEST_DOSE);
         assertThat(exec.getStatus()).isEqualTo("Completed");
         assertThat(exec.getRequires2pAuth()).isTrue();
         assertThat(exec.getExecutedAt()).isNotNull();
@@ -110,7 +116,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 UUID.randomUUID(), CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                "10mg", SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Day part not found");
     }
@@ -118,11 +124,11 @@ class PrescriptionExecutionServiceTest {
     @Test
     void execute_throws_whenSecondPersonNotFound() {
         when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
-        when(userRepository.findByLogin("unknown")).thenReturn(Optional.empty());
+        when(userRepository.findByLogin(UNKNOWN_USER_LOGIN)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                "10mg", "unknown", "pwd"))
+                TEST_DOSE_NOT_FOUND, UNKNOWN_USER_LOGIN, WRONG_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Другу особу не знайдено");
     }
@@ -131,11 +137,11 @@ class PrescriptionExecutionServiceTest {
     void execute_throws_whenSecondPersonPasswordWrong() {
         when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
         when(userRepository.findByLogin(SECOND_USER_LOGIN)).thenReturn(Optional.of(secondUser));
-        when(passwordEncoder.matches("wrong", secondUser.getPasswordHash())).thenReturn(false);
+        when(passwordEncoder.matches(WRONG_PASSWORD, secondUser.getPasswordHash())).thenReturn(false);
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                "10mg", SECOND_USER_LOGIN, "wrong"))
+                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, WRONG_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Невірний пароль");
     }
@@ -143,16 +149,16 @@ class PrescriptionExecutionServiceTest {
     @Test
     void execute_throws_whenSecondPersonNotNurse() {
         User doctorUser = User.builder()
-                .id(4L).login("doctor1")
+                .id(4L).login(DOCTOR_LOGIN)
                 .passwordHash("hash").fullName("Doctor")
                 .role(UserRole.DOCTOR).build();
         when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
-        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(doctorUser));
-        when(passwordEncoder.matches("pwd", doctorUser.getPasswordHash())).thenReturn(true);
+        when(userRepository.findByLogin(DOCTOR_LOGIN)).thenReturn(Optional.of(doctorUser));
+        when(passwordEncoder.matches(DOCTOR_PASSWORD, doctorUser.getPasswordHash())).thenReturn(true);
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                "10mg", "doctor1", "pwd"))
+                TEST_DOSE_NOT_FOUND, DOCTOR_LOGIN, DOCTOR_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("роль медсестри");
     }
@@ -169,7 +175,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                "10mg", CURRENT_USER_LOGIN, "pwd"))
+                TEST_DOSE_NOT_FOUND, CURRENT_USER_LOGIN, "pwd"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("не може бути тією ж");
     }

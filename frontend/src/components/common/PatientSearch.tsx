@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Autocomplete, TextField, Box, Typography, CircularProgress } from '@mui/material';
+import { Input } from '@/components/ui/input';
+import { Loader2 } from 'lucide-react';
 import { patientApi } from '../../api/endpoints';
 import type { PatientDto } from '../../types';
+import { cn } from '@/lib/utils';
 
 interface PatientSearchProps {
   onSelect: (patient: PatientDto) => void;
@@ -14,15 +16,27 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
   const [patients, setPatients] = useState<PatientDto[]>([]);
   const [selected, setSelected] = useState<PatientDto | null>(null);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const abortRef = useRef<AbortController>(undefined);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (abortRef.current) abortRef.current.abort();
     };
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const performSearch = useCallback(async (query: string) => {
@@ -35,6 +49,7 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
     try {
       const res = await patientApi.search(query, controller.signal);
       setPatients(res.data);
+      setOpen(true);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'CanceledError') return;
     } finally {
@@ -42,56 +57,61 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
     }
   }, []);
 
-  const handleInputChange = (_: unknown, value: string) => {
+  const handleInputChange = (value: string) => {
     setSearch(value);
     if (selected) setSelected(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => performSearch(value), 300);
   };
 
+  const handleSelect = (patient: PatientDto) => {
+    setSelected(patient);
+    setSearch(`${patient.fullName} (${patient.externalId1})`);
+    setOpen(false);
+    onSelect(patient);
+  };
+
   return (
-    <Autocomplete
-      inputValue={search}
-      onInputChange={handleInputChange}
-      value={selected}
-      onChange={(_, v) => { setSelected(v); if (v) onSelect(v); }}
-      options={patients}
-      getOptionLabel={(p) => `${p.fullName} (${p.externalId1})`}
-      isOptionEqualToValue={(o, v) => o.id === v.id}
-      filterOptions={(x) => x}
-      loading={loading}
-      noOptionsText={search.length < 2 ? 'Введіть мінімум 2 символи' : 'Пацієнтів не знайдено'}
-      renderOption={(props, p) => {
-        const { key, ...rest } = props;
-        return (
-          <Box component="li" key={key} {...rest} sx={{ px: 2, py: 1.5 }}>
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: 600 }}>{p.fullName}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {p.externalId1} &middot; {p.birthDate} &middot; {p.address?.split(',')[0]?.trim()}
-              </Typography>
-            </Box>
-          </Box>
-        );
-      }}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          label={resolvedLabel}
-          slotProps={{
-            ...params.slotProps,
-            input: {
-              ...params.slotProps?.input,
-              endAdornment: (
-                <>
-                  {loading && <CircularProgress size={20} />}
-                  {params.slotProps?.input?.endAdornment}
-                </>
-              ),
-            },
-          }}
+    <div className="relative" ref={wrapperRef}>
+      <div className="relative">
+        <Input
+          value={search}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onFocus={() => { if (patients.length > 0) setOpen(true); }}
+          placeholder={resolvedLabel}
+          aria-label={resolvedLabel}
         />
+        {loading && (
+          <Loader2 role="progressbar" aria-label="Loading" className="absolute right-2 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
+        )}
+      </div>
+      {open && patients.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border bg-popover text-popover-foreground shadow-md">
+          {patients.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => handleSelect(p)}
+              className={cn(
+                'px-2 py-1.5 cursor-pointer hover:bg-accent hover:text-accent-foreground',
+                selected?.id === p.id && 'bg-accent'
+              )}
+            >
+              <p className="font-semibold text-sm">{p.fullName}</p>
+              <p className="text-xs text-muted-foreground">
+                {p.externalId1} &middot; {p.birthDate} &middot; {p.address?.split(',')[0]?.trim()}
+              </p>
+            </div>
+          ))}
+        </div>
       )}
-    />
+      {open && search.length >= 2 && patients.length === 0 && !loading && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border bg-popover text-popover-foreground shadow-md px-2 py-1.5 text-sm text-muted-foreground">
+          Пацієнтів не знайдено
+        </div>
+      )}
+      {search.length < 2 && (
+        <p className="text-xs text-muted-foreground mt-0.5">Введіть мінімум 2 символи</p>
+      )}
+    </div>
   );
 }

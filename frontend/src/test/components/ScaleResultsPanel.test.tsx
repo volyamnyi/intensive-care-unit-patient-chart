@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import ScaleResultsPanel from '../../components/common/ScaleResultsPanel';
 import type { ScaleResult, ClinicalScale } from '../../types';
 
@@ -23,11 +24,13 @@ const mockResult: ScaleResult = {
 
 function renderPanel(props: Partial<React.ComponentProps<typeof ScaleResultsPanel>> = {}) {
   return render(
-    <ScaleResultsPanel
-      results={props.results ?? []}
-      availableScales={props.availableScales ?? []}
-      onCreateResult={props.onCreateResult}
-    />
+    <ThemeModeProvider>
+      <ScaleResultsPanel
+        results={props.results ?? []}
+        availableScales={props.availableScales ?? []}
+        onCreateResult={props.onCreateResult}
+      />
+    </ThemeModeProvider>
   );
 }
 
@@ -38,13 +41,13 @@ describe('ScaleResultsPanel', () => {
 
   it('shows available scales in dropdown when onCreateResult provided', () => {
     renderPanel({ availableScales: mockScales, onCreateResult: vi.fn() });
-    expect(screen.getByLabelText('Шкала')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Шкала/i })).toBeInTheDocument();
     expect(screen.getByText('Додати')).toBeInTheDocument();
   });
 
   it('does not show create UI when onCreateResult is not provided', () => {
     renderPanel({ availableScales: mockScales });
-    expect(screen.queryByLabelText('Шкала')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Шкала/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Додати')).not.toBeInTheDocument();
   });
 
@@ -70,11 +73,11 @@ describe('ScaleResultsPanel', () => {
   it('can add a new scale result', async () => {
     const onCreateResult = vi.fn();
     renderPanel({ availableScales: mockScales, onCreateResult });
-    const select = screen.getByLabelText('Шкала');
+    const select = screen.getByRole('combobox', { name: /Шкала/i });
     await userEvent.click(select);
-    const option = screen.getByRole('option', { name: 'APACHE II' });
+    const option = screen.getByRole('option', { name: 'APACHE II', hidden: true });
     await userEvent.click(option);
-    const resultInput = screen.getByLabelText('Результат');
+    const resultInput = screen.getByPlaceholderText('Результат');
     await userEvent.type(resultInput, '20');
     await userEvent.click(screen.getByText('Додати'));
     await waitFor(() => {

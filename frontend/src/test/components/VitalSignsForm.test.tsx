@@ -1,11 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import VitalSignsForm from '../../components/common/VitalSignsForm';
 import type { HourlyRecordCreateRequest } from '../../types';
 
-const theme = createTheme({});
 const emptyValues: HourlyRecordCreateRequest = { recordTime: '' };
 
 function renderForm(props: Partial<Parameters<typeof VitalSignsForm>[0]> = {}) {
@@ -15,9 +14,9 @@ function renderForm(props: Partial<Parameters<typeof VitalSignsForm>[0]> = {}) {
     onSave: vi.fn(),
   };
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <VitalSignsForm {...defaultProps} {...props} />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

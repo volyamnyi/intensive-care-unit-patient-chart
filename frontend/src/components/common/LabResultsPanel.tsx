@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import {
-  Box, Typography, TextField, Button, MenuItem, Chip, Stack,
-  Paper, CircularProgress,
-} from '@mui/material';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 import type { LabResult, LabResultCreateRequest } from '../../types';
 
 const PREDEFINED_TESTS: { code: string; name: string; unit: string; min: number | null; max: number | null }[] = [
@@ -71,60 +73,63 @@ export default function LabResultsPanel({
   };
 
   return (
-    <Box>
+    <div>
       {!isLocked && (
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1.5, alignItems: 'flex-start' }}>
-          <TextField
-            select size="small" label={'Тест'}
-            value={selectedCode} onChange={(e) => setSelectedCode(e.target.value)}
-            sx={{ minWidth: 200 }}
-          >
-            {PREDEFINED_TESTS.map((x) => (
-              <MenuItem key={x.code} value={x.code}>{x.name} ({x.code})</MenuItem>
-            ))}
-          </TextField>
+        <div className="mb-3 flex flex-col items-start gap-2 sm:flex-row">
+          <Select value={selectedCode} onValueChange={(v: string | null) => { if (v !== null) setSelectedCode(v); }}>
+            <SelectTrigger aria-label="Тест" className="h-7 min-w-[200px]">
+              <SelectValue placeholder="Тест" />
+            </SelectTrigger>
+            <SelectContent>
+              {PREDEFINED_TESTS.map((x) => (
+                <SelectItem key={x.code} value={x.code}>{x.name} ({x.code})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {selected && (
-            <Typography sx={{ fontSize: 11, color: 'text.secondary', alignSelf: 'center' }}>
+            <span className="self-center text-[11px] text-muted-foreground font-mulish">
               {`Норма: ${selected.min ?? '—'}–${selected.max ?? '—'} ${selected.unit}`}
-            </Typography>
+            </span>
           )}
-          <TextField
-            size="small" type="number" label={'Результат'}
+          <Input
+            type="number" placeholder="Результат"
             value={result} onChange={(e) => setResult(e.target.value)}
-            sx={{ width: 130 }}
+            className="h-7 w-[130px]"
           />
-          <Box sx={{ alignItems: 'center' }}>
-            <Button variant="contained" size="small" onClick={handleAdd} disabled={saving || !selected || result.trim() === ''} sx={{ mt: 0.5 }}>
-              {saving ? <CircularProgress size={14} sx={{ mr: 0.5 }} /> : null}
+          <div className="flex items-center">
+            <Button size="sm" onClick={handleAdd} disabled={saving || !selected || result.trim() === ''} className="mt-0.5">
+              {saving ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
               {saving ? 'Зберігається...' : 'Додати'}
             </Button>
-          </Box>
-        </Stack>
+          </div>
+        </div>
       )}
 
       {labs.length === 0 ? (
-        <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{'Немає лабораторних досліджень'}</Typography>
+        <p className="text-xs text-muted-foreground font-mulish">{'Немає лабораторних досліджень'}</p>
       ) : (
-        <Stack spacing={0.75}>
+        <div className="flex flex-col gap-[3px]">
           {labs.map((l) => (
-            <Paper
+            <div
               key={l.id}
-              variant="outlined"
-              sx={{ p: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, borderColor: l.isAbnormal ? 'error.main' : 'divider' }}
+              className={cn(
+                'flex items-center justify-between gap-1 rounded-xl border bg-card p-2 text-card-foreground shadow-sm',
+                l.isAbnormal ? 'border-destructive' : '',
+              )}
             >
-              <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold font-rubik">
                   {l.testName}
-                  {l.isAbnormal && <Chip label={'Аномалія'} color="error" size="small" sx={{ ml: 1, height: 18, fontSize: 9, fontWeight: 700 }} />}
-                </Typography>
-                <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
+                  {l.isAbnormal && <Badge variant="destructive" className="ml-1 h-[18px] text-[9px] font-bold">Аномалія</Badge>}
+                </p>
+                <p className="text-[11px] text-muted-foreground font-mulish">
                   {`${l.result} ${l.unit}${(l.referenceMin ?? l.referenceMax) != null ? ` (${l.referenceMin ?? '—'}–${l.referenceMax ?? '—'} ${l.unit})` : ''}`}
-                </Typography>
-              </Box>
-            </Paper>
+                </p>
+              </div>
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import MedicalNotesPanel from '../../components/common/MedicalNotesPanel';
 import type { MedicalNote } from '../../types';
 
@@ -18,10 +19,12 @@ const mockNote: MedicalNote = {
 
 function renderPanel(props: Partial<React.ComponentProps<typeof MedicalNotesPanel>> = {}) {
   return render(
-    <MedicalNotesPanel
-      notes={props.notes ?? []}
-      onCreateNote={props.onCreateNote}
-    />
+    <ThemeModeProvider>
+      <MedicalNotesPanel
+        notes={props.notes ?? []}
+        onCreateNote={props.onCreateNote}
+      />
+    </ThemeModeProvider>
   );
 }
 
@@ -43,13 +46,13 @@ describe('MedicalNotesPanel', () => {
   it('renders create note UI when onCreateNote is provided', () => {
     renderPanel({ onCreateNote: vi.fn() });
     expect(screen.getByText('Додати')).toBeInTheDocument();
-    expect(screen.getByLabelText('Нова нотатка')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Нова нотатка')).toBeInTheDocument();
   });
 
   it('calls onCreateNote when text is entered and submitted', async () => {
     const onCreateNote = vi.fn();
     renderPanel({ onCreateNote });
-    const textarea = screen.getByLabelText('Нова нотатка');
+    const textarea = screen.getByPlaceholderText('Нова нотатка');
     await userEvent.type(textarea, 'Температура тіла в нормі.');
     await userEvent.click(screen.getByText('Додати'));
     await waitFor(() => {
@@ -60,7 +63,7 @@ describe('MedicalNotesPanel', () => {
   it('clears textarea after note creation', async () => {
     const onCreateNote = vi.fn();
     renderPanel({ onCreateNote });
-    const textarea = screen.getByLabelText('Нова нотатка') as HTMLTextAreaElement;
+    const textarea = screen.getByPlaceholderText('Нова нотатка') as HTMLTextAreaElement;
     await userEvent.type(textarea, 'Нотатка для очищення');
     await userEvent.click(screen.getByText('Додати'));
     await waitFor(() => {

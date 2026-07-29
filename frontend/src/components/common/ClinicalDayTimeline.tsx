@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { cn } from '@/lib/utils';
 import type { ClinicalDay } from '../../types';
 
 interface ClinicalDayTimelineProps {
@@ -8,27 +8,21 @@ interface ClinicalDayTimelineProps {
   onSelectDay: (day: ClinicalDay) => void;
 }
 
-function getStatusColor(theme: import('@mui/material').Theme): Record<string, string> {
-  const isDark = theme.palette.mode === 'dark';
-  return {
-    OPEN: isDark ? '#1E2A1E' : '#F0F7F0',
-    NURSE_SIGNED: isDark ? '#1E2633' : '#F0F4FF',
-    DOCTOR_SIGNED: isDark ? '#1E2A1E' : '#F0FAF0',
-    CLOSED: isDark ? '#1A1A1A' : '#F5F5F0',
-    REOPENED: isDark ? '#2A2420' : '#FFF8F0',
-  };
-}
+const STATUS_BG: Record<string, string> = {
+  OPEN: 'bg-success/10',
+  NURSE_SIGNED: 'bg-info/10',
+  DOCTOR_SIGNED: 'bg-success/10',
+  CLOSED: 'bg-muted',
+  REOPENED: 'bg-warning/10',
+};
 
-function getStatusBorderColor(theme: import('@mui/material').Theme): Record<string, string> {
-  const isDark = theme.palette.mode === 'dark';
-  return {
-    OPEN: isDark ? '#4CAF50' : '#81C784',
-    NURSE_SIGNED: isDark ? '#42A5F5' : '#64B5F6',
-    DOCTOR_SIGNED: isDark ? '#4CAF50' : '#81C784',
-    CLOSED: isDark ? '#2A2A2A' : '#D0CEC9',
-    REOPENED: isDark ? '#FF9800' : '#FFB74D',
-  };
-}
+const STATUS_BORDER: Record<string, string> = {
+  OPEN: 'border-success',
+  NURSE_SIGNED: 'border-info',
+  DOCTOR_SIGNED: 'border-success',
+  CLOSED: 'border-border',
+  REOPENED: 'border-warning',
+};
 
 function getStatusLabel(status: string): string {
   switch (status) {
@@ -41,8 +35,17 @@ function getStatusLabel(status: string): string {
   }
 }
 
+function getStatusTextColor(status: string): string {
+  switch (status) {
+    case 'OPEN': return 'text-success';
+    case 'NURSE_SIGNED': return 'text-info';
+    case 'DOCTOR_SIGNED': return 'text-success';
+    case 'REOPENED': return 'text-warning';
+    default: return 'text-muted-foreground';
+  }
+}
+
 export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }: ClinicalDayTimelineProps) {
-  const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,65 +58,44 @@ export default function ClinicalDayTimeline({ days, selectedDayId, onSelectDay }
 
   if (days.length === 0) {
     return (
-      <Box sx={{ py: 2, textAlign: 'center' }}>
-        <Typography color="text.secondary" sx={{ fontSize: 13 }}>
-          Немає клінічних днів
-        </Typography>
-      </Box>
+      <div className="py-2 text-center">
+        <span className="text-[13px] text-muted-foreground font-mulish">Немає клінічних днів</span>
+      </div>
     );
   }
 
   const sortedDays = [...days].sort((a, b) => a.dayNumber - b.dayNumber);
 
   return (
-    <Box ref={containerRef} sx={{ display: 'flex', gap: 1, overflow: 'auto', py: 1 }}>
+    <div ref={containerRef} className="flex gap-1 overflow-auto py-1">
       {sortedDays.map((day) => {
         const isSelected = day.id === selectedDayId;
+        const bgClass = STATUS_BG[day.status] || 'bg-muted';
+        const borderClass = STATUS_BORDER[day.status] || 'border-border';
         return (
-          <Box
+          <div
             key={day.id}
             data-day-id={day.id}
             onClick={() => onSelectDay(day)}
             tabIndex={0}
             role="button"
             aria-current={isSelected ? 'true' : undefined}
-            sx={{
-              minWidth: 90,
-              textAlign: 'center',
-              py: 1.25,
-              px: 1.5,
-              borderRadius: 2,
-              cursor: 'pointer',
-              bgcolor: getStatusColor(theme)[day.status] || (theme.palette.mode === 'dark' ? '#1A1A1A' : '#F5F5F0'),
-              border: isSelected ? '2px solid #FF5F33' : `1px solid ${getStatusBorderColor(theme)[day.status] || (theme.palette.mode === 'dark' ? '#2A2A2A' : '#D0CEC9')}`,
-              fontWeight: 700,
-              fontSize: 13,
-              transition: 'all 0.2s ease',
-              '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' },
-            }}
+            className={cn(
+              'min-w-[90px] cursor-pointer rounded-xl px-3 py-[5px] text-center text-[13px] font-bold transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
+              bgClass,
+              isSelected ? 'border-2 border-primary' : `border ${borderClass}`,
+            )}
           >
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              Доба {day.dayNumber}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+            <span className="block font-bold font-rubik">Доба {day.dayNumber}</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground font-mulish">
               {new Date(day.startDateTime).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                display: 'block', mt: 0.5, fontSize: 9, fontWeight: 600,
-                color: day.status === 'OPEN' ? '#4CAF50'
-                  : day.status === 'NURSE_SIGNED' ? '#42A5F5'
-                  : day.status === 'DOCTOR_SIGNED' ? '#2E7D32'
-                  : day.status === 'REOPENED' ? '#FF9800'
-                  : 'text.secondary',
-              }}
-            >
+            </span>
+            <span className={cn('mt-0.5 block text-[9px] font-semibold', getStatusTextColor(day.status))}>
               {getStatusLabel(day.status)}
-            </Typography>
-          </Box>
+            </span>
+          </div>
         );
       })}
-    </Box>
+    </div>
   );
 }

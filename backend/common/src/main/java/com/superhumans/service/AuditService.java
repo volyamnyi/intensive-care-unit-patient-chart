@@ -22,8 +22,8 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuditService {
 
-    final AuditLogRepository auditLogRepository;
-    final AuditLogMapper auditLogMapper;
+    AuditLogRepository auditLogRepository;
+    AuditLogMapper auditLogMapper;
 
     public AuditLogResponse getAuditLog(UUID id) {
         AuditLog log = auditLogRepository.findById(id)

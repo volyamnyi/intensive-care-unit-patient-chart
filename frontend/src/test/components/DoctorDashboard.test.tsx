@@ -1,11 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard';
 import type { DashboardProps } from '../../components/monitoring/dashboardTypes';
 import type { Episode, ClinicalDay } from '../../types';
 
-const theme = createTheme({});
 
 const baseEpisode: Episode = {
   id: 'ep-1', patientId: 1001, patientName: 'Петренко Іван',
@@ -39,7 +38,7 @@ const defaultProps: DashboardProps = {
 };
 
 function renderWithTheme(ui: React.ReactElement) {
-  return render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>);
+  return render(<ThemeModeProvider>{ui}</ThemeModeProvider>);
 }
 
 describe('DoctorDashboard', () => {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Card, CardContent, CardActionArea, Typography } from '@mui/material';
-import { LocalHospital, ReceiptLong, AdminPanelSettings } from '@mui/icons-material';
+import { Hospital, FileText, Shield } from 'lucide-react';
+import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '../services/AuthContext';
 
 const cards = [
@@ -9,15 +9,15 @@ const cards = [
     app: 'icu' as const,
     title: 'Карта інтенсивної терапії',
     subtitle: 'Відділення анестезіології та інтенсивної терапії',
-    icon: <LocalHospital sx={{ fontSize: 48 }} />,
+    icon: <Hospital className="size-12" />,
     color: '#1976d2',
-    path: '/doctor',
+    path: '/prescriptions/icu/doctor',
   },
   {
     app: 'prescriptions' as const,
     title: 'Листок лікарських призначень',
     subtitle: 'Форма 003-4/о — медикаментозні призначення',
-    icon: <ReceiptLong sx={{ fontSize: 48 }} />,
+    icon: <FileText className="size-12" />,
     color: '#2e7d32',
     path: '/prescriptions/doctor',
   },
@@ -31,8 +31,8 @@ export default function AppSelectorPage() {
   const handleSelect = (card: (typeof cards)[0]) => {
     selectApp(card.app);
     let target = card.path;
-    if (target === '/doctor' && hasRole('NURSE')) {
-      target = '/nurse';
+    if (target === '/prescriptions/icu/doctor' && hasRole('NURSE')) {
+      target = '/prescriptions/icu/nurse';
     }
     if (target === '/prescriptions/doctor' && hasRole('NURSE')) {
       target = '/prescriptions/nurse';
@@ -41,60 +41,38 @@ export default function AppSelectorPage() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
-        p: 3,
-      }}
-    >
-      <Typography variant="h4" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, mb: 1 }}>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-3">
+      <h1 className="font-rubik mb-1 text-2xl font-extrabold">
         Superhumans Lviv
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      </h1>
+      <p className="mb-4 text-muted-foreground">
         {`Вітаємо, ${user?.fullName ?? ''}`}
-      </Typography>
-      <Typography variant="h6" sx={{ mb: 3 }}>
+      </p>
+      <h2 className="mb-3 text-base font-semibold">
         Оберіть додаток для роботи
-      </Typography>
-      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 700 }}>
+      </h2>
+      <div className="flex max-w-[700px] flex-wrap justify-center gap-3">
         {cards.map((card) => (
-          <Card key={card.app} sx={{ width: 300 }}>
-            <CardActionArea onClick={() => handleSelect(card)} sx={{ p: 2 }}>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Box sx={{ color: card.color, mb: 1 }}>{card.icon}</Box>
-                <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 600 }}>
-                  {card.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {card.subtitle}
-                </Typography>
-              </CardContent>
-            </CardActionArea>
+          <Card key={card.app} className="w-[300px] cursor-pointer" onClick={() => handleSelect(card)}>
+            <CardContent className="flex flex-col items-center p-4 text-center">
+              <div className="mb-1" style={{ color: card.color }}>{card.icon}</div>
+              <CardTitle className="font-rubik text-base font-semibold">{card.title}</CardTitle>
+              <CardDescription>{card.subtitle}</CardDescription>
+            </CardContent>
           </Card>
         ))}
         {hasRole('ADMINISTRATOR') && (
-          <Card sx={{ width: 300 }}>
-            <CardActionArea onClick={() => navigate('/admin', { replace: true })} sx={{ p: 2 }}>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Box sx={{ color: '#7b1fa2', mb: 1 }}>
-                  <AdminPanelSettings sx={{ fontSize: 48 }} />
-                </Box>
-                <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 600 }}>
-                  Адміністративна панель
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Керування доступом, аудит, налаштування
-                </Typography>
-              </CardContent>
-            </CardActionArea>
+          <Card className="w-[300px] cursor-pointer" onClick={() => navigate('/admin', { replace: true })}>
+            <CardContent className="flex flex-col items-center p-4 text-center">
+              <div className="mb-1" style={{ color: '#7b1fa2' }}>
+                <Shield className="size-12" />
+              </div>
+              <CardTitle className="font-rubik text-base font-semibold">Адміністративна панель</CardTitle>
+              <CardDescription>Керування доступом, аудит, налаштування</CardDescription>
+            </CardContent>
           </Card>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

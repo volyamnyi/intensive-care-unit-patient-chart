@@ -1,13 +1,40 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { History, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Box, Typography, IconButton, Menu, MenuItem,
-  Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress,
-  Button, TextField, Tabs, Tab, Select, Chip, Dialog, DialogTitle, DialogContent, DialogActions,
-  Alert, Snackbar,
-} from '@mui/material';
-import { AccountCircle, History, Refresh } from '@mui/icons-material';
-import { useAuth } from '../../services/AuthContext';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Loader2 } from 'lucide-react';
 import { auditApi, adminApi } from '../../api/endpoints';
 import AuditLogTable from '../../components/common/AuditLogTable';
 import { getErrorMessage } from '../../utils/errorMessage';
@@ -15,10 +42,7 @@ import type { User, AuditLog } from '../../types';
 
 export default function AdminPage() {
   useEffect(() => { document.title = 'Адмін — Superhumans Lviv'; }, []);
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [tabIndex, setTabIndex] = useState(0);
+  const [tabValue, setTabValue] = useState('users');
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -29,8 +53,6 @@ export default function AdminPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const handleLogout = () => { logout(); navigate('/login'); };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,152 +115,178 @@ export default function AdminPage() {
     (u.permissions ?? '').split(',').some((p) => p.trim().toUpperCase() === perm.toUpperCase());
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700 }}>
-          Адміністративна панель
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <IconButton aria-label="Меню користувача" onClick={(e) => setAnchorEl(e.currentTarget)}>
-            <AccountCircle />
-          </IconButton>
-        </Box>
-        <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={() => setAnchorEl(null)}>
-          <MenuItem disabled>{user?.fullName}</MenuItem>
-          <MenuItem onClick={handleLogout}>Вийти</MenuItem>
-        </Menu>
-      </Box>
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <h1 className="font-rubik text-xl font-bold">Адміністративна панель</h1>
+      </div>
 
-      <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} sx={{ mb: 3 }}>
-        <Tab label="Користувачі" />
-        <Tab label="Журнал аудиту" />
-        <Tab label="Статистика" />
+      <Tabs value={tabValue} onValueChange={setTabValue} className="mb-3">
+        <TabsList>
+          <TabsTrigger value="users">Користувачі</TabsTrigger>
+          <TabsTrigger value="audit">Журнал аудиту</TabsTrigger>
+          <TabsTrigger value="stats">Статистика</TabsTrigger>
+        </TabsList>
+
+        {loading && <Loader2 className="mx-auto mt-4 block size-6 animate-spin text-primary" />}
+
+        {!loading && (
+          <>
+            <TabsContent value="users">
+              <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-2.5">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <h2 className="font-rubik text-base font-medium">Користувачі ({users.length})</h2>
+                  <Button size="sm" variant="outline" onClick={loadData}>
+                    <RefreshCw className="mr-1 size-4" />
+                    Оновити
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>ПІБ</TableHead>
+                        <TableHead>Логін</TableHead>
+                        <TableHead>Роль</TableHead>
+                        <TableHead>PRESCRIBER</TableHead>
+                        <TableHead>Дії</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((u) => (
+                        <TableRow
+                          key={u.id}
+                          className={u.deleted ? 'bg-destructive/20' : undefined}
+                        >
+                          <TableCell>{u.id}</TableCell>
+                          <TableCell className="font-semibold">{u.fullName}</TableCell>
+                          <TableCell>{u.login}</TableCell>
+                          <TableCell>
+                            <Select
+                              value={u.role}
+                              onValueChange={(val: string | null) => { if (val !== null) handleRoleChange(u.id, val); }}
+                            >
+                              <SelectTrigger className="min-w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="DOCTOR">Лікар</SelectItem>
+                                <SelectItem value="NURSE">Медсестра</SelectItem>
+                                <SelectItem value="HEAD_OF_DEPARTMENT">Завідувач</SelectItem>
+                                <SelectItem value="ADMINISTRATOR">Адміністратор</SelectItem>
+                                <SelectItem value="AUDITOR">Аудитор</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={hasPerm(u, 'PRESCRIBER') ? 'default' : 'outline'}
+                              className="cursor-pointer"
+                              onClick={() => handlePermissionToggle(u.id, 'PRESCRIBER', hasPerm(u, 'PRESCRIBER'))}
+                            >
+                              {hasPerm(u, 'PRESCRIBER') ? 'ТАК' : 'НІ'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => { setSelectedUser(u); setDialogOpen(true); }}
+                            >
+                              Видалити
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="audit">
+              <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-2.5">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <h2 className="font-rubik text-base font-medium">Журнал аудиту</h2>
+                  <Button
+                    variant={showAudit ? 'outline' : 'default'}
+                    onClick={() => setShowAudit(!showAudit)}
+                  >
+                    <History className="mr-1 size-4" />
+                    {showAudit ? 'Сховати' : 'Переглянути'}
+                  </Button>
+                </div>
+                {showAudit && (
+                  <>
+                    <div className="mb-1.5 flex flex-wrap gap-1">
+                      <Input
+                        placeholder="Фільтр за сутністю"
+                        value={auditFilterEntity}
+                        onChange={(e) => setAuditFilterEntity(e.target.value)}
+                        className="w-[200px]"
+                      />
+                      <Button variant="outline" size="sm" onClick={loadAudit}>Пошук</Button>
+                    </div>
+                    <AuditLogTable logs={auditLogs} loading={auditLoading} />
+                  </>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="stats">
+              <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-2.5">
+                <h2 className="font-rubik mb-2 text-base font-medium">Статистика системи</h2>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(stats).map(([key, val]) => (
+                    <div
+                      key={key}
+                      className="min-w-[150px] rounded-xl border bg-card p-2 text-center shadow-sm"
+                    >
+                      <div className="text-2xl font-bold">{val}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {key === 'totalUsers' ? 'Всього користувачів'
+                          : key === 'doctors' ? 'Лікарів'
+                          : key === 'nurses' ? 'Медсестер'
+                          : key === 'headsOfDepartment' ? 'Завідувачів'
+                          : key === 'administrators' ? 'Адміністраторів'
+                          : key === 'prescribers' ? 'PRESCRIBER' : key}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+          </>
+        )}
       </Tabs>
 
-      {loading && <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />}
-
-      {!loading && tabIndex === 0 && (
-        <Paper sx={{ p: 2.5 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-            <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif' }}>Користувачі ({users.length})</Typography>
-            <Button size="small" startIcon={<Refresh />} onClick={loadData}>Оновити</Button>
-          </Box>
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>ПІБ</TableCell>
-                  <TableCell>Логін</TableCell>
-                  <TableCell>Роль</TableCell>
-                  <TableCell>PRESCRIBER</TableCell>
-                  <TableCell>Дії</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.id} sx={{ bgcolor: u.deleted ? 'error.light' : undefined }}>
-                    <TableCell>{u.id}</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{u.fullName}</TableCell>
-                    <TableCell>{u.login}</TableCell>
-                    <TableCell>
-                      <Select
-                        size="small"
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                        sx={{ minWidth: 140 }}
-                      >
-                        <MenuItem value="DOCTOR">Лікар</MenuItem>
-                        <MenuItem value="NURSE">Медсестра</MenuItem>
-                        <MenuItem value="HEAD_OF_DEPARTMENT">Завідувач</MenuItem>
-                        <MenuItem value="ADMINISTRATOR">Адміністратор</MenuItem>
-                        <MenuItem value="AUDITOR">Аудитор</MenuItem>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={hasPerm(u, 'PRESCRIBER') ? 'ТАК' : 'НІ'}
-                        color={hasPerm(u, 'PRESCRIBER') ? 'success' : 'default'}
-                        size="small"
-                        onClick={() => handlePermissionToggle(u.id, 'PRESCRIBER', hasPerm(u, 'PRESCRIBER'))}
-                        sx={{ cursor: 'pointer' }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => { setSelectedUser(u); setDialogOpen(true); }}
-                      >
-                        Видалити
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
-      {!loading && tabIndex === 1 && (
-        <Paper sx={{ p: 2.5 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-            <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif' }}>Журнал аудиту</Typography>
-            <Button variant={showAudit ? 'outlined' : 'contained'} startIcon={<History />}
-              onClick={() => setShowAudit(!showAudit)}>
-              {showAudit ? 'Сховати' : 'Переглянути'}
+      {error && (
+        <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2">
+          <Alert variant="destructive" className="w-full">
+            <AlertDescription>{error}</AlertDescription>
+            <Button variant="ghost" size="icon-sm" className="absolute right-2 top-2" onClick={() => setError(null)}>
+              <span className="sr-only">Close</span>
             </Button>
-          </Box>
-          {showAudit && (
-            <>
-              <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-                <TextField size="small" label="Фільтр за сутністю" value={auditFilterEntity}
-                  onChange={(e) => setAuditFilterEntity(e.target.value)} sx={{ width: 200 }} />
-                <Button size="small" variant="outlined" onClick={loadAudit}>Пошук</Button>
-              </Box>
-              <AuditLogTable logs={auditLogs} loading={auditLoading} />
-            </>
-          )}
-        </Paper>
+          </Alert>
+        </div>
       )}
 
-      {!loading && tabIndex === 2 && (
-        <Paper sx={{ p: 2.5 }}>
-          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>Статистика системи</Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            {Object.entries(stats).map(([key, val]) => (
-              <Paper key={key} sx={{ p: 2, minWidth: 150, textAlign: 'center' }}>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>{val}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {key === 'totalUsers' ? 'Всього користувачів'
-                    : key === 'doctors' ? 'Лікарів'
-                    : key === 'nurses' ? 'Медсестер'
-                    : key === 'headsOfDepartment' ? 'Завідувачів'
-                    : key === 'administrators' ? 'Адміністраторів'
-                    : key === 'prescribers' ? 'PRESCRIBER' : key}
-                </Typography>
-              </Paper>
-            ))}
-          </Box>
-        </Paper>
-      )}
-
-      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-        <Alert severity="error" onClose={() => setError(null)} sx={{ width: '100%' }}>{error}</Alert>
-      </Snackbar>
-
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
-        <DialogTitle>Підтвердження видалення</DialogTitle>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          Видалити користувача {selectedUser?.fullName} ({selectedUser?.login})?
+          <DialogHeader>
+            <DialogTitle>Підтвердження видалення</DialogTitle>
+            <DialogDescription>
+              Видалити користувача {selectedUser?.fullName} ({selectedUser?.login})?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Скасувати</Button>
+            <Button variant="destructive" onClick={() => selectedUser && handleDelete(selectedUser.id)}>
+              Видалити
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Скасувати</Button>
-          <Button color="error" onClick={() => selectedUser && handleDelete(selectedUser.id)}>Видалити</Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

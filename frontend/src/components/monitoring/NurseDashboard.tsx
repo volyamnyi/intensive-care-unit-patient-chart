@@ -1,4 +1,5 @@
-import { Box, Typography, Paper, Chip, useTheme } from '@mui/material';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import ClinicalDayTimeline from '../common/ClinicalDayTimeline';
 import IntensiveCareCard from './IntensiveCareCard';
 import type { DashboardProps } from './dashboardTypes';
@@ -10,14 +11,7 @@ export default function NurseDashboard(props: DashboardProps) {
     isLocked, isNurse, user, onRefresh, onFeedback,
   } = props;
 
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const bd = `1px solid ${isDark ? '#2A2A2A' : '#E0DED9'}`;
-  const paperSx = {
-    p: 1.5, border: bd, borderRadius: 2,
-    bgcolor: isDark ? '#141414' : '#FFFFFF',
-    boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.03)',
-  };
+  const paperClass = cn('rounded-xl border border-border bg-card p-3 shadow-sm');
 
   const dayChipColor = (status: string) => {
     if (status === 'OPEN' || status === 'REOPENED') return 'warning';
@@ -27,44 +21,41 @@ export default function NurseDashboard(props: DashboardProps) {
   };
 
   return (
-    <Box>
-      {/* Top bar: episode + day info */}
-      <Paper sx={{ ...paperSx, mb: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, fontSize: 16 }}>
+    <div>
+      <div className={cn(paperClass, 'mb-3 flex flex-wrap items-center justify-between gap-2')}>
+        <div className="flex items-center gap-1.5">
+          <h1 className="font-rubik text-base font-extrabold" style={{ fontWeight: 800 }}>
             {episode.patientName || 'Patient'}
-          </Typography>
+          </h1>
           {selectedDay?.weightKg && (
-            <Chip label={`${selectedDay.weightKg} kg`} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11 }} />
+            <Badge variant="outline" className="text-[11px] font-semibold">{`${selectedDay.weightKg} kg`}</Badge>
           )}
           {episode.ward && (
-            <Chip label={[episode.ward, episode.bedNumber].filter(Boolean).join(' / ')} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11 }} />
+            <Badge variant="outline" className="text-[11px] font-semibold">{[episode.ward, episode.bedNumber].filter(Boolean).join(' / ')}</Badge>
           )}
           {selectedDay && (
-            <Chip label={`День ${selectedDay.dayNumber}`} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 12 }} />
+            <Badge variant="outline" className="text-[12px] font-semibold">{`День ${selectedDay.dayNumber}`}</Badge>
           )}
-          <Chip
-            label={selectedDay?.status === 'OPEN' ? 'Відкритий'
+          <Badge
+            variant={dayChipColor(selectedDay?.status ?? '') as 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'}
+            className="text-[11px] font-semibold"
+          >
+            {selectedDay?.status === 'OPEN' ? 'Відкритий'
               : selectedDay?.status === 'NURSE_SIGNED' ? 'Підписано медсестрою'
               : selectedDay?.status === 'DOCTOR_SIGNED' ? 'Підписано лікарем'
               : selectedDay?.status === 'REOPENED' ? 'Відкрито повторно'
               : 'Закрито'}
-            color={dayChipColor(selectedDay?.status ?? '')}
-            size="small"
-            sx={{ fontWeight: 600, fontSize: 11 }}
-          />
-        </Box>
-        <Typography variant="caption" color="text.secondary">
+          </Badge>
+        </div>
+        <span className="font-mulish text-xs text-muted-foreground">
           {'Епізод #' + episode.id?.slice(0, 8)}
-        </Typography>
-      </Paper>
+        </span>
+      </div>
 
-      {/* Clinical day timeline */}
-      <Paper sx={{ ...paperSx, mb: 1.5 }}>
+      <div className={cn(paperClass, 'mb-3')}>
         <ClinicalDayTimeline days={clinicalDays} selectedDayId={selectedDay?.id} onSelectDay={onSelectDay} />
-      </Paper>
+      </div>
 
-      {/* Single dynamic ICU card — nurse inline edits losses + order execution */}
       <IntensiveCareCard
         episode={episode}
         selectedDay={selectedDay}
@@ -77,6 +68,6 @@ export default function NurseDashboard(props: DashboardProps) {
         onRefresh={onRefresh}
         onFeedback={onFeedback}
       />
-    </Box>
+    </div>
   );
 }

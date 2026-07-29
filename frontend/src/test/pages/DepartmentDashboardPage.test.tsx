@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import { MemoryRouter } from 'react-router-dom';
 import DepartmentDashboardPage from '../../pages/doctor/DepartmentDashboardPage';
 import type { DepartmentPatient } from '../../types';
 
-const theme = createTheme({});
 const mockNavigate = vi.fn();
 const mockGetPatients = vi.fn();
 const mockGetStats = vi.fn();
@@ -59,11 +58,11 @@ const mockStats = {
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <MemoryRouter>
         <DepartmentDashboardPage />
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

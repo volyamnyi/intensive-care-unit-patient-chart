@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import ClinicalDayTimeline from '../../components/common/ClinicalDayTimeline';
 import type { ClinicalDay } from '../../types';
 
@@ -63,11 +64,13 @@ const mockDays: ClinicalDay[] = [
 
 function renderTimeline(props: Partial<React.ComponentProps<typeof ClinicalDayTimeline>> = {}) {
   return render(
-    <ClinicalDayTimeline
-      days={props.days ?? []}
-      selectedDayId={props.selectedDayId}
-      onSelectDay={props.onSelectDay ?? vi.fn()}
-    />
+    <ThemeModeProvider>
+      <ClinicalDayTimeline
+        days={props.days ?? []}
+        selectedDayId={props.selectedDayId}
+        onSelectDay={props.onSelectDay ?? vi.fn()}
+      />
+    </ThemeModeProvider>
   );
 }
 
@@ -92,8 +95,9 @@ describe('ClinicalDayTimeline', () => {
     renderTimeline({ days: mockDays, selectedDayId: 'day-2' });
     const day2 = screen.getByText('Доба 2').closest('div');
     const day1 = screen.getByText('Доба 1').closest('div');
-    expect(day2).toHaveStyle('border: 2px solid rgb(255, 95, 51)');
-    expect(day1).not.toHaveStyle('border: 2px solid rgb(255, 95, 51)');
+    expect(day2).toHaveClass('border-2');
+    expect(day2).toHaveClass('border-primary');
+    expect(day1).not.toHaveClass('border-2');
   });
 
   it('calls onSelectDay when a day chip is clicked', async () => {

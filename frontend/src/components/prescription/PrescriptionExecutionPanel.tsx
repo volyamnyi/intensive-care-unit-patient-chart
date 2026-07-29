@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box } from '@mui/material';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { PrescriptionDayPart } from '../../types';
 
 interface PrescriptionExecutionPanelProps {
@@ -49,40 +52,39 @@ export default function PrescriptionExecutionPanel({ dayParts, onExecute, execut
   };
 
   if (plannedParts.length === 0) {
-    return <Typography color="text.secondary">Немає запланованих доз для виконання</Typography>;
+    return <p className="text-muted-foreground">Немає запланованих доз для виконання</p>;
   }
 
   return (
     <>
-      <TableContainer sx={{ overflowX: 'auto' }}>
-        <Table size="small" sx={{ minWidth: 500 }}>
-          <TableHead>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell>Період</TableCell>
-              <TableCell>Планова доза</TableCell>
-              <TableCell>Фактична доза</TableCell>
-              <TableCell>Дія</TableCell>
+              <TableHead>Період</TableHead>
+              <TableHead>Планова доза</TableHead>
+              <TableHead>Фактична доза</TableHead>
+              <TableHead>Дія</TableHead>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {plannedParts.map((part) => (
               <TableRow key={part.id}>
                 <TableCell>{periodLabels[part.period] || part.period}</TableCell>
                 <TableCell>{part.dose || '—'}</TableCell>
                 <TableCell>
-                  <TextField
-                    size="small"
-                    label="Фактична доза"
+                  <Input
+                    placeholder="Фактична доза"
                     value={actualDoses[part.id] || ''}
                     onChange={(e) => setActualDoses((prev) => ({ ...prev, [part.id]: e.target.value }))}
                     disabled={executing}
+                    className="w-24"
                   />
                 </TableCell>
                 <TableCell>
                   <Button
-                    size="small"
-                    variant="contained"
-                    color="success"
+                    size="sm"
+                    variant="default"
                     disabled={executing || !actualDoses[part.id]?.trim()}
                     onClick={() => open2fa(part.id)}
                   >
@@ -93,32 +95,34 @@ export default function PrescriptionExecutionPanel({ dayParts, onExecute, execut
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+      </div>
 
-      <Dialog open={Boolean(selectedPartId)} onClose={close2fa} maxWidth="xs" fullWidth>
-        <DialogTitle>2-факторна авторизація</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Dialog open={Boolean(selectedPartId)} onOpenChange={(open) => { if (!open) close2fa(); }}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>2-факторна авторизація</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-2">
             Для виконання призначення необхідне підтвердження іншою медсестрою.
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
-            <TextField size="small" label="Логін другої особи" value={secondPersonLogin}
+          </p>
+          <div className="flex flex-col gap-1.5 mt-1">
+            <Input placeholder="Логін другої особи" value={secondPersonLogin}
               onChange={e => setSecondPersonLogin(e.target.value)}
               disabled={executing} autoFocus />
-            <TextField size="small" label="Пароль" type="password" value={secondPersonPassword}
+            <Input placeholder="Пароль" type="password" value={secondPersonPassword}
               onChange={e => setSecondPersonPassword(e.target.value)}
               disabled={executing} />
             {secondPersonError && (
-              <Typography variant="caption" color="error">{secondPersonError}</Typography>
+              <p className="text-xs text-destructive">{secondPersonError}</p>
             )}
-          </Box>
+          </div>
+          <DialogFooter>
+            <Button size="sm" variant="outline" onClick={close2fa} disabled={executing}>Скасувати</Button>
+            <Button size="sm" variant="default"
+              disabled={executing || !secondPersonLogin.trim() || !secondPersonPassword.trim()}
+              onClick={commitExecute}>Підтвердити</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button size="small" onClick={close2fa} disabled={executing}>Скасувати</Button>
-          <Button size="small" variant="contained" color="success"
-            disabled={executing || !secondPersonLogin.trim() || !secondPersonPassword.trim()}
-            onClick={commitExecute}>Підтвердити</Button>
-        </DialogActions>
       </Dialog>
     </>
   );

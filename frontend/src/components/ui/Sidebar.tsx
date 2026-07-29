@@ -1,7 +1,9 @@
 /* eslint-disable react/only-export-components */
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
-import { Box, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useThemeMode } from '../../styles/ThemeContext';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SidebarContextValue {
   open: boolean;
@@ -30,6 +32,22 @@ export interface SidebarProps {
   children: React.ReactNode;
   side?: 'left' | 'right';
   collapsible?: 'none' | 'offcanvas' | 'icon';
+}
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [query]);
+
+  return matches;
 }
 
 export function SidebarProvider({
@@ -120,44 +138,33 @@ export function useSidebar() {
 
 export function Sidebar({ children }: SidebarProps) {
   const { sidebarWidth, isMobile } = useSidebar();
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
 
   return (
-    <Box
-      component="aside"
-      sx={{
+    <aside
+      style={{
         width: isMobile ? '100%' : sidebarWidth,
-        flexShrink: 0,
         maxHeight: isMobile ? 'none' : 'calc(100vh - 160px)',
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
-        pl: isMobile ? 0 : 2.5,
-        position: isMobile ? 'static' : 'sticky',
-        top: 0, alignSelf: 'flex-start',
-        '&::-webkit-scrollbar': { width: 6 },
-        '&::-webkit-scrollbar-thumb': {
-          bgcolor: isDark ? '#333' : '#CCC',
-          borderRadius: 3,
-        },
+        paddingLeft: isMobile ? 0 : undefined,
       }}
+      className={cn(
+        'flex shrink-0 flex-col gap-1 overflow-y-auto',
+        isMobile ? 'static w-full' : 'sticky top-0 self-start',
+        '[&::-webkit-scrollbar]:w-[6px]',
+        '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30',
+      )}
     >
       {children}
-    </Box>
+    </aside>
   );
 }
 
 export function SidebarRail() {
   const { startResize, isMobile, toggleSidebar } = useSidebar();
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
 
   if (isMobile) return null;
 
   return (
-    <Box
+    <div
       onMouseDown={(e) => {
         e.preventDefault();
         startResize(e.clientX);
@@ -165,90 +172,75 @@ export function SidebarRail() {
       onDoubleClick={toggleSidebar}
       role="separator"
       aria-label="Зміна ширини бічної панелі"
-      sx={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: 20,
-        cursor: 'col-resize', zIndex: 5,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        '&::after': {
-          content: '""', display: 'block',
-          width: 3, height: '100%',
-          bgcolor: 'divider', borderRadius: 1.5,
-          transition: 'background-color 0.15s',
-        },
-        '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' },
-        '&:hover::after': { bgcolor: 'primary.main' },
-        '&:active': { bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' },
-        '&:active::after': { bgcolor: 'primary.main', width: 4 },
-      }}
+      className={cn(
+        'absolute left-0 top-0 bottom-0 z-[5] flex w-5 cursor-col-resize items-center justify-center',
+        'hover:bg-black/5 dark:hover:bg-white/5',
+        'active:bg-black/8 dark:active:bg-white/8',
+        'after:block after:h-full after:w-[3px] after:rounded-full after:bg-border after:transition-colors after:duration-150',
+        'hover:after:bg-primary active:after:bg-primary active:after:w-[4px]',
+      )}
     />
   );
 }
 
 export function SidebarHeader({
-  children, sx, ...props
-}: { children: React.ReactNode; sx?: object; [k: string]: unknown }) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const bd = `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`;
+  children, className, ...props
+}: { children: React.ReactNode; className?: string; [k: string]: unknown }) {
+  const { mode } = useThemeMode();
+  const isDark = mode === 'dark';
+
   return (
-    <Box
-      sx={{
-        p: 1.5, border: bd, borderRadius: 2,
-        bgcolor: isDark ? '#1A1A1A' : '#FAFAF8',
-        position: 'sticky', top: 0, zIndex: 1,
-        ...(sx ?? {}),
-      }}
+    <div
+      className={cn(
+        'sticky top-0 z-[1] rounded-xl border p-3',
+        isDark ? 'border-[#2A2A2A] bg-[#1A1A1A]' : 'border-[#D0CEC9] bg-[#FAFAF8]',
+        className,
+      )}
       {...props}
     >
       {children}
-    </Box>
+    </div>
   );
 }
 
 export function SidebarContent({
-  children, sx, ...props
-}: { children: React.ReactNode; sx?: object; [k: string]: unknown }) {
+  children, className, ...props
+}: { children: React.ReactNode; className?: string; [k: string]: unknown }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ...(sx ?? {}) }} {...props}>
+    <div className={cn('flex flex-col gap-1', className)} {...props}>
       {children}
-    </Box>
+    </div>
   );
 }
 
 export function SidebarGroup({
-  label, count, children, sx, ...props
-}: { label: string; count?: number; children: React.ReactNode; sx?: object; [k: string]: unknown }) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const bd = `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`;
+  label, count, children, className, ...props
+}: { label: string; count?: number; children: React.ReactNode; className?: string; [k: string]: unknown }) {
+  const { mode } = useThemeMode();
+  const isDark = mode === 'dark';
+
   return (
-    <Box sx={{ p: 1.5, border: bd, borderRadius: 2, ...(sx ?? {}) }} {...props}>
-      <Typography sx={{ fontWeight: 700, fontSize: 13, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+    <div className={cn('rounded-xl border p-3', isDark ? 'border-[#2A2A2A]' : 'border-[#D0CEC9]', className)} {...props}>
+      <p className={cn('mb-1 flex items-center gap-0.5 text-[13px] font-bold font-rubik', className)}>
         {label}
         {count !== undefined && (
-          <Box
-            component="span"
-            sx={{
-              fontSize: 10, fontWeight: 400, color: 'text.secondary',
-              bgcolor: 'action.hover', px: 0.75, py: 0.125, borderRadius: 1,
-            }}
-          >
+          <span className="rounded-md bg-muted px-[3px] py-[1px] text-[10px] font-normal text-muted-foreground">
             {count}
-          </Box>
+          </span>
         )}
-      </Typography>
+      </p>
       {children}
-    </Box>
+    </div>
   );
 }
 
 export function SidebarTrigger({
-  sx, ...props
-}: { sx?: object; [k: string]: unknown }) {
+  className, ...props
+}: { className?: string; [k: string]: unknown }) {
   const { open, toggleSidebar } = useSidebar();
   return (
-    <IconButton onClick={toggleSidebar} size="small" sx={{ ...(sx ?? {}) }} {...props}>
-      {open ? <ChevronRight /> : <ChevronLeft />}
-    </IconButton>
+    <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} className={className} {...props}>
+      {open ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+    </Button>
   );
 }

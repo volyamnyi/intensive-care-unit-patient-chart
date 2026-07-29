@@ -1,4 +1,5 @@
-import { Dialog, DialogTitle, DialogContent, Typography, DialogActions, Button } from '@mui/material';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface SignDialogProps {
   open: boolean;
@@ -12,28 +13,24 @@ interface SignDialogProps {
 export default function SignDialog({ open, onClose, onConfirm, dayNumber, signing, role }: SignDialogProps) {
   const roleLabel = role === 'NURSE' ? 'медсестра' : 'лікар';
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle sx={{ fontFamily: '"Rubik", sans-serif' }}>
-        {`Підписання дня ${dayNumber}`}
-      </DialogTitle>
+    <Dialog open={open} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
-        <Typography>
-          {`Підтвердьте підписання клінічного дня як ${roleLabel}`}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        <DialogHeader>
+          <DialogTitle className="font-rubik">{`Підписання дня ${dayNumber}`}</DialogTitle>
+        </DialogHeader>
+        <p>{`Підтвердьте підписання клінічного дня як ${roleLabel}`}</p>
+        <p className="text-sm text-muted-foreground mt-1">
           {role === 'NURSE'
             ? 'Після підписання медсестрою день буде доступний для підписання лікарем.'
             : 'Після підписання лікарем клінічний день буде закрито.'}
-        </Typography>
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>{'Скасувати'}</Button>
+          <Button onClick={onConfirm} disabled={signing}>
+            {signing ? 'Підписання...' : 'Підписати'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{'Скасувати'}</Button>
-        <Button
-          variant="contained" onClick={onConfirm} disabled={signing}
-        >
-          {signing ? 'Підписання...' : 'Підписати'}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }

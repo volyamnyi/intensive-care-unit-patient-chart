@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Box, Grid, TextField, Button, Autocomplete } from '@mui/material';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import type { MedicineCatalogItem, PrescriptionItemAddRequest, AllergyItem } from '../../types';
 import AllergyWarning from './AllergyWarning';
 
@@ -17,7 +19,19 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, aller
   const [options, setOptions] = useState<MedicineCatalogItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [open, setOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (inputValue.length < 2) {
@@ -32,6 +46,7 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, aller
         .then((res) => {
           if (!controller.signal.aborted) {
             setOptions(res);
+            setOpen(true);
           }
         })
         .catch(() => setOptions([]))
@@ -64,56 +79,62 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, aller
   const medicineName = medicine?.name || '';
 
   return (
-    <Box>
-      <Grid container spacing={2} sx={{ alignItems: 'flex-start' }}>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <Autocomplete
-            options={options}
-            getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
-            inputValue={inputValue}
-            onInputChange={(_event, value) => setInputValue(value)}
-            value={medicine}
-            onChange={(_event, newValue) => setMedicine(newValue)}
-            loading={loading}
-            disabled={disabled}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Препарат"
-                size="small"
-                fullWidth
-              />
+    <div>
+      <div className="grid grid-cols-12 gap-2 items-start">
+        <div className="col-span-12 sm:col-span-4 relative" ref={wrapperRef}>
+          <div className="relative">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onFocus={() => { if (options.length > 0) setOpen(true); }}
+              placeholder="Препарат"
+              disabled={disabled}
+            />
+            {loading && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
             )}
-            loadingText="Завантаження..."
-          />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <TextField
-            fullWidth
-            size="small"
-            label="Спосіб введення"
+          </div>
+          {open && options.length > 0 && (
+            <div className="absolute z-50 mt-1 w-full rounded-lg border bg-popover text-popover-foreground shadow-md max-h-48 overflow-auto">
+              {options.map((option) => (
+                <div
+                  key={option.id || option.name}
+                  className="px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => {
+                    setMedicine(option);
+                    setInputValue(option.name);
+                    setOpen(false);
+                  }}
+                >
+                  {option.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="col-span-6 sm:col-span-3">
+          <Input
+            placeholder="Спосіб введення"
             value={medicineMethod}
             onChange={(e) => setMedicineMethod(e.target.value)}
             disabled={disabled}
           />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <TextField
-            fullWidth
-            size="small"
-            label="Режим"
+        </div>
+        <div className="col-span-6 sm:col-span-3">
+          <Input
+            placeholder="Режим"
             value={regime}
             onChange={(e) => setRegime(e.target.value)}
             disabled={disabled}
           />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 2 }}>
-          <Button variant="contained" size="small" disabled={disabled || !medicine} onClick={handleSubmit}>
+        </div>
+        <div className="col-span-12 sm:col-span-2">
+          <Button variant="default" size="sm" disabled={disabled || !medicine} onClick={handleSubmit}>
             Додати
           </Button>
-        </Grid>
-      </Grid>
+        </div>
+      </div>
       <AllergyWarning medicineName={medicineName} allergies={allergies ?? []} />
-    </Box>
+    </div>
   );
 }

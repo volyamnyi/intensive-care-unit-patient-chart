@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Grid, Paper, Typography, TextField, Button, MenuItem, Box, Chip, useTheme } from '@mui/material';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { useThemeMode } from '../../styles/ThemeContext';
 import type { ScaleResult, ClinicalScale } from '../../types';
 
 interface ScaleResultsPanelProps {
@@ -9,8 +14,8 @@ interface ScaleResultsPanelProps {
 }
 
 export default function ScaleResultsPanel({ results, availableScales, onCreateResult }: ScaleResultsPanelProps) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useThemeMode();
+  const isDark = mode === 'dark';
   const [selectedScaleId, setSelectedScaleId] = useState('');
   const [resultValue, setResultValue] = useState('');
 
@@ -28,59 +33,55 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
   return (
     <>
       {onCreateResult && availableScales.length > 0 && (
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <TextField
-            select size="small" label={'Шкала'} value={selectedScaleId}
-            onChange={(e) => setSelectedScaleId(e.target.value)}
-            sx={{ minWidth: { xs: '100%', sm: 200 } }}
-          >
-            {availableScales.map((s) => (
-              <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            size="small" label={'Результат'} value={resultValue}
+        <div className="mb-2 flex flex-wrap items-start gap-2">
+          <Select value={selectedScaleId} onValueChange={(v: string | null) => { if (v !== null) setSelectedScaleId(v); }}>
+            <SelectTrigger aria-label="Шкала" className="h-7 w-full sm:w-[200px]">
+              <SelectValue placeholder="Шкала" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableScales.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            placeholder="Результат"
+            value={resultValue}
             onChange={(e) => setResultValue(e.target.value)}
-            sx={{ minWidth: { xs: '100%', sm: 120 } }}
+            className="h-7 w-full sm:w-[120px]"
           />
-          <Button variant="contained" size="small" onClick={handleCreate}>
-            {'Додати'}
-          </Button>
-        </Box>
+          <Button size="sm" onClick={handleCreate}>Додати</Button>
+        </div>
       )}
 
-      <Grid container spacing={2}>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {availableScales.length === 0 && results.length === 0 ? (
-          <Grid size={12}>
-            <Typography color="text.secondary">{'Немає результатів'}</Typography>
-          </Grid>
+          <div className="col-span-full">
+            <p className="text-muted-foreground">Немає результатів</p>
+          </div>
         ) : (
           availableScales.map((scale) => {
             const result = getResultForScale(scale.id);
             return (
-              <Grid size={{ xs: 12, md: 6 }} key={scale.id}>
-                <Paper sx={{ p: 2, border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)' }}>
-                  <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 600 }}>
-                    {scale.name}
-                    {isAutoScale(scale.name) && (
-                      <Chip label="Auto" size="small" color="info" sx={{ ml: 1, fontSize: 9, fontWeight: 700, height: 18 }} />
-                    )}
-                  </Typography>
-                  {result ? (
-                    <Typography variant="body1" sx={{ mt: 0.5 }}>
-                      {`Результат: ${result.result} (${new Date(result.calculatedAt).toLocaleString('uk-UA')})`}
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {'Не заповнено'}
-                    </Typography>
+              <div key={scale.id} className={cn('rounded-xl border bg-card p-4 text-card-foreground shadow-sm', isDark ? 'border-[#2A2A2A] shadow-[0_2px_12px_rgba(0,0,0,0.2)]' : 'border-[#E8E6E1] shadow-[0_2px_8px_rgba(0,0,0,0.04)]')}>
+                <p className="font-rubik text-sm font-semibold">
+                  {scale.name}
+                  {isAutoScale(scale.name) && (
+                    <Badge variant="secondary" className="ml-1 h-[18px] text-[9px] font-bold">Auto</Badge>
                   )}
-                </Paper>
-              </Grid>
+                </p>
+                {result ? (
+                  <p className="mt-0.5 text-sm font-mulish">
+                    {`Результат: ${result.result} (${new Date(result.calculatedAt).toLocaleString('uk-UA')})`}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-sm text-muted-foreground font-mulish">Не заповнено</p>
+                )}
+              </div>
             );
           })
         )}
-      </Grid>
+      </div>
     </>
   );
 }

@@ -27,9 +27,9 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    final JwtTokenProvider jwtTokenProvider;
-    final AuditLogRepository auditLogRepository;
-    final AuditService auditService;
+    JwtTokenProvider jwtTokenProvider;
+    AuditLogRepository auditLogRepository;
+    AuditService auditService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

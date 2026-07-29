@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import PatientSearch from '../../components/common/PatientSearch';
 import type { PatientDto } from '../../types';
 
-const theme = createTheme({});
 
 const mockSearch = vi.fn();
 const onSelect = vi.fn();
@@ -31,9 +30,9 @@ const testPatients: PatientDto[] = [
 
 function renderSearch() {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <PatientSearch onSelect={onSelect} />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 
@@ -95,8 +94,7 @@ describe('PatientSearch', () => {
     await waitFor(() => {
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
     });
-    const option = screen.getByText('Петренко Іван').closest('li')!;
-    await userEvent.click(option);
+    await userEvent.click(screen.getByText('Петренко Іван'));
     await waitFor(() => {
       expect(onSelect).toHaveBeenCalledWith(testPatients[0]);
     });
@@ -114,9 +112,9 @@ describe('PatientSearch', () => {
 
   it('renders with custom label', () => {
     render(
-      <ThemeProvider theme={theme}>
+      <ThemeModeProvider>
         <PatientSearch onSelect={onSelect} label="Знайти пацієнта" />
-      </ThemeProvider>
+      </ThemeModeProvider>
     );
     expect(screen.getByLabelText('Знайти пацієнта')).toBeInTheDocument();
   });

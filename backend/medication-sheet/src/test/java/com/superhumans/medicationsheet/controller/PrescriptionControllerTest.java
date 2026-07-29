@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -37,6 +38,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     MedicineCatalogMapperImpl.class
 })
 class PrescriptionControllerTest {
+
+    private static final String TEST_DOCTOR_LOGIN = "testuser";
+    private static final String TEST_NURSE_LOGIN = "nurse2";
+    private static final String TEST_ADMIN_LOGIN = "admin";
+    private static final Long TEST_DOCTOR_ID = 1L;
+    private static final Long TEST_NURSE_ID = 2L;
+    private static final Long TEST_HOD_ID = 4L;
+    private static final String TEST_PATIENT_ID = "1001";
+    private static final String TEST_MEDICINE_NAME = "Aspirin";
+    private static final String TEST_DOSE = "50mg";
+    private static final String TEST_ACTUAL_DOSE = "45mg";
+    private static final String TEST_SECOND_PERSON_PASSWORD = "nurse123";
 
     @Autowired
     private MockMvc mockMvc;
@@ -84,9 +97,9 @@ class PrescriptionControllerTest {
         testList.setId(listId);
 
         when(jwtTokenProvider.validateToken(any())).thenReturn(true);
-        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("testuser");
+        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn(TEST_DOCTOR_LOGIN);
         when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
-        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(TEST_DOCTOR_ID);
     }
 
     @Test
@@ -94,7 +107,7 @@ class PrescriptionControllerTest {
         when(listService.getByPatient(1001L)).thenReturn(List.of(testList));
 
         mockMvc.perform(get("/api/prescriptions")
-                        .param("patientId", "1001")
+                        .param("patientId", TEST_PATIENT_ID)
                         .header("Authorization", "Bearer test-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(listId.toString()))
@@ -118,7 +131,7 @@ class PrescriptionControllerTest {
 
         mockMvc.perform(post("/api/prescriptions")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"patientId\":\"1001\"}")
+                        .content("{\"patientId\":\"" + TEST_PATIENT_ID + "\"}")
                         .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.patientId").value(1001));
@@ -200,19 +213,69 @@ class PrescriptionControllerTest {
     }
 
     @Test
-    void executeDose_returnsOk() throws Exception {
-        // Execute endpoint requires NURSE role
-        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
-        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(2L);
+    void planDose_generatesDeterministicUuidFromUserId() throws Exception {
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(42L);
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).build();
+        part.setId(dayPartId);
+        when(itemService.planDose(eq(dayPartId), eq("50mg"), any())).thenReturn(part);
 
-        mockMvc.perform(post("/api/prescriptions/day-parts/{dayPartId}/execute", dayPartId)
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/plan", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"actualDose\":\"45mg\",\"secondPersonLogin\":\"nurse2\",\"secondPersonPassword\":\"nurse123\"}")
+                        .content("{\"dose\":\"50mg\"}")
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isOk());
+
+        UUID expectedUuid = UUID.nameUUIDFromBytes("42".getBytes());
+        verify(itemService).planDose(eq(dayPartId), eq("50mg"), eq(expectedUuid));
+    }
+
+    @Test
+    void completeDose_generatesDeterministicUuidFromUserId() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(99L);
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).build();
+        part.setId(dayPartId);
+        when(itemService.markCompleted(eq(dayPartId), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isOk());
 
-        verify(executionService).execute(eq(dayPartId), eq(2L), eq("user"),
-                eq("45mg"), eq("nurse2"), eq("nurse123"));
+        UUID expectedUuid = UUID.nameUUIDFromBytes("99".getBytes());
+        verify(itemService).markCompleted(eq(dayPartId), eq(expectedUuid));
+    }
+
+    @Test
+    void cancelDose_generatesDeterministicUuidFromUserId() throws Exception {
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(123L);
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).isPlannedFinished(true).build();
+        part.setId(dayPartId);
+        when(itemService.markPlannedFinished(eq(dayPartId), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel", dayPartId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isOk());
+
+        UUID expectedUuid = UUID.nameUUIDFromBytes("123".getBytes());
+        verify(itemService).markPlannedFinished(eq(dayPartId), eq(expectedUuid));
+    }
+
+    @Test
+    void executeDose_returnsOk() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(TEST_NURSE_ID);
+
+        mockMvc.perform(post("/api/prescriptions/day-parts/{dayPartId}/execute", dayPartId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"actualDose\":\"" + TEST_ACTUAL_DOSE + "\",\"secondPersonLogin\":\"" + TEST_NURSE_LOGIN + "\",\"secondPersonPassword\":\"" + TEST_SECOND_PERSON_PASSWORD + "\"}")
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isOk());
+
+        verify(executionService).execute(eq(dayPartId), eq(TEST_NURSE_ID), eq(TEST_DOCTOR_LOGIN),
+                eq(TEST_ACTUAL_DOSE), eq(TEST_NURSE_LOGIN), eq(TEST_SECOND_PERSON_PASSWORD));
     }
 
     @Test
@@ -240,6 +303,136 @@ class PrescriptionControllerTest {
                         .header("Authorization", "Bearer test-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Aspirin"));
+    }
+
+    // --- Role-based access tests ---
+
+    @Test
+    void getByPatient_withNurseRole_returnsOk() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
+        when(listService.getByPatient(1001L)).thenReturn(List.of(testList));
+
+        mockMvc.perform(get("/api/prescriptions")
+                        .param("patientId", "1001")
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getByPatient_withHodRole_returnsOk() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        when(listService.getByPatient(1001L)).thenReturn(List.of(testList));
+
+        mockMvc.perform(get("/api/prescriptions")
+                        .param("patientId", "1001")
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void create_withHodRole_returnsCreated() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        when(listService.create(1001L)).thenReturn(testList);
+
+        mockMvc.perform(post("/api/prescriptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"1001\"}")
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void delete_withHodRole_returnsNoContent() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+
+        mockMvc.perform(delete("/api/prescriptions/{id}", listId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void close_withHodRole_returnsPrescription() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        PrescriptionList closed = PrescriptionList.builder()
+                .patientId(1001L).status("Finished").build();
+        closed.setId(listId);
+        when(listService.getById(listId)).thenReturn(closed);
+
+        mockMvc.perform(post("/api/prescriptions/{id}/close", listId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("Finished"));
+    }
+
+    @Test
+    void planDose_withHodRole_returnsDayPart() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).build();
+        part.setId(dayPartId);
+        when(itemService.planDose(eq(dayPartId), eq("50mg"), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/plan", dayPartId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dose\":\"50mg\"}")
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dose").value("50mg"));
+    }
+
+    @Test
+    void completeDose_withNurseRole_returnsOk() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).build();
+        part.setId(dayPartId);
+        when(itemService.markCompleted(eq(dayPartId), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void completeDose_withHodRole_returnsOk() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).build();
+        part.setId(dayPartId);
+        when(itemService.markCompleted(eq(dayPartId), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void cancelDose_withHodRole_returnsDayPart() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).isPlannedFinished(true).build();
+        part.setId(dayPartId);
+        when(itemService.markPlannedFinished(eq(dayPartId), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel", dayPartId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isPlannedFinished").value(true));
+    }
+
+    @Test
+    void executeDose_withHodRole_returnsOk() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(4L);
+
+        mockMvc.perform(post("/api/prescriptions/day-parts/{dayPartId}/execute", dayPartId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"actualDose\":\"45mg\",\"secondPersonLogin\":\"nurse2\",\"secondPersonPassword\":\"nurse123\"}")
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk());
+
+        verify(executionService).execute(eq(dayPartId), eq(4L), eq("user"),
+                eq("45mg"), eq("nurse2"), eq("nurse123"));
     }
 
     // TODO: Re-enable when SecurityConfig is moved to common module

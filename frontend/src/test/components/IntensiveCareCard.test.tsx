@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import IntensiveCareCard from '../../components/monitoring/IntensiveCareCard';
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
 
-const theme = createTheme({});
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const mockEpisode: Episode = {
@@ -65,7 +64,7 @@ interface CardProps {
 
 function renderCard(props: CardProps = {}) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <IntensiveCareCard
         episode={mockEpisode}
         selectedDay={mockDay}
@@ -77,18 +76,8 @@ function renderCard(props: CardProps = {}) {
         user={{ id: 1 }}
         {...props}
       />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
-}
-
-/** Find an <input> element by matching its aria-label attribute value.
- *  MUI TextField may put aria-label on the FormControl or on the input itself. */
-function findInputByAriaLabel(label: string): HTMLInputElement {
-  const el = screen.getByLabelText(label);
-  // If el is already the input, return it; otherwise look inside
-  const input = el.tagName === 'INPUT' ? el : el.querySelector('input');
-  if (!input) throw new Error(`No input found for aria-label "${label}"`);
-  return input as HTMLInputElement;
 }
 
 let mockHourlyRecordCreate = vi.fn();
@@ -135,7 +124,6 @@ vi.mock('../../api/endpoints', () => ({
 describe('IntensiveCareCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Prevent window.location.reload() from hanging jsdom
     Object.defineProperty(window, 'location', {
       value: { ...window.location, reload: vi.fn() },
       writable: true, configurable: true,
@@ -158,7 +146,6 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByText('Показники')).toBeInTheDocument();
       expect(screen.getByText('Втрати (мл)')).toBeInTheDocument();
       expect(screen.getByText('Терапія (призначення)')).toBeInTheDocument();
-      // 'ЧД' may appear in multiple contexts — use getAllByText
       const rowLabels = ['АТсист', 'АТдіас', 'ЧСС', 'SpO2', 'Темп', 'ЦВТ',
         'Сеча', 'Дренаж', 'Випорожнення', 'Блювота'];
       rowLabels.forEach(label => expect(screen.getByText(label)).toBeInTheDocument());
@@ -191,7 +178,6 @@ describe('IntensiveCareCard', () => {
   describe('Cell value display', () => {
     it('displays values from mockRecords via getByDisplayValue', () => {
       renderCard();
-      // Hour 8 values
       expect(screen.getByDisplayValue('120')).toBeInTheDocument();
       expect(screen.getByDisplayValue('80')).toBeInTheDocument();
       expect(screen.getByDisplayValue('72')).toBeInTheDocument();
@@ -199,7 +185,6 @@ describe('IntensiveCareCard', () => {
       expect(screen.getAllByDisplayValue('36.6').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByDisplayValue('8').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByDisplayValue('16').length).toBeGreaterThanOrEqual(1);
-      // Hour 10 values
       expect(screen.getByDisplayValue('130')).toBeInTheDocument();
       expect(screen.getByDisplayValue('76')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Ясна')).toBeInTheDocument();
@@ -211,7 +196,7 @@ describe('IntensiveCareCard', () => {
   describe('Cell editing via API', () => {
     it('creates hourly record via api.create on blur', async () => {
       renderCard({ records: [], orders: [] });
-      const input = findInputByAriaLabel('ЧСС 10:00');
+      const input = screen.getByLabelText('ЧСС 10:00');
       await fireEvent.change(input, { target: { value: '88' } });
       await fireEvent.blur(input);
       await waitFor(() => expect(mockHourlyRecordCreate)
@@ -220,7 +205,7 @@ describe('IntensiveCareCard', () => {
 
     it('saves on Enter key', async () => {
       renderCard({ records: [], orders: [] });
-      const input = findInputByAriaLabel('АТсист 5:00');
+      const input = screen.getByLabelText('АТсист 5:00');
       await fireEvent.change(input, { target: { value: '140' } });
       fireEvent.keyDown(input, { key: 'Enter' });
       fireEvent.blur(input);
@@ -230,7 +215,7 @@ describe('IntensiveCareCard', () => {
 
     it('updates existing record via api.update', async () => {
       renderCard();
-      const input = findInputByAriaLabel('ЧСС 8:00');
+      const input = screen.getByLabelText('ЧСС 8:00');
       await fireEvent.change(input, { target: { value: '90' } });
       await fireEvent.blur(input);
       await waitFor(() => expect(mockHourlyRecordUpdate)
@@ -239,7 +224,7 @@ describe('IntensiveCareCard', () => {
 
     it('does not save empty value', async () => {
       renderCard({ records: [], orders: [] });
-      const input = findInputByAriaLabel('ЧСС 3:00');
+      const input = screen.getByLabelText('ЧСС 3:00');
       await fireEvent.change(input, { target: { value: '' } });
       await fireEvent.blur(input);
       await waitFor(() => expect(mockHourlyRecordCreate).not.toHaveBeenCalled());
@@ -295,9 +280,9 @@ describe('IntensiveCareCard', () => {
       renderCard({ isNurse: false });
       fireEvent.click(screen.getByText('+ Нове призначення'));
       await waitFor(() => expect(screen.getByText('Нове призначення')).toBeInTheDocument(), { timeout: 10000 });
-      const inputs = screen.getAllByLabelText('Препарат');
+      const inputs = screen.getAllByPlaceholderText('Препарат');
       fireEvent.change(inputs[inputs.length - 1], { target: { value: 'Парацетамол' } });
-      const doseInputs = screen.getAllByLabelText('Доза');
+      const doseInputs = screen.getAllByPlaceholderText('Доза');
       fireEvent.change(doseInputs[doseInputs.length - 1], { target: { value: '500' } });
       fireEvent.click(screen.getByText('Створити'));
       await waitFor(() => expect(mockOrderCreate).toHaveBeenCalled(), { timeout: 10000 });

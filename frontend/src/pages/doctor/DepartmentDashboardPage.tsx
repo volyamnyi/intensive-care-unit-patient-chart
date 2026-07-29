@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Typography, TextField, CircularProgress, Alert, InputAdornment, useTheme, Paper, Grid, ToggleButtonGroup, ToggleButton, IconButton, Tooltip } from '@mui/material';
-import { Search as SearchIcon, People, Assignment, HowToReg, GppBad, TaskAlt, TableChart, Dashboard as DashboardIcon, MedicalServices, Hotel, Group, Refresh } from '@mui/icons-material';
-import { departmentApi } from '../../api/endpoints';
-import EpisodeTable from '../../components/common/EpisodeTable';
-import DepartmentPatientCard from '../../components/common/DepartmentPatientCard';
-import type { DepartmentStats, DepartmentPatient } from '../../types';
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Users, ClipboardList, UserCheck, AlertTriangle, CheckSquare, Table, LayoutDashboard, Stethoscope, Bed, RefreshCw, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Alert } from '@/components/ui/alert'
+import { departmentApi } from '../../api/endpoints'
+import EpisodeTable from '../../components/common/EpisodeTable'
+import DepartmentPatientCard from '../../components/common/DepartmentPatientCard'
+import type { DepartmentStats, DepartmentPatient } from '../../types'
 
 const initialStats: DepartmentStats = {
   activePatients: 0,
@@ -17,18 +19,17 @@ const initialStats: DepartmentStats = {
   occupiedBeds: 0,
   activeDoctors: 0,
   activeNurses: 0,
-};
+}
 
 export default function DepartmentDashboardPage() {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const [patients, setPatients] = useState<DepartmentPatient[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [stats, setStats] = useState<DepartmentStats>(initialStats);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const navigate = useNavigate()
+  const [patients, setPatients] = useState<DepartmentPatient[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [stats, setStats] = useState<DepartmentStats>(initialStats)
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchData = useCallback(() => {
     Promise.all([
@@ -36,127 +37,123 @@ export default function DepartmentDashboardPage() {
       departmentApi.getStats(),
     ])
       .then(([patRes, statsRes]) => {
-        setPatients(patRes.data);
-        setStats(statsRes.data);
-        setLastUpdated(new Date());
+        setPatients(patRes.data)
+        setStats(statsRes.data)
+        setLastUpdated(new Date())
       })
       .catch(() => {
-        setPatients([]);
+        setPatients([])
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
-    document.title = 'ВАІТ — Завідувач відділення';
-  }, []);
+    document.title = 'ВАІТ — Завідувач відділення'
+  }, [])
 
   useEffect(() => {
-    fetchData();
-    timerRef.current = setInterval(fetchData, 30000);
+    fetchData()
+    timerRef.current = setInterval(fetchData, 30000)
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [fetchData]);
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [fetchData])
 
   const filteredPatients = patients.filter((p) =>
     (p.patientName ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  )
 
   const statCards = [
-    { label: 'Активних пацієнтів', value: stats.activePatients, icon: <People />, color: '#1976d2' },
-    { label: 'Відкритих днів', value: stats.openDays, icon: <Assignment />, color: '#ed6c02' },
-    { label: 'Підписано медсестрою', value: stats.nurseSignedDays, icon: <HowToReg />, color: '#0288d1' },
-    { label: 'Підписано лікарем', value: stats.doctorSignedDays, icon: <GppBad />, color: '#2e7d32' },
-    { label: 'Зайнято ліжок', value: `${stats.occupiedBeds} / ${stats.totalBeds}`, icon: <Hotel />, color: '#5c6bc0' },
-    { label: 'Активні лікарі', value: stats.activeDoctors, icon: <MedicalServices />, color: '#7b1fa2' },
-    { label: 'Активні медсестри', value: stats.activeNurses, icon: <Group />, color: '#00796b' },
-    { label: 'Закрито днів', value: stats.closedDays, icon: <TaskAlt />, color: '#455a64' },
-  ];
+    { label: 'Активних пацієнтів', value: stats.activePatients, icon: <Users />, color: '#1976d2' },
+    { label: 'Відкритих днів', value: stats.openDays, icon: <ClipboardList />, color: '#ed6c02' },
+    { label: 'Підписано медсестрою', value: stats.nurseSignedDays, icon: <UserCheck />, color: '#0288d1' },
+    { label: 'Підписано лікарем', value: stats.doctorSignedDays, icon: <AlertTriangle />, color: '#2e7d32' },
+    { label: 'Зайнято ліжок', value: `${stats.occupiedBeds} / ${stats.totalBeds}`, icon: <Bed />, color: '#5c6bc0' },
+    { label: 'Активні лікарі', value: stats.activeDoctors, icon: <Stethoscope />, color: '#7b1fa2' },
+    { label: 'Активні медсестри', value: stats.activeNurses, icon: <Users />, color: '#00796b' },
+    { label: 'Закрито днів', value: stats.closedDays, icon: <CheckSquare />, color: '#455a64' },
+  ]
 
-  if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
+  if (loading) return <Loader2 role="progressbar" aria-label="Loading" className="mx-auto mt-4 size-6 animate-spin text-primary" />
 
   return (
-    <Box>
-      <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary, mb: 0.5 }}>
+    <div>
+      <h1 className="font-rubik text-2xl font-extrabold text-foreground mb-0.5">
         Відділення анестезіології та інтенсивної терапії
-      </Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+      </h1>
+      <div className="mb-3 flex items-center gap-1">
+        <p className="text-sm text-muted-foreground">
           Оглядова панель завідувача
-        </Typography>
-        <Box sx={{ flex: 1 }} />
+        </p>
+        <div className="flex-1" />
         {lastUpdated && (
-          <Typography variant="caption" sx={{ color: theme.palette.text.disabled }}>
+          <span className="text-xs text-muted-foreground/60">
             Оновлено: {lastUpdated.toLocaleTimeString('uk-UA')}
-          </Typography>
+          </span>
         )}
-        <Tooltip title="Оновити дані">
-          <IconButton size="small" onClick={fetchData}>
-            <Refresh fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
+        <Button variant="ghost" size="icon-sm" onClick={fetchData}>
+          <RefreshCw />
+        </Button>
+      </div>
 
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <div className="mb-3 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {statCards.map((card) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={card.label}>
-            <Paper elevation={1} sx={{ p: 2, textAlign: 'center', borderRadius: 2 }}>
-              <Box sx={{ color: card.color, mb: 0.5 }}>{card.icon}</Box>
-              <Typography variant="h4" sx={{ fontWeight: 800, fontFamily: '"Rubik", sans-serif', color: card.color }}>
-                {card.value}
-              </Typography>
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                {card.label}
-              </Typography>
-            </Paper>
-          </Grid>
+          <div key={card.label} className="rounded-xl border bg-card text-card-foreground shadow-sm p-4 text-center">
+            <div className="mb-0.5 flex justify-center" style={{ color: card.color }}>{card.icon}</div>
+            <div className="font-rubik text-3xl font-extrabold" style={{ color: card.color }}>
+              {card.value}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {card.label}
+            </p>
+          </div>
         ))}
-      </Grid>
+      </div>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700, color: theme.palette.text.primary }}>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-1">
+        <h2 className="font-rubik text-lg font-semibold text-foreground">
           Активні пацієнти
-        </Typography>
-        <ToggleButtonGroup
-          value={viewMode}
-          exclusive
-          onChange={(_, val) => val && setViewMode(val)}
-          size="small"
-        >
-          <ToggleButton value="cards"><DashboardIcon fontSize="small" sx={{ mr: 0.5 }} />Картки</ToggleButton>
-          <ToggleButton value="table"><TableChart fontSize="small" sx={{ mr: 0.5 }} />Таблиця</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+        </h2>
+        <div className="flex items-center gap-1 rounded-lg border bg-muted p-1">
+          <Button
+            variant={viewMode === 'cards' ? 'default' : 'outline'}
+            size="xs"
+            onClick={() => setViewMode('cards')}
+          >
+            <LayoutDashboard />
+            Картки
+          </Button>
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'outline'}
+            size="xs"
+            onClick={() => setViewMode('table')}
+          >
+            <Table />
+            Таблиця
+          </Button>
+        </div>
+      </div>
 
-      <TextField
-        fullWidth
-        placeholder="Пошук пацієнта за ПІБ..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2 }}
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: theme.palette.text.secondary }} />
-              </InputAdornment>
-            ),
-          },
-        }}
-      />
+      <div className="relative mb-2">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Пошук пацієнта за ПІБ..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8"
+        />
+      </div>
 
       {filteredPatients.length === 0 && !loading ? (
-        <Alert severity="info">
+        <Alert>
           {search ? 'Немає пацієнтів за запитом' : 'Немає активних пацієнтів'}
         </Alert>
       ) : viewMode === 'cards' ? (
-        <Grid container spacing={2}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredPatients.map((p) => (
-            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={p.id}>
-              <DepartmentPatientCard patient={p} />
-            </Grid>
+            <DepartmentPatientCard patient={p} key={p.id} />
           ))}
-        </Grid>
+        </div>
       ) : (
         <EpisodeTable
           episodes={filteredPatients.map((p) => ({
@@ -179,9 +176,9 @@ export default function DepartmentDashboardPage() {
             updatedAt: p.admissionDate,
             version: 0,
           }))}
-          onSelect={(ep) => navigate('/doctor/episode/' + ep.id)}
+          onSelect={(ep) => navigate('/prescriptions/icu/doctor/episode/' + ep.id)}
         />
       )}
-    </Box>
-  );
+    </div>
+  )
 }

@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import HourlyRecordTable from '../../components/common/HourlyRecordTable';
 import type { HourlyRecord } from '../../types';
 
-const theme = createTheme({});
 
 const mockRecords: HourlyRecord[] = [
   {
@@ -29,9 +28,9 @@ const mockRecords: HourlyRecord[] = [
 
 function renderTable(records: HourlyRecord[] = mockRecords, hours: number[] = [8, 9, 10]) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <HourlyRecordTable records={records} hours={hours} />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

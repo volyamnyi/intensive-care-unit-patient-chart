@@ -66,28 +66,7 @@ describe('ThemeModeProvider', () => {
     expect(localStorage.getItem('themeMode')).toBe('dark');
   });
 
-  it('provides a theme object', () => {
-    const { result } = renderHook(() => useThemeMode(), {
-      wrapper: ThemeModeProvider,
-    });
-    expect(result.current.theme).toBeDefined();
-    expect(result.current.theme.palette).toBeDefined();
-  });
 
-  it('light mode theme has light primary background (default)', () => {
-    const { result } = renderHook(() => useThemeMode(), {
-      wrapper: ThemeModeProvider,
-    });
-    expect(result.current.theme.palette.background.default).toBe('#FAFAF8');
-  });
-
-  it('light mode theme has light primary background', () => {
-    localStorage.setItem('themeMode', 'light');
-    const { result } = renderHook(() => useThemeMode(), {
-      wrapper: ThemeModeProvider,
-    });
-    expect(result.current.theme.palette.background.default).toBe('#FAFAF8');
-  });
 
   it('persists theme mode change to localStorage', () => {
     localStorage.setItem('themeMode', 'dark');

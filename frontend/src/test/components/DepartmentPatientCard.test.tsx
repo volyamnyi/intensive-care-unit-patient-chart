@@ -1,12 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import { MemoryRouter } from 'react-router-dom';
 import DepartmentPatientCard from '../../components/common/DepartmentPatientCard';
 import type { DepartmentPatient } from '../../types';
 
-const theme = createTheme({});
 const mockNavigate = vi.fn();
 
 vi.mock('react-router-dom', async () => {
@@ -35,11 +34,11 @@ const basePatient: DepartmentPatient = {
 
 function renderCard(patient: DepartmentPatient = basePatient) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <MemoryRouter>
         <DepartmentPatientCard patient={patient} />
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 
@@ -122,7 +121,7 @@ describe('DepartmentPatientCard', () => {
   it('navigates to episode on click', async () => {
     renderCard();
     await userEvent.click(screen.getByText('Петренко Іван'));
-    expect(mockNavigate).toHaveBeenCalledWith('/doctor/episode/ep-1');
+    expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor/episode/ep-1');
   });
 
   it('renders unknown patient when name is null', () => {

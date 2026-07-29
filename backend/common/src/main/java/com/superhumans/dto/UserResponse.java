@@ -2,8 +2,10 @@ package com.superhumans.dto;
 
 import com.superhumans.entity.UserRole;
 import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserResponse {
     Long id;
     String login;

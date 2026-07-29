@@ -1,9 +1,8 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import { useThemeMode, ThemeModeProvider } from './styles/ThemeContext';
-import './styles/animations.css';
-import { AuthProvider, useAuth } from './services/AuthContext';
 import { useEffect, useRef } from 'react';
+import { ThemeModeProvider } from './styles/ThemeContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider, useAuth } from './services/AuthContext';
 import LoginPage from './pages/LoginPage';
 import GlobalLayout from './layouts/GlobalLayout';
 import DoctorLayout from './layouts/DoctorLayout';
@@ -96,28 +95,30 @@ function AppRoutes() {
           </Guard>
         } />
 
-        <Route path="/doctor" element={
-          <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
-            <DoctorLayout />
-          </Guard>
-        }>
-          <Route index element={<DashboardPage />} />
-          <Route path="department" element={
-            <Guard roles={['HEAD_OF_DEPARTMENT']}>
-              <DepartmentDashboardPage />
+        <Route path="/prescriptions/icu">
+          <Route path="doctor" element={
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+              <DoctorLayout />
             </Guard>
-          } />
-          <Route path="create-card" element={<CreateCardPage />} />
-          <Route path="episode/:episodeId" element={<PatientDayPage />} />
-        </Route>
+          }>
+            <Route index element={<DashboardPage />} />
+            <Route path="department" element={
+              <Guard roles={['HEAD_OF_DEPARTMENT']}>
+                <DepartmentDashboardPage />
+              </Guard>
+            } />
+            <Route path="create-card" element={<CreateCardPage />} />
+            <Route path="episode/:episodeId" element={<PatientDayPage />} />
+          </Route>
 
-        <Route path="/nurse" element={
-          <Guard roles={['NURSE']}>
-            <NurseLayout />
-          </Guard>
-        }>
-          <Route index element={<NurseDashboardPage />} />
-          <Route path="episode/:episodeId" element={<PatientDayPage />} />
+          <Route path="nurse" element={
+            <Guard roles={['NURSE']}>
+              <NurseLayout />
+            </Guard>
+          }>
+            <Route index element={<NurseDashboardPage />} />
+            <Route path="episode/:episodeId" element={<PatientDayPage />} />
+          </Route>
         </Route>
 
         <Route path="/prescriptions">
@@ -160,16 +161,14 @@ function AppRoutes() {
 }
 
 function ThemedApp() {
-  const { theme } = useThemeMode();
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <TooltipProvider>
           <AppRoutes />
-        </AuthProvider>
-      </BrowserRouter>
-    </ThemeProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

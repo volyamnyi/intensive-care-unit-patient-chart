@@ -32,6 +32,6 @@ test.describe('Login', () => {
 
   test('login page has correct title', async ({ page }) => {
     await page.goto('/login');
-    await expect(page).toHaveTitle('ВАІТ — Вхід');
+    await expect(page).toHaveTitle('Вхід — Superhumans Lviv');
   });
 });

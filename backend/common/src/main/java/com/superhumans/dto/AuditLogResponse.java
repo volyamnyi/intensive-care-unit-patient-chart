@@ -1,20 +1,23 @@
 package com.superhumans.dto;
 
 import lombok.*;
+import lombok.experimental.FieldDefaults;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuditLogResponse {
-    private UUID id;
-    private LocalDateTime timestamp;
-    private Long userId;
-    private String entity;
-    private UUID entityId;
-    private String action;
-    private String oldValue;
-    private String newValue;
-    private String correlationId;
-    private String ipAddress;
-    private String userRole;
+    UUID id;
+    LocalDateTime timestamp;
+    Long userId;
+    String entity;
+    UUID entityId;
+    String action;
+    String oldValue;
+    String newValue;
+    String correlationId;
+    String ipAddress;
+    String userRole;
 }

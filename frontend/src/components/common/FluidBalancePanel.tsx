@@ -1,4 +1,8 @@
-import { Box, Typography, Button, Paper, useTheme, Divider, Chip } from '@mui/material';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useThemeMode } from '../../styles/ThemeContext';
+import { cn } from '@/lib/utils';
 import type { FluidBalanceItem } from '../../types';
 
 const INTAKE_LABELS: Record<string, string> = {
@@ -27,8 +31,8 @@ interface FluidBalancePanelProps {
 }
 
 export default function FluidBalancePanel({ items, onRecalculate, loading }: FluidBalancePanelProps) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { mode } = useThemeMode();
+  const isDark = mode === 'dark';
   const totalIntake = items.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = items.reduce((s, i) => s + (i.output || 0), 0);
   const dailyBalance = totalIntake - totalOutput;
@@ -40,62 +44,68 @@ export default function FluidBalancePanel({ items, onRecalculate, loading }: Flu
   const renderCategoryList = (map: Record<string, number> | undefined, labels: Record<string, string>) => {
     if (!map) return null;
     const entries = Object.entries(map).filter(([, v]) => v > 0);
-    if (entries.length === 0) return <Typography variant="caption" color="text.secondary">—</Typography>;
+    if (entries.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
     return entries.map(([key, val]) => (
-      <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, py: 0.3 }}>
-        <Typography variant="caption">{labels[key] || key}</Typography>
-        <Typography variant="caption" sx={{ fontWeight: 600 }}>{val} ml</Typography>
-      </Box>
+      <div key={key} className="flex justify-between text-xs py-0.3">
+        <span className="text-xs">{labels[key] || key}</span>
+        <span className="text-xs font-semibold">{val} ml</span>
+      </div>
     ));
   };
 
   return (
-    <Paper sx={{
-      p: 2.5, mb: 2, bgcolor: isDark ? '#141414' : '#FFFFFF',
-      border: `1px solid ${isDark ? '#2A2A2A' : '#E8E6E1'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)',
-    }}>
-      <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', mb: 2 }}>
+    <div
+      className={cn(
+        'rounded-xl border bg-card text-card-foreground shadow-sm p-2.5 mb-2'
+      )}
+      style={{
+        borderColor: isDark ? '#2A2A2A' : '#E8E6E1',
+        backgroundColor: isDark ? '#141414' : '#FFFFFF',
+        boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)',
+      }}
+    >
+      <h6 className="font-rubik mb-2 text-base font-medium">
         Водний баланс
-        <Chip label="Auto" size="small" color="info" sx={{ ml: 1, fontSize: 9, fontWeight: 700, height: 18 }} />
-      </Typography>
+        <Badge variant="outline" className="ml-1 text-[9px] font-bold h-[18px]">Auto</Badge>
+      </h6>
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+      <div className="flex flex-wrap gap-2">
         {/* Intake breakdown */}
-        <Box sx={{ flex: 1, minWidth: 180 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13, mb: 0.5, color: '#4CAF50' }}>
+        <div className="flex-1 min-w-[180px]">
+          <p className="font-bold text-xs mb-0.5" style={{ color: '#4CAF50' }}>
             Надходження — {totalIntake} ml
-          </Typography>
+          </p>
           {intakeByCategory && renderCategoryList(intakeByCategory, INTAKE_LABELS)}
-        </Box>
+        </div>
 
         {/* Output breakdown */}
-        <Box sx={{ flex: 1, minWidth: 180 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13, mb: 0.5, color: '#FF9100' }}>
+        <div className="flex-1 min-w-[180px]">
+          <p className="font-bold text-xs mb-0.5" style={{ color: '#FF9100' }}>
             Виведення — {totalOutput} ml
-          </Typography>
+          </p>
           {outputByCategory && renderCategoryList(outputByCategory, OUTPUT_LABELS)}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
-      <Divider sx={{ my: 1.5 }} />
+      <Separator className="my-1.5" />
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-        <Typography variant="body2" color="text.secondary">Денний баланс</Typography>
-        <Typography sx={{ fontWeight: 700 }} color={dailyBalance < 0 ? '#FF5252' : '#4CAF50'}>
+      <div className="flex justify-between mb-0.5">
+        <span className="text-sm text-muted-foreground">Денний баланс</span>
+        <span className="font-bold" style={{ color: dailyBalance < 0 ? '#FF5252' : '#4CAF50' }}>
           {dailyBalance >= 0 ? '+' : ''}{dailyBalance} ml
-        </Typography>
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography variant="body2" color="text.secondary">Кумулятивний баланс</Typography>
-        <Typography sx={{ fontWeight: 700 }} color={cumulativeBalance < 0 ? '#FF5252' : '#4CAF50'}>
+        </span>
+      </div>
+      <div className="flex justify-between mb-1.5">
+        <span className="text-sm text-muted-foreground">Кумулятивний баланс</span>
+        <span className="font-bold" style={{ color: cumulativeBalance < 0 ? '#FF5252' : '#4CAF50' }}>
           {cumulativeBalance >= 0 ? '+' : ''}{cumulativeBalance} ml
-        </Typography>
-      </Box>
+        </span>
+      </div>
       {onRecalculate && (
-        <Button size="small" variant="outlined" onClick={onRecalculate} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={onRecalculate} disabled={loading}>
           {loading ? 'Розрахунок...' : 'Перерахувати'}
         </Button>
       )}
-    </Paper>
+    </div>
   );
 }

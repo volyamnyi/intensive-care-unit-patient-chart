@@ -14,12 +14,12 @@ test.describe('Doctor Prescriptions', () => {
 
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
-    await page.getByLabel('Препарат').fill('Dopamine');
-    await page.getByLabel('Доза').fill('200');
-    await page.getByLabel('Од.').fill('mcg');
-    await page.getByLabel('Шлях').fill('IV');
-    await page.getByLabel('Частота').fill('stat');
-    await page.getByLabel('Початок').fill(futureStartTime());
+    await page.getByPlaceholder('Препарат').fill('Dopamine');
+    await page.getByPlaceholder('Доза').fill('200');
+    await page.getByPlaceholder('Од.').fill('mcg');
+    await page.getByPlaceholder('Шлях').fill('IV');
+    await page.getByPlaceholder('Частота').fill('stat');
+    await page.locator('input[type="datetime-local"]').first().fill(futureStartTime());
 
     await page.getByRole('button', { name: 'Створити' }).click();
 
@@ -31,12 +31,12 @@ test.describe('Doctor Prescriptions', () => {
 
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
-    await page.getByLabel('Препарат').fill('Norepinephrine');
-    await page.getByLabel('Доза').fill('4');
-    await page.getByLabel('Од.').fill('mcg');
-    await page.getByLabel('Шлях').fill('IV');
-    await page.getByLabel('Частота').fill('stat');
-    await page.getByLabel('Початок').fill(futureStartTime());
+    await page.getByPlaceholder('Препарат').fill('Norepinephrine');
+    await page.getByPlaceholder('Доза').fill('4');
+    await page.getByPlaceholder('Од.').fill('mcg');
+    await page.getByPlaceholder('Шлях').fill('IV');
+    await page.getByPlaceholder('Частота').fill('stat');
+    await page.locator('input[type="datetime-local"]').first().fill(futureStartTime());
 
     await page.getByRole('button', { name: 'Створити' }).click();
 

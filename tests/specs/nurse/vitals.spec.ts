@@ -10,11 +10,11 @@ test.describe('Nurse Vitals & Losses', () => {
   test('nurse edits a loss cell inline', async ({ page }) => {
     await page.goto('/nurse/episode/a3333333-3333-3333-3333-333333333333');
 
-    const input = page.getByLabel('Сеча 1:00').locator('input');
+    const input = page.getByLabel('Сеча 1:00');
     await input.click();
     await input.fill('250');
     await input.press('Enter');
 
-    await expect(page.getByLabel('Сеча 1:00').locator('input')).toHaveValue('250', { timeout: 10000 });
+    await expect(page.getByLabel('Сеча 1:00')).toHaveValue('250', { timeout: 10000 });
   });
 });

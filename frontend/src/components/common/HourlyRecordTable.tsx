@@ -1,4 +1,4 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, useTheme } from '@mui/material';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { HourlyRecord } from '../../types';
 
 interface HourlyRecordTableProps {
@@ -9,8 +9,6 @@ interface HourlyRecordTableProps {
 function medDayPos(h: number): number { return h < 8 ? h + 24 : h; }
 
 export default function HourlyRecordTable({ records, hours }: HourlyRecordTableProps) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
   const clockHour = new Date().getHours();
   const getRec = (hour: number) => {
     return records.find((r) => {
@@ -20,35 +18,30 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
   };
 
   return (
-    <TableContainer component={Paper} sx={{ border: `1px solid ${isDark ? '#2A2A2A' : '#D0CEC9'}`, boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.04)', overflowX: 'auto' }}>
-      <Table size="small" sx={{ minWidth: 600 }}>
-        <TableHead>
+    <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell>{'Година'}</TableCell>
-            <TableCell>{'АТ сист.'}</TableCell>
-            <TableCell>{'АТ діас.'}</TableCell>
-            <TableCell>{'ЧСС'}</TableCell>
-            <TableCell>{'SpO₂'}</TableCell>
-            <TableCell>{'Темп.'}</TableCell>
-            <TableCell>{'ЦВТ'}</TableCell>
-            <TableCell>{'ЧД'}</TableCell>
+            <TableHead className="font-rubik font-semibold">Година</TableHead>
+            <TableHead className="font-rubik font-semibold">АТ сист.</TableHead>
+            <TableHead className="font-rubik font-semibold">АТ діас.</TableHead>
+            <TableHead className="font-rubik font-semibold">ЧСС</TableHead>
+            <TableHead className="font-rubik font-semibold">SpO₂</TableHead>
+            <TableHead className="font-rubik font-semibold">Темп.</TableHead>
+            <TableHead className="font-rubik font-semibold">ЦВТ</TableHead>
+            <TableHead className="font-rubik font-semibold">ЧД</TableHead>
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
           {hours.map((h) => {
             const r = getRec(h);
             const isPast = medDayPos(h) < medDayPos(clockHour);
-            let bg: string;
-            if (isPast && r) {
-              bg = isDark ? '#1A3A2A' : '#E8F5E9';
-            } else if (isPast && !r) {
-              bg = isDark ? '#3A1A1A' : '#FFEBEE';
-            } else {
-              bg = 'inherit';
-            }
+            const bg = isPast && r ? 'bg-success/10 dark:bg-success/20'
+              : isPast && !r ? 'bg-destructive/10 dark:bg-destructive/20'
+              : '';
             return (
-              <TableRow key={h} sx={{ bgcolor: bg }}>
-                <TableCell sx={{ fontWeight: 600 }}>{h}:00</TableCell>
+              <TableRow key={h} className={bg}>
+                <TableCell className="font-semibold">{h}:00</TableCell>
                 <TableCell>{r?.systolicBP ?? '—'}</TableCell>
                 <TableCell>{r?.diastolicBP ?? '—'}</TableCell>
                 <TableCell>{r?.heartRate ?? '—'}</TableCell>
@@ -61,6 +54,6 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
           })}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }

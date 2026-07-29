@@ -77,12 +77,8 @@ vi.mock('../pages/LoginPage', () => ({
   default: () => <div>Login Page</div>,
 }));
 
-vi.mock('../layouts/DoctorLayout', () => ({
-  default: () => <div>Doctor Layout</div>,
-}));
-
-vi.mock('../layouts/NurseLayout', () => ({
-  default: () => <div>Nurse Layout</div>,
+vi.mock('../pages/AppSelectorPage', () => ({
+  default: () => <div>App Selector</div>,
 }));
 
 import { Outlet } from 'react-router-dom';
@@ -147,11 +143,11 @@ describe('App', () => {
     });
   });
 
-  it('renders doctor layout for DOCTOR user at /doctor', async () => {
-    window.history.pushState({}, '', '/doctor');
+  it('renders global layout for DOCTOR user at /prescriptions/icu/doctor', async () => {
+    window.history.pushState({}, '', '/prescriptions/icu/doctor');
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByText('Doctor Layout')).toBeInTheDocument();
+      expect(screen.getByText('Global Layout')).toBeInTheDocument();
     });
   });
 
@@ -164,13 +160,13 @@ describe('App', () => {
     });
   });
 
-  it('renders nurse dashboard for NURSE user at /nurse', async () => {
+  it('renders nurse dashboard for NURSE user at /prescriptions/icu/nurse', async () => {
     mockUser = { id: 2, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE' };
     mockHasRole = (...roles: string[]) => roles.includes('NURSE');
-    window.history.pushState({}, '', '/nurse');
+    window.history.pushState({}, '', '/prescriptions/icu/nurse');
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByText('Nurse Layout')).toBeInTheDocument();
+      expect(screen.getByText('Global Layout')).toBeInTheDocument();
     });
   });
 
@@ -187,11 +183,10 @@ describe('App', () => {
   it('redirects to login when accessing protected route unauthenticated', async () => {
     mockIsAuthenticated = false;
     mockUser = null;
-    window.history.pushState({}, '', '/doctor');
+    window.history.pushState({}, '', '/prescriptions/icu/doctor');
     render(<App />);
-    // Should not render doctor - redirect to login
     await waitFor(() => {
-      expect(screen.queryByText('Doctor Layout')).not.toBeInTheDocument();
+      expect(screen.queryByText('Global Layout')).not.toBeInTheDocument();
     });
   });
 });

@@ -1,4 +1,5 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Typography } from '@mui/material';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AuditLog } from '../../types';
 
 interface AuditLogTableProps {
@@ -6,62 +7,60 @@ interface AuditLogTableProps {
   loading?: boolean;
 }
 
-const actionColors: Record<string, 'default' | 'success' | 'error' | 'info' | 'warning'> = {
-  CREATE: 'success',
-  UPDATE: 'info',
-  DELETE: 'error',
-  ACTION: 'warning',
+const actionVariantMap: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'> = {
+  CREATE: 'default',
+  UPDATE: 'secondary',
+  DELETE: 'destructive',
+  ACTION: 'outline',
 };
 
 export default function AuditLogTable({ logs, loading }: AuditLogTableProps) {
   if (loading) {
-    return <Typography color="text.secondary">Завантаження...</Typography>;
+    return <p className="text-muted-foreground font-mulish">Завантаження...</p>;
   }
 
   if (logs.length === 0) {
-    return <Typography color="text.secondary">Немає записів аудиту</Typography>;
+    return <p className="text-muted-foreground font-mulish">Немає записів аудиту</p>;
   }
 
   return (
-    <TableContainer sx={{ overflowX: 'auto' }}>
-      <Table size="small" sx={{ minWidth: 600 }}>
-        <TableHead>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell>Час</TableCell>
-            <TableCell>Користувач</TableCell>
-            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Сутність</TableCell>
-            <TableCell>Дія</TableCell>
-            <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Зміни</TableCell>
+            <TableHead>Час</TableHead>
+            <TableHead>Користувач</TableHead>
+            <TableHead className="hidden sm:table-cell">Сутність</TableHead>
+            <TableHead>Дія</TableHead>
+            <TableHead className="hidden md:table-cell">Зміни</TableHead>
           </TableRow>
-        </TableHead>
+        </TableHeader>
         <TableBody>
           {logs.map((log) => (
             <TableRow key={log.id}>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>
+              <TableCell className="whitespace-nowrap">
                 {new Date(log.timestamp).toLocaleString('uk-UA')}
               </TableCell>
               <TableCell>{log.userId ?? '-'}</TableCell>
-              <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+              <TableCell className="hidden sm:table-cell">
                 {log.entity}
-                {log.entityId && <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>#{log.entityId.slice(0, 8)}</Typography>}
+                {log.entityId && <span className="ml-0.5 text-xs text-muted-foreground font-mulish">#{log.entityId.slice(0, 8)}</span>}
               </TableCell>
               <TableCell>
-                <Chip
-                  label={log.action}
-                  color={actionColors[log.action] || 'default'}
-                  size="small"
-                />
+                <Badge variant={actionVariantMap[log.action] || 'default'}>
+                  {log.action}
+                </Badge>
               </TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
+              <TableCell className="hidden md:table-cell">
+                <span className="whitespace-pre-wrap text-xs text-muted-foreground font-mulish">
                   {log.oldValue && `- ${log.oldValue}`}
                   {log.newValue && `\n+ ${log.newValue}`}
-                </Typography>
+                </span>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,15 +26,16 @@ import lombok.experimental.FieldDefaults;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class SecurityConfig {
 
-    JwtAuthenticationFilter jwtAuthFilter;
-
-    private static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR", "ADJACENT_SPECIALIST"};
-    private static final String[] PRESCRIBER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
-    private static final String[] SIGNER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
-    private static final String[] EXECUTOR_ROLES = {"NURSE", "HEAD_OF_DEPARTMENT"};
+    final JwtAuthenticationFilter jwtAuthFilter;
+    @Value("${server.ssl.enabled:false}")
+    boolean sslEnabled;
+    static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR", "ADJACENT_SPECIALIST"};
+    static final String[] PRESCRIBER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
+    static final String[] SIGNER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
+    static final String[] EXECUTOR_ROLES = {"NURSE", "HEAD_OF_DEPARTMENT"};
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -52,8 +54,12 @@ public class SecurityConfig {
                         response.getWriter().write("{\"error\":\"Forbidden\"}");
                     }))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .requiresChannel(channel -> channel
-                        .anyRequest().requiresSecure())
+                .requiresChannel(channel -> {
+                    if (sslEnabled) {
+                        channel.anyRequest().requiresSecure();
+                    }
+                })
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()

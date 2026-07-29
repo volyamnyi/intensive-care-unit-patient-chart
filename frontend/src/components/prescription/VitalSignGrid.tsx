@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
-import {
-  Box, Typography, IconButton, Paper, Tooltip, CircularProgress,
-} from '@mui/material';
-import { ArrowBackIosNew, ArrowForwardIos } from '@mui/icons-material';
+import { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import type { VitalSignEntry } from '../../types';
 
 const PERIODS = ['morning', 'day', 'evening', 'night'] as const;
@@ -48,7 +48,7 @@ interface VitalSignGridProps {
 
 function entryValue(entry: VitalSignEntry | undefined, key: string): string {
   if (!entry) return '';
-  const v = (entry as Record<string, unknown>)[key];
+  const v = (entry as unknown as Record<string, unknown>)[key];
   if (v === null || v === undefined) return '';
   return String(v);
 }
@@ -97,77 +97,61 @@ export default function VitalSignGrid({
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Paper sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <IconButton size="small" onClick={shiftLeft} disabled={viewStart === 0}>
-          <ArrowBackIosNew fontSize="small" />
-        </IconButton>
-        <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, textAlign: 'center' }}>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3 text-card-foreground shadow-sm">
+        <Button variant="ghost" size="icon-sm" onClick={shiftLeft} disabled={viewStart === 0}>
+          <ChevronLeft className="size-4" />
+        </Button>
+        <span className="min-w-[120px] text-center text-sm font-semibold font-rubik">
           {visibleDays.length > 0
             ? `${formatDate(visibleDays[0].dayDate)} — ${formatDate(visibleDays[visibleDays.length - 1].dayDate)}`
             : 'Немає даних'}
-        </Typography>
-        <IconButton size="small" onClick={shiftRight} disabled={viewStart + daysToShow >= days.length}>
-          <ArrowForwardIos fontSize="small" />
-        </IconButton>
-      </Paper>
+        </span>
+        <Button variant="ghost" size="icon-sm" onClick={shiftRight} disabled={viewStart + daysToShow >= days.length}>
+          <ChevronRight className="size-4" />
+        </Button>
+      </div>
 
       {loading ? (
-        <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />
+        <Loader2 className="mx-auto mt-4 size-6 animate-spin text-primary" />
       ) : days.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary">Немає даних життєвих показників</Typography>
-        </Paper>
+        <div className="rounded-xl border bg-card p-4 text-center text-card-foreground shadow-sm">
+          <p className="text-muted-foreground font-mulish">Немає даних життєвих показників</p>
+        </div>
       ) : (
-        <Paper sx={{ overflow: 'auto' }}>
-          <Box component="table" sx={{
-            borderCollapse: 'collapse', minWidth: 200 + visibleDays.length * 300,
-            '& th, & td': { border: '1px solid', borderColor: 'divider', p: 0 },
-          }}>
-            <Box component="thead">
-              <Box component="tr">
-                <Box component="th" sx={{
-                  position: 'sticky', left: 0, bgcolor: 'background.paper',
-                  zIndex: 2, minWidth: 180, p: '6px 8px !important',
-                }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700 }}>Показник</Typography>
-                </Box>
+        <div className="overflow-auto rounded-xl border bg-card shadow-sm">
+          <table className="border-collapse" style={{ minWidth: 200 + visibleDays.length * 300 }}>
+            <thead>
+              <tr>
+                <th className="sticky left-0 z-[2] min-w-[180px] bg-card p-[6px_8px] text-left">
+                  <span className="text-xs font-bold font-rubik">Показник</span>
+                </th>
                 {visibleDays.map(day => (
-                  <Box component="th" key={day.id} colSpan={4} sx={{ p: '4px 2px !important', bgcolor: 'grey.100' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                      {formatDate(day.dayDate)}
-                    </Typography>
-                  </Box>
+                  <th key={day.id} colSpan={4} className="bg-muted p-[4px_2px] text-center">
+                    <span className="text-xs font-bold font-rubik">{formatDate(day.dayDate)}</span>
+                  </th>
                 ))}
-              </Box>
-              <Box component="tr">
-                <Box component="th" sx={{ position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }} />
+              </tr>
+              <tr>
+                <th className="sticky left-0 z-[2] bg-card" />
                 {visibleDays.map(day =>
                   PERIODS.map(p => (
-                    <Box component="th" key={`${day.id}-${p}`}
-                      sx={{ width: 68, fontSize: 10, color: 'text.secondary', p: '2px !important' }}>
+                    <th key={`${day.id}-${p}`} className="w-[68px] p-[2px] text-[10px] text-muted-foreground font-mulish">
                       {PERIOD_LABELS[p]}
-                    </Box>
+                    </th>
                   ))
                 )}
-              </Box>
-            </Box>
-            <Box component="tbody">
+              </tr>
+            </thead>
+            <tbody>
               {VITAL_PARAMS.map(param => (
-                <Box component="tr" key={param.key}>
-                  <Box component="td" sx={{
-                    position: 'sticky', left: 0, bgcolor: 'background.paper',
-                    zIndex: 1, p: '4px 8px !important', minWidth: 180,
-                  }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {param.label}
-                    </Typography>
+                <tr key={param.key}>
+                  <td className="sticky left-0 z-[1] min-w-[180px] bg-card p-[4px_8px]">
+                    <span className="text-sm font-semibold font-rubik">{param.label}</span>
                     {param.unit && (
-                      <Typography variant="caption" color="text.secondary">
-                        {param.unit}
-                      </Typography>
+                      <span className="block text-xs text-muted-foreground font-mulish">{param.unit}</span>
                     )}
-                  </Box>
+                  </td>
 
                   {visibleDays.map(day =>
                     PERIODS.map(period => {
@@ -182,45 +166,56 @@ export default function VitalSignGrid({
                       };
 
                       return (
-                        <Box component="td" key={cellKey} sx={{
-                          width: 68, height: 32, cursor: canEdit && isDoctor ? 'pointer' : 'default',
-                          bgcolor: '#fff',
-                          textAlign: 'center', verticalAlign: 'middle',
-                          position: 'relative',
-                        }} onClick={onClick}>
+                        <td
+                          key={cellKey}
+                          className={cn(
+                            'relative h-8 w-[68px] bg-white text-center align-middle',
+                            canEdit && isDoctor ? 'cursor-pointer' : 'cursor-default',
+                          )}
+                          onClick={onClick}
+                        >
                           {isEditing ? (
-                            <Box component="form" onSubmit={e => { e.preventDefault(); commitEdit(day.id, period, param.key); }}
-                              sx={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex' }}>
-                              <input autoFocus value={editingValue}
+                            <form
+                              onSubmit={e => { e.preventDefault(); commitEdit(day.id, period, param.key); }}
+                              className="absolute inset-0 z-[3] flex"
+                            >
+                              <input
+                                autoFocus
+                                value={editingValue}
                                 onChange={e => setEditingValue(e.target.value)}
                                 onBlur={() => commitEdit(day.id, period, param.key)}
-                                style={{
-                                  width: '100%', border: '2px solid #1976d2',
-                                  textAlign: 'center', fontSize: 11, padding: 0, outline: 'none',
-                                }} />
-                            </Box>
+                                className="w-full border-2 border-[#1976d2] p-0 text-center text-[11px] outline-none"
+                              />
+                            </form>
                           ) : (
-                            <Tooltip title={entry ? `${PERIOD_FULL[entry.period]}: ${value || '—'}` : '—'} arrow>
-                              <Typography variant="caption" sx={{
-                                fontSize: 10, lineHeight: '32px',
-                                color: value ? '#1565c0' : 'text.secondary',
-                                fontWeight: value ? 600 : 400,
-                                userSelect: 'none',
-                              }}>
-                                {value || ''}
-                              </Typography>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <span
+                                  className={cn(
+                                    'inline-block leading-[32px] select-none text-[10px]',
+                                    value ? 'font-semibold text-[#1565c0]' : 'text-muted-foreground',
+                                  )}
+                                >
+                                  {value || ''}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <span className="text-xs">
+                                  {entry ? `${PERIOD_FULL[entry.period]}: ${value || '—'}` : '—'}
+                                </span>
+                              </TooltipContent>
                             </Tooltip>
                           )}
-                        </Box>
+                        </td>
                       );
                     })
                   )}
-                </Box>
+                </tr>
               ))}
-            </Box>
-          </Box>
-        </Paper>
+            </tbody>
+          </table>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

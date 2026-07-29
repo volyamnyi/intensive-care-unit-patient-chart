@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import {
-  Box, Paper, Typography, Grid, TextField, Button, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow, Chip, IconButton, useTheme,
-} from '@mui/material';
-import { CheckCircle } from '@mui/icons-material';
+import { CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useThemeMode } from '../../styles/ThemeContext';
+
 import type { MedicalOrder, MedicalOrderCreateRequest } from '../../types';
 
 interface MedicalOrdersPanelProps {
@@ -29,7 +31,7 @@ const emptyOrder: MedicalOrderCreateRequest = {
 export default function MedicalOrdersPanel({
   orders, onCreateOrder, onExecuteOrder, onCancelOrder, canCreate, canExecute,
 }: MedicalOrdersPanelProps) {
-  const theme = useTheme();
+  useThemeMode();
   const statusLabels: Record<string, string> = {
     DRAFT: 'Чернетка',
     ACTIVE: 'Активний',
@@ -47,121 +49,106 @@ export default function MedicalOrdersPanel({
     setShowForm(false);
   };
 
+  const badgeVariant = (status: string) => {
+    if (status === 'ACTIVE') return 'default' as const;
+    if (status === 'CANCELLED') return 'secondary' as const;
+    return 'outline' as const;
+  };
+
   return (
     <>
       {canCreate && (
-        <Box sx={{ mb: 2 }}>
+        <div className="mb-2">
           {showForm ? (
-            <Paper sx={{ p: 2, mb: 2 }}>
-              <Typography variant="subtitle1" sx={{ fontFamily: '"Rubik", sans-serif', mb: 1 }}>
+            <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-2 mb-2">
+              <p className="font-rubik mb-1 text-sm font-medium">
                 {'Нове призначення'}
-              </Typography>
-              <Grid container spacing={1} sx={{ alignItems: 'center' }}>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <TextField fullWidth size="small" label={'Категорія'}
-                    value={newOrder.category}
-                    onChange={(e) => setNewOrder({ ...newOrder, category: e.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <TextField fullWidth size="small" label={'Препарат'}
-                    value={newOrder.drugName}
-                    onChange={(e) => setNewOrder({ ...newOrder, drugName: e.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 4, sm: 2 }}>
-                  <TextField fullWidth size="small" label={'Доза'}
-                    value={newOrder.dose}
-                    onChange={(e) => setNewOrder({ ...newOrder, dose: e.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 4, sm: 2 }}>
-                  <TextField fullWidth size="small" label={'Од.'}
-                    value={newOrder.unit}
-                    onChange={(e) => setNewOrder({ ...newOrder, unit: e.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 4, sm: 2 }}>
-                  <TextField fullWidth size="small" label={'Шлях'}
-                    value={newOrder.route}
-                    onChange={(e) => setNewOrder({ ...newOrder, route: e.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <TextField fullWidth size="small" label={'Частота'}
-                    value={newOrder.frequency}
-                    onChange={(e) => setNewOrder({ ...newOrder, frequency: e.target.value })} />
-                </Grid>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <TextField fullWidth size="small" type="datetime-local" label={'Початок'}
-                    value={newOrder.startTime}
-                    onChange={(e) => setNewOrder({ ...newOrder, startTime: e.target.value })}
-                    slotProps={{ inputLabel: { shrink: true } }} />
-                </Grid>
-                <Grid size={{ xs: 6, sm: 3 }}>
-                  <TextField fullWidth size="small" type="datetime-local" label={'Кінець'}
-                    value={newOrder.endTime}
-                    onChange={(e) => setNewOrder({ ...newOrder, endTime: e.target.value })}
-                    slotProps={{ inputLabel: { shrink: true } }} />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 3 }}>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button variant="contained" size="small" onClick={handleCreate}>
-                      {'Створити'}
-                    </Button>
-                    <Button size="small" onClick={() => setShowForm(false)}>
-                      {'Скасувати'}
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Paper>
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 items-center">
+                <Input placeholder="Категорія"
+                  value={newOrder.category}
+                  onChange={(e) => setNewOrder({ ...newOrder, category: e.target.value })} />
+                <Input placeholder="Препарат"
+                  value={newOrder.drugName}
+                  onChange={(e) => setNewOrder({ ...newOrder, drugName: e.target.value })} />
+                <Input placeholder="Доза"
+                  value={newOrder.dose}
+                  onChange={(e) => setNewOrder({ ...newOrder, dose: e.target.value })} />
+                <Input placeholder="Од."
+                  value={newOrder.unit}
+                  onChange={(e) => setNewOrder({ ...newOrder, unit: e.target.value })} />
+                <Input placeholder="Шлях"
+                  value={newOrder.route}
+                  onChange={(e) => setNewOrder({ ...newOrder, route: e.target.value })} />
+                <Input placeholder="Частота"
+                  value={newOrder.frequency}
+                  onChange={(e) => setNewOrder({ ...newOrder, frequency: e.target.value })} />
+                <Input type="datetime-local" placeholder="Початок"
+                  value={newOrder.startTime}
+                  onChange={(e) => setNewOrder({ ...newOrder, startTime: e.target.value })} />
+                <Input type="datetime-local" placeholder="Кінець"
+                  value={newOrder.endTime}
+                  onChange={(e) => setNewOrder({ ...newOrder, endTime: e.target.value })} />
+                <div className="col-span-full flex gap-1">
+                  <Button variant="default" size="sm" onClick={handleCreate}>
+                    {'Створити'}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowForm(false)}>
+                    {'Скасувати'}
+                  </Button>
+                </div>
+              </div>
+            </div>
           ) : (
-            <Button variant="outlined" size="small" onClick={() => setShowForm(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
               {'+ Нове призначення'}
             </Button>
           )}
-        </Box>
+        </div>
       )}
 
-      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-        <Table size="small" sx={{ minWidth: 500 }}>
-          <TableHead>
+      <div className="overflow-x-auto rounded-xl border">
+        <Table className="min-w-[500px]">
+          <TableHeader>
             <TableRow>
-              <TableCell>{'Препарат'}</TableCell>
-              <TableCell>{'Доза'}</TableCell>
-              <TableCell>{'Шлях'}</TableCell>
-              <TableCell>{'Статус'}</TableCell>
-              {showActions && <TableCell>{''}</TableCell>}
+              <TableHead>{'Препарат'}</TableHead>
+              <TableHead>{'Доза'}</TableHead>
+              <TableHead>{'Шлях'}</TableHead>
+              <TableHead>{'Статус'}</TableHead>
+              {showActions && <TableHead>{''}</TableHead>}
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showActions ? 5 : 4} align="center" sx={{ py: 3, color: theme.palette.text.secondary }}>
+                <TableCell colSpan={showActions ? 5 : 4} align="center" className="py-3 text-muted-foreground">
                   {'Немає призначень'}
                 </TableCell>
               </TableRow>
             ) : (
               orders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell sx={{ fontWeight: 600 }}>{order.drugName}</TableCell>
+                  <TableCell className="font-semibold">{order.drugName}</TableCell>
                   <TableCell>{order.dose} {order.unit}</TableCell>
                   <TableCell>{order.route}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={statusLabels[order.status] || order.status}
-                      size="small"
-                      color={order.status === 'ACTIVE' ? 'success' : order.status === 'CANCELLED' ? 'default' : 'info'}
-                    />
+                    <Badge variant={badgeVariant(order.status)}>
+                      {statusLabels[order.status] || order.status}
+                    </Badge>
                   </TableCell>
                   {showActions && (
                     <TableCell>
                       {order.status === 'ACTIVE' && canExecute && onExecuteOrder && (
-                        <IconButton
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onExecuteOrder(order.id)}
-                          sx={{ color: theme.palette.secondary.main, '&:hover': { bgcolor: theme.palette.action.hover } }}
                         >
-                          <CheckCircle />
-                        </IconButton>
+                          <CheckCircle2 className="size-4" />
+                        </Button>
                       )}
                       {order.status === 'ACTIVE' && !canExecute && onCancelOrder && (
-                        <Button size="small" color="error" onClick={() => onCancelOrder(order.id)}>
+                        <Button size="sm" variant="destructive" onClick={() => onCancelOrder(order.id)}>
                           {'Скасувати'}
                         </Button>
                       )}
@@ -172,7 +159,7 @@ export default function MedicalOrdersPanel({
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </div>
     </>
   );
 }

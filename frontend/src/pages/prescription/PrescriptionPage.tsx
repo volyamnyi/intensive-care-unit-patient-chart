@@ -1,14 +1,29 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Loader2, X, ExternalLink, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Box, Typography, Button, CircularProgress, Alert, useTheme,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TableSortLabel, Paper, ToggleButtonGroup, ToggleButton, TextField, Link,
-  Drawer, IconButton, Chip, List, ListItem, ListItemButton, ListItemText,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-} from '@mui/material';
-import { Close, Delete, Edit, OpenInNew, ArticleOutlined } from '@mui/icons-material';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { patientApi, prescriptionApi } from '../../api/endpoints';
+import { useAuth } from '../../services/AuthContext';
+import { useThemeMode } from '../../styles/ThemeContext';
 import { getErrorMessage } from '../../utils/errorMessage';
 import type { PatientDto, PrescriptionList } from '../../types';
 
@@ -23,9 +38,10 @@ interface PatientRow {
 type SortKey = 'id' | 'name' | 'room' | 'bed' | 'doctor' | 'status';
 
 export default function PrescriptionPage() {
-  const theme = useTheme();
+  useThemeMode();
   useEffect(() => { document.title = 'Призначення — Лікар'; }, []);
   const navigate = useNavigate();
+  useAuth();
 
   const [dept, setDept] = useState<Department>(
     () => (localStorage.getItem('prescDept') as Department) || 'surgery',
@@ -93,8 +109,7 @@ export default function PrescriptionPage() {
     navigate(`/prescriptions/doctor/${listId}`);
   };
 
-  const handleDeptChange = (_: unknown, val: Department | null) => {
-    if (!val) return;
+  const handleDeptChange = (val: Department) => {
     setDept(val);
     localStorage.setItem('prescDept', val);
   };
@@ -149,10 +164,10 @@ export default function PrescriptionPage() {
     return 'Завершено';
   };
 
-  const getRowStyle = (lists: PrescriptionList[]) => {
-    if (lists.length === 0) return { backgroundColor: '#FAFAD2' };
-    if (lists.every(l => l.status === 'Finished')) return { backgroundColor: 'lightgrey' };
-    return {};
+  const getRowClasses = (lists: PrescriptionList[]) => {
+    if (lists.length === 0) return 'bg-yellow-100 dark:bg-yellow-900/30';
+    if (lists.every(l => l.status === 'Finished')) return 'bg-muted/50';
+    return '';
   };
 
   const formatDate = (dateStr: string | null | undefined): string => {
@@ -201,225 +216,225 @@ export default function PrescriptionPage() {
   }, [rows, search, sortKey, sortDir]);
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary }}>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-rubik text-xl font-extrabold text-foreground">
           Листок лікарських призначень
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <ToggleButtonGroup value={dept} exclusive onChange={handleDeptChange} size="small">
-            <ToggleButton value="surgery">Хірургія</ToggleButton>
-            <ToggleButton value="rehab">Реабілітація</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-      </Box>
+        </h1>
+        <div className="flex items-center gap-1.5 rounded-lg bg-muted p-0.5">
+          <Button
+            variant={dept === 'surgery' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => handleDeptChange('surgery')}
+          >
+            Хірургія
+          </Button>
+          <Button
+            variant={dept === 'rehab' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => handleDeptChange('rehab')}
+          >
+            Реабілітація
+          </Button>
+        </div>
+      </div>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {error && (
+        <Alert variant="destructive" className="mb-2">
+          <AlertDescription>{error}</AlertDescription>
+          <Button variant="ghost" size="icon-sm" className="absolute right-2 top-2" onClick={() => setError(null)}>
+            <X className="size-4" />
+          </Button>
+        </Alert>
+      )}
 
-      <TextField
-        size="small"
+      <Input
         placeholder="Пошук пацієнта за ПІБ, ID, № картки, палатою або лікарем"
         value={search}
         onChange={e => setSearch(e.target.value)}
-        sx={{ mb: 2, maxWidth: 500 }}
+        className="mb-2 max-w-[500px]"
       />
 
       {loading ? (
-        <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />
+        <Loader2 className="mx-auto mt-4 block size-6 animate-spin text-primary" />
       ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[70px]">
+                <Button variant="ghost" className="whitespace-nowrap p-0 font-semibold" onClick={() => toggleSort('id')}>
+                  Номер {sortKey === 'id' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="whitespace-nowrap p-0 font-semibold" onClick={() => toggleSort('name')}>
+                  Пацієнт {sortKey === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[120px]">
+                <Button variant="ghost" className="whitespace-nowrap p-0 font-semibold" onClick={() => toggleSort('room')}>
+                  Палата {sortKey === 'room' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[90px]">
+                <Button variant="ghost" className="whitespace-nowrap p-0 font-semibold" onClick={() => toggleSort('bed')}>
+                  Ліжко {sortKey === 'bed' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[160px]">
+                <Button variant="ghost" className="whitespace-nowrap p-0 font-semibold" onClick={() => toggleSort('doctor')}>
+                  Лікар {sortKey === 'doctor' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[110px]">
+                <Button variant="ghost" className="whitespace-nowrap p-0 font-semibold" onClick={() => toggleSort('status')}>
+                  Статус {sortKey === 'status' && (sortDir === 'asc' ? '↑' : '↓')}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[160px]">Дії</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredRows.length === 0 ? (
               <TableRow>
-                <TableCell sx={{ width: 70 }}>
-                  <TableSortLabel active={sortKey === 'id'} direction={sortDir}
-                    onClick={() => toggleSort('id')}>
-                    Номер
-                  </TableSortLabel>
+                <TableCell colSpan={7} className="text-center">
+                  <span className="py-2 text-muted-foreground">
+                    {search ? 'Пацієнтів не знайдено' : 'Немає пацієнтів у відділенні'}
+                  </span>
                 </TableCell>
-                <TableCell>
-                  <TableSortLabel active={sortKey === 'name'} direction={sortDir}
-                    onClick={() => toggleSort('name')}>
-                    Пацієнт
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ width: 120 }}>
-                  <TableSortLabel active={sortKey === 'room'} direction={sortDir}
-                    onClick={() => toggleSort('room')}>
-                    Палата
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ width: 90 }}>
-                  <TableSortLabel active={sortKey === 'bed'} direction={sortDir}
-                    onClick={() => toggleSort('bed')}>
-                    Ліжко
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ width: 160 }}>
-                  <TableSortLabel active={sortKey === 'doctor'} direction={sortDir}
-                    onClick={() => toggleSort('doctor')}>
-                    Лікар
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ width: 110 }}>
-                  <TableSortLabel active={sortKey === 'status'} direction={sortDir}
-                    onClick={() => toggleSort('status')}>
-                    Статус
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ width: 160 }}>Дії</TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    <Typography color="text.secondary" sx={{ py: 2 }}>
-                      {search ? 'Пацієнтів не знайдено' : 'Немає пацієнтів у відділенні'}
-                    </Typography>
+            ) : (
+              filteredRows.map(row => (
+                <TableRow key={row.patient.id} className={getRowClasses(row.lists)}>
+                  <TableCell>{row.patient.id}</TableCell>
+                  <TableCell>
+                    <span className="font-semibold">{row.patient.fullName}</span>
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredRows.map(row => (
-                  <TableRow key={row.patient.id} hover sx={getRowStyle(row.lists)}>
-                    <TableCell>{row.patient.id}</TableCell>
-                    <TableCell>
-                      {row.lists.length > 0 ? (
-                        <Link
-                          component="button"
-                          variant="body2"
-                          underline="hover"
-                          sx={{ fontWeight: 600, textAlign: 'left' }}
+                  <TableCell>{row.patient.room || '—'}</TableCell>
+                  <TableCell>{row.patient.bed || '—'}</TableCell>
+                  <TableCell>{row.patient.doctorName || '—'}</TableCell>
+                  <TableCell>{getStatusText(row.lists)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-0.5">
+                      {row.lists.length > 0 && (
+                        <Button
+                          size="sm"
+                          className="rounded-full px-1.5 text-[0.8125rem] font-semibold normal-case"
+                          variant="outline"
                           onClick={() => handleOpenDrawer(row.patient, row.lists)}
                         >
-                          {row.patient.fullName}
-                        </Link>
-                      ) : (
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {row.patient.fullName}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>{row.patient.room || '—'}</TableCell>
-                    <TableCell>{row.patient.bed || '—'}</TableCell>
-                    <TableCell>{row.patient.doctorName || '—'}</TableCell>
-                    <TableCell>{getStatusText(row.lists)}</TableCell>
-                     <TableCell>
-                       <Box sx={{ display: 'flex', gap: 0.5 }}>
-                         {row.lists.length > 0 && (
-                           <Button size="small" variant="outlined"
-                             onClick={() => handleOpenDrawer(row.patient, row.lists)}>
-                             Відкрити
-                           </Button>
-                         )}
-                       </Box>
-                     </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Drawer anchor="right" open={drawerOpen} onClose={handleCloseDrawer}
-        slotProps={{ backdrop: { sx: { backgroundColor: 'rgba(0,0,0,0.15)' } } }}>
-        <Box sx={{ width: { xs: '90vw', sm: 400 }, display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2.5, borderBottom: 1, borderColor: 'divider' }}>
-            <Box>
-              <Typography variant="h6" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 700, lineHeight: 1.3 }}>
-                {drawerPatient?.fullName}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                ID: {drawerPatient?.id} · {drawerPatient?.room || '—'} · {drawerPatient?.bed || '—'}
-              </Typography>
-            </Box>
-            <IconButton onClick={handleCloseDrawer} size="small"><Close /></IconButton>
-          </Box>
-
-          <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.5 }}>
-              Листки призначень ({drawerLists.length})
-            </Typography>
-
-            {drawerLists.length === 0 ? (
-              <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-                Немає листків призначень
-              </Typography>
-            ) : (
-              <List disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {drawerLists.map(pl => (
-                  <Paper key={pl.id} variant="outlined" sx={{ borderRadius: 2 }}>
-                    <ListItem disablePadding>
-                      <ListItemButton onClick={() => handleNavigate(pl.id)} sx={{ borderRadius: 2 }}>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <ArticleOutlined sx={{ fontSize: 18, color: 'primary.main' }} />
-                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{pl.documentName}</Typography>
-                            </Box>
-                          }
-                          secondary={
-                            <Typography component="div" variant="body2">
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                <Chip
-                                  label={pl.status === 'Finished' ? 'Завершено' : 'В ході'}
-                                  size="small"
-                                  color={pl.status === 'Finished' ? 'default' : 'success'}
-                                  variant="outlined"
-                                  sx={{ height: 20, fontSize: 10 }}
-                                />
-                                <Typography variant="caption" color="text.secondary">
-                                  {formatDate(pl.updatedAt || pl.createdAt)}
-                                </Typography>
-                              </Box>
-                            </Typography>
-                          }
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                    <Box sx={{ display: 'flex', gap: 0.5, px: 1.5, pb: 1, justifyContent: 'flex-end' }}>
-                      <Button size="small" variant="text"
-                        startIcon={<OpenInNew />}
-                        onClick={() => handleNavigate(pl.id)}>
-                        Відкрити
-                      </Button>
-                      {pl.status !== 'Finished' && (
-                        <Button size="small" variant="text" color="warning"
-                          disabled={closingId === pl.id}
-                          onClick={() => handleCloseList(pl)}>
-                          {closingId === pl.id ? '...' : 'Закрити'}
+                          <FileText className="mr-1 size-4" />
+                          Відкрити
                         </Button>
                       )}
-                      <Button size="small" variant="text" color="error"
-                        disabled={deletingId === pl.id}
-                        onClick={() => { setDeleteTarget(pl); setDeleteDialogOpen(true); }}>
-                        {deletingId === pl.id ? '...' : 'Видалити'}
-                      </Button>
-                    </Box>
-                  </Paper>
-                ))}
-              </List>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
-           </Box>
-         </Box>
-       </Drawer>
+          </TableBody>
+        </Table>
+      )}
 
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Видалити листок?</DialogTitle>
+      {/* Drawer */}
+      {drawerOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/15" onClick={handleCloseDrawer} />
+          <div className="fixed right-0 top-0 z-50 flex h-full w-[90vw] flex-col border-l bg-card shadow-lg sm:w-[400px]">
+            <div className="flex items-center justify-between border-b p-2.5">
+              <div>
+                <div className="font-rubik text-base font-bold leading-tight">{drawerPatient?.fullName}</div>
+                <div className="text-xs text-muted-foreground">
+                  ID: {drawerPatient?.id} · {drawerPatient?.room || '—'} · {drawerPatient?.bed || '—'}
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleCloseDrawer}>
+                <X className="size-4" />
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-2">
+              <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.5px] text-muted-foreground">
+                Листки призначень ({drawerLists.length})
+              </div>
+
+              {drawerLists.length === 0 ? (
+                <div className="py-4 text-center text-muted-foreground">Немає листків призначень</div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {drawerLists.map(pl => (
+                    <div key={pl.id} className="rounded-xl border p-0">
+                      <button
+                        className="flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left hover:bg-muted/50"
+                        onClick={() => handleNavigate(pl.id)}
+                      >
+                        <div className="flex items-center gap-1">
+                          <FileText className="size-4 text-primary" />
+                          <span className="text-sm font-semibold">{pl.documentName}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge
+                            variant={pl.status === 'Finished' ? 'outline' : 'default'}
+                            className="h-5 px-1.5 text-[10px]"
+                          >
+                            {pl.status === 'Finished' ? 'Завершено' : 'В ході'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(pl.updatedAt || pl.createdAt)}
+                          </span>
+                        </div>
+                      </button>
+                      <div className="flex justify-end gap-0.5 px-3 pb-1">
+                        <Button size="sm" variant="ghost" onClick={() => handleNavigate(pl.id)}>
+                          <ExternalLink className="mr-1 size-3" />
+                          Відкрити
+                        </Button>
+                        {pl.status !== 'Finished' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-amber-600 hover:text-amber-700"
+                            disabled={closingId === pl.id}
+                            onClick={() => handleCloseList(pl)}
+                          >
+                            {closingId === pl.id ? '...' : 'Закрити'}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          disabled={deletingId === pl.id}
+                          onClick={() => { setDeleteTarget(pl); setDeleteDialogOpen(true); }}
+                        >
+                          {deletingId === pl.id ? '...' : 'Видалити'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
-          <DialogContentText>
-            Ви впевнені, що хочете видалити листок &laquo;{deleteTarget?.documentName}&raquo;? Цю дію не можна скасувати.
-          </DialogContentText>
+          <DialogHeader>
+            <DialogTitle>Видалити листок?</DialogTitle>
+            <DialogDescription>
+              Ви впевнені, що хочете видалити листок &laquo;{deleteTarget?.documentName}&raquo;? Цю дію не можна скасувати.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Скасувати</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm} disabled={deletingId === deleteTarget?.id}>
+              {deletingId === deleteTarget?.id ? 'Видалення...' : 'Видалити'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Скасувати</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained"
-            disabled={deletingId === deleteTarget?.id}>
-            {deletingId === deleteTarget?.id ? 'Видалення...' : 'Видалити'}
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }

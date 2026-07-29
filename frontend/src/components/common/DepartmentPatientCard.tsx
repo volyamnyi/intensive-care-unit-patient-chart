@@ -1,14 +1,28 @@
-import { Card, CardContent, Typography, Chip, Box, useTheme } from '@mui/material';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { useThemeMode } from '../../styles/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import type { DepartmentPatient } from '../../types';
 
-const statusConfig: Record<string, { label: string; color: 'default' | 'info' | 'warning' | 'success' | 'error' }> = {
-  OPEN: { label: 'Відкрито', color: 'warning' },
-  NURSE_SIGNED: { label: 'Підписано медсестрою', color: 'info' },
-  DOCTOR_SIGNED: { label: 'Підписано лікарем', color: 'success' },
-  CLOSED: { label: 'Закрито', color: 'default' },
-  REOPENED: { label: 'Відкрито повторно', color: 'warning' },
+const statusConfig: Record<string, { label: string; borderColor: string }> = {
+  OPEN: { label: 'Відкрито', borderColor: '#FF9800' },
+  NURSE_SIGNED: { label: 'Підписано медсестрою', borderColor: '#2196F3' },
+  DOCTOR_SIGNED: { label: 'Підписано лікарем', borderColor: '#4CAF50' },
+  CLOSED: { label: 'Закрито', borderColor: '#9E9E9E' },
+  REOPENED: { label: 'Відкрито повторно', borderColor: '#FF9800' },
 };
+
+function badgeVariantFor(status: string): 'default' | 'secondary' | 'destructive' | 'outline' | null {
+  const map: Record<string, 'default' | 'secondary' | 'outline'> = {
+    OPEN: 'default',
+    NURSE_SIGNED: 'secondary',
+    DOCTOR_SIGNED: 'default',
+    CLOSED: 'secondary',
+    REOPENED: 'default',
+  };
+  return map[status] || 'outline';
+}
 
 function daysSinceLabel(days: number): string {
   if (days === 0) return 'Сьогодні';
@@ -23,56 +37,55 @@ interface Props {
 
 export default function DepartmentPatientCard({ patient }: Props) {
   const navigate = useNavigate();
-  const theme = useTheme();
+  useThemeMode();
   const dayConfig = patient.latestDayStatus ? statusConfig[patient.latestDayStatus] : null;
 
   return (
     <Card
-      sx={{
-        cursor: 'pointer',
-        transition: 'box-shadow 0.2s, transform 0.2s',
-        '&:hover': {
-          boxShadow: theme.shadows[4],
-          transform: 'translateY(-2px)',
-        },
-        borderLeft: 4,
-        borderColor: dayConfig?.color === 'warning' ? theme.palette.warning.main
-          : dayConfig?.color === 'info' ? theme.palette.info.main
-          : dayConfig?.color === 'success' ? theme.palette.success.main
-          : theme.palette.grey[400],
+      className="cursor-pointer transition-shadow duration-200 hover:translate-y-[-2px]"
+      style={{
+        borderLeft: dayConfig ? `4px solid ${dayConfig.borderColor}` : undefined,
       }}
-      onClick={() => navigate('/doctor/episode/' + patient.id)}
+      onClick={() => navigate('/prescriptions/icu/doctor/episode/' + patient.id)}
     >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+      <CardContent className="p-4">
+        <div className="mb-1 flex items-start justify-between">
+          <p className="font-rubik text-sm font-bold leading-tight">
             {patient.patientName ?? 'Невідомий пацієнт'}
-          </Typography>
+          </p>
           {patient.latestDayNumber != null && (
-            <Chip label={`День ${patient.latestDayNumber}`} size="small" variant="outlined" sx={{ ml: 1, flexShrink: 0 }} />
+            <Badge variant="outline" className="ml-1 shrink-0">{`День ${patient.latestDayNumber}`}</Badge>
           )}
-        </Box>
+        </div>
 
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+        <div className="mb-1 flex flex-wrap gap-0.5">
           {patient.latestDayStatus && dayConfig && (
-            <Chip label={dayConfig.label} size="small" color={dayConfig.color} />
+            <Badge
+              variant={badgeVariantFor(patient.latestDayStatus)}
+              className={cn(
+                patient.latestDayStatus === 'OPEN' || patient.latestDayStatus === 'REOPENED' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20' : '',
+                patient.latestDayStatus === 'DOCTOR_SIGNED' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' : '',
+              )}
+            >
+              {dayConfig.label}
+            </Badge>
           )}
           {patient.ward && patient.bedNumber && (
-            <Chip label={`${patient.ward} / ${patient.bedNumber}`} size="small" variant="outlined" />
+            <Badge variant="outline">{`${patient.ward} / ${patient.bedNumber}`}</Badge>
           )}
-          <Chip label={daysSinceLabel(patient.daysSinceAdmission)} size="small" variant="outlined" />
-        </Box>
+          <Badge variant="outline">{daysSinceLabel(patient.daysSinceAdmission)}</Badge>
+        </div>
 
         {patient.admissionDiagnosis && (
-          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 0.5 }}>
+          <span className="mb-0.5 block text-xs text-muted-foreground font-mulish">
             {patient.admissionDiagnosis}
-          </Typography>
+          </span>
         )}
 
         {patient.attendingDoctorName && (
-          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block' }}>
+          <span className="block text-xs text-muted-foreground font-mulish">
             Лікар: {patient.attendingDoctorName}
-          </Typography>
+          </span>
         )}
       </CardContent>
     </Card>

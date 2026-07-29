@@ -21,7 +21,8 @@ import java.util.List;
     "spring.sql.init.mode=never",
     "app.scheduling.signing-window-start=0",
     "app.scheduling.signing-window-end=23",
-    "app.scheduling.signing-window-enabled=false"
+    "app.scheduling.signing-window-enabled=false",
+    "server.ssl.enabled=false"
 })
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test.sql")
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-prescription.sql",

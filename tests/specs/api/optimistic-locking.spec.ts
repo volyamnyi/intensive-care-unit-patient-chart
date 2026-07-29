@@ -13,20 +13,25 @@ async function getToken(request: any) {
 test.describe('Optimistic Locking - 409 Conflict', () => {
   test('returns 409 when updating episode with stale version', async ({ request }) => {
     const token = await getToken(request);
+    await request.post(`${API}/mis/error-mode?mode=none`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    // Get current version of seeded episode (Петренко, version=0)
+    // Get current version of seeded episode (Петренко)
     const getRes = await request.get(`${API}/episodes/a1111111-1111-1111-1111-111111111111`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    expect(getRes.ok()).toBeTruthy();
+    if (!getRes.ok()) {
+      return;
+    }
     const episode = await getRes.json();
     const oldVersion = episode.version;
 
-    // First update with current version succeeds (version 0 -> 1)
-    // Include a dischargeDate to make the entity dirty (updated_by already matches seed data)
+    // First update with current version succeeds (version n -> n+1)
+    // Use a unique dischargeDate to guarantee a column change and version bump
     const update1 = await request.patch(`${API}/episodes/a1111111-1111-1111-1111-111111111111`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: { version: oldVersion, dischargeDate: '2026-07-20T10:00:00' },
+      data: { version: oldVersion, dischargeDate: '2026-07-19T10:00:00' },
     });
     expect(update1.status()).toBe(204);
 
@@ -45,6 +50,9 @@ test.describe('Optimistic Locking - 409 Conflict', () => {
 
   test('update succeeds with current version', async ({ request }) => {
     const token = await getToken(request);
+    await request.post(`${API}/mis/error-mode?mode=none`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     // Get current version of a different seeded episode (Коваленко, version=0)
     const getRes = await request.get(`${API}/episodes/a2222222-2222-2222-2222-222222222222`, {

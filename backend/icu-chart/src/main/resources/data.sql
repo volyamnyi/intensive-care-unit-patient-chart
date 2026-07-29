@@ -28,11 +28,15 @@ ON CONFLICT (login) DO UPDATE SET
 -- Clinical scales seed data
 INSERT INTO clinical_scales (id, name, description, is_automatic, status, created_at, created_by, updated_at, updated_by, version)
 VALUES
-('c1111111-1111-1111-1111-111111111101', 'GCS', 'Glasgow Coma Scale — assessment of consciousness level', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
-('c1111111-1111-1111-1111-111111111102', 'RASS', 'Richmond Agitation-Sedation Scale — assessment of sedation level', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111101', 'GCS', 'Glasgow Coma Scale — assessment of consciousness level', true, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111102', 'RASS', 'Richmond Agitation-Sedation Scale — assessment of sedation level', true, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
 ('c1111111-1111-1111-1111-111111111103', 'SOFA', 'Sequential Organ Failure Assessment — assessment of organ failure', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
-('c1111111-1111-1111-1111-111111111104', 'APACHE II', 'Acute Physiology And Chronic Health Evaluation II', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0)
-ON CONFLICT (id) DO NOTHING;
+('c1111111-1111-1111-1111-111111111104', 'APACHE II', 'Acute Physiology And Chronic Health Evaluation II', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111105', 'CAM-ICU', 'Confusion Assessment Method for the ICU — delirium screening', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111106', 'Браден', 'Braden Scale — pressure injury risk assessment', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0)
+ON CONFLICT (id) DO UPDATE SET
+  is_automatic = EXCLUDED.is_automatic,
+  description = EXCLUDED.description;
 
 -- Reset seed data to prevent data pollution from prior test runs
 -- CASCADE handles all FK-dependent tables (clinical_days, hourly_records, etc.)
@@ -16298,6 +16302,51 @@ INSERT INTO prescription_lists (id, patient_id, department_id, document_name, st
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('ffff2033-2033-2033-2033-203303000000', 2033, 1, 'Листок лікарських призначень №4', 'Finished', NULL, NULL, NOW() - INTERVAL '2 days', 11, NOW() - INTERVAL '2 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('cccc2033-2033-2033-2033-203304000000', 2033, 1, 'Листок лікарських призначень №5', 'Finished', NULL, NULL, NOW() - INTERVAL '1 days', 11, NOW() - INTERVAL '1 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('dddd2034-2034-2034-2034-203401000000', 2034, 1, 'Листок лікарських призначень №2', 'Finished', NULL, NULL, NOW() - INTERVAL '5 days', 11, NOW() - INTERVAL '5 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+-- Scale results seed data for main clinical days
+-- Scale IDs: GCS=c1111111-1111-1111-1111-111111111101, RASS=c1111111-1111-1111-1111-111111111102, SOFA=c1111111-1111-1111-1111-111111111103, APACHE II=c1111111-1111-1111-1111-111111111104, CAM-ICU=c1111111-1111-1111-1111-111111111105, Браден=c1111111-1111-1111-1111-111111111106
+INSERT INTO scale_results (id, clinical_day_id, scale_id, result, calculated_at, calculated_by, created_at, created_by, updated_at, updated_by, version)
+VALUES
+-- Episode a1111111 (Петренко, patient 1001) - Day 2 (b1111112, NURSE_SIGNED)
+('e1111112-1112-1112-1112-111111111101', 'b1111112-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111101', '14', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e1111112-1112-1112-1112-111111111102', 'b1111112-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111102', '-1', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e1111112-1112-1112-1112-111111111103', 'b1111112-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111103', '4', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e1111112-1112-1112-1112-111111111104', 'b1111112-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111104', '16', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e1111112-1112-1112-1112-111111111105', 'b1111112-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111105', 'Негативний', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e1111112-1112-1112-1112-111111111106', 'b1111112-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111106', '18', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+
+-- Episode a1111111 (Петренко, patient 1001) - Day 1 (b1111111, OPEN)
+('e1111111-1111-1111-1111-111111111101', 'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111101', '15', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e1111111-1111-1111-1111-111111111102', 'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111102', '0', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e1111111-1111-1111-1111-111111111103', 'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111103', '3', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e1111111-1111-1111-1111-111111111104', 'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111104', '14', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e1111111-1111-1111-1111-111111111105', 'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111105', 'Негативний', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e1111111-1111-1111-1111-111111111106', 'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111106', '19', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+
+-- Episode a2222222 (Коваленко, patient 1002) - Day 1 (b4444444, NURSE_SIGNED)
+('e2222222-4444-4444-4444-444444444401', 'b4444444-4444-4444-4444-444444444444', 'c1111111-1111-1111-1111-111111111101', '10', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e2222222-4444-4444-4444-444444444402', 'b4444444-4444-4444-4444-444444444444', 'c1111111-1111-1111-1111-111111111102', '-2', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e2222222-4444-4444-4444-444444444403', 'b4444444-4444-4444-4444-444444444444', 'c1111111-1111-1111-1111-111111111103', '8', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e2222222-4444-4444-4444-444444444404', 'b4444444-4444-4444-4444-444444444444', 'c1111111-1111-1111-1111-111111111104', '24', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e2222222-4444-4444-4444-444444444405', 'b4444444-4444-4444-4444-444444444444', 'c1111111-1111-1111-1111-111111111105', 'Негативний', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+('e2222222-4444-4444-4444-444444444406', 'b4444444-4444-4444-4444-444444444444', 'c1111111-1111-1111-1111-111111111106', '12', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+
+-- Episode a2222222 (Коваленко, patient 1002) - Day 2 (b2222222, OPEN)
+('e2222222-2222-2222-2222-222222222201', 'b2222222-2222-2222-2222-222222222222', 'c1111111-1111-1111-1111-111111111101', '12', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e2222222-2222-2222-2222-222222222202', 'b2222222-2222-2222-2222-222222222222', 'c1111111-1111-1111-1111-111111111102', '-2', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e2222222-2222-2222-2222-222222222203', 'b2222222-2222-2222-2222-222222222222', 'c1111111-1111-1111-1111-111111111103', '7', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e2222222-2222-2222-2222-222222222204', 'b2222222-2222-2222-2222-222222222222', 'c1111111-1111-1111-1111-111111111104', '22', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e2222222-2222-2222-2222-222222222205', 'b2222222-2222-2222-2222-222222222222', 'c1111111-1111-1111-1111-111111111105', 'Негативний', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+('e2222222-2222-2222-2222-222222222206', 'b2222222-2222-2222-2222-222222222222', 'c1111111-1111-1111-1111-111111111106', '13', NOW(), 11, NOW(), 11, NOW(), 11, 0),
+
+-- Episode a3333333 (Сидоренко, patient 1003) - Day 1 (b3333333, OPEN)
+('e3333333-3333-3333-3333-333333333301', 'b3333333-3333-3333-3333-333333333333', 'c1111111-1111-1111-1111-111111111101', '15', NOW(), 12, NOW(), 12, NOW(), 12, 0),
+('e3333333-3333-3333-3333-333333333302', 'b3333333-3333-3333-3333-333333333333', 'c1111111-1111-1111-1111-111111111102', '0', NOW(), 12, NOW(), 12, NOW(), 12, 0),
+('e3333333-3333-3333-3333-333333333303', 'b3333333-3333-3333-3333-333333333333', 'c1111111-1111-1111-1111-111111111103', '2', NOW(), 12, NOW(), 12, NOW(), 12, 0),
+('e3333333-3333-3333-3333-333333333304', 'b3333333-3333-3333-3333-333333333333', 'c1111111-1111-1111-1111-111111111104', '10', NOW(), 12, NOW(), 12, NOW(), 12, 0),
+('e3333333-3333-3333-3333-333333333305', 'b3333333-3333-3333-3333-333333333333', 'c1111111-1111-1111-1111-111111111105', 'Негативний', NOW(), 12, NOW(), 12, NOW(), 12, 0),
+('e3333333-3333-3333-3333-333333333306', 'b3333333-3333-3333-3333-333333333333', 'c1111111-1111-1111-1111-111111111106', '20', NOW(), 12, NOW(), 12, NOW(), 12, 0)
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('eeee2034-2034-2034-2034-203402000000', 2034, 1, 'Листок лікарських призначень №3', 'Finished', NULL, NULL, NOW() - INTERVAL '4 days', 11, NOW() - INTERVAL '4 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('ffff2034-2034-2034-2034-203403000000', 2034, 1, 'Листок лікарських призначень №4', 'Finished', NULL, NULL, NOW() - INTERVAL '3 days', 11, NOW() - INTERVAL '3 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('cccc2034-2034-2034-2034-203404000000', 2034, 1, 'Листок лікарських призначень №5', 'Finished', NULL, NULL, NOW() - INTERVAL '2 days', 11, NOW() - INTERVAL '2 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;

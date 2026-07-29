@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
-const theme = createTheme({});
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import PatientDayPage from '../../pages/doctor/PatientDayPage';
 import type { Episode, ClinicalDay, ClinicalScale } from '../../types';
 
@@ -149,9 +148,9 @@ const mockScales: ClinicalScale[] = [
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <PatientDayPage />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 
@@ -252,7 +251,7 @@ describe('PatientDayPage', () => {
       expect(screen.getByText('← Назад до пацієнтів')).toBeInTheDocument();
     });
     await userEvent.click(screen.getByText('← Назад до пацієнтів'));
-    expect(mockNavigate).toHaveBeenCalledWith('/doctor');
+    expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor');
   });
 
   it('shows error state when API fails', async () => {

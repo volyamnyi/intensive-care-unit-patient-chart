@@ -2,11 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import CreateCardPage from '../../pages/doctor/CreateCardPage';
 import type { PatientDto } from '../../types';
-
-const theme = createTheme({});
 
 const mockNavigate = vi.fn();
 const mockCreate = vi.fn();
@@ -46,11 +44,11 @@ const testPatient: PatientDto = {
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <MemoryRouter>
         <CreateCardPage />
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 
@@ -128,7 +126,7 @@ describe('CreateCardPage', () => {
         patientId: 1001,
         admissionDate: expect.any(String),
       }));
-      expect(mockNavigate).toHaveBeenCalledWith('/doctor/episode/ep-1');
+      expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor/episode/ep-1');
     });
   });
 
@@ -144,12 +142,12 @@ describe('CreateCardPage', () => {
     });
   });
 
-  it('navigates to /doctor on cancel', async () => {
+  it('navigates to /prescriptions/icu/doctor on cancel', async () => {
     renderPage();
     const onSelect = mockPatientSearch.mock.calls[0][0];
     onSelect(testPatient);
     await waitFor(() => expect(screen.getByText('Скасувати')).toBeInTheDocument());
     await userEvent.click(screen.getByText('Скасувати'));
-    expect(mockNavigate).toHaveBeenCalledWith('/doctor');
+    expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor');
   });
 });

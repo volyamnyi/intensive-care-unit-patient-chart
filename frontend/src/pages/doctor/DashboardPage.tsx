@@ -1,78 +1,69 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Typography, TextField, Button, CircularProgress, Alert, InputAdornment, useTheme } from '@mui/material';
-import { Add, Search as SearchIcon } from '@mui/icons-material';
-import { episodeApi } from '../../api/endpoints';
-import EpisodeTable from '../../components/common/EpisodeTable';
-import type { Episode } from '../../types';
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Plus, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Alert } from '@/components/ui/alert'
+import { episodeApi } from '../../api/endpoints'
+import EpisodeTable from '../../components/common/EpisodeTable'
+import type { Episode } from '../../types'
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const navigate = useNavigate()
+  const [episodes, setEpisodes] = useState<Episode[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     episodeApi.search({ status: 'ACTIVE' })
       .then((res) => setEpisodes(res.data))
       .catch(() => setEpisodes([]))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setLoading(false))
+  }, [])
 
-  useEffect(() => { document.title = 'ВАІТ — Лікар'; }, []);
+  useEffect(() => { document.title = 'ВАІТ — Лікар' }, [])
 
   const filteredEpisodes = episodes.filter((ep) =>
     (ep.patientName ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  )
 
-  if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
+  if (loading) return <Loader2 role="progressbar" aria-label="Loading" className="mx-auto mt-4 size-6 animate-spin text-primary" />
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontFamily: '"Rubik", sans-serif', fontWeight: 800, color: theme.palette.text.primary }}>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="font-rubik text-2xl font-extrabold text-foreground">
             Активні пацієнти
-          </Typography>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mt: 0.5 }}>
+          </h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Відділення анестезіології та інтенсивної терапії
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          onClick={() => navigate('/doctor/create-card')}
-          startIcon={<Add />}
-        >
+          </p>
+        </div>
+        <Button onClick={() => navigate('/prescriptions/icu/doctor/create-card')}>
+          <Plus />
           Нова карта
         </Button>
-      </Box>
-      <TextField
-        fullWidth
-        placeholder="Пошук пацієнта за ПІБ..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 3 }}
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: theme.palette.text.secondary }} />
-              </InputAdornment>
-            ),
-          },
-        }}
-      />
+      </div>
+      <div className="relative mb-3">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Пошук пацієнта за ПІБ..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-8"
+        />
+      </div>
       {filteredEpisodes.length === 0 && !loading ? (
-        <Alert severity="info">
+        <Alert>
           {search ? 'Немає пацієнтів за запитом' : 'Немає активних пацієнтів'}
         </Alert>
       ) : (
         <EpisodeTable
           episodes={filteredEpisodes}
-          onSelect={(ep) => navigate('/doctor/episode/' + ep.id)}
+          onSelect={(ep) => navigate('/prescriptions/icu/doctor/episode/' + ep.id)}
         />
       )}
-    </Box>
-  );
+    </div>
+  )
 }

@@ -1,14 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import ClosePrescriptionDialog from '../../../components/prescription/ClosePrescriptionDialog';
 
-const theme = createTheme({});
 
 function renderDialog(props: Partial<React.ComponentProps<typeof ClosePrescriptionDialog>> = {}) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <ClosePrescriptionDialog
         open={props.open ?? true}
         onClose={props.onClose ?? vi.fn()}
@@ -16,7 +15,7 @@ function renderDialog(props: Partial<React.ComponentProps<typeof ClosePrescripti
         allCompleted={props.allCompleted ?? false}
         closing={props.closing}
       />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

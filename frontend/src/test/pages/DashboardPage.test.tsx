@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material';
-const theme = createTheme({});
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import DashboardPage from '../../pages/doctor/DashboardPage';
 
 const mockSearch = vi.fn();
@@ -20,11 +19,11 @@ const mockEpisodes = [
 
 function renderPage() {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

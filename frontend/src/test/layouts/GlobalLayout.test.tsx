@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 import { MemoryRouter } from 'react-router-dom';
 import GlobalLayout from '../../layouts/GlobalLayout';
 
-const theme = createTheme({});
 const mockNavigate = vi.fn();
 const mockLogout = vi.fn();
 const mockToggleTheme = vi.fn();
@@ -32,17 +31,17 @@ vi.mock('../../styles/ThemeContext', () => ({
   useThemeMode: () => ({
     mode: 'dark' as const,
     toggleTheme: mockToggleTheme,
-    theme: createTheme({ palette: { mode: 'dark' } }),
   }),
+  ThemeModeProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-function renderLayout(route = '/doctor') {
+function renderLayout(route = '/prescriptions/icu/doctor') {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <MemoryRouter initialEntries={[route]}>
         <GlobalLayout />
       </MemoryRouter>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 
@@ -54,7 +53,7 @@ describe('GlobalLayout - header', () => {
   });
 
   it('renders app title based on route', () => {
-    renderLayout('/doctor');
+    renderLayout('/prescriptions/icu/doctor');
     expect(screen.getByText('ВАІТ')).toBeInTheDocument();
     expect(screen.getByText('Карта інтенсивної терапії')).toBeInTheDocument();
   });
@@ -66,7 +65,8 @@ describe('GlobalLayout - header', () => {
 
   it('renders admin title when on admin route', () => {
     renderLayout('/admin');
-    expect(screen.getByText('Адмін')).toBeInTheDocument();
+    const headings = screen.getAllByText('Адмін');
+    expect(headings.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders logo image', () => {
@@ -75,19 +75,9 @@ describe('GlobalLayout - header', () => {
     expect(img).toBeInTheDocument();
   });
 
-  it('does not render Пацієнти link', () => {
+  it('renders Модулі link in header', () => {
     renderLayout();
-    expect(screen.queryByText('Пацієнти')).not.toBeInTheDocument();
-  });
-
-  it('does not render Призначення link', () => {
-    renderLayout();
-    expect(screen.queryByText('Призначення')).not.toBeInTheDocument();
-  });
-
-  it('renders Додатки link', () => {
-    renderLayout();
-    expect(screen.getByText('Додатки')).toBeInTheDocument();
+    expect(screen.getByText('Модулі')).toBeInTheDocument();
   });
 
   it('does not show Відділення for regular doctor', () => {
@@ -99,7 +89,8 @@ describe('GlobalLayout - header', () => {
     renderLayout();
     await userEvent.click(screen.getByLabelText('Меню користувача'));
     await waitFor(() => {
-      expect(screen.getByText('Доктор Іван')).toBeInTheDocument();
+      const menuItems = screen.getAllByText('Доктор Іван');
+      expect(menuItems.length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Лікар')).toBeInTheDocument();
     });
   });
@@ -119,10 +110,10 @@ describe('GlobalLayout - header', () => {
     expect(mockToggleTheme).toHaveBeenCalled();
   });
 
-  it('nurse sees nurse routes in nav', async () => {
+  it('nurse sees nurse routes in sidebar', async () => {
     mockUser = { id: 3, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE' };
     mockHasRole = (...roles: string[]) => roles.includes('NURSE');
-    renderLayout('/nurse');
+    renderLayout('/prescriptions/icu/nurse');
     expect(screen.getByText('ВАІТ')).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText('Меню користувача'));
     await waitFor(() => {
@@ -149,5 +140,30 @@ describe('GlobalLayout - HOD role', () => {
     await waitFor(() => {
       expect(screen.getByText('Завідувач відділення')).toBeInTheDocument();
     });
+  });
+});
+
+describe('GlobalLayout - sidebar and breadcrumbs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUser = { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR' };
+    mockHasRole = (...roles: string[]) => roles.includes('DOCTOR');
+  });
+
+  it('renders sidebar navigation', () => {
+    renderLayout('/prescriptions/icu/doctor');
+    expect(screen.getByLabelText('Головна навігація')).toBeInTheDocument();
+  });
+
+  it('renders breadcrumbs on doctor episode page', () => {
+    renderLayout('/prescriptions/icu/doctor/episode/test-123');
+    expect(screen.getByLabelText('Breadcrumb')).toBeInTheDocument();
+    expect(screen.getAllByText('Пацієнти').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders breadcrumbs on prescriptions page', () => {
+    renderLayout('/prescriptions/doctor');
+    expect(screen.getByLabelText('Breadcrumb')).toBeInTheDocument();
+    expect(screen.getAllByText('Призначення').length).toBeGreaterThanOrEqual(1);
   });
 });

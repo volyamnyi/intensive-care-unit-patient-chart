@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import AllergyWarning from '../../../components/prescription/AllergyWarning';
 import type { AllergyItem } from '../../../types';
 
-const theme = createTheme({});
 const allergies: AllergyItem[] = [
   { id: 'a1', patientId: 1001, allergenName: 'Penicillin', sourceDocumentId: 1 },
   { id: 'a2', patientId: 1001, allergenName: 'Iodine', sourceDocumentId: 2 },
@@ -12,9 +11,9 @@ const allergies: AllergyItem[] = [
 
 function renderWarning(medicineName: string) {
   return render(
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <AllergyWarning medicineName={medicineName} allergies={allergies} />
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
 

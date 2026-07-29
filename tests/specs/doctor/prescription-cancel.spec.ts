@@ -15,12 +15,12 @@ test.describe('Prescription Cancel', () => {
 
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
-    await page.getByLabel('Препарат').fill('Lidocaine');
-    await page.getByLabel('Доза').fill('100');
-    await page.getByLabel('Од.').fill('mg');
-    await page.getByLabel('Шлях').fill('IV');
-    await page.getByLabel('Частота').fill('PRN');
-    await page.getByLabel('Початок').fill(futureStartTime());
+    await page.getByPlaceholder('Препарат').fill('Lidocaine');
+    await page.getByPlaceholder('Доза').fill('100');
+    await page.getByPlaceholder('Од.').fill('mg');
+    await page.getByPlaceholder('Шлях').fill('IV');
+    await page.getByPlaceholder('Частота').fill('PRN');
+    await page.locator('input[type="datetime-local"]').first().fill(futureStartTime());
 
     await page.getByRole('button', { name: 'Створити' }).click();
     await expect(page.getByText('Lidocaine').first()).toBeVisible({ timeout: 10000 });
