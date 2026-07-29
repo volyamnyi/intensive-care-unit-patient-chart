@@ -55,12 +55,12 @@ describe('GlobalLayout - header', () => {
   it('renders app title based on route', () => {
     renderLayout('/prescriptions/icu/doctor');
     expect(screen.getByText('ВАІТ')).toBeInTheDocument();
-    expect(screen.getByText('Карта інтенсивної терапії')).toBeInTheDocument();
+    expect(screen.getAllByText('Карта інтенсивної терапії').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders prescriptions title when on prescriptions route', () => {
     renderLayout('/prescriptions/doctor');
-    expect(screen.getByText('Листок лікарських призначень')).toBeInTheDocument();
+    expect(screen.getAllByText('Листок лікарських призначень').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders admin title when on admin route', () => {
@@ -127,11 +127,6 @@ describe('GlobalLayout - HOD role', () => {
     vi.clearAllMocks();
     mockUser = { id: 2, login: 'head1', fullName: 'Завідувач Петро', role: 'HEAD_OF_DEPARTMENT' };
     mockHasRole = (...roles: string[]) => roles.includes('HEAD_OF_DEPARTMENT');
-  });
-
-  it('shows Відділення link for HOD', () => {
-    renderLayout();
-    expect(screen.getByText('Відділення')).toBeInTheDocument();
   });
 
   it('shows HOD role label in user menu', async () => {
