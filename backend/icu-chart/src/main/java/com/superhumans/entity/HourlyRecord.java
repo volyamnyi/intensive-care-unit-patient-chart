@@ -101,11 +101,21 @@ public class HourlyRecord extends BaseEntity {
     @Column(name = "drain_output")
     Double drainOutput;
 
+    @DecimalMin(ClinicalConstants.DRAIN_OUTPUT_MIN_STR)
+    @Column(name = "gastric_output")
+    Double gastricOutput;
+
     @Column(columnDefinition = "TEXT")
     String stool;
 
     @Column(columnDefinition = "TEXT")
     String vomit;
+
+    @Column(name = "bed_position", length = 100)
+    String bedPosition;
+
+    @Column(name = "head_end", length = 100)
+    String headEnd;
 
     @Min(ClinicalConstants.PAIN_SCORE_MIN) @Max(ClinicalConstants.PAIN_SCORE_MAX)
     @Column(name = "pain_score")
@@ -138,6 +148,8 @@ public class HourlyRecord extends BaseEntity {
             throw new IllegalArgumentException("Urine output must be at least " + ClinicalConstants.URINE_OUTPUT_MIN);
         if (drainOutput != null && drainOutput < ClinicalConstants.DRAIN_OUTPUT_MIN)
             throw new IllegalArgumentException("Drain output must be at least " + ClinicalConstants.DRAIN_OUTPUT_MIN);
+        if (gastricOutput != null && gastricOutput < ClinicalConstants.DRAIN_OUTPUT_MIN)
+            throw new IllegalArgumentException("Gastric output must be at least " + ClinicalConstants.DRAIN_OUTPUT_MIN);
         if (painScore != null && (painScore < ClinicalConstants.PAIN_SCORE_MIN || painScore > ClinicalConstants.PAIN_SCORE_MAX))
             throw new IllegalArgumentException("Pain score must be between " + ClinicalConstants.PAIN_SCORE_MIN + " and " + ClinicalConstants.PAIN_SCORE_MAX);
         if (etco2 != null && (etco2 < ClinicalConstants.ETCO2_MIN || etco2 > ClinicalConstants.ETCO2_MAX))

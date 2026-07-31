@@ -94,8 +94,11 @@ export interface HourlyRecordCreateRequest {
   epinephrine?: number;
   urineOutput?: number;
   drainOutput?: number;
+  gastricOutput?: number;
   stool?: string;
   vomit?: string;
+  bedPosition?: string;
+  headEnd?: string;
   painScore?: number;
   notes?: string;
 }
@@ -296,8 +299,11 @@ export interface HourlyRecord {
   epinephrine: number | null;
   urineOutput: number | null;
   drainOutput: number | null;
+  gastricOutput: number | null;
   stool: string | null;
   vomit: string | null;
+  bedPosition: string | null;
+  headEnd: string | null;
   painScore: number | null;
   notes: string | null;
   createdBy: number;

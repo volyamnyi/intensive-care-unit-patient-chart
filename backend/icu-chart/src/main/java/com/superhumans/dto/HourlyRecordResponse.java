@@ -30,8 +30,11 @@ public class HourlyRecordResponse {
     Double epinephrine;
     Double urineOutput;
     Double drainOutput;
+    Double gastricOutput;
     String stool;
     String vomit;
+    String bedPosition;
+    String headEnd;
     Integer painScore;
     String notes;
     Long createdBy;

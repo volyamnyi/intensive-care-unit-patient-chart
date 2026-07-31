@@ -29,9 +29,15 @@ const VITAL_ROWS: { key: keyof HourlyRecord; label: string; numeric: boolean }[]
 
 const LOSS_ROWS: { key: keyof HourlyRecord; label: string }[] = [
   { key: 'urineOutput', label: 'Сеча' },
+  { key: 'gastricOutput', label: 'Зонд' },
   { key: 'drainOutput', label: 'Дренаж' },
   { key: 'stool', label: 'Випорожнення' },
   { key: 'vomit', label: 'Блювота' },
+];
+
+const CARE_ROWS: { key: keyof HourlyRecord; label: string; numeric: boolean }[] = [
+  { key: 'bedPosition', label: 'Положення у ліжку', numeric: false },
+  { key: 'headEnd', label: 'Головний кінець ліжка', numeric: false },
 ];
 
 const VASOPRESSOR_ROWS: { key: keyof HourlyRecord; label: string }[] = [
@@ -375,6 +381,29 @@ export default function HourlyGrid({
                     hour={h}
                     rowKey={row.key}
                     numeric
+                    label={row.label}
+                    value={boundValue(h, row.key)}
+                    isLocked={isLocked}
+                    isNurse={isNurse}
+                    isLossRow
+                    isDark={false}
+                    isPast={isPastMedDay(h, realClockHour)}
+                    onSave={onSaveCell}
+                  />
+                ))}
+              </TableRow>
+            ))}
+
+            <GroupHeader label="Заходи по догляду" nurseEditable />
+            {CARE_ROWS.map((row) => (
+              <TableRow key={String(row.key)}>
+                <TableCell className="font-semibold text-xs border-r border-border">{row.label}</TableCell>
+                {HOURS.map((h) => (
+                  <Cell
+                    key={h}
+                    hour={h}
+                    rowKey={row.key}
+                    numeric={row.numeric}
                     label={row.label}
                     value={boundValue(h, row.key)}
                     isLocked={isLocked}

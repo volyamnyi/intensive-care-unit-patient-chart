@@ -175,6 +175,11 @@ export const departmentApi = {
     client.get<DepartmentPatient[]>('/department/patients'),
 };
 
+export const settingsApi = {
+  getByKey: (key: string) =>
+    client.get<{ key: string; value: string }>(`/settings/${key}`),
+};
+
 export const auditApi = {
   list: (params?: { page?: number; size?: number; action?: string; dateFrom?: string; dateTo?: string }) =>
     client.get<PageResponse<AuditLog>>('/audit', { params }),

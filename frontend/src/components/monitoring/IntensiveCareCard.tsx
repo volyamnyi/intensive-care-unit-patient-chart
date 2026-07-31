@@ -177,7 +177,8 @@ export default function IntensiveCareCard({
 
   const saveCell = useCallback(async (hour: number, key: keyof HourlyRecord, raw: string) => {
     if (!selectedDay || isLocked) return;
-    const numeric = key !== 'consciousness' && key !== 'stool' && key !== 'vomit';
+    const textKeys: (keyof HourlyRecord)[] = ['consciousness', 'stool', 'vomit', 'bedPosition', 'headEnd'];
+    const numeric = !textKeys.includes(key);
     const value = raw.trim() === '' ? null : numeric ? Number(raw) : raw;
     const existing: { id: string; version: number } | undefined = recByHour.get(hour) || localRecordMap.current.get(hour);
     const recTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
@@ -249,6 +250,7 @@ export default function IntensiveCareCard({
           episode={episode}
           selectedDay={selectedDay}
           isLocked={isLocked}
+          records={records}
           notes={notes}
           noteText={noteText}
           autoSaveStatus={autoSaveStatus}

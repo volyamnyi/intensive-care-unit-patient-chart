@@ -20,3 +20,6 @@
   - include:
       relativeToChangelogFile: true
       file: changesets/007-hourly-record-vasopressors.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/008-hourly-record-care.sql

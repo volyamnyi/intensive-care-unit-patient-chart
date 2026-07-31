@@ -181,3 +181,41 @@ html {
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
+
+@media print {
+  body {
+    font-family: 'Times New Roman', Times, serif !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  aside, nav, header {
+    display: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  main > div, .print-area {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .document-header, .document-header * {
+    color: #000 !important;
+  }
+  .rounded-xl {
+    border-radius: 2px !important;
+    box-shadow: none !important;
+  }
+  .border, [class*="border-"] {
+    border-color: #000 !important;
+  }
+  button {
+    display: none !important;
+  }
+  tr, .document-header {
+    page-break-inside: avoid;
+  }
+}

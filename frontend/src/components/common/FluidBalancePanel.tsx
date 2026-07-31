@@ -18,6 +18,7 @@ const INTAKE_LABELS: Record<string, string> = {
 const OUTPUT_LABELS: Record<string, string> = {
   diuresis: 'Діурез',
   drainage: 'Дренаж',
+  gastric: 'Зонд',
   vomiting: 'Блювання',
   stool: 'Кал',
   bloodLoss: 'Крововтрата',

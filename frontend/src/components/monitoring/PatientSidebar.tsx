@@ -9,7 +9,7 @@ import ScaleResultsPanel from '../common/ScaleResultsPanel';
 import LabResultsPanel from '../common/LabResultsPanel';
 import VentilationPanel from '../common/VentilationPanel';
 import PatientStatePanel from '../common/PatientStatePanel';
-import type { Episode, ClinicalDay, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale, ScaleResult } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale, ScaleResult } from '../../types';
 import type { LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types';
 
 interface NoteItem {
@@ -32,6 +32,7 @@ export interface PatientSidebarProps {
   ventilation: unknown[];
   labs: unknown[];
   patientState: unknown[];
+  records?: HourlyRecord[];
   loadingSidebar: boolean;
   balanceItems: FluidBalanceItem[];
   totalIntake: number;
@@ -63,7 +64,7 @@ function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
 export default function PatientSidebar({
   episode, selectedDay, isLocked,
   notes, noteText, autoSaveStatus, savingNote,
-  scales, ventilation, labs, patientState, loadingSidebar,
+  scales, ventilation, labs, patientState, records, loadingSidebar,
   totalIntake, totalOutput, dailyBalance, cumulativeBalance,
   keyScales, canEditSidebar,
   onNoteChange, onSaveNote,
@@ -191,6 +192,7 @@ export default function PatientSidebar({
             clinicalDayId={selectedDay?.id ?? ''}
             labs={labs as LabResult[]}
             isLocked={isLocked}
+            records={records}
             onCreate={onCreateLab}
           />
         </SidebarGroup>

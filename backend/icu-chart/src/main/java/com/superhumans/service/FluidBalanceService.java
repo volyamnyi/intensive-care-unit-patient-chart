@@ -67,6 +67,7 @@ public class FluidBalanceService {
             double output = 0.0;
             if (rec.getUrineOutput() != null) output += rec.getUrineOutput();
             if (rec.getDrainOutput() != null) output += rec.getDrainOutput();
+            if (rec.getGastricOutput() != null) output += rec.getGastricOutput();
             if (rec.getVomit() != null && !rec.getVomit().isBlank()) output += 100.0;
             outputByHour.merge(hour, output, Double::sum);
         }
@@ -141,6 +142,7 @@ public class FluidBalanceService {
         Map<String, Double> outputByCategory = new LinkedHashMap<>();
         outputByCategory.put("diuresis", 0.0);
         outputByCategory.put("drainage", 0.0);
+        outputByCategory.put("gastric", 0.0);
         outputByCategory.put("vomiting", 0.0);
         outputByCategory.put("bloodLoss", 0.0);
         outputByCategory.put("other", 0.0);
@@ -150,6 +152,8 @@ public class FluidBalanceService {
                 outputByCategory.merge("diuresis", rec.getUrineOutput(), Double::sum);
             if (rec.getDrainOutput() != null)
                 outputByCategory.merge("drainage", rec.getDrainOutput(), Double::sum);
+            if (rec.getGastricOutput() != null)
+                outputByCategory.merge("gastric", rec.getGastricOutput(), Double::sum);
             if (rec.getVomit() != null && !rec.getVomit().isBlank())
                 outputByCategory.merge("vomiting", 100.0, Double::sum);
         }

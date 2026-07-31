@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
-import type { LabResult, LabResultCreateRequest } from '../../types';
+import type { LabResult, LabResultCreateRequest, HourlyRecord } from '../../types';
 
 const PREDEFINED_TESTS: { code: string; name: string; unit: string; min: number | null; max: number | null }[] = [
   { code: 'Hb', name: 'Hemoglobin', unit: 'g/dL', min: 12, max: 16 },
@@ -37,11 +37,29 @@ interface LabResultsPanelProps {
   clinicalDayId: string;
   labs: LabResult[];
   isLocked: boolean;
+  records?: HourlyRecord[];
   onCreate: (data: LabResultCreateRequest) => Promise<void>;
 }
 
+function findFio2(records: HourlyRecord[] | undefined, hour: number | null): number | null {
+  if (!records?.length) return null;
+  if (hour != null) {
+    const same = records.find(r => r.recordHour === hour && r.fio2 != null);
+    if (same?.fio2 != null) return same.fio2;
+  }
+  const latest = records
+    .filter(r => r.fio2 != null)
+    .sort((a, b) => b.recordHour - a.recordHour)[0];
+  return latest?.fio2 ?? null;
+}
+
+function pfiRatio(po2: number, fio2: number | null): number | null {
+  if (fio2 == null || fio2 <= 0) return null;
+  return Math.round(po2 / (fio2 / 100));
+}
+
 export default function LabResultsPanel({
-  labs, isLocked, onCreate,
+  labs, isLocked, records, onCreate,
 }: LabResultsPanelProps) {
   const [selectedCode, setSelectedCode] = useState('');
   const [result, setResult] = useState('');
@@ -91,6 +109,15 @@ export default function LabResultsPanel({
               {`Норма: ${selected.min ?? '—'}–${selected.max ?? '—'} ${selected.unit}`}
             </span>
           )}
+          {selected?.code === 'pO2' && (
+            <span className="self-center text-[11px] text-muted-foreground font-mulish">
+              {(() => {
+                const fio2 = findFio2(records, new Date().getHours())
+                if (fio2 == null) return 'PaO₂/FiO₂: FiO₂ не задано'
+                return `PaO₂/FiO₂ = результат ÷ ${fio2}%`
+              })()}
+            </span>
+          )}
           <Input
             type="number" placeholder="Результат"
             value={result} onChange={(e) => setResult(e.target.value)}
@@ -126,6 +153,18 @@ export default function LabResultsPanel({
                   {`${l.result} ${l.unit}${(l.referenceMin ?? l.referenceMax) != null ? ` (${l.referenceMin ?? '—'}–${l.referenceMax ?? '—'} ${l.unit})` : ''}`}
                 </p>
               </div>
+              {l.testCode === 'pO2' && (() => {
+                const hour = l.measuredAt ? new Date(l.measuredAt).getHours() : null
+                const fio2 = findFio2(records, hour)
+                const po2 = Number(l.result)
+                const ratio = Number.isFinite(po2) ? pfiRatio(po2, fio2) : null
+                if (ratio == null) return null
+                return (
+                  <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-semibold text-foreground whitespace-nowrap">
+                    {`PaO₂/FiO₂: ${ratio}`}
+                  </span>
+                )
+              })()}
             </div>
           ))}
         </div>

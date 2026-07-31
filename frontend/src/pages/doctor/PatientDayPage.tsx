@@ -4,10 +4,11 @@ import { ArrowLeft, Lock, Download, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { useThemeMode } from '../../styles/ThemeContext'
-import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi } from '../../api/endpoints'
+import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi, patientApi, settingsApi } from '../../api/endpoints'
 import { useAuth } from '../../services/AuthContext'
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard'
 import NurseDashboard from '../../components/monitoring/NurseDashboard'
+import DocumentHeader from '../../components/common/DocumentHeader'
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types'
 
 export default function PatientDayPage() {
@@ -26,6 +27,9 @@ export default function PatientDayPage() {
   const [reopenOpen, setReopenOpen] = useState(false)
   const [reopenReason, setReopenReason] = useState('')
   const [loading, setLoading] = useState(true)
+  const [institutionName, setInstitutionName] = useState('')
+  const [institutionEdrpou, setInstitutionEdrpou] = useState('')
+  const [patientBirthDate, setPatientBirthDate] = useState<string | null>(null)
   const [dayLoading, setDayLoading] = useState(false)
   const [signingLoading, setSigningLoading] = useState(false)
   const [reopenLoading, setReopenLoading] = useState(false)
@@ -37,9 +41,18 @@ export default function PatientDayPage() {
     Promise.all([
       episodeApi.getById(episodeId),
       episodeApi.getClinicalDays(episodeId),
-    ]).then(([epRes, daysRes]) => {
+      settingsApi.getByKey('institution_name').catch(() => null),
+      settingsApi.getByKey('institution_edrpou').catch(() => null),
+    ]).then(([epRes, daysRes, nameRes, edrpouRes]) => {
       setEpisode(epRes.data)
       setClinicalDays(daysRes.data)
+      setInstitutionName(nameRes?.data?.value ?? '')
+      setInstitutionEdrpou(edrpouRes?.data?.value ?? '')
+      if (epRes.data.patientId) {
+        patientApi.getById(String(epRes.data.patientId))
+          .then(pRes => setPatientBirthDate(pRes.data.birthDate ?? null))
+          .catch(() => setPatientBirthDate(null))
+      }
       const isDoctorRole = user?.role === 'DOCTOR' || user?.role === 'HEAD_OF_DEPARTMENT'
       const target = isDoctorRole
         ? daysRes.data.find(d => d.status === 'NURSE_SIGNED')
@@ -145,6 +158,16 @@ export default function PatientDayPage() {
   const isDoctor = user?.role === 'DOCTOR' || user?.role === 'HEAD_OF_DEPARTMENT'
   const isHod = user?.role === 'HEAD_OF_DEPARTMENT'
   const isLocked = selectedDay ? selectedDay.status !== 'OPEN' && selectedDay.status !== 'REOPENED' : true
+  const patientAge = (() => {
+    if (!patientBirthDate) return null
+    const birth = new Date(patientBirthDate)
+    const ref = selectedDay?.startDateTime ? new Date(selectedDay.startDateTime) : new Date()
+    if (Number.isNaN(birth.getTime()) || Number.isNaN(ref.getTime())) return null
+    let years = ref.getFullYear() - birth.getFullYear()
+    const m = ref.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) years -= 1
+    return years >= 0 ? `${years} р.` : null
+  })()
   const canSign = selectedDay && (
     (isNurse && selectedDay.status === 'OPEN') ||
     (isDoctor && selectedDay.status === 'NURSE_SIGNED')
@@ -155,8 +178,17 @@ export default function PatientDayPage() {
 
   return (
     <div>
+      <DocumentHeader
+        institutionName={institutionName}
+        institutionEdrpou={institutionEdrpou}
+        patientName={episode.patientName}
+        patientAge={patientAge}
+        dayNumber={selectedDay?.dayNumber ?? null}
+        dayDate={selectedDay?.startDateTime ?? episode.admissionDate}
+        cardNumber={episode.hospitalizationId ?? episode.id.slice(0, 8).toUpperCase()}
+      />
       {/* Float action bar */}
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-0.5">
+      <div className="no-print mb-1 flex flex-wrap items-center justify-between gap-0.5">
         <Button
           variant="link"
           size="sm"

@@ -49,8 +49,12 @@ public class HourlyRecordPatchRequest {
     Double urineOutput;
     @DecimalMin("0.0")
     Double drainOutput;
+    @DecimalMin("0.0")
+    Double gastricOutput;
     String stool;
     String vomit;
+    String bedPosition;
+    String headEnd;
     @Min(0) @Max(10)
     Integer painScore;
     String notes;
