@@ -23,10 +23,11 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * Verifies the {@code server.ssl.enabled} boundary of the generic
  * {@link SecurityConfig}: when HTTPS is enabled, the channel rule applies to
- * every request, including the otherwise public permit-all endpoints.
+ * every request, including the otherwise public permit-all endpoints, and
+ * plain HTTP requests are redirected to HTTPS.
  */
 @WebMvcTest(value = SecurityFixtureController.class, properties = "server.ssl.enabled=true")
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
 class SecurityConfigSslTest {
 
     @SpringBootConfiguration
@@ -51,20 +52,20 @@ class SecurityConfigSslTest {
     }
 
     @Test
-    void sslEnabled_plainHttpRequest_toSecuredEndpoint_returnsForbidden() throws Exception {
+    void sslEnabled_plainHttpRequest_toSecuredEndpoint_redirectsToHttps() throws Exception {
         mockMvc.perform(get("/api/private").with(TestSecurityHelper.doctor()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isFound());
     }
 
     @Test
-    void sslEnabled_plainHttpRequest_evenToPermitAllEndpoint_returnsForbidden() throws Exception {
+    void sslEnabled_plainHttpRequest_evenToPermitAllEndpoint_redirectsToHttps() throws Exception {
         mockMvc.perform(post("/api/auth/login"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isFound());
     }
 
     @Test
-    void sslEnabled_plainHttpRequest_withoutAuthentication_returnsForbidden() throws Exception {
+    void sslEnabled_plainHttpRequest_withoutAuthentication_redirectsToHttps() throws Exception {
         mockMvc.perform(get("/api/private"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isFound());
     }
 }

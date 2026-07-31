@@ -6,14 +6,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Test-only controller mirroring the URL surface guarded by
- * {@link IcuSecurityRules}. It allows {@link IcuSecurityRulesTest} to assert
- * both granted (200) and denied (401/403) outcomes for every rule without
- * exercising any real service logic.
- */
+@Profile("test-security")
 @RestController
 public class IcuRuleFixtureController {
 

@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import type { PrescriptionItem, PrescriptionDayPart, MedicineCatalogItem, AllergyItem } from '../../types';
-import type { GridItem } from './PrescriptionGrid';
-
 import MedicineSearchInput from './MedicineSearchInput';
 import PrescriptionSpreadsheet from './PrescriptionSpreadsheet';
 import ExecuteDosePopover from './ExecuteDosePopover';
 import DeleteConfirmPopover from './DeleteConfirmPopover';
+
+export interface GridItem extends PrescriptionItem {
+  cells: Map<string, PrescriptionDayPart>;
+}
 
 export interface GridProps {
   items: PrescriptionItem[];

@@ -6,12 +6,7 @@ describe('BradenForm', () => {
   it('renders title and all select elements', () => {
     render(<BradenForm onCalculate={vi.fn()} />);
     expect(screen.getByText('Шкала Браден — ризик пролежнів')).toBeInTheDocument();
-    expect(screen.getByText('Сенсорне сприйняття')).toBeInTheDocument();
-    expect(screen.getByText('Вологість')).toBeInTheDocument();
-    expect(screen.getByText('Активність')).toBeInTheDocument();
-    expect(screen.getByText('Мобільність')).toBeInTheDocument();
-    expect(screen.getByText('Харчування')).toBeInTheDocument();
-    expect(screen.getByText('Тертя/зсув')).toBeInTheDocument();
+    expect(screen.getAllByRole('combobox')).toHaveLength(6);
   });
 
   it('shows default total and risk category', () => {

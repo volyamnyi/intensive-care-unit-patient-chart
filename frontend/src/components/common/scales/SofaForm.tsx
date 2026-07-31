@@ -52,7 +52,7 @@ export default function SofaForm({ onCalculate, disabled }: SofaFormProps) {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
         <Input placeholder="PaO₂ (mmHg)" value={paO2} onChange={e => setPaO2(e.target.value)} className="h-7 text-xs" disabled={disabled} />
         <Input placeholder="FiO₂ (%)" value={fio2} onChange={e => setFio2(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Select value={onVentilator} onValueChange={v => setOnVentilator(v)} disabled={disabled}>
+        <Select value={onVentilator} onValueChange={v => setOnVentilator(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="ШВЛ?" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="false">Ні</SelectItem>

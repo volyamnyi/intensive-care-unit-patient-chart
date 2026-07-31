@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(IcuRuleFixtureController.class)
 @Import({SecurityConfig.class, IcuSecurityRules.class})
+@ActiveProfiles("test-security")
 class IcuSecurityRulesTest {
 
     private static final String EPISODE_PATH = "/api/episodes/ep-1";

@@ -10,7 +10,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PrescriptionExecuteRequest {
     @NotBlank @Size(max = 100) String actualDose;
-    @NotBlank @Size(max = 50) String secondPersonLogin;
-    @NotBlank @Size(max = 100) String secondPersonPassword;
+    @Size(max = 50) String secondPersonLogin;
+    @Size(max = 100) String secondPersonPassword;
     boolean requires2pAuth;
 }

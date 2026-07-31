@@ -5,6 +5,7 @@ import com.superhumans.medicationsheet.dto.VitalSignEntryResponse;
 import com.superhumans.medicationsheet.entity.*;
 import com.superhumans.medicationsheet.mapper.*;
 import com.superhumans.medicationsheet.service.VitalSignService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -79,6 +81,11 @@ class VitalSignControllerTest {
         when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("testuser");
         when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test

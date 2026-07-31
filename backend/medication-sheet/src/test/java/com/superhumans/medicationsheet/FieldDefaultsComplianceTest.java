@@ -28,6 +28,9 @@ class FieldDefaultsComplianceTest {
 
     private static void assertThatFieldsArePrivateAndFinal(Class<?> clazz) {
         for (Field field : clazz.getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
             assertThat(field.getModifiers())
                     .withFailMessage("Field %s in %s is not private final", field.getName(), clazz.getSimpleName())
                     .isEqualTo(Modifier.PRIVATE | Modifier.FINAL);

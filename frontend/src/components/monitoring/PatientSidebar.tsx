@@ -9,7 +9,7 @@ import ScaleResultsPanel from '../common/ScaleResultsPanel';
 import LabResultsPanel from '../common/LabResultsPanel';
 import VentilationPanel from '../common/VentilationPanel';
 import PatientStatePanel from '../common/PatientStatePanel';
-import type { Episode, ClinicalDay, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale } from '../../types';
+import type { Episode, ClinicalDay, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale, ScaleResult } from '../../types';
 import type { LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types';
 
 interface NoteItem {
@@ -20,12 +20,6 @@ interface NoteItem {
   createdAt?: string | null;
 }
 
-interface ScaleItem {
-  id: string;
-  name?: string;
-  result: string;
-}
-
 export interface PatientSidebarProps {
   episode: Episode;
   selectedDay: ClinicalDay | null;
@@ -34,7 +28,7 @@ export interface PatientSidebarProps {
   noteText: string;
   autoSaveStatus: string;
   savingNote: boolean;
-  scales: ScaleItem[];
+  scales: ScaleResult[];
   ventilation: unknown[];
   labs: unknown[];
   patientState: unknown[];
@@ -70,7 +64,7 @@ export default function PatientSidebar({
   episode, selectedDay, isLocked,
   notes, noteText, autoSaveStatus, savingNote,
   scales, ventilation, labs, patientState, loadingSidebar,
-  balanceItems, totalIntake, totalOutput, dailyBalance, cumulativeBalance,
+  totalIntake, totalOutput, dailyBalance, cumulativeBalance,
   keyScales, canEditSidebar,
   onNoteChange, onSaveNote,
   onCreateLab, onCreateVentilation, onCreatePatientState,

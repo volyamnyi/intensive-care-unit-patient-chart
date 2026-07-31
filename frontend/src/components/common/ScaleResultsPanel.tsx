@@ -16,7 +16,7 @@ interface ScaleResultsPanelProps {
   episodeId?: string;
 }
 
-export default function ScaleResultsPanel({ results, availableScales, onCreateResult, onCalculateScale, disabled, episodeId }: ScaleResultsPanelProps) {
+export default function ScaleResultsPanel({ results, availableScales, onCreateResult, onCalculateScale, disabled }: ScaleResultsPanelProps) {
   const { mode } = useThemeMode();
   const isDark = mode === 'dark';
   const [selectedScaleId, setSelectedScaleId] = useState('');

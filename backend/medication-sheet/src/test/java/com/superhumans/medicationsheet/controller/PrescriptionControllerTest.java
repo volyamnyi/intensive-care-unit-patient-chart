@@ -8,6 +8,7 @@ import com.superhumans.mis.dto.AllergyMisDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.medicationsheet.service.*;
 import com.superhumans.service.AuditService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -100,6 +102,11 @@ class PrescriptionControllerTest {
         when(jwtTokenProvider.getLoginFromToken(any())).thenReturn(TEST_DOCTOR_LOGIN);
         when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(TEST_DOCTOR_ID);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -213,8 +220,7 @@ class PrescriptionControllerTest {
     }
 
     @Test
-    void planDose_generatesDeterministicUuidFromUserId() throws Exception {
-        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(42L);
+    void planDose_generatesDeterministicUuidFromAuthenticatedUser() throws Exception {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).build();
         part.setId(dayPartId);
@@ -226,14 +232,12 @@ class PrescriptionControllerTest {
                         .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isOk());
 
-        UUID expectedUuid = UUID.nameUUIDFromBytes("42".getBytes());
+        UUID expectedUuid = UUID.nameUUIDFromBytes("1".getBytes());
         verify(itemService).planDose(eq(dayPartId), eq("50mg"), eq(expectedUuid));
     }
 
     @Test
-    void completeDose_generatesDeterministicUuidFromUserId() throws Exception {
-        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
-        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(99L);
+    void completeDose_generatesDeterministicUuidFromAuthenticatedUser() throws Exception {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).build();
         part.setId(dayPartId);
@@ -243,13 +247,12 @@ class PrescriptionControllerTest {
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isOk());
 
-        UUID expectedUuid = UUID.nameUUIDFromBytes("99".getBytes());
+        UUID expectedUuid = UUID.nameUUIDFromBytes("2".getBytes());
         verify(itemService).markCompleted(eq(dayPartId), eq(expectedUuid));
     }
 
     @Test
-    void cancelDose_generatesDeterministicUuidFromUserId() throws Exception {
-        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(123L);
+    void cancelDose_generatesDeterministicUuidFromAuthenticatedUser() throws Exception {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).isPlannedFinished(true).build();
         part.setId(dayPartId);
@@ -259,23 +262,20 @@ class PrescriptionControllerTest {
                         .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isOk());
 
-        UUID expectedUuid = UUID.nameUUIDFromBytes("123".getBytes());
+        UUID expectedUuid = UUID.nameUUIDFromBytes("1".getBytes());
         verify(itemService).markPlannedFinished(eq(dayPartId), eq(expectedUuid));
     }
 
     @Test
     void executeDose_returnsOk() throws Exception {
-        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
-        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(TEST_NURSE_ID);
-
         mockMvc.perform(post("/api/prescriptions/day-parts/{dayPartId}/execute", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"actualDose\":\"" + TEST_ACTUAL_DOSE + "\",\"secondPersonLogin\":\"" + TEST_NURSE_LOGIN + "\",\"secondPersonPassword\":\"" + TEST_SECOND_PERSON_PASSWORD + "\"}")
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isOk());
 
-        verify(executionService).execute(eq(dayPartId), eq(TEST_NURSE_ID), eq(TEST_DOCTOR_LOGIN),
-                eq(TEST_ACTUAL_DOSE), eq(TEST_NURSE_LOGIN), eq(TEST_SECOND_PERSON_PASSWORD));
+        verify(executionService).execute(eq(dayPartId), eq(TEST_NURSE_ID), eq("user"),
+                eq(TEST_ACTUAL_DOSE), eq(TEST_NURSE_LOGIN), eq(TEST_SECOND_PERSON_PASSWORD), eq(false));
     }
 
     @Test
@@ -422,9 +422,6 @@ class PrescriptionControllerTest {
 
     @Test
     void executeDose_withHodRole_returnsOk() throws Exception {
-        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
-        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(4L);
-
         mockMvc.perform(post("/api/prescriptions/day-parts/{dayPartId}/execute", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"actualDose\":\"45mg\",\"secondPersonLogin\":\"nurse2\",\"secondPersonPassword\":\"nurse123\"}")
@@ -432,7 +429,7 @@ class PrescriptionControllerTest {
                 .andExpect(status().isOk());
 
         verify(executionService).execute(eq(dayPartId), eq(4L), eq("user"),
-                eq("45mg"), eq("nurse2"), eq("nurse123"));
+                eq("45mg"), eq("nurse2"), eq("nurse123"), eq(false));
     }
 
     // TODO: Re-enable when SecurityConfig is moved to common module

@@ -53,7 +53,7 @@ describe('CamIcuForm', () => {
   it('disables all inputs when disabled prop is true', () => {
     render(<CamIcuForm onCalculate={vi.fn()} disabled={true} />);
     screen.getAllByRole('checkbox').forEach(cb => {
-      expect(cb).toBeDisabled();
+      expect(cb).toHaveAttribute('aria-disabled', 'true');
     });
     expect(screen.getByText('Зберегти CAM-ICU')).toBeDisabled();
   });

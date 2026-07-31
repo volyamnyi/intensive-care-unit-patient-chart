@@ -6,6 +6,7 @@ import com.superhumans.entity.ClinicalScale;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
+import org.springframework.test.context.jdbc.Sql;
 
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:data-test.sql")
 class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID SEED_DAY_ID =
@@ -186,7 +188,7 @@ class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
     void calculateAndSaveScale_sofa_calculatesSuccessfully() {
         Map<String, Object> rawData = Map.of(
                 "paO2", 80.0,
-                "fio2", 0.5,
+                "fio2", 50.0,
                 "onVentilator", true
         );
 
@@ -224,7 +226,7 @@ class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void calculateAndSaveScale_braden_doctorCalculatesSuccessfully() {
+    void calculateAndSaveScale_braden_doctorForbidden() {
         Map<String, Object> rawData = Map.of(
                 "sensoryPerception", 4,
                 "moisture", 4,
@@ -238,19 +240,17 @@ class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/episodes/{episodeId}/scales/calculate?scaleId={scaleId}",
-                HttpMethod.POST, entity, ScaleResultResponse.class,
+                HttpMethod.POST, entity, String.class,
                 SEED_EPISODE_ID, SEED_BRADEN_SCALE_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getResult()).isEqualTo("23");
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
     void calculateAndSaveScale_withClinicalDayParam_succeeds() {
         Map<String, Object> rawData = Map.of(
                 "paO2", 80.0,
-                "fio2", 0.5,
+                "fio2", 50.0,
                 "onVentilator", true
         );
 
@@ -269,8 +269,8 @@ class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
     @Test
     void createScaleResult_nurseCanCreateDailyScale() {
         ScaleResultCreateRequest req = new ScaleResultCreateRequest();
-        req.setScaleId(SEED_SOFA_SCALE_ID);
-        req.setResult("6");
+        req.setScaleId(SEED_BRADEN_SCALE_ID);
+        req.setResult("15");
 
         var entity = authEntity(req, getNurseToken());
 
@@ -280,7 +280,7 @@ class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getResult()).isEqualTo("6");
+        assertThat(res.getBody().getResult()).isEqualTo("15");
     }
 
     @Test

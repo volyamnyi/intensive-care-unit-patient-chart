@@ -21,6 +21,7 @@ import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.MockReset;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
@@ -35,7 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * extension point that the config-move refactoring introduced.
  */
 @WebMvcTest(SecurityFixtureController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
 class SecurityConfigTest {
 
     @SpringBootConfiguration
@@ -61,6 +62,12 @@ class SecurityConfigTest {
             return registry -> registry.requestMatchers(HttpMethod.POST, "/api/auth/restricted")
                     .hasRole("DOCTOR");
         }
+
+        @Bean
+        SecurityRuleContributor passiveContributor() {
+            return registry -> {
+            };
+        }
     }
 
     @Autowired
@@ -78,7 +85,7 @@ class SecurityConfigTest {
     @MockBean
     private AuditService auditService;
 
-    @MockBean
+    @MockBean(name = "passiveContributor", reset = MockReset.NONE)
     private SecurityRuleContributor passiveContributor;
 
     @BeforeEach
@@ -159,7 +166,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void allRegisteredContributors_areInvokedWithTheRegistry() {
+    void allRegisteredContributors_areInvokedWithTheRegistry() throws Exception {
         verify(passiveContributor).contribute(any());
     }
 

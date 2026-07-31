@@ -77,7 +77,7 @@ export default function ApacheIiForm({ onCalculate, disabled }: ApacheIiFormProp
         <Input placeholder="Na⁺ (mmol/L)" value={serumSodium} onChange={e => setSerumSodium(e.target.value)} className="h-7 text-xs" disabled={disabled} />
         <Input placeholder="K⁺ (mmol/L)" value={serumPotassium} onChange={e => setSerumPotassium(e.target.value)} className="h-7 text-xs" disabled={disabled} />
          <Input placeholder="Креатинін (мкмоль/л або мг/дл)" value={serumCreatinine} onChange={e => setSerumCreatinine(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Select value={acuteRenalFailure} onValueChange={v => setAcuteRenalFailure(v)} disabled={disabled}>
+        <Select value={acuteRenalFailure} onValueChange={v => setAcuteRenalFailure(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="ГНН?" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="false">Немає ГНН</SelectItem>
@@ -88,14 +88,14 @@ export default function ApacheIiForm({ onCalculate, disabled }: ApacheIiFormProp
         <Input placeholder="WBC (×10³/µL)" value={whiteBloodCount} onChange={e => setWhiteBloodCount(e.target.value)} className="h-7 text-xs" disabled={disabled} />
          <Input placeholder="GCS (3–15)" value={gcs} onChange={e => setGcs(e.target.value)} className="h-7 text-xs" disabled={disabled} />
         <Input placeholder="Вік (роки)" value={age} onChange={e => setAge(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Select value={chronicHealthType} onValueChange={v => setChronicHealthType(v)} disabled={disabled}>
+        <Select value={chronicHealthType} onValueChange={v => setChronicHealthType(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Хронічне здоров'я" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="NONE">Немає</SelectItem>
             <SelectItem value="CHRONIC">Хронічна недостатність</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={emergencySurgical} onValueChange={v => setEmergencySurgical(v)} disabled={disabled}>
+        <Select value={emergencySurgical} onValueChange={v => setEmergencySurgical(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Тип операції" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="false">Не хірургічний / плановий</SelectItem>

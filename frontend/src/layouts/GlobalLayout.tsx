@@ -4,7 +4,6 @@ import { UserCircle } from 'lucide-react';
 import { useAuth } from '../services/AuthContext';
 import { useThemeMode } from '../styles/ThemeContext';
 import ThemeToggle from '../components/common/ThemeToggle';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -60,7 +59,7 @@ function useAppInfo(): AppInfo {
 }
 
 export default function GlobalLayout() {
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode } = useThemeMode();
   const app = useAppInfo();

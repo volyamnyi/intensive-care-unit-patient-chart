@@ -75,7 +75,7 @@ interface CellProps {
 }
 
 const Cell = memo(function Cell({
-  hour, rowKey, numeric, label, value, isLocked, isNurse, isLossRow, isDark, isPast, onSave,
+  hour, rowKey, numeric, label, value, isLocked, isNurse, isLossRow, isDark: _isDark, isPast, onSave,
 }: CellProps) {
   const [draft, setDraft] = useState(value);
   const focusedRef = useRef(false);
@@ -130,7 +130,7 @@ interface TherapyCellProps {
 }
 
 const TherapyCell = memo(function TherapyCell({
-  order, hour, isDark, isPast, canExecute, isExecuting, onToggle,
+  order, hour, isDark: _isDark, isPast, canExecute, isExecuting, onToggle,
 }: TherapyCellProps) {
   const [editing, setEditing] = useState(false);
   const [doseInput, setDoseInput] = useState('');
@@ -318,7 +318,7 @@ export interface HourlyGridProps {
 
 export default function HourlyGrid({
   isMobile, isNurse, isLocked, user, selectedDay,
-  recByHour, orders, activeOrders, executing, orderFormOpen, realClockHour,
+  recByHour, activeOrders, executing, orderFormOpen, realClockHour,
   canEditSidebar, onSetOrderFormOpen, onSaveCell, onToggleOrder,
   onRefresh, onError,
 }: HourlyGridProps) {
@@ -416,7 +416,7 @@ export default function HourlyGrid({
                 <div className="flex justify-between items-center">
                   <span>Терапія (призначення)</span>
                   {canEditSidebar && !isNurse && (
-                    <Button size="sm" variant="outline" onClick={() => onSetOrderFormOpen(v => !v)} className="text-[10px] h-5 py-0">
+                    <Button size="sm" variant="outline" onClick={() => onSetOrderFormOpen(!orderFormOpen)} className="text-[10px] h-5 py-0">
                       {orderFormOpen ? 'X Сховати' : '+ Нове призначення'}
                     </Button>
                   )}

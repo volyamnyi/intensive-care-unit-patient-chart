@@ -182,7 +182,7 @@ class HourlyRecordServiceTest {
         assertThat(recordCaptor.getValue().getHeartRate()).isEqualTo(90);
         assertThat(recordCaptor.getValue().getSystolicBP()).isEqualTo(130);
         assertThat(recordCaptor.getValue().getDiastolicBP()).isEqualTo(80);
-        assertThat(recordCaptor.getValue().getMeanArterialPressure()).isEqualTo(93);
+        assertThat(recordCaptor.getValue().getMeanArterialPressure()).isEqualTo(96);
         verify(auditService).logUpdate("HourlyRecord", recordId, userId, null, "Updated hourly record");
     }
 

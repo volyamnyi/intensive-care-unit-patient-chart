@@ -85,27 +85,27 @@ export default function BradenForm({ onCalculate, disabled }: BradenFormProps) {
     <div className="flex flex-col gap-2">
       <p className="text-xs font-semibold mb-1">Шкала Браден — ризик пролежнів</p>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-        <Select value={sensoryPerception} onValueChange={setSensoryPerception} disabled={disabled}>
+        <Select value={sensoryPerception} onValueChange={v => setSensoryPerception(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Сенсорне сприйняття" /></SelectTrigger>
           <SelectContent>{sensoryOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
-        <Select value={moisture} onValueChange={setMoisture} disabled={disabled}>
+        <Select value={moisture} onValueChange={v => setMoisture(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Вологість" /></SelectTrigger>
           <SelectContent>{moistureOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
-        <Select value={activity} onValueChange={setActivity} disabled={disabled}>
+        <Select value={activity} onValueChange={v => setActivity(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Активність" /></SelectTrigger>
           <SelectContent>{activityOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
-        <Select value={mobility} onValueChange={setMobility} disabled={disabled}>
+        <Select value={mobility} onValueChange={v => setMobility(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Мобільність" /></SelectTrigger>
           <SelectContent>{mobilityOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
-        <Select value={nutrition} onValueChange={setNutrition} disabled={disabled}>
+        <Select value={nutrition} onValueChange={v => setNutrition(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Харчування" /></SelectTrigger>
           <SelectContent>{nutritionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
-        <Select value={frictionShear} onValueChange={setFrictionShear} disabled={disabled}>
+        <Select value={frictionShear} onValueChange={v => setFrictionShear(v ?? '')} disabled={disabled}>
           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Тертя/зсув" /></SelectTrigger>
           <SelectContent>{frictionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>

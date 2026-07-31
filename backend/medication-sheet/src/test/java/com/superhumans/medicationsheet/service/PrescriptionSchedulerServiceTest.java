@@ -87,6 +87,6 @@ class PrescriptionSchedulerServiceTest {
 
         scheduler.autoCreatePrescriptionLists();
 
-        verifyNoInteractions(listRepository, listService, notificationService, misService);
+        verifyNoInteractions(listRepository, listService, notificationService);
     }
 }

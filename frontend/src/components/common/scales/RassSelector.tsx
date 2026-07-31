@@ -21,7 +21,7 @@ interface RassSelectorProps {
 
 export default function RassSelector({ value, onChange, disabled }: RassSelectorProps) {
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select value={value} onValueChange={(v: string | null) => onChange(v ?? '')} disabled={disabled}>
       <SelectTrigger className="h-7 text-xs w-[200px]">
         <SelectValue placeholder="RASS" />
       </SelectTrigger>

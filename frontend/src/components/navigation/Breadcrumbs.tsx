@@ -1,6 +1,5 @@
 import { useLocation, Link as RouterLink } from 'react-router-dom';
 import { useMemo } from 'react';
-import { useAuth } from '../../services/AuthContext';
 
 interface BreadcrumbItem {
   label: string;
@@ -56,7 +55,6 @@ function matchBreadcrumbs(pathname: string): BreadcrumbItem[] {
 
 export default function Breadcrumbs() {
   const location = useLocation();
-  const { user } = useAuth();
 
   const items = useMemo(() => matchBreadcrumbs(location.pathname), [location.pathname]);
 

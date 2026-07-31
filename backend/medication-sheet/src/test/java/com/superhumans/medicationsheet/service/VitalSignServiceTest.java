@@ -67,7 +67,7 @@ class VitalSignServiceTest {
     }
 
     @Test
-    void getOrCreate_createsNew_with21DaysAnd2EntriesEach() {
+    void getOrCreate_createsNew_with21DaysAnd4EntriesEach() {
         when(vitalListRepository.findByPrescriptionListId(prescriptionListId))
                 .thenReturn(Optional.empty());
         when(listRepository.findById(prescriptionListId)).thenReturn(Optional.of(prescriptionList));
@@ -88,8 +88,8 @@ class VitalSignServiceTest {
         // 21 days created
         verify(vitalDayRepository, times(21)).save(any(VitalSignDay.class));
 
-        // 42 entries created (21 days × 2 periods: morning, evening)
-        verify(vitalEntryRepository, times(42)).save(any(VitalSignEntry.class));
+        // 84 entries created (21 days × 4 periods: morning, day, evening, night)
+        verify(vitalEntryRepository, times(84)).save(any(VitalSignEntry.class));
 
         assertThat(result.getId()).isEqualTo(vitalListId);
     }

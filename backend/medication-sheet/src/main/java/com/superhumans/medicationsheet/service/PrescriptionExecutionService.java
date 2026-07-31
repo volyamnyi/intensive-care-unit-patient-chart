@@ -31,36 +31,41 @@ public class PrescriptionExecutionService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public PrescriptionExecution execute(UUID dayPartId, Long currentUserId, String currentUserLogin, String actualDose, String secondPersonLogin, String secondPersonPassword) {
+    public PrescriptionExecution execute(UUID dayPartId, Long currentUserId, String currentUserLogin, String actualDose, String secondPersonLogin, String secondPersonPassword, boolean requires2pAuth) {
         PrescriptionDayPart part = partRepository.findById(dayPartId)
                 .orElseThrow(() -> new NotFoundException("Day part not found: " + dayPartId));
 
-        // Authenticate second person
-        User secondPerson = userRepository.findByLogin(secondPersonLogin)
-                .orElseThrow(() -> new IllegalArgumentException("Помилка автентифікації другої особи"));
-
-        if (!passwordEncoder.matches(secondPersonPassword, secondPerson.getPasswordHash())) {
-            throw new IllegalArgumentException("Помилка автентифікації другої особи");
-        }
-
-        if (secondPerson.getRole() != UserRole.NURSE) {
-            throw new IllegalArgumentException("Помилка автентифікації другої особи");
-        }
-
-        if (secondPerson.getId().equals(currentUserId)) {
-            throw new IllegalArgumentException("Друга особа не може бути тією ж, що виконує призначення");
-        }
-
-        // Deterministic UUIDs from logins for audit trail
         UUID firstPersonUuid = UUID.nameUUIDFromBytes(currentUserLogin.getBytes());
-        UUID secondPersonUuid = UUID.nameUUIDFromBytes(secondPersonLogin.getBytes());
+        UUID secondPersonUuid = null;
+        String nurseName = currentUserLogin;
+
+        if (requires2pAuth) {
+            // Authenticate second person
+            User secondPerson = userRepository.findByLogin(secondPersonLogin)
+                    .orElseThrow(() -> new IllegalArgumentException("Помилка автентифікації другої особи"));
+
+            if (!passwordEncoder.matches(secondPersonPassword, secondPerson.getPasswordHash())) {
+                throw new IllegalArgumentException("Невірний пароль другої особи");
+            }
+
+            if (secondPerson.getRole() != UserRole.NURSE) {
+                throw new IllegalArgumentException("Друга особа повинна мати роль медсестри");
+            }
+
+            if (secondPerson.getId().equals(currentUserId)) {
+                throw new IllegalArgumentException("Друга особа не може бути тією ж, що виконує призначення");
+            }
+
+            secondPersonUuid = UUID.nameUUIDFromBytes(secondPersonLogin.getBytes());
+            nurseName = currentUserLogin + "/2P:" + secondPersonLogin;
+        }
 
         PrescriptionExecution exec = PrescriptionExecution.builder()
                 .dayPart(part)
                 .executedAt(LocalDateTime.now())
                 .actualDose(actualDose)
                 .status("Completed")
-                .requires2pAuth(true)
+                .requires2pAuth(requires2pAuth)
                 .secondPersonId(secondPersonUuid)
                 .build();
         exec.setCreatedBy(currentUserId);
@@ -69,7 +74,7 @@ public class PrescriptionExecutionService {
         exec = executionRepository.save(exec);
 
         part.setIsCompleted(true);
-        part.setNurseName(currentUserLogin + "/2P:" + secondPersonLogin);
+        part.setNurseName(nurseName);
         part.setUpdatedBy(currentUserId);
         partRepository.save(part);
 

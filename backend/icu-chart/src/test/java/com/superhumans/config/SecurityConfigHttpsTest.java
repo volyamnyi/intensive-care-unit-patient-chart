@@ -4,12 +4,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpMethod;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Verifies the {@code server.ssl.enabled} boundary of the common
+ * {@link SecurityConfig}: when HTTPS is enabled, the channel rule
+ * ({@code anyRequest().requiresSecure()}) applies to every request, so plain
+ * HTTP requests — even to permit-all endpoints like {@code /api/auth/login} —
+ * are redirected to HTTPS.
+ */
 @SpringBootTest(properties = "server.ssl.enabled=true")
 @AutoConfigureMockMvc
 class SecurityConfigHttpsTest {
@@ -18,9 +24,9 @@ class SecurityConfigHttpsTest {
     private MockMvc mockMvc;
 
     @Test
-    void httpRequest_isRejectedWhenSslEnabled() throws Exception {
+    void httpRequest_isRedirectedToHttpsWhenSslEnabled() throws Exception {
         mockMvc.perform(get("/api/auth/login")
                         .header("Authorization", "Bearer test-token"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isFound());
     }
 }

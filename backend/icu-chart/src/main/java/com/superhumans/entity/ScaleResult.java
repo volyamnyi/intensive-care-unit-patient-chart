@@ -2,6 +2,8 @@ package com.superhumans.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,6 +28,7 @@ public class ScaleResult extends BaseEntity {
     private String result;
 
     @Column(name = "raw_data", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String rawData;
 
     @Column(name = "calculated_at", nullable = false)

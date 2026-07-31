@@ -198,7 +198,8 @@ public class PrescriptionController {
         Long currentUserId = (Long) auth.getCredentials();
         String currentUserLogin = (String) auth.getPrincipal();
         executionService.execute(dayPartId, currentUserId, currentUserLogin,
-                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword());
+                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword(),
+                req.isRequires2pAuth());
     }
 
     @GetMapping("/allergies")

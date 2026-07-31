@@ -5,7 +5,7 @@ import { useAutoSave } from '../../hooks/useAutoSave';
 import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/endpoints';
 import HourlyGrid from './HourlyGrid';
 import PatientSidebar from './PatientSidebar';
-import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, HourlyRecordCreateRequest, MedicalNoteCreateRequest, LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, ClinicalScale, ScaleResult, HourlyRecordCreateRequest, MedicalNoteCreateRequest, LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types';
 
 interface UserLike { id: number; }
 
@@ -74,8 +74,8 @@ export default function IntensiveCareCard({
     const v = e.target.value; setNoteText(v); noteTextRef.current = v; markDirty();
   };
 
-  const [scales, setScales] = useState<{ id: string; scaleId?: string; name?: string; result: string; scaleName?: string }[]>([]);
-  const [availableScales, setAvailableScales] = useState<{ id: string; name: string; isAutomatic: boolean; [k: string]: unknown }[]>([]);
+  const [scales, setScales] = useState<ScaleResult[]>([]);
+  const [availableScales, setAvailableScales] = useState<ClinicalScale[]>([]);
   const [ventilation, setVentilation] = useState<{ id: string; mode?: string; [k: string]: unknown }[]>([]);
   const [labs, setLabs] = useState<{ id: string; testName?: string; result?: string }[]>([]);
   const [patientState, setPatientState] = useState<{ id: string; assessment?: string }[]>([]);
@@ -95,9 +95,9 @@ export default function IntensiveCareCard({
         patientStateApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
       ]);
       setNotes(n as unknown as { id: string; text: string; authorId?: string | null; role?: string | null; createdAt?: string | null }[]);
-      const allScales = [...(s ?? []), ...(es ?? [])] as { id: string; scaleId?: string; name?: string; result: string; scaleName?: string }[];
+      const allScales = [...(s ?? []), ...(es ?? [])];
       setScales(allScales);
-      setAvailableScales(a as unknown as { id: string; name: string; isAutomatic: boolean; [k: string]: unknown }[]);
+      setAvailableScales(a as unknown as ClinicalScale[]);
       setVentilation(v as unknown as { id: string; mode?: string; [k: string]: unknown }[]);
       setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
       setPatientState(p as unknown as { id: string; assessment?: string }[]);
@@ -128,7 +128,7 @@ export default function IntensiveCareCard({
       if (scale && /APACHE|SOFA/i.test(scale.name)) {
         await clinicalScaleApi.createEpisodeResult(episode.id, { scaleId, result });
       } else {
-        await clinicalScaleApi.create(selectedDay.id, { scaleId, result });
+        await clinicalScaleApi.createResult(selectedDay.id, { scaleId, result });
       }
       await refreshSidebar();
     } catch (err) {
@@ -168,8 +168,8 @@ export default function IntensiveCareCard({
     const names = ['APACHE II', 'SOFA', 'RASS', 'CAM-ICU', 'Браден'];
     return names.map(name => {
       const found = scales.find(s =>
-        (s.scaleName || s.name || '')?.toLowerCase() === name.toLowerCase()
-        || (s.scaleName || s.name || '')?.includes(name)
+        (s.scaleName || '')?.toLowerCase() === name.toLowerCase()
+        || (s.scaleName || '')?.includes(name)
       );
       return found ? { name, result: found.result } : null;
     }).filter(Boolean) as { name: string; result: string }[];
