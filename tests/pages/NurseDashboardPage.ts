@@ -12,7 +12,7 @@ export class NurseDashboardPage extends BasePage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/nurse');
+    await this.page.goto('/icu/nurse');
     await this.page.waitForLoadState('networkidle');
   }
 

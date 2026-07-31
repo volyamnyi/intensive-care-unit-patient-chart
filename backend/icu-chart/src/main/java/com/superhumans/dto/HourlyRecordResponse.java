@@ -13,6 +13,7 @@ public class HourlyRecordResponse {
     UUID clinicalDayId;
     LocalDateTime recordTime;
     String consciousness;
+    Integer gcs;
     Double temperature;
     Integer heartRate;
     Integer respiratoryRate;
@@ -23,6 +24,10 @@ public class HourlyRecordResponse {
     Double etco2;
     Double fio2;
     Double cvp;
+    Double dopamine;
+    Double dobutamine;
+    Double norepinephrine;
+    Double epinephrine;
     Double urineOutput;
     Double drainOutput;
     String stool;

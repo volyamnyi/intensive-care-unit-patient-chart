@@ -182,7 +182,30 @@ class HourlyRecordServiceTest {
         assertThat(recordCaptor.getValue().getHeartRate()).isEqualTo(90);
         assertThat(recordCaptor.getValue().getSystolicBP()).isEqualTo(130);
         assertThat(recordCaptor.getValue().getDiastolicBP()).isEqualTo(80);
+        assertThat(recordCaptor.getValue().getMeanArterialPressure()).isEqualTo(93);
         verify(auditService).logUpdate("HourlyRecord", recordId, userId, null, "Updated hourly record");
+    }
+
+    @Test
+    void updateHourlyRecord_autoCalculatesMAP() {
+        HourlyRecord existing = HourlyRecord.builder().build();
+        existing.setId(recordId);
+        existing.setClinicalDay(clinicalDay);
+        existing.setVersion(0);
+
+        HourlyRecordPatchRequest patch = new HourlyRecordPatchRequest();
+        patch.setSystolicBP(110);
+        patch.setDiastolicBP(70);
+        patch.setVersion(0);
+
+        when(hourlyRecordRepository.findById(recordId)).thenReturn(Optional.of(existing));
+        when(hourlyRecordRepository.save(any(HourlyRecord.class)))
+                .thenAnswer(inv -> { HourlyRecord r = inv.getArgument(0); r.setVersion(1); return r; });
+
+        hourlyRecordService.updateHourlyRecord(recordId, patch, userId);
+
+        verify(hourlyRecordRepository).save(recordCaptor.capture());
+        assertThat(recordCaptor.getValue().getMeanArterialPressure()).isEqualTo(83);
     }
 
     @Test

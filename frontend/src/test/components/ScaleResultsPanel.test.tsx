@@ -39,9 +39,11 @@ describe('ScaleResultsPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('shows available scales in dropdown when onCreateResult provided', () => {
+  it('shows available scales in dropdown when onCreateResult provided', async () => {
     renderPanel({ availableScales: mockScales, onCreateResult: vi.fn() });
     expect(screen.getByRole('combobox', { name: /Шкала/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: /Шкала/i }));
+    await userEvent.click(screen.getByRole('option', { name: 'APACHE II' }));
     expect(screen.getByText('Додати')).toBeInTheDocument();
   });
 

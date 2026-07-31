@@ -1,4 +1,4 @@
-export interface User {
+﻿export interface User {
   id: number;
   login: string;
   fullName: string;
@@ -77,6 +77,7 @@ export interface ClinicalDayPatchRequest {
 export interface HourlyRecordCreateRequest {
   recordTime: string;
   consciousness?: string;
+  gcs?: number;
   temperature?: number;
   heartRate?: number;
   respiratoryRate?: number;
@@ -87,6 +88,10 @@ export interface HourlyRecordCreateRequest {
   etco2?: number;
   fio2?: number;
   cvp?: number;
+  dopamine?: number;
+  dobutamine?: number;
+  norepinephrine?: number;
+  epinephrine?: number;
   urineOutput?: number;
   drainOutput?: number;
   stool?: string;
@@ -274,6 +279,7 @@ export interface HourlyRecord {
   clinicalDayId: string;
   recordTime: string;
   consciousness: string | null;
+  gcs: number | null;
   temperature: number | null;
   heartRate: number | null;
   respiratoryRate: number | null;
@@ -284,6 +290,10 @@ export interface HourlyRecord {
   etco2: number | null;
   fio2: number | null;
   cvp: number | null;
+  dopamine: number | null;
+  dobutamine: number | null;
+  norepinephrine: number | null;
+  epinephrine: number | null;
   urineOutput: number | null;
   drainOutput: number | null;
   stool: string | null;
@@ -358,14 +368,22 @@ export interface ClinicalScale {
 
 export interface ScaleResult {
   id: string;
-  clinicalDayId: string;
+  clinicalDayId?: string;
+  episodeId?: string;
   scaleId: string;
   scaleName: string;
   result: string;
+  rawData?: string;
   calculatedAt: string;
   calculatedBy: number;
   createdAt: string;
   version: number;
+}
+
+export interface ScaleResultCreateRequest {
+  scaleId: string;
+  result: string;
+  episodeId?: string;
 }
 
 export interface FluidBalanceItem {

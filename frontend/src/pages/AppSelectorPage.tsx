@@ -11,7 +11,7 @@ const cards = [
     subtitle: 'Відділення анестезіології та інтенсивної терапії',
     icon: <Hospital className="size-12" />,
     color: '#1976d2',
-    path: '/prescriptions/icu/doctor',
+    path: '/icu/doctor',
   },
   {
     app: 'prescriptions' as const,
@@ -31,8 +31,8 @@ export default function AppSelectorPage() {
   const handleSelect = (card: (typeof cards)[0]) => {
     selectApp(card.app);
     let target = card.path;
-    if (target === '/prescriptions/icu/doctor' && hasRole('NURSE')) {
-      target = '/prescriptions/icu/nurse';
+    if (target === '/icu/doctor' && hasRole('NURSE')) {
+      target = '/icu/nurse';
     }
     if (target === '/prescriptions/doctor' && hasRole('NURSE')) {
       target = '/prescriptions/nurse';

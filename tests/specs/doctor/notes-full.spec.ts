@@ -4,7 +4,7 @@ const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
 
 test.describe('Doctor Notes Full', () => {
   test('creates a note and shows author and timestamp', async ({ page }) => {
-    await page.goto(`/doctor/episode/${EPISODE_ID}`);
+    await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
     await page.getByText('Нотатки').first().click();
 
@@ -19,13 +19,13 @@ test.describe('Doctor Notes Full', () => {
   });
 
   test('shows note field is visible', async ({ page }) => {
-    await page.goto(`/doctor/episode/${EPISODE_ID}`);
+    await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
     await expect(page.getByLabel('Нова нотатка')).toBeVisible();
   });
 
   test('creates multiple notes and verifies list order', async ({ page }) => {
-    await page.goto(`/doctor/episode/${EPISODE_ID}`);
+    await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
     await page.getByText('Нотатки').first().click();
 

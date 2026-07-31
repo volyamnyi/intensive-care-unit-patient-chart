@@ -34,11 +34,11 @@ interface AppInfo {
 function useAppInfo(): AppInfo {
   const { pathname } = useLocation();
   return useMemo(() => {
-    if (pathname.startsWith('/prescriptions/icu/nurse')) {
-      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/prescriptions/icu/nurse' };
+    if (pathname.startsWith('/icu/nurse')) {
+      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/icu/nurse' };
     }
-    if (pathname.startsWith('/prescriptions/icu')) {
-      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/prescriptions/icu/doctor' };
+    if (pathname.startsWith('/icu')) {
+      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/icu/doctor' };
     }
     if (pathname.startsWith('/prescriptions/nurse')) {
       return { title: 'Призначення', subtitle: 'Виконання лікарських призначень', homePath: '/prescriptions/nurse' };
@@ -47,10 +47,10 @@ function useAppInfo(): AppInfo {
       return { title: 'Призначення', subtitle: 'Листок лікарських призначень', homePath: '/prescriptions/doctor' };
     }
     if (pathname.startsWith('/nurse')) {
-      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/prescriptions/icu/nurse' };
+      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/icu/nurse' };
     }
     if (pathname.startsWith('/doctor')) {
-      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/prescriptions/icu/doctor' };
+      return { title: 'ВАІТ', subtitle: 'Карта інтенсивної терапії', homePath: '/icu/doctor' };
     }
     if (pathname.startsWith('/admin')) {
       return { title: 'Адмін', subtitle: 'Адміністративна панель', homePath: '/admin' };

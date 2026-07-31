@@ -23,7 +23,7 @@ export default function AppSidebar() {
   });
 
   const navItems = useMemo<NavItem[]>(() => {
-    const prefix = user?.role === 'NURSE' ? '/prescriptions/icu/nurse' : '/prescriptions/icu/doctor';
+    const prefix = user?.role === 'NURSE' ? '/icu/nurse' : '/icu/doctor';
     const rxPrefix = user?.role === 'NURSE' ? '/prescriptions/nurse' : '/prescriptions/doctor';
     return [
       { label: 'Карта інтенсивної терапії', to: prefix, icon: <Hospital className="size-5 text-info" /> },

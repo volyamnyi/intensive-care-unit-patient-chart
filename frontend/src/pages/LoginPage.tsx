@@ -45,12 +45,7 @@ export default function LoginPage() {
           <img
             src="/superhumans.svg"
             alt="Superhumans"
-            className="mb-2.5 h-10 w-auto dark:hidden"
-          />
-          <img
-            src="/superhumans-white.svg"
-            alt="Superhumans"
-            className="mb-2.5 hidden h-10 w-auto dark:block"
+            className="mb-2.5 h-10 w-auto"
           />
           <div className="font-rubik mb-2.5 text-[15px] font-bold leading-relaxed text-foreground">
             Веб додаток до Медичної інформаційної системи
@@ -79,9 +74,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="text-[11px] font-bold uppercase tracking-[0.5px] text-primary">
-            Вхід до системи
-          </div>
         </div>
 
         <div className="flex flex-1 flex-col justify-center p-3 sm:p-4">

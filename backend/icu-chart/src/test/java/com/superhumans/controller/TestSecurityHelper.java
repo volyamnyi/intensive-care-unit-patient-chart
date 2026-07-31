@@ -14,6 +14,7 @@ public final class TestSecurityHelper {
     private static final String TEST_JWT_DOCTOR = "test-jwt-token";
     private static final String TEST_JWT_NURSE = "test-nurse-token";
     private static final String TEST_JWT_ADMIN = "test-admin-token";
+    private static final String TEST_JWT_HOD = "test-hod-token";
 
     private TestSecurityHelper() {}
 
@@ -46,6 +47,17 @@ public final class TestSecurityHelper {
                             "user", 3L, List.of(new SimpleGrantedAuthority("ROLE_ADMINISTRATOR"))))
                             .postProcessRequest(request);
             req.addHeader("Authorization", "Bearer " + TEST_JWT_ADMIN);
+            return req;
+        };
+    }
+
+    public static RequestPostProcessor hod() {
+        return request -> {
+            MockHttpServletRequest req = (MockHttpServletRequest)
+                    authentication(new UsernamePasswordAuthenticationToken(
+                            "user", 4L, List.of(new SimpleGrantedAuthority("ROLE_HEAD_OF_DEPARTMENT"))))
+                            .postProcessRequest(request);
+            req.addHeader("Authorization", "Bearer " + TEST_JWT_HOD);
             return req;
         };
     }

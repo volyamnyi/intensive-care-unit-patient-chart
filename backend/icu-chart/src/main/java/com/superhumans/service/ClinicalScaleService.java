@@ -3,18 +3,22 @@ package com.superhumans.service;
 import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.entity.*;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.ScaleResultMapper;
 import com.superhumans.repository.*;
+import com.superhumans.service.scale.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -31,6 +35,7 @@ public class ClinicalScaleService {
     HourlyRecordRepository hourlyRecordRepository;
     AuditService auditService;
     ScaleResultMapper scaleResultMapper;
+    ObjectMapper objectMapper;
 
     public ScaleResultResponse getScaleResult(UUID id) {
         ScaleResult result = scaleResultRepository.findById(id)
@@ -40,6 +45,11 @@ public class ClinicalScaleService {
 
     public List<ScaleResultResponse> getScaleResultsByClinicalDay(UUID clinicalDayId) {
         return scaleResultRepository.findByClinicalDayId(clinicalDayId)
+                .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());
+    }
+
+    public List<ScaleResultResponse> getScaleResultsByEpisode(UUID episodeId) {
+        return scaleResultRepository.findByEpisodeId(episodeId)
                 .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());
     }
 
@@ -80,9 +90,167 @@ public class ClinicalScaleService {
         return scaleResultMapper.toResponse(sr);
     }
 
+    @Transactional
+    public ScaleResultResponse createEpisodeScaleResult(UUID episodeId, ScaleResultCreateRequest request, Long userId) {
+        ClinicalScale scale = clinicalScaleRepository.findById(request.getScaleId())
+                .orElseThrow(() -> new NotFoundException("Clinical scale not found: " + request.getScaleId()));
+
+        String result = request.getResult();
+        if (result == null || result.isBlank()) result = "N/A";
+
+        ScaleResult sr = ScaleResult.builder()
+                .episodeId(episodeId)
+                .scale(scale)
+                .result(result)
+                .rawData(request.getResult())
+                .calculatedAt(LocalDateTime.now())
+                .calculatedBy(userId)
+                .build();
+        sr.setCreatedBy(userId);
+        sr.setUpdatedBy(userId);
+        sr = scaleResultRepository.save(sr);
+        auditService.logCreate("ScaleResult", sr.getId(), userId);
+        return scaleResultMapper.toResponse(sr);
+    }
+
+    @Transactional
+    public ScaleResultResponse calculateAndSaveScale(
+            UUID episodeId, UUID clinicalDayId, UUID scaleId,
+            Map<String, Object> rawData, Long userId) {
+        ClinicalScale scale = clinicalScaleRepository.findById(scaleId)
+                .orElseThrow(() -> new NotFoundException("Clinical scale not found: " + scaleId));
+
+        String scaleName = scale.getName() != null ? scale.getName().toLowerCase() : "";
+        String rawJson;
+        try {
+            rawJson = objectMapper.writeValueAsString(rawData);
+        } catch (JsonProcessingException e) {
+            rawJson = rawData.toString();
+        }
+
+        String result;
+        if (scaleName.contains("apache")) {
+            result = String.valueOf(calculateApacheIi(rawData));
+        } else if (scaleName.contains("sofa")) {
+            result = String.valueOf(calculateSofa(rawData));
+        } else if (scaleName.contains("cam-icu") || scaleName.contains("cam")) {
+            result = calculateCamIcu(rawData);
+        } else if (scaleName.contains("браден") || scaleName.contains("braden")) {
+            result = String.valueOf(calculateBraden(rawData));
+        } else {
+            result = (String) rawData.getOrDefault("result", "N/A");
+        }
+
+        ScaleResult sr = ScaleResult.builder()
+                .episodeId(episodeId)
+                .clinicalDay(clinicalDayId != null ? clinicalDayRepository.getReferenceById(clinicalDayId) : null)
+                .scale(scale)
+                .result(result)
+                .rawData(rawJson)
+                .calculatedAt(LocalDateTime.now())
+                .calculatedBy(userId)
+                .build();
+        sr.setCreatedBy(userId);
+        sr.setUpdatedBy(userId);
+        sr = scaleResultRepository.save(sr);
+        auditService.logCreate("ScaleResult", sr.getId(), userId);
+        return scaleResultMapper.toResponse(sr);
+    }
+
+    private int calculateApacheIi(Map<String, Object> rawData) {
+        Integer age = rawData.containsKey("age") ? ((Number) rawData.get("age")).intValue() : null;
+        Integer gcs = rawData.containsKey("gcs") ? ((Number) rawData.get("gcs")).intValue() : null;
+
+        ApacheIiCalculator.ApacheIiInput input = ApacheIiCalculator.ApacheIiInput.builder()
+                .temperatureC(doubleOrNull(rawData.get("temperatureC")))
+                .meanArterialPressure(doubleOrNull(rawData.get("meanArterialPressure")))
+                .heartRate(doubleOrNull(rawData.get("heartRate")))
+                .respiratoryRate(doubleOrNull(rawData.get("respiratoryRate")))
+                .fio2(doubleOrNull(rawData.get("fio2")))
+                .paO2(doubleOrNull(rawData.get("paO2")))
+                .paCO2(doubleOrNull(rawData.get("paCO2")))
+                .aaDo2(doubleOrNull(rawData.get("aaDo2")))
+                .ph(doubleOrNull(rawData.get("ph")))
+                .serumHco3(doubleOrNull(rawData.get("serumHco3")))
+                .serumSodium(doubleOrNull(rawData.get("serumSodium")))
+                .serumPotassium(doubleOrNull(rawData.get("serumPotassium")))
+                .serumCreatinine(doubleOrNull(rawData.get("serumCreatinine")))
+                .acuteRenalFailure(boolOrNull(rawData.get("acuteRenalFailure")))
+                .hematocrit(doubleOrNull(rawData.get("hematocrit")))
+                .whiteBloodCount(doubleOrNull(rawData.get("whiteBloodCount")))
+                .gcs(gcs)
+                .age(age)
+                .chronicHealthType((String) rawData.get("chronicHealthType"))
+                .isEmergencySurgical(boolOrNull(rawData.get("emergencySurgical")))
+                .build();
+        return ApacheIiCalculator.calculate(input).getTotal();
+    }
+
+    private int calculateSofa(Map<String, Object> rawData) {
+        SofaCalculator.SofaInput input = SofaCalculator.SofaInput.builder()
+                .paO2(doubleOrNull(rawData.get("paO2")))
+                .fio2(doubleOrNull(rawData.get("fio2")))
+                .onVentilator(boolOrNull(rawData.get("onVentilator")))
+                .platelets(doubleOrNull(rawData.get("platelets")))
+                .bilirubin(doubleOrNull(rawData.get("bilirubin")))
+                .map(doubleOrNull(rawData.get("map")))
+                .dopamine(doubleOrNull(rawData.get("dopamine")))
+                .dobutamine(doubleOrNull(rawData.get("dobutamine")))
+                .norepinephrine(doubleOrNull(rawData.get("norepinephrine")))
+                .epinephrine(doubleOrNull(rawData.get("epinephrine")))
+                .gcs(rawData.containsKey("gcs") ? ((Number) rawData.get("gcs")).intValue() : null)
+                .creatinine(doubleOrNull(rawData.get("creatinine")))
+                .urineOutput(doubleOrNull(rawData.get("urineOutput")))
+                .build();
+        return SofaCalculator.calculate(input).getTotal();
+    }
+
+    private String calculateCamIcu(Map<String, Object> rawData) {
+        CamIcuCalculator.CamIcuInput input = CamIcuCalculator.CamIcuInput.builder()
+                .acuteOnset(boolOrDefault(rawData.get("acuteOnset")))
+                .inattention(boolOrDefault(rawData.get("inattention")))
+                .disorganizedThinking(boolOrDefault(rawData.get("disorganizedThinking")))
+                .alteredConsciousness(boolOrDefault(rawData.get("alteredConsciousness")))
+                .build();
+        CamIcuCalculator.CamIcuResult result = CamIcuCalculator.calculate(input);
+        return result.isDelirium() ? "Позитивний" : "Негативний";
+    }
+
+    private int calculateBraden(Map<String, Object> rawData) {
+        BradenCalculator.BradenInput input = BradenCalculator.BradenInput.builder()
+                .sensoryPerception(intClamp(rawData.get("sensoryPerception"), 1, 4))
+                .moisture(intClamp(rawData.get("moisture"), 1, 4))
+                .activity(intClamp(rawData.get("activity"), 1, 4))
+                .mobility(intClamp(rawData.get("mobility"), 1, 4))
+                .nutrition(intClamp(rawData.get("nutrition"), 1, 4))
+                .frictionShear(intClamp(rawData.get("frictionShear"), 1, 3))
+                .build();
+        return BradenCalculator.calculate(input).getTotal();
+    }
+
+    private Double doubleOrNull(Object v) {
+        if (v == null) return null;
+        if (v instanceof Number n) return n.doubleValue();
+        return null;
+    }
+
+    private Boolean boolOrNull(Object v) {
+        if (v instanceof Boolean b) return b;
+        return null;
+    }
+
+    private boolean boolOrDefault(Object v) {
+        return Boolean.TRUE.equals(v);
+    }
+
+    private int intClamp(Object v, int min, int max) {
+        if (v instanceof Number n) return Math.max(min, Math.min(max, n.intValue()));
+        return min;
+    }
+
     private String autoFillFromPreviousDay(ClinicalDay day, ClinicalScale scale, UUID clinicalDayId) {
         String scaleName = scale.getName() != null ? scale.getName().toLowerCase() : "";
-        if (!scaleName.contains("apache") && !scaleName.contains("sofa")) return null;
+        if (!scaleName.contains("sofa")) return null;
 
         List<ClinicalDay> days = clinicalDayRepository
                 .findByEpisodeIdOrderByDayNumberAsc(day.getEpisode().getId());
@@ -111,7 +279,9 @@ public class ClinicalScaleService {
         if (!result.getVersion().equals(request.getVersion())) {
             throw new VersionConflictException("Scale result was modified by another user");
         }
-        assertNotLocked(result.getClinicalDay());
+        if (result.getClinicalDay() != null) {
+            assertNotLocked(result.getClinicalDay());
+        }
 
         if (request.getResult() != null) result.setResult(request.getResult());
         result.setUpdatedBy(userId);
@@ -137,6 +307,8 @@ public class ClinicalScaleService {
         if (records.isEmpty()) return "N/A";
 
         HourlyRecord latest = records.get(records.size() - 1);
+        if (latest.getGcs() != null) return String.valueOf(latest.getGcs());
+
         String consciousness = latest.getConsciousness();
         if (consciousness == null) return "N/A";
 

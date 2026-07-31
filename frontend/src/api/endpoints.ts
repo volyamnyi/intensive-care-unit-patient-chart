@@ -109,6 +109,12 @@ export const clinicalScaleApi = {
     client.get<ScaleResult[]>(`/clinical-days/${clinicalDayId}/scales`),
   createResult: (clinicalDayId: string, data: ScaleResultCreateRequest) =>
     client.post<ScaleResult>(`/clinical-days/${clinicalDayId}/scales`, data),
+  getResultsByEpisode: (episodeId: string) =>
+    client.get<ScaleResult[]>(`/episodes/${episodeId}/scales`),
+  createEpisodeResult: (episodeId: string, data: ScaleResultCreateRequest) =>
+    client.post<ScaleResult>(`/episodes/${episodeId}/scales`, data),
+  calculateAndSave: (episodeId: string, scaleId: string, rawData: Record<string, unknown>, clinicalDayId?: string) =>
+    client.post<ScaleResult>(`/episodes/${episodeId}/scales/calculate?scaleId=${scaleId}${clinicalDayId ? `&clinicalDayId=${clinicalDayId}` : ''}`, rawData),
   updateResult: (id: string, data: { result?: string; version: number }) =>
     client.patch<ScaleResult>(`/scales/${id}`, data),
 };

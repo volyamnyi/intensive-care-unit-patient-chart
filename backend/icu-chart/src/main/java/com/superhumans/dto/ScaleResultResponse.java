@@ -11,9 +11,11 @@ import lombok.experimental.FieldDefaults;
 public class ScaleResultResponse {
     UUID id;
     UUID clinicalDayId;
+    UUID episodeId;
     UUID scaleId;
     String scaleName;
     String result;
+    String rawData;
     LocalDateTime calculatedAt;
     Long calculatedBy;
     LocalDateTime createdAt;

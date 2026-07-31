@@ -1,7 +1,7 @@
-﻿import { test, expect } from '../../fixtures/index';
+import { test, expect } from '../../fixtures/index';
 
 const API = 'http://localhost:8085/api';
-const HOD_PATIENT_ID = 1005; // Ткачук
+const HOD_PATIENT_ID = 1005; // ������
 
 async function getToken(request: any) {
   const res = await request.post(`${API}/auth/login`, {
@@ -26,8 +26,8 @@ async function closeActiveEpisode(request: any, token: string) {
 
 test.describe('HOD Dashboard', () => {
   test('displays active patients list', async ({ page }) => {
-    await page.goto('/doctor');
-    await expect(page.getByText('Активні пацієнти')).toBeVisible({ timeout: 10000 });
+    await page.goto('/icu/doctor');
+    await expect(page.getByText('������� ��������')).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('table')).toBeVisible();
   });
 
@@ -35,25 +35,25 @@ test.describe('HOD Dashboard', () => {
     const token = await getToken(request);
     await closeActiveEpisode(request, token);
 
-    await page.goto('/doctor/create-card');
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill('Ткачук');
+    await page.goto('/icu/doctor/create-card');
+    await page.getByLabel('ϲ�, ������� ��� � ��������').fill('������');
 
-    const option = page.getByText(/Ткачук Андрій/);
+    const option = page.getByText(/������ �����/);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
 
-    await expect(page.getByText('Дані пацієнта (з МІС)')).toBeVisible();
-    await page.getByRole('button', { name: 'Створити карту' }).click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await expect(page.getByText('���� �������� (� ̲�)')).toBeVisible();
+    await page.getByRole('button', { name: '�������� �����' }).click();
+    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
   });
 
   test('can view prescriptions section on episode page', async ({ page }) => {
-    await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
-    await expect(page.getByRole('button', { name: '+ Нове призначення' })).toBeVisible();
+    await page.goto('/icu/doctor/episode/a3333333-3333-3333-3333-333333333333');
+    await expect(page.getByRole('button', { name: '+ ���� �����������' })).toBeVisible();
   });
 
   test('can view scales section', async ({ page }) => {
-    await page.goto('/doctor/episode/a3333333-3333-3333-3333-333333333333');
-    await expect(page.getByText('Шкали').first()).toBeVisible();
+    await page.goto('/icu/doctor/episode/a3333333-3333-3333-3333-333333333333');
+    await expect(page.getByText('�����').first()).toBeVisible();
   });
 });

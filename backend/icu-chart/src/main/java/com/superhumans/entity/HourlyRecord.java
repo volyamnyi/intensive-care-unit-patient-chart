@@ -32,6 +32,10 @@ public class HourlyRecord extends BaseEntity {
     @Column(length = 50)
     String consciousness;
 
+    @Min(ClinicalConstants.GCS_MIN) @Max(ClinicalConstants.GCS_MAX)
+    @Column(name = "gcs")
+    Integer gcs;
+
     @DecimalMin(ClinicalConstants.TEMPERATURE_MIN_STR) @DecimalMax(ClinicalConstants.TEMPERATURE_MAX_STR)
     Double temperature;
 
@@ -72,6 +76,22 @@ public class HourlyRecord extends BaseEntity {
     @DecimalMin(ClinicalConstants.CVP_MIN_STR) @DecimalMax(ClinicalConstants.CVP_MAX_STR)
     @Column(name = "cvp")
     Double cvp;
+
+    @DecimalMin(ClinicalConstants.VASOPRESSOR_MIN_STR) @DecimalMax(ClinicalConstants.VASOPRESSOR_MAX_STR)
+    @Column(name = "dopamine")
+    Double dopamine;
+
+    @DecimalMin(ClinicalConstants.VASOPRESSOR_MIN_STR) @DecimalMax(ClinicalConstants.VASOPRESSOR_MAX_STR)
+    @Column(name = "dobutamine")
+    Double dobutamine;
+
+    @DecimalMin(ClinicalConstants.VASOPRESSOR_MIN_STR) @DecimalMax(ClinicalConstants.VASOPRESSOR_MAX_STR)
+    @Column(name = "norepinephrine")
+    Double norepinephrine;
+
+    @DecimalMin(ClinicalConstants.VASOPRESSOR_MIN_STR) @DecimalMax(ClinicalConstants.VASOPRESSOR_MAX_STR)
+    @Column(name = "epinephrine")
+    Double epinephrine;
 
     @DecimalMin(ClinicalConstants.URINE_OUTPUT_MIN_STR)
     @Column(name = "urine_output")
@@ -123,9 +143,19 @@ public class HourlyRecord extends BaseEntity {
         if (etco2 != null && (etco2 < ClinicalConstants.ETCO2_MIN || etco2 > ClinicalConstants.ETCO2_MAX))
             throw new IllegalArgumentException("ETCO2 must be between " + ClinicalConstants.ETCO2_MIN + " and " + ClinicalConstants.ETCO2_MAX + " mmHg");
         if (fio2 != null && (fio2 < ClinicalConstants.FIO2_MIN || fio2 > ClinicalConstants.FIO2_MAX))
-            throw new IllegalArgumentException("FiO2 must be between " + ClinicalConstants.FIO2_MIN + " and " + ClinicalConstants.FIO2_MAX);
+            throw new IllegalArgumentException("FiO2 must be between " + ClinicalConstants.FIO2_MIN + " and " + ClinicalConstants.FIO2_MAX + "%");
         if (cvp != null && (cvp < ClinicalConstants.CVP_MIN || cvp > ClinicalConstants.CVP_MAX))
             throw new IllegalArgumentException("CVP must be between " + ClinicalConstants.CVP_MIN + " and " + ClinicalConstants.CVP_MAX + " mmHg");
+        if (gcs != null && (gcs < ClinicalConstants.GCS_MIN || gcs > ClinicalConstants.GCS_MAX))
+            throw new IllegalArgumentException("GCS must be between " + ClinicalConstants.GCS_MIN + " and " + ClinicalConstants.GCS_MAX);
+        if (dopamine != null && (dopamine < ClinicalConstants.VASOPRESSOR_MIN || dopamine > ClinicalConstants.VASOPRESSOR_MAX))
+            throw new IllegalArgumentException("Dopamine must be between " + ClinicalConstants.VASOPRESSOR_MIN + " and " + ClinicalConstants.VASOPRESSOR_MAX + " мкг/кг/хв");
+        if (dobutamine != null && (dobutamine < ClinicalConstants.VASOPRESSOR_MIN || dobutamine > ClinicalConstants.VASOPRESSOR_MAX))
+            throw new IllegalArgumentException("Dobutamine must be between " + ClinicalConstants.VASOPRESSOR_MIN + " and " + ClinicalConstants.VASOPRESSOR_MAX + " мкг/кг/хв");
+        if (norepinephrine != null && (norepinephrine < ClinicalConstants.VASOPRESSOR_MIN || norepinephrine > ClinicalConstants.VASOPRESSOR_MAX))
+            throw new IllegalArgumentException("Norepinephrine must be between " + ClinicalConstants.VASOPRESSOR_MIN + " and " + ClinicalConstants.VASOPRESSOR_MAX + " мкг/кг/хв");
+        if (epinephrine != null && (epinephrine < ClinicalConstants.VASOPRESSOR_MIN || epinephrine > ClinicalConstants.VASOPRESSOR_MAX))
+            throw new IllegalArgumentException("Epinephrine must be between " + ClinicalConstants.VASOPRESSOR_MIN + " and " + ClinicalConstants.VASOPRESSOR_MAX + " мкг/кг/хв");
     }
 
 }

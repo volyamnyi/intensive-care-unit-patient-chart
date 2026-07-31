@@ -14,4 +14,5 @@ public class ScaleResultCreateRequest {
     UUID scaleId;
     @NotBlank
     String result;
+    UUID episodeId;
 }

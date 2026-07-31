@@ -26,7 +26,7 @@ test.describe('Login', () => {
   });
 
   test('redirects to /login when unauthenticated', async ({ page }) => {
-    await page.goto('/doctor');
+    await page.goto('/icu/doctor');
     await expect(page).toHaveURL('/login');
   });
 

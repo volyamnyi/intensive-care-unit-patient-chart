@@ -16,7 +16,7 @@ export class DoctorDashboardPage extends BasePage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/doctor');
+    await this.page.goto('/icu/doctor');
     await this.page.waitForLoadState('networkidle');
   }
 

@@ -35,7 +35,7 @@ vi.mock('../../styles/ThemeContext', () => ({
   ThemeModeProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-function renderLayout(route = '/prescriptions/icu/doctor') {
+function renderLayout(route = '/icu/doctor') {
   return render(
     <ThemeModeProvider>
       <MemoryRouter initialEntries={[route]}>
@@ -53,7 +53,7 @@ describe('GlobalLayout - header', () => {
   });
 
   it('renders app title based on route', () => {
-    renderLayout('/prescriptions/icu/doctor');
+    renderLayout('/icu/doctor');
     expect(screen.getByText('ВАІТ')).toBeInTheDocument();
     expect(screen.getAllByText('Карта інтенсивної терапії').length).toBeGreaterThanOrEqual(1);
   });
@@ -113,7 +113,7 @@ describe('GlobalLayout - header', () => {
   it('nurse sees nurse routes in sidebar', async () => {
     mockUser = { id: 3, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE' };
     mockHasRole = (...roles: string[]) => roles.includes('NURSE');
-    renderLayout('/prescriptions/icu/nurse');
+    renderLayout('/icu/nurse');
     expect(screen.getByText('ВАІТ')).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText('Меню користувача'));
     await waitFor(() => {
@@ -146,12 +146,12 @@ describe('GlobalLayout - sidebar and breadcrumbs', () => {
   });
 
   it('renders sidebar navigation', () => {
-    renderLayout('/prescriptions/icu/doctor');
+    renderLayout('/icu/doctor');
     expect(screen.getByLabelText('Головна навігація')).toBeInTheDocument();
   });
 
   it('renders breadcrumbs on doctor episode page', () => {
-    renderLayout('/prescriptions/icu/doctor/episode/test-123');
+    renderLayout('/icu/doctor/episode/test-123');
     expect(screen.getByLabelText('Breadcrumb')).toBeInTheDocument();
     expect(screen.getAllByText('Пацієнти').length).toBeGreaterThanOrEqual(1);
   });

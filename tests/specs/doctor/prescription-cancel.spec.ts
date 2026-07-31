@@ -11,7 +11,7 @@ function futureStartTime(): string {
 
 test.describe('Prescription Cancel', () => {
   test('creates prescription via UI and shows active status', async ({ page }) => {
-    await page.goto(`/doctor/episode/${EPISODE_ID}`);
+    await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 
@@ -28,7 +28,7 @@ test.describe('Prescription Cancel', () => {
   });
 
   test('prescription form has cancel button to close form', async ({ page }) => {
-    await page.goto(`/doctor/episode/${EPISODE_ID}`);
+    await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
 

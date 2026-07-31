@@ -40,7 +40,7 @@ export default function DashboardPage() {
             Відділення анестезіології та інтенсивної терапії
           </p>
         </div>
-        <Button onClick={() => navigate('/prescriptions/icu/doctor/create-card')}>
+        <Button onClick={() => navigate('/icu/doctor/create-card')}>
           <Plus />
           Нова карта
         </Button>
@@ -61,7 +61,7 @@ export default function DashboardPage() {
       ) : (
         <EpisodeTable
           episodes={filteredEpisodes}
-          onSelect={(ep) => navigate('/prescriptions/icu/doctor/episode/' + ep.id)}
+          onSelect={(ep) => navigate('/icu/doctor/episode/' + ep.id)}
         />
       )}
     </div>

@@ -2,9 +2,9 @@ import { test, expect } from '../../fixtures/index';
 
 test.describe('Scales Section', () => {
   test('scales section shows scale panel in sidebar', async ({ page }) => {
-    await page.goto('/doctor');
+    await page.goto('/icu/doctor');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
 
     const scalesSection = page.getByText('Шкали').first();
     await scalesSection.click();

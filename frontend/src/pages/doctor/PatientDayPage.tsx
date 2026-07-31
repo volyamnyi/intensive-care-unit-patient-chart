@@ -160,7 +160,7 @@ export default function PatientDayPage() {
         <Button
           variant="link"
           size="sm"
-          onClick={() => navigate(isNurse ? '/prescriptions/icu/nurse' : '/prescriptions/icu/doctor')}
+          onClick={() => navigate(isNurse ? '/icu/nurse' : '/icu/doctor')}
           className="text-muted-foreground text-xs"
         >
           <ArrowLeft />

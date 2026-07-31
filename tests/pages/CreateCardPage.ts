@@ -18,7 +18,7 @@ export class CreateCardPage extends BasePage {
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/doctor/create-card');
+    await this.page.goto('/icu/doctor/create-card');
   }
 
   async searchPatient(query: string): Promise<void> {

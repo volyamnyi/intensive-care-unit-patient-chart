@@ -29,7 +29,7 @@ test.describe('Create Card', () => {
     const token = await getToken(request);
     await closeActiveEpisode(request, token);
 
-    await page.goto('/doctor/create-card');
+    await page.goto('/icu/doctor/create-card');
     await expect(page.getByText('Нова карта інтенсивної терапії')).toBeVisible();
 
     await page.getByLabel('ПІБ, телефон або № медкарти').fill('Бондаренко');
@@ -40,11 +40,11 @@ test.describe('Create Card', () => {
     await expect(page.getByText('Дані пацієнта (з МІС)')).toBeVisible();
 
     await page.getByRole('button', { name: 'Створити карту' }).click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
   });
 
   test('shows info message for short search query', async ({ page }) => {
-    await page.goto('/doctor/create-card');
+    await page.goto('/icu/doctor/create-card');
     await page.getByLabel('ПІБ, телефон або № медкарти').fill('A');
     await expect(page.getByText('Введіть мінімум 2 символи')).toBeVisible();
   });
@@ -53,7 +53,7 @@ test.describe('Create Card', () => {
     const token = await getToken(request);
     await closeActiveEpisode(request, token);
 
-    await page.goto('/doctor/create-card');
+    await page.goto('/icu/doctor/create-card');
     await page.getByLabel('ПІБ, телефон або № медкарти').fill('Бондаренко');
     const option = page.getByText(/Бондаренко Тетяна/);
     await expect(option).toBeVisible({ timeout: 10000 });
@@ -61,6 +61,6 @@ test.describe('Create Card', () => {
     await expect(page.getByText('Дані пацієнта (з МІС)')).toBeVisible();
 
     await page.getByRole('button', { name: 'Скасувати' }).click();
-    await expect(page).toHaveURL('/doctor');
+    await expect(page).toHaveURL('/icu/doctor');
   });
 });

@@ -128,18 +128,20 @@ public class PdfGeneratorService {
             PdfFont font = loadFont();
             PdfFont boldFont = loadBoldFont(font);
 
+            Episode episode = day.getEpisode();
             List<HourlyRecord> hourlyRecords = hourlyRecordRepository
                     .findByClinicalDayIdOrderByRecordTimeAsc(day.getId());
             List<FluidBalance> balances = fluidBalanceRepository
                     .findByClinicalDayIdOrderByHourAsc(day.getId());
             List<Signature> signatures = signatureRepository.findByClinicalDayId(day.getId());
             List<ScaleResult> scales = scaleResultRepository.findByClinicalDayId(day.getId());
+            List<ScaleResult> episodeScales = episode != null
+                    ? scaleResultRepository.findByEpisodeId(episode.getId())
+                    : Collections.emptyList();
             List<MedicalNote> notes = medicalNoteRepository
                     .findByClinicalDayIdOrderByCreatedAtAsc(day.getId());
             List<MedicalOrder> orders = medicalOrderRepository
                     .findByClinicalDayIdOrderByStartTimeAsc(day.getId());
-
-            Episode episode = day.getEpisode();
             PatientDTO patient = null;
             if (episode != null && episode.getPatientId() != null) {
                 try {
@@ -192,13 +194,15 @@ public class PdfGeneratorService {
             master.addCell(leftCell);
 
             // Right sidebar
-            master.addCell(createSidebar(font, boldFont, patient, episode, balances, signatures));
+            master.addCell(createSidebar(font, boldFont, patient, episode, balances, signatures, episodeScales, scales));
 
             document.add(master);
 
             // Additional pages for notes and scales
             addNotesSection(document, font, boldFont, notes);
-            addScalesSection(document, font, boldFont, scales);
+            List<ScaleResult> allScales = new ArrayList<>(scales);
+            allScales.addAll(episodeScales);
+            addScalesSection(document, font, boldFont, allScales);
             addFooter(document, font, version, userId);
 
             document.close();
@@ -467,7 +471,8 @@ public class PdfGeneratorService {
     // ========================================================================
 
     private Cell createSidebar(PdfFont font, PdfFont boldFont, PatientDTO patient, Episode episode,
-                                List<FluidBalance> balances, List<Signature> signatures) {
+                                List<FluidBalance> balances, List<Signature> signatures,
+                                List<ScaleResult> episodeScales, List<ScaleResult> scales) {
         float cellSize = 7f;
         float titleSize = 8f;
 
@@ -493,10 +498,12 @@ public class PdfGeneratorService {
         sb.addCell(sideCell("Резус-фактор: " + rhFactor, font, cellSize).setMinHeight(12));
 
         // APACHE II
-        sb.addCell(sideCell("Важкість стану за APACHE II: ____", font, cellSize).setMinHeight(12));
+        String apacheVal = findScaleValue(episodeScales, "APACHE II");
+        sb.addCell(sideCell("Важкість стану за APACHE II: " + (apacheVal != null ? apacheVal : "____"), font, cellSize).setMinHeight(12));
 
         // SOFA
-        sb.addCell(sideCell("Ступінь тяж. ПОН за SOFA: ____", font, cellSize).setMinHeight(12));
+        String sofaVal = findScaleValue(scales, "SOFA");
+        sb.addCell(sideCell("Ступінь тяж. ПОН за SOFA: " + (sofaVal != null ? sofaVal : "____"), font, cellSize).setMinHeight(12));
 
         // Fluid balance
         sb.addCell(sideSectionTitle("Баланс рідини", font, boldFont, titleSize));
@@ -808,6 +815,15 @@ public class PdfGeneratorService {
         } catch (Exception e) {
             return userId.toString().substring(0, 8);
         }
+    }
+
+    private String findScaleValue(List<ScaleResult> scales, String name) {
+        for (ScaleResult sr : scales) {
+            if (sr.getScale() != null && name.equalsIgnoreCase(sr.getScale().getName())) {
+                return sr.getResult();
+            }
+        }
+        return null;
     }
 
     private PdfFont loadFont() {

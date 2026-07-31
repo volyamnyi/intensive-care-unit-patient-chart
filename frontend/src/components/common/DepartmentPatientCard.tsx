@@ -46,7 +46,7 @@ export default function DepartmentPatientCard({ patient }: Props) {
       style={{
         borderLeft: dayConfig ? `4px solid ${dayConfig.borderColor}` : undefined,
       }}
-      onClick={() => navigate('/prescriptions/icu/doctor/episode/' + patient.id)}
+      onClick={() => navigate('/icu/doctor/episode/' + patient.id)}
     >
       <CardContent className="p-4">
         <div className="mb-1 flex items-start justify-between">

@@ -8,22 +8,22 @@ interface BreadcrumbItem {
 }
 
 const ROUTE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
-  '/prescriptions/icu/doctor': [{ label: 'Пацієнти', to: '/prescriptions/icu/doctor' }],
-  '/prescriptions/icu/doctor/department': [
-    { label: 'Пацієнти', to: '/prescriptions/icu/doctor' },
-    { label: 'Відділення', to: '/prescriptions/icu/doctor/department' },
+  '/icu/doctor': [{ label: 'Пацієнти', to: '/icu/doctor' }],
+  '/icu/doctor/department': [
+    { label: 'Пацієнти', to: '/icu/doctor' },
+    { label: 'Відділення', to: '/icu/doctor/department' },
   ],
-  '/prescriptions/icu/doctor/create-card': [
-    { label: 'Пацієнти', to: '/prescriptions/icu/doctor' },
+  '/icu/doctor/create-card': [
+    { label: 'Пацієнти', to: '/icu/doctor' },
     { label: 'Новий пацієнт' },
   ],
-  '/prescriptions/icu/doctor/episode': [
-    { label: 'Пацієнти', to: '/prescriptions/icu/doctor' },
+  '/icu/doctor/episode': [
+    { label: 'Пацієнти', to: '/icu/doctor' },
     { label: 'День' },
   ],
-  '/prescriptions/icu/nurse': [{ label: 'Пацієнти', to: '/prescriptions/icu/nurse' }],
-  '/prescriptions/icu/nurse/episode': [
-    { label: 'Пацієнти', to: '/prescriptions/icu/nurse' },
+  '/icu/nurse': [{ label: 'Пацієнти', to: '/icu/nurse' }],
+  '/icu/nurse/episode': [
+    { label: 'Пацієнти', to: '/icu/nurse' },
     { label: 'День' },
   ],
   '/prescriptions/doctor': [{ label: 'Призначення', to: '/prescriptions/doctor' }],
@@ -40,12 +40,12 @@ const ROUTE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
 };
 
 function matchBreadcrumbs(pathname: string): BreadcrumbItem[] {
-  if (pathname.startsWith('/prescriptions/icu/doctor/episode/')) return ROUTE_BREADCRUMBS['/prescriptions/icu/doctor/episode'];
-  if (pathname.startsWith('/prescriptions/icu/nurse/episode/')) return ROUTE_BREADCRUMBS['/prescriptions/icu/nurse/episode'];
-  if (pathname.startsWith('/prescriptions/icu/doctor/department')) return ROUTE_BREADCRUMBS['/prescriptions/icu/doctor/department'];
-  if (pathname.startsWith('/prescriptions/icu/doctor/create-card')) return ROUTE_BREADCRUMBS['/prescriptions/icu/doctor/create-card'];
-  if (pathname.startsWith('/prescriptions/icu/doctor')) return ROUTE_BREADCRUMBS['/prescriptions/icu/doctor'];
-  if (pathname.startsWith('/prescriptions/icu/nurse')) return ROUTE_BREADCRUMBS['/prescriptions/icu/nurse'];
+  if (pathname.startsWith('/icu/doctor/episode/')) return ROUTE_BREADCRUMBS['/icu/doctor/episode'];
+  if (pathname.startsWith('/icu/nurse/episode/')) return ROUTE_BREADCRUMBS['/icu/nurse/episode'];
+  if (pathname.startsWith('/icu/doctor/department')) return ROUTE_BREADCRUMBS['/icu/doctor/department'];
+  if (pathname.startsWith('/icu/doctor/create-card')) return ROUTE_BREADCRUMBS['/icu/doctor/create-card'];
+  if (pathname.startsWith('/icu/doctor')) return ROUTE_BREADCRUMBS['/icu/doctor'];
+  if (pathname.startsWith('/icu/nurse')) return ROUTE_BREADCRUMBS['/icu/nurse'];
   if (pathname.startsWith('/prescriptions/doctor/')) return ROUTE_BREADCRUMBS['/prescriptions/doctor/:id'];
   if (pathname.startsWith('/prescriptions/nurse/')) return ROUTE_BREADCRUMBS['/prescriptions/nurse/:id'];
   if (pathname.startsWith('/prescriptions/doctor')) return ROUTE_BREADCRUMBS['/prescriptions/doctor'];

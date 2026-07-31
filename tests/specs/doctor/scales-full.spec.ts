@@ -20,18 +20,18 @@ test.describe('Scales Full', () => {
     const scales = await res.json();
     expect(Array.isArray(scales)).toBeTruthy();
 
-    await page.goto('/doctor');
+    await page.goto('/icu/doctor');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
 
     await page.getByText('Шкали').first().click();
     await expect(page.getByText('Немає даних шкал').or(page.getByText('Не заповнено'))).toBeVisible();
   });
 
   test('scales section is accessible from episode page', async ({ page }) => {
-    await page.goto('/doctor');
+    await page.goto('/icu/doctor');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
 
     const scalesSection = page.getByText('Шкали').first();
     await expect(scalesSection).toBeVisible();

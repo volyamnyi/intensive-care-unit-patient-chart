@@ -64,6 +64,7 @@ public class HourlyRecordService {
         record.setClinicalDay(day);
         record.setCreatedBy(userId);
         record.setUpdatedBy(userId);
+        autoCalculateMAP(record);
         record = hourlyRecordRepository.save(record);
 
         if (record.getRecordTime() != null && record.getRecordTime().getHour() < LocalDateTime.now().getHour()) {
@@ -87,6 +88,7 @@ public class HourlyRecordService {
         assertNotLocked(record.getClinicalDay());
 
         if (request.getConsciousness() != null) record.setConsciousness(request.getConsciousness());
+        if (request.getGcs() != null) record.setGcs(request.getGcs());
         if (request.getTemperature() != null) record.setTemperature(request.getTemperature());
         if (request.getHeartRate() != null) record.setHeartRate(request.getHeartRate());
         if (request.getRespiratoryRate() != null) record.setRespiratoryRate(request.getRespiratoryRate());
@@ -97,17 +99,31 @@ public class HourlyRecordService {
         if (request.getEtco2() != null) record.setEtco2(request.getEtco2());
         if (request.getFio2() != null) record.setFio2(request.getFio2());
         if (request.getCvp() != null) record.setCvp(request.getCvp());
+        if (request.getDopamine() != null) record.setDopamine(request.getDopamine());
+        if (request.getDobutamine() != null) record.setDobutamine(request.getDobutamine());
+        if (request.getNorepinephrine() != null) record.setNorepinephrine(request.getNorepinephrine());
+        if (request.getEpinephrine() != null) record.setEpinephrine(request.getEpinephrine());
         if (request.getUrineOutput() != null) record.setUrineOutput(request.getUrineOutput());
         if (request.getDrainOutput() != null) record.setDrainOutput(request.getDrainOutput());
         if (request.getStool() != null) record.setStool(request.getStool());
         if (request.getVomit() != null) record.setVomit(request.getVomit());
         if (request.getPainScore() != null) record.setPainScore(request.getPainScore());
         if (request.getNotes() != null) record.setNotes(request.getNotes());
+        autoCalculateMAP(record);
         record.setUpdatedBy(userId);
         record = hourlyRecordRepository.save(record);
         auditService.logUpdate("HourlyRecord", id, userId, null, "Updated hourly record");
         fluidBalanceService.recalculate(record.getClinicalDay().getId(), userId);
         return hourlyRecordMapper.toResponse(record);
+    }
+
+    private void autoCalculateMAP(HourlyRecord record) {
+        Integer sbp = record.getSystolicBP();
+        Integer dbp = record.getDiastolicBP();
+        if (sbp != null && dbp != null) {
+            int map = (2 * dbp + sbp) / 3;
+            record.setMeanArterialPressure(map);
+        }
     }
 
     private void assertNotLocked(ClinicalDay day) {

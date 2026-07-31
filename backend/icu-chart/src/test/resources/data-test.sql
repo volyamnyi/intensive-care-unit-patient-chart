@@ -34,6 +34,20 @@ VALUES
 ('b3333333-3333-3333-3333-333333333333', 'a3333333-3333-3333-3333-333333333333', 1, DATE_TRUNC('day', NOW()) + INTERVAL '8 hours', DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '1 day', 'OPEN', false, false, NOW(), 12, NOW(), 12, 0),
 ('b4444444-4444-4444-4444-444444444444', 'a2222222-2222-2222-2222-222222222222', 2, DATE_TRUNC('day', NOW()) - INTERVAL '1 day' + INTERVAL '8 hours', DATE_TRUNC('day', NOW()) + INTERVAL '8 hours', 'NURSE_SIGNED', false, true, NOW(), 11, NOW(), 11, 0);
 
+INSERT INTO clinical_scales (id, name, description, is_automatic, status, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c1111111-1111-1111-1111-111111111101', 'GCS', 'Glasgow Coma Scale', true, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111102', 'RASS', 'Richmond Agitation-Sedation Scale', true, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111103', 'SOFA', 'Sequential Organ Failure Assessment', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111104', 'APACHE II', 'Acute Physiology And Chronic Health Evaluation II', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111105', 'CAM-ICU', 'Confusion Assessment Method for the ICU', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0),
+('c1111111-1111-1111-1111-111111111106', 'Браден', 'Braden Scale — pressure injury risk assessment', false, 'ACTIVE', NOW(), 11, NOW(), 11, 0);
+
+-- Seed an episode-level scale result for APACHE II
+INSERT INTO scale_results (id, clinical_day_id, scale_id, episode_id, result, raw_data, calculated_at, calculated_by, created_at, created_by, updated_at, updated_by, version)
+VALUES
+('c1111111-1111-1111-1111-111111111201', NULL, 'c1111111-1111-1111-1111-111111111104', 'a3333333-3333-3333-3333-333333333333', '25', '{"temperatureC":38.5}', NOW(), 12, NOW(), 12, NOW(), 12, 0);
+
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted)
 VALUES
 ('cccc0001-0001-0001-0001-000000000001', 1001, NULL, 'Test Prescription', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE),

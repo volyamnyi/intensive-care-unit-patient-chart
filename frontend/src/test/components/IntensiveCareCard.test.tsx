@@ -40,7 +40,8 @@ const mockRecords: HourlyRecord[] = [
     id: 'r1', clinicalDayId: 'day-1', recordTime: '2025-06-01T08:00:00',
     systolicBP: 120, diastolicBP: 80, heartRate: 72, spo2: 98,
     temperature: 36.6, cvp: 8, respiratoryRate: 16,
-    consciousness: null, meanArterialPressure: null, etco2: null, fio2: null,
+    consciousness: null, gcs: null, meanArterialPressure: null, etco2: null, fio2: null,
+    dopamine: null, dobutamine: null, norepinephrine: null, epinephrine: null,
     urineOutput: null, drainOutput: null, stool: null, vomit: null,
     painScore: null, notes: null,
     createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1,
@@ -49,7 +50,8 @@ const mockRecords: HourlyRecord[] = [
     id: 'r2', clinicalDayId: 'day-1', recordTime: '2025-06-01T10:00:00',
     systolicBP: 130, diastolicBP: 85, heartRate: 76, spo2: 97,
     temperature: 36.8, cvp: 7, respiratoryRate: 18,
-    consciousness: 'Ясна', meanArterialPressure: null, etco2: null, fio2: null,
+    consciousness: 'Ясна', gcs: 14, meanArterialPressure: null, etco2: null, fio2: null,
+    dopamine: null, dobutamine: null, norepinephrine: null, epinephrine: null,
     urineOutput: 150, drainOutput: 50, stool: null, vomit: null,
     painScore: null, notes: null,
     createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1,
@@ -101,6 +103,11 @@ vi.mock('../../api/endpoints', () => ({
   },
   clinicalScaleApi: {
     getResultsByClinicalDay: (...args: unknown[]) => mockScaleGetResultsByClinicalDay(...args),
+    getResultsByEpisode: vi.fn().mockResolvedValue({ data: [] }),
+    getAvailable: vi.fn().mockResolvedValue({ data: [] }),
+    create: vi.fn().mockResolvedValue({ data: {} }),
+    createEpisodeResult: vi.fn().mockResolvedValue({ data: {} }),
+    calculateAndSave: vi.fn().mockResolvedValue({ data: {} }),
   },
   ventilationApi: {
     getByClinicalDay: (...args: unknown[]) => mockVentilationGetByClinicalDay(...args),
@@ -146,10 +153,11 @@ describe('IntensiveCareCard', () => {
       expect(screen.getByText('Показники')).toBeInTheDocument();
       expect(screen.getByText('Втрати (мл)')).toBeInTheDocument();
       expect(screen.getByText('Терапія (призначення)')).toBeInTheDocument();
-      const rowLabels = ['АТсист', 'АТдіас', 'ЧСС', 'SpO2', 'Темп', 'ЦВТ',
-        'Сеча', 'Дренаж', 'Випорожнення', 'Блювота'];
+    const rowLabels = ['АТсист', 'АТдіас', 'ЧСС', 'SpO₂', 'Темп', 'ЦВТ',
+      'GCS', 'EtCO₂', 'FiO₂,%', 'Допамін (мкг/кг/хв)', 'Добутамін (мкг/кг/хв)',
+      'Норадреналін (мкг/кг/хв)', 'Адреналін (мкг/кг/хв)',
+      'Сеча', 'Дренаж', 'Випорожнення', 'Блювота'];
       rowLabels.forEach(label => expect(screen.getByText(label)).toBeInTheDocument());
-      expect(screen.getAllByText('Свідомість').length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText('ЧД').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Пацієнт')).toBeInTheDocument();
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
@@ -187,7 +195,7 @@ describe('IntensiveCareCard', () => {
       expect(screen.getAllByDisplayValue('16').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByDisplayValue('130')).toBeInTheDocument();
       expect(screen.getByDisplayValue('76')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Ясна')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('14')).toBeInTheDocument();
       expect(screen.getByDisplayValue('150')).toBeInTheDocument();
       expect(screen.getByDisplayValue('50')).toBeInTheDocument();
     });

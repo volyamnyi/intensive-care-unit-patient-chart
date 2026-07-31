@@ -251,7 +251,7 @@ describe('PatientDayPage', () => {
       expect(screen.getByText('← Назад до пацієнтів')).toBeInTheDocument();
     });
     await userEvent.click(screen.getByText('← Назад до пацієнтів'));
-    expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor');
+    expect(mockNavigate).toHaveBeenCalledWith('/icu/doctor');
   });
 
   it('shows error state when API fails', async () => {

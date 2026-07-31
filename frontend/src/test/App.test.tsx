@@ -143,8 +143,8 @@ describe('App', () => {
     });
   });
 
-  it('renders global layout for DOCTOR user at /prescriptions/icu/doctor', async () => {
-    window.history.pushState({}, '', '/prescriptions/icu/doctor');
+  it('renders global layout for DOCTOR user at /icu/doctor', async () => {
+    window.history.pushState({}, '', '/icu/doctor');
     render(<App />);
     await waitFor(() => {
       expect(screen.getByText('Global Layout')).toBeInTheDocument();
@@ -160,10 +160,10 @@ describe('App', () => {
     });
   });
 
-  it('renders nurse dashboard for NURSE user at /prescriptions/icu/nurse', async () => {
+  it('renders nurse dashboard for NURSE user at /icu/nurse', async () => {
     mockUser = { id: 2, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE' };
     mockHasRole = (...roles: string[]) => roles.includes('NURSE');
-    window.history.pushState({}, '', '/prescriptions/icu/nurse');
+    window.history.pushState({}, '', '/icu/nurse');
     render(<App />);
     await waitFor(() => {
       expect(screen.getByText('Global Layout')).toBeInTheDocument();
@@ -183,7 +183,7 @@ describe('App', () => {
   it('redirects to login when accessing protected route unauthenticated', async () => {
     mockIsAuthenticated = false;
     mockUser = null;
-    window.history.pushState({}, '', '/prescriptions/icu/doctor');
+    window.history.pushState({}, '', '/icu/doctor');
     render(<App />);
     await waitFor(() => {
       expect(screen.queryByText('Global Layout')).not.toBeInTheDocument();

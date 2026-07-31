@@ -48,6 +48,9 @@ app:
   mis:
     mock-enabled: true
     wiremock-enabled: false
+  api:
+    title: ICU Patient Chart API
+    description: API for Intensive Care Unit Patient Chart - Form 003-15/о electronic medical record system
   ldap:
     enabled: false
   scheduling:

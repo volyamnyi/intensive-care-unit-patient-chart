@@ -126,7 +126,7 @@ describe('CreateCardPage', () => {
         patientId: 1001,
         admissionDate: expect.any(String),
       }));
-      expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor/episode/ep-1');
+      expect(mockNavigate).toHaveBeenCalledWith('/icu/doctor/episode/ep-1');
     });
   });
 
@@ -142,12 +142,12 @@ describe('CreateCardPage', () => {
     });
   });
 
-  it('navigates to /prescriptions/icu/doctor on cancel', async () => {
+  it('navigates to /icu/doctor on cancel', async () => {
     renderPage();
     const onSelect = mockPatientSearch.mock.calls[0][0];
     onSelect(testPatient);
     await waitFor(() => expect(screen.getByText('Скасувати')).toBeInTheDocument());
     await userEvent.click(screen.getByText('Скасувати'));
-    expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor');
+    expect(mockNavigate).toHaveBeenCalledWith('/icu/doctor');
   });
 });

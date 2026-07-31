@@ -1,4 +1,4 @@
-databaseChangeLog:
+﻿databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: changesets/001-initial-schema.sql
@@ -14,3 +14,9 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: changesets/005-user-permissions.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/006-scale-result-episode.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/007-hourly-record-vasopressors.sql

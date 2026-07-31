@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
-  SidebarProvider, Sidebar, SidebarRail, SidebarHeader, SidebarContent, SidebarGroup,
+  Sidebar, SidebarRail, SidebarHeader, SidebarContent, SidebarGroup,
 } from '../ui/Sidebar';
+import ScaleResultsPanel from '../common/ScaleResultsPanel';
 import LabResultsPanel from '../common/LabResultsPanel';
 import VentilationPanel from '../common/VentilationPanel';
 import PatientStatePanel from '../common/PatientStatePanel';
-import type { Episode, ClinicalDay, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment } from '../../types';
+import type { Episode, ClinicalDay, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale } from '../../types';
 import type { LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types';
 
 interface NoteItem {
@@ -50,6 +51,10 @@ export interface PatientSidebarProps {
   onCreateLab: (data: LabResultCreateRequest) => Promise<void>;
   onCreateVentilation: (data: VentilationCreateRequest) => Promise<void>;
   onCreatePatientState: (data: PatientStateCreateRequest) => Promise<void>;
+  availableScales?: ClinicalScale[];
+  onCreateScale?: (scaleId: string, result: string) => void;
+  onCalculateScale?: (scaleId: string, rawData: Record<string, unknown>) => void;
+  episodeId?: string;
 }
 
 function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
@@ -69,6 +74,7 @@ export default function PatientSidebar({
   keyScales, canEditSidebar,
   onNoteChange, onSaveNote,
   onCreateLab, onCreateVentilation, onCreatePatientState,
+  availableScales, onCreateScale, onCalculateScale, episodeId,
 }: PatientSidebarProps) {
   return (
     <Sidebar side="right" collapsible="none">
@@ -163,16 +169,17 @@ export default function PatientSidebar({
         </SidebarGroup>
 
         <SidebarGroup label="Шкали" count={scales.length}>
-          {scales.length === 0 ? (
+          {scales.length === 0 && !availableScales?.length ? (
             <EmptyState icon={<Weight className="size-6" />} text={'Немає даних шкал'} />
           ) : (
-            <div className="space-y-1 py-0">
-              {scales.map((s) => (
-                <div key={s.id} className="px-0">
-                  <p className="text-xs">{`${s.name ?? ''}: ${s.result}`}</p>
-                </div>
-              ))}
-            </div>
+            <ScaleResultsPanel
+              results={scales}
+              availableScales={availableScales ?? []}
+              onCreateResult={onCreateScale}
+              onCalculateScale={onCalculateScale}
+              disabled={!canEditSidebar}
+              episodeId={episodeId}
+            />
           )}
         </SidebarGroup>
 

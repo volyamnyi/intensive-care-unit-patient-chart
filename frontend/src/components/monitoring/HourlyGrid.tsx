@@ -18,11 +18,13 @@ const VITAL_ROWS: { key: keyof HourlyRecord; label: string; numeric: boolean }[]
   { key: 'systolicBP', label: 'АТсист', numeric: true },
   { key: 'diastolicBP', label: 'АТдіас', numeric: true },
   { key: 'heartRate', label: 'ЧСС', numeric: true },
-  { key: 'spo2', label: 'SpO2', numeric: true },
-  { key: 'temperature', label: 'Темп', numeric: true },
-  { key: 'cvp', label: 'ЦВТ', numeric: true },
   { key: 'respiratoryRate', label: 'ЧД', numeric: true },
-  { key: 'consciousness', label: 'Свідомість', numeric: false },
+  { key: 'temperature', label: 'Темп', numeric: true },
+  { key: 'spo2', label: 'SpO₂', numeric: true },
+  { key: 'etco2', label: 'EtCO₂', numeric: true },
+  { key: 'fio2', label: 'FiO₂,%', numeric: true },
+  { key: 'cvp', label: 'ЦВТ', numeric: true },
+  { key: 'gcs', label: 'GCS', numeric: true },
 ];
 
 const LOSS_ROWS: { key: keyof HourlyRecord; label: string }[] = [
@@ -30,6 +32,13 @@ const LOSS_ROWS: { key: keyof HourlyRecord; label: string }[] = [
   { key: 'drainOutput', label: 'Дренаж' },
   { key: 'stool', label: 'Випорожнення' },
   { key: 'vomit', label: 'Блювота' },
+];
+
+const VASOPRESSOR_ROWS: { key: keyof HourlyRecord; label: string }[] = [
+  { key: 'dopamine', label: 'Допамін (мкг/кг/хв)' },
+  { key: 'dobutamine', label: 'Добутамін (мкг/кг/хв)' },
+  { key: 'norepinephrine', label: 'Норадреналін (мкг/кг/хв)' },
+  { key: 'epinephrine', label: 'Адреналін (мкг/кг/хв)' },
 ];
 
 const CRITICAL_RANGES: Partial<Record<string, { min: number; max: number }>> = {
@@ -40,6 +49,7 @@ const CRITICAL_RANGES: Partial<Record<string, { min: number; max: number }>> = {
   spo2: { min: 90, max: 100 },
   respiratoryRate: { min: 10, max: 30 },
   cvp: { min: 2, max: 14 },
+  gcs: { min: 8, max: 15 },
 };
 
 function isCritical(key: string, val: string): boolean {
@@ -357,6 +367,29 @@ export default function HourlyGrid({
 
             <GroupHeader label="Втрати (мл)" nurseEditable />
             {LOSS_ROWS.map((row) => (
+              <TableRow key={String(row.key)}>
+                <TableCell className="font-semibold text-xs border-r border-border">{row.label}</TableCell>
+                {HOURS.map((h) => (
+                  <Cell
+                    key={h}
+                    hour={h}
+                    rowKey={row.key}
+                    numeric
+                    label={row.label}
+                    value={boundValue(h, row.key)}
+                    isLocked={isLocked}
+                    isNurse={isNurse}
+                    isLossRow
+                    isDark={false}
+                    isPast={isPastMedDay(h, realClockHour)}
+                    onSave={onSaveCell}
+                  />
+                ))}
+              </TableRow>
+            ))}
+
+            <GroupHeader label="Вазопресорна та інотропна підтримка (мкг/кг/хв)" nurseEditable />
+            {VASOPRESSOR_ROWS.map((row) => (
               <TableRow key={String(row.key)}>
                 <TableCell className="font-semibold text-xs border-r border-border">{row.label}</TableCell>
                 {HOURS.map((h) => (

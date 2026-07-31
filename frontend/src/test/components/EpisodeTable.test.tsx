@@ -113,4 +113,50 @@ describe('EpisodeTable', () => {
     renderTable({ episodes: mockEpisodes });
     expect(screen.queryByText('Відкрити')).not.toBeInTheDocument();
   });
+
+  it('sorts by admission date descending by default', () => {
+    renderTable({ episodes: mockEpisodes });
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0]).toHaveTextContent('Коваленко Олена');
+    expect(rows[1]).toHaveTextContent('Петренко Іван');
+  });
+
+  it('sorts by patient name when header is clicked', async () => {
+    renderTable({ episodes: mockEpisodes });
+    await userEvent.click(screen.getByRole('button', { name: /Пацієнт/ }));
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0]).toHaveTextContent('Коваленко Олена');
+    expect(rows[1]).toHaveTextContent('Петренко Іван');
+  });
+
+  it('toggles sort direction on second header click', async () => {
+    renderTable({ episodes: mockEpisodes });
+    await userEvent.click(screen.getByRole('button', { name: /Пацієнт/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Пацієнт/ }));
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0]).toHaveTextContent('Петренко Іван');
+    expect(rows[1]).toHaveTextContent('Коваленко Олена');
+  });
+
+  it('sorts by status using status labels', async () => {
+    renderTable({ episodes: mockEpisodes });
+    await userEvent.click(screen.getByRole('button', { name: /Статус/ }));
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0]).toHaveTextContent('Активний');
+    expect(rows[1]).toHaveTextContent('Завершений');
+  });
+
+  it('sorts episodes with missing discharge date last', async () => {
+    renderTable({ episodes: mockEpisodes });
+    await userEvent.click(screen.getByRole('button', { name: /Дата виписки/ }));
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0]).toHaveTextContent('Коваленко Олена');
+    expect(rows[1]).toHaveTextContent('Петренко Іван');
+  });
+
+  it('does not render a sort button for the Дії column', () => {
+    renderTable({ episodes: mockEpisodes });
+    const actionsHeader = screen.getByRole('columnheader', { name: 'Дії' });
+    expect(actionsHeader.querySelector('button')).toBeNull();
+  });
 });

@@ -41,7 +41,7 @@ test.describe('HOD Clinical Day Reopen', () => {
 
   test('HOD can open episode page and see reopen button on a1111111 day 2', async ({ page }) => {
     // a1111111 day 2 (b1111112) is NURSE_SIGNED — stable seed, never reopened here.
-    await page.goto('/doctor/episode/a1111111-1111-1111-1111-111111111111');
+    await page.goto('/icu/doctor/episode/a1111111-1111-1111-1111-111111111111');
 
     // Select the NURSE_SIGNED day (Доба 2) so the reopen action appears.
     await page.getByText('Доба 2').click();
@@ -49,7 +49,7 @@ test.describe('HOD Clinical Day Reopen', () => {
   });
 
   test('HOD reopen form blocks empty reason (regression F2/UC-14)', async ({ hodPage }) => {
-    await hodPage.goto('/doctor/episode/a1111111-1111-1111-1111-111111111111');
+    await hodPage.goto('/icu/doctor/episode/a1111111-1111-1111-1111-111111111111');
 
     await hodPage.getByText('Доба 2').click();
     await expect(hodPage.getByRole('button', { name: 'Перевідкрити' })).toBeVisible({ timeout: 10000 });

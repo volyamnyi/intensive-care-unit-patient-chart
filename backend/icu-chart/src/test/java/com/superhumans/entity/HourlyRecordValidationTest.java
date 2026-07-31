@@ -288,7 +288,7 @@ class HourlyRecordValidationTest {
     @Test
     void fio2_belowMin_throws() {
         HourlyRecord record = createRecord();
-        record.setFio2(-0.1);
+        record.setFio2(20.9);
         assertThatThrownBy(record::validateClinicalRanges)
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("FiO2");
@@ -297,7 +297,7 @@ class HourlyRecordValidationTest {
     @Test
     void fio2_aboveMax_throws() {
         HourlyRecord record = createRecord();
-        record.setFio2(1.1);
+        record.setFio2(100.1);
         assertThatThrownBy(record::validateClinicalRanges)
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("FiO2");
@@ -306,16 +306,16 @@ class HourlyRecordValidationTest {
     @Test
     void fio2_atBoundaries_doesNotThrow() {
         HourlyRecord record = createRecord();
-        record.setFio2(0.0);
+        record.setFio2(21.0);
         assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
-        record.setFio2(1.0);
+        record.setFio2(100.0);
         assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
     }
 
     @Test
     void fio2_valid_doesNotThrow() {
         HourlyRecord record = createRecord();
-        record.setFio2(0.4);
+        record.setFio2(60.0);
         assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
     }
 
@@ -352,6 +352,92 @@ class HourlyRecordValidationTest {
     void cvp_valid_doesNotThrow() {
         HourlyRecord record = createRecord();
         record.setCvp(8.0);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    // ========== gcs ==========
+
+    @Test
+    void gcs_belowMin_throws() {
+        HourlyRecord record = createRecord();
+        record.setGcs(2);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("GCS");
+    }
+
+    @Test
+    void gcs_aboveMax_throws() {
+        HourlyRecord record = createRecord();
+        record.setGcs(16);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("GCS");
+    }
+
+    @Test
+    void gcs_atBoundaries_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setGcs(3);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+        record.setGcs(15);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    @Test
+    void gcs_valid_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setGcs(10);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    // ========== vasopressors ==========
+
+    @Test
+    void dopamine_belowMin_throws() {
+        HourlyRecord record = createRecord();
+        record.setDopamine(-0.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Dopamine");
+    }
+
+    @Test
+    void dopamine_aboveMax_throws() {
+        HourlyRecord record = createRecord();
+        record.setDopamine(100.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Dopamine");
+    }
+
+    @Test
+    void dopamine_atBoundaries_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setDopamine(0.0);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+        record.setDopamine(100.0);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    @Test
+    void dobutamine_valid_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setDobutamine(5.0);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    @Test
+    void norepinephrine_valid_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setNorepinephrine(0.5);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    @Test
+    void epinephrine_valid_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setEpinephrine(0.1);
         assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
     }
 

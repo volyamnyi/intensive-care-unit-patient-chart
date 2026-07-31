@@ -10,4 +10,6 @@ public interface ScaleResultRepository extends JpaRepository<ScaleResult, UUID> 
     List<ScaleResult> findByClinicalDayId(UUID clinicalDayId);
     Optional<ScaleResult> findByClinicalDayIdAndScaleId(UUID clinicalDayId, UUID scaleId);
     List<ScaleResult> findByScaleId(UUID scaleId);
+    List<ScaleResult> findByEpisodeId(UUID episodeId);
+    Optional<ScaleResult> findByEpisodeIdAndScaleId(UUID episodeId, UUID scaleId);
 }

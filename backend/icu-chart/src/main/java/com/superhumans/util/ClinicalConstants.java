@@ -46,11 +46,23 @@ public final class ClinicalConstants {
     public static final String ETCO2_MIN_STR = "0.0";
     public static final String ETCO2_MAX_STR = "100.0";
 
-    // fio2 (fraction of inspired oxygen, 0.21-1.0)
-    public static final double FIO2_MIN = 0.0;
-    public static final double FIO2_MAX = 1.0;
-    public static final String FIO2_MIN_STR = "0.0";
-    public static final String FIO2_MAX_STR = "1.0";
+    // fio2 (fraction of inspired oxygen, %)
+    public static final double FIO2_MIN = 21.0;
+    public static final double FIO2_MAX = 100.0;
+    public static final String FIO2_MIN_STR = "21.0";
+    public static final String FIO2_MAX_STR = "100.0";
+
+    // GCS (Glasgow Coma Scale, 3-15)
+    public static final int GCS_MIN = 3;
+    public static final int GCS_MAX = 15;
+    public static final String GCS_MIN_STR = "3";
+    public static final String GCS_MAX_STR = "15";
+
+    // Vasopressors (мкг/кг/хв)
+    public static final double VASOPRESSOR_MIN = 0.0;
+    public static final double VASOPRESSOR_MAX = 100.0;
+    public static final String VASOPRESSOR_MIN_STR = "0.0";
+    public static final String VASOPRESSOR_MAX_STR = "100.0";
 
     // cvp (central venous pressure, mmHg)
     public static final double CVP_MIN = 0.0;

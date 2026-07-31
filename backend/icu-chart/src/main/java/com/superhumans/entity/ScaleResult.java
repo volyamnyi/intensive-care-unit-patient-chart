@@ -3,6 +3,7 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 
 @Entity
@@ -11,15 +12,21 @@ import java.time.LocalDateTime;
 public class ScaleResult extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinical_day_id", nullable = false)
+    @JoinColumn(name = "clinical_day_id", nullable = true)
     private ClinicalDay clinicalDay;
+
+    @Column(name = "episode_id")
+    private UUID episodeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scale_id", nullable = false)
     private ClinicalScale scale;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, columnDefinition = "text")
     private String result;
+
+    @Column(name = "raw_data", columnDefinition = "jsonb")
+    private String rawData;
 
     @Column(name = "calculated_at", nullable = false)
     private LocalDateTime calculatedAt;

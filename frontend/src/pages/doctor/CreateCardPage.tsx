@@ -27,7 +27,7 @@ export default function CreateCardPage() {
         bedNumber: bedNumber || undefined,
         admissionDiagnosis: admissionDiagnosis || undefined,
       })
-      navigate('/prescriptions/icu/doctor/episode/' + res.data.id)
+      navigate('/icu/doctor/episode/' + res.data.id)
     } catch {
       setError('Помилка створення карти')
     }
@@ -123,7 +123,7 @@ export default function CreateCardPage() {
           <Button size="lg" onClick={handleCreate}>
             Створити карту
           </Button>
-          <Button variant="outline" size="lg" onClick={() => navigate('/prescriptions/icu/doctor')}>
+          <Button variant="outline" size="lg" onClick={() => navigate('/icu/doctor')}>
             Скасувати
           </Button>
         </div>

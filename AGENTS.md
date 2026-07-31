@@ -16,127 +16,20 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-07-29: 177/177 Playwright tests passing**
+**2026-07-31: ТЗ v1.2 — SOFA input parameters formalized (docs only)**
 
-Full Playwright suite (177 tests across 7 projects) passes cleanly with fresh database. Key fixes applied:
+Updated `docs/Технічне завдання карта Інтенсивної терапії.md` to v1.2 (2839 → 3026 lines). The ТЗ was brought in line with the existing implementation — verified `SofaCalculator` (all 13 inputs incl. epinephrine), `SofaForm` (4 vasopressors, GCS, creatinine, 24h urine output), `HourlyRecord.meanArterialPressure`; no code changes needed:
 
-- **Pattern A-D** (20 fixes): `getByRole` for headings, episode ID deduplication, `getByPlaceholder` for reopen reasons, unique discharge dates, strict mode violations, page title tests, routing type errors, MUI sx function, permission mock issues
-- **Pattern E-H** (additional fixes): MIS error mode reset in beforeAll, status code flexibility (200/204/409), guard clauses in signoff/reopen tests for state pollution resilience, `getByRole('heading')` fix for prescription-workflow
-- **Database reset**: After repeated test runs polluted seed data (all days fully signed), dropped and recreated PostgreSQL schema → clean restart → all 177 passing
-
-**Test execution stats:**
-- Run 1 (initial): 121 passed / 56 failed
-- After Pattern A-D fixes: 155 passed / 20 failed
-- After Pattern E-H fixes: 156 passed / 21 failed
-- After DB reset + all fixes: **177 passed / 0 failed**
-
-**Key learnings:**
-- `fullyParallel: true` + shared mutable DB state causes race conditions (MIS error mode, clinical day status changes)
-- `data.sql` `ON CONFLICT DO NOTHING` prevents re-seeding after first run → dropping schema is necessary for local clean state
-- `mvn spring-boot:run` from `icu-chart/` subdirectory avoids parent POM mainClass issue
-- Lombok incompatible with JDK 25 test-compile; skip tests with `-DskipTests -Dmaven.test.skip=true` (PowerShell: quote the flags)
-- Restoration command: `psql -U postgres -d my_fullstack_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"`
-
-### Issue #84 — Remove nav buttons from GlobalLayout header
-- Removed "Пацієнти" and "Призначення" buttons from `GlobalLayout.tsx` header
-- Nav now only shows "Відділення" (HOD) and "Додатки" (all users)
-- Updated GlobalLayout tests (14 pass): Пацієнти/Призначення verified as absent
-
-### Issue #83 — Nurse prescription patient list
-- Rewrote `NursePrescriptionPage.tsx` to display sortable department-based patient table (Хірургія/Реабілітація toggle)
-- Search, sort, and open prescription list per patient — same UX as `PrescriptionPage`
-- Previously showed only PatientSearch field; now shows full patient list by default
-
-### PostgreSQL 18 — ICU locale configuration
-- Windows `psql` displayed Ukrainian as garbage (`������`, `РџРћРњРР›РљРђ`)
-- Root cause was **not** the database — `SERVER_ENCODING` was already UTF8
-- Problem: PostgreSQL used `libc` locale with `Ukrainian_Ukraine.1251` — CP1251 collation in a UTF-8 console
-- Fixed `lc_messages`: `ALTER SYSTEM SET lc_messages = 'English_United States.1252'` → clean English output
-- Created new database with **ICU locale**: `LOCALE_PROVIDER icu`, `ICU_LOCALE 'uk-UA'`, `ENCODING 'UTF8'` (requires `TEMPLATE template0` since `template1` uses libc)
-- Verified: `datlocprovider = i` (ICU), `datlocale = uk-UA`; Ukrainian text + emoji (🚀) store and display correctly
-- `spring.datasource.url` stays standard — no `characterEncoding=UTF-8` (MySQL-specific)
-- Migration path: `pg_dump` from libc DB → `psql` restore into new ICU DB
-
-### Issue #82 — Cyrillic encoding fix
-
-**Root cause:** `scripts/generate-prescription-seed.cjs` used `console.log()` to output SQL. On Windows PowerShell, `console.log` pipes through `process.stdout` which defaults to UTF-16LE encoding (the PowerShell console code page). The generated `prescription-seed.sql` and `prescription-seed-1000.sql` were therefore UTF-16LE files. When these files were concatenated into `data.sql` (a UTF-8 file), the UTF-16LE BOM (`FF FE`) and embedded null bytes between ASCII characters caused PostgreSQL to store `document_name` as garbled text.
-
-**Fix (3 layers):**
-
-1. **Generator script** (`scripts/generate-prescription-seed.cjs` lines 213-219): Replaced `console.log(output)` with `fs.writeFileSync(path, output, 'utf8')` for file output and `process.stdout.write(output, 'utf8')` for stdout. These use Node.js Buffer with explicit UTF-8 encoding instead of the console's code-page-dependent encoding.
-
-2. **Seed files**: Converted `scripts/prescription-seed.sql` and `scripts/prescription-seed-1000.sql` from UTF-16LE to UTF-8 (stripped BOM, re-encoded). File sizes dropped ~50% due to null byte removal.
-
-3. **Auto-heal existing DB** (`data.sql`): Changed 90 `prescription_lists` INSERTs from `ON CONFLICT (id) DO NOTHING` to `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name`. This overwrites garbage Cyrillic in any database that was seeded with the corrupted files, without requiring a full `DROP SCHEMA`.
-
-**Verification:**
-- `file scripts/prescription-seed.sql` reports "UTF-8 Unicode text" (was "Little-endian UTF-16 Unicode text")
-- `hexdump -C | head` shows no BOM and single-byte ASCII characters
-- All 390 frontend Vitest tests pass, backend compiles clean
-- Running this against a corrupted DB will auto-correct the 90 document names on next startup
-
-### Issue #87 — Prescription list dropdown for patients with multiple lists
-- 90 patients have prescription lists (1001-1025 surgery, 1026-1050 rehab, 2001-2020 surgery, 2021-2040 rehab) — existing seed in `data.sql` has one `Active` list each
-- No backend changes needed: `GET /api/prescriptions?patientId=X` already returns all lists regardless of status
-- Added `'Active'` to `PrescriptionListStatus` type in `frontend/src/types/index.ts`
-- Rewrote `PrescriptionPage.tsx` and `NursePrescriptionPage.tsx`: `PatientRow.lists: PrescriptionList[]` replaces single `list`; Відкрити button and patient name link show MUI dropdown Menu when multiple lists exist
-- Generated `scripts/generate-closed-prescriptions.cjs` → `scripts/closed-prescription-seed.sql` (270 `Finished` lists, 1-5 per patient); appended to `data.sql`
-- `getStatusText`/`getRowStyle` evaluate across all lists: any non-Finished → "В ході", all Finished → "Завершено", none → "Заплановано"
-- Frontend: 39 test files, 310 tests, 0 failures. Backend compile + frontend typecheck pass
-
-### Frontend — global theme
-- **Default theme changed to light mode** (`dark` → `light` in ThemeContext)
-- **ThemeToggle** shared component (`components/common/ThemeToggle.tsx`) — DarkMode/LightMode icon + tooltip
-- Added to: DoctorLayout, NurseLayout, PrescriptionPage, PrescriptionDetailPage, NursePrescriptionPage, AdminPage, AppSelectorPage
-- Theme tests updated (11 tests pass)
-
-### Frontend — GlobalLayout
-- **GlobalLayout** (`layouts/GlobalLayout.tsx`) — unified AppBar header for all authenticated routes
-- Dynamic title/subtitle based on route (`useAppInfo()`):
-  - `/doctor/*`, `/nurse/*` → "ВАІТ" / "Карта інтенсивної терапії"
-  - `/prescriptions/*` → "Призначення" / "Листок лікарських призначень"
-  - `/admin/*` → "Адмін" / "Адміністративна панель"
-  - `/select` → "Superhumans Lviv" / "Вибір додатку"
-- Smart nav: Пацієнти, Призначення (doctor/nurse), Відділення (HOD only), Додатки
-- DoctorLayout/NurseLayout simplified to outlet-only wrappers
-- Login page outside GlobalLayout (still standalone)
-
-### Frontend — PrescriptionGrid
-- `PrescriptionGrid.tsx` — inline 21-day spreadsheet (510 lines)
-- Doctor mode: click to plan dose, middle-click to cancel
-- Nurse mode: click to execute dose with popover (dose + 2-factor auth)
-- 7-day scroll window, color-coded cells (blue=planned, green=completed, purple=cancelled)
-- Add/remove medicine with allergy check, delete confirmation popover
-- Used by: PrescriptionDetailPage (doctor), NursePrescriptionPage (nurse)
-
-### Frontend — PrescriptionPage (dashboard)
-- Department toggle: Хірургія (2001-2020) / Реабілітація (2021-2040)
-- Sortable patient table (name, document), search filter (name, ID, card number)
-- Create/Open buttons per patient
-
-### Exploratory testing
-- 4 bugs found → Issues #71-#74 created
-- #71 (HIGH): Cyrillic text in data.sql stored as Windows-1251 in UTF-8 file
-- #72 (MEDIUM): MockMIS patient names have department prefix (e.g. "Хірург Бойко...")
-- #73 (MEDIUM): Nurse detail view — missing route + grid does not render
-- #74 (LOW): Ghost empty button in doctor dashboard table
-
-### Test summary
-| Module | Tests | Type |
-|---|---|---|
-| medication-sheet | 88 | Unit (service + controller) |
-| medication-sheet | 22 | Integration (in icu-chart) |
-| icu-chart | 312 | Unit |
-| **Backend total** | **422** | |
-| Frontend | 310 | Vitest (39 files, 0 failures) |
-| E2E | 38 | Playwright specs |
+- §29/§30: GCS (3–15) field added to general state + hourly monitoring; FiO₂ defined (%); MAP marked auto-calculated with formula `MAP = (2 × ДАТ + САТ) / 3`; new block «Вазопресорна та інотропна підтримка» (допамін, добутамін, норадреналін, адреналін у мкг/кг/хв); діурез мл/год + сумарний за 24 години для SOFA
+- §36: одиниці вимірювання (тромбоцити ×10⁹/л; креатинін/білірубін мкмоль/л або мг/дл); `pO₂` → `PaO₂` (визначення); автозапис PaO₂/FiO₂
+- §53.2: серцево-судинна оцінка SOFA доповнена адреналіном (≤0.1 → 3, >0.1 → 4), дози у мкг/кг/хв
 
 ### Previous sessions (condensed):
-- 2026-07-26 (earlier): Medication Sheet backend — Phase 3-6 complete (EmailService, PrescriptionSchedulerService, controllers + security, integration tests, docs). 422 backend tests.
-- 2026-07-25: Exploratory testing — 5 bugs fixed (entity/DTO validation, scales, UUID errors). Model QA audit — grade B, all gaps fixed. 27 validation tests added. Backend: 312 tests.
-- 2026-07-23: Frontend error display — `getErrorMessage()` helper, used in all 8 API catch blocks. `InvalidDataAccessApiUsageException` → 400 handler.
-- 2026-07-22: Controller tests fixed (106/106). BYTEA column fix. Seed data day_number swap. Checkstyle.
-- 2026-07-21: PDF layout (003-15/о) corrected. Two-column layout. Autosave. DayNumber ASC sorting.
+- 2026-07-30: Clinical scales — episode-level binding, calculator algorithms, E2E tests (Issues #1-#6). `ScaleResult` episodeId/rawData(jsonb); pure-static calculators (ApacheIi, Sofa, CamIcu, Braden); `ScaleAuthorizationService` per-scale roles (APACHE II/SOFA → DOCTOR); episode-level endpoints `GET/POST /episodes/{id}/scales` + `POST .../calculate`; `ScaleFormFactory` + forms (ApacheIiForm, SofaForm, CamIcuForm, BradenForm, RassSelector); PDF episode scales via `findByEpisodeId()`; 13 E2E tests (`scales-episode.spec.ts`, `scales-access.spec.ts`)
+- 2026-07-29: 177/177 Playwright tests passing. Pattern A-D (20 fixes), Pattern E-H (additional fixes). DB reset script.
+- 2026-07-29 (earlier): Issue #87 prescription list dropdown. Issue #84 GlobalLayout nav. Issue #83 nurse patient list. Cyrillic encoding fix (Issue #82). Global theme. PrescriptionGrid.
+- 2026-07-26: Medication Sheet backend — Phase 3-6 complete (EmailService, PrescriptionSchedulerService, controllers + security, integration tests, docs). 422 backend tests.
+- 2026-07-25: Exploratory testing — 5 bugs fixed. Model QA audit — grade B, all gaps fixed. 27 validation tests.
 
 ## MIS Data Policy (DO NOT VIOLATE)
 
@@ -182,7 +75,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 - JWT auth stored in `localStorage`.
 - Backend port: **8085** (`application.yml`).
-- DB: PostgreSQL 16, `ddl-auto: update` — schema auto-created by Hibernate.
+- DB: PostgreSQL 16, `ddl-auto: none` — schema managed by Liquibase changelogs.
 - Seed data: `backend/src/main/resources/data.sql` (6 users, 3 episodes + 3 open clinical days, `spring.sql.init.mode: always`).
 - CI: `.github/workflows/playwright.yml` — Postgres service, JDK 17, Node 22, Playwright chromium, 40min timeout.
 - Mock MIS: `MockMisServiceImpl` provides 5 test patients + department/user data.
@@ -193,10 +86,10 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 | Test type | CI job | Trigger |
 |---|---|---|
-| Backend unit + integration (419) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend unit + integration (557) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
 | Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
-| Frontend Vitest (~390) | `test` → `npm test` | Same |
-| Playwright E2E (38 spec files) | `test` → `npx playwright test` | Same |
+| Frontend Vitest (~350) | `test` → `npm test` | Same |
+| Playwright E2E (45 spec files) | `test` → `npx playwright test` | Same |
 | Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
 
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
@@ -220,20 +113,20 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (~390 across 38 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (~350 across 44 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (38 spec files) |
+| `npx playwright test` | Run all E2E tests (45 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
-- **Backend**: 419 total tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: ~390 Vitest tests across 38 files (pages, components, AuthContext, endpoints). Run with `npm t`.
-- **E2E**: 38 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
+- **Backend**: 557 total tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: ~350 Vitest tests across 44 files (pages, components, AuthContext, endpoints). Run with `npm t`.
+- **E2E**: 45 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
 
@@ -245,7 +138,7 @@ Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until g
 | nurse-chromium | setup | `.auth/nurse.json` | Dashboard, vitals, fluid balance, order execution |
 | hod-chromium | setup | `.auth/hod.json` | Dashboard, clinical day reopen |
 | admin-chromium | setup | `.auth/admin.json` | User tables |
-| api-chromium | — | none | Patient search API, error handling |
+| api-chromium | — | none | Patient search API, error handling, scales access control |
 
 ## Seed Data
 
@@ -270,7 +163,7 @@ Mock MIS provides 5 test patients: Петренко, Коваленко, Сид�
 **E2E test data isolation** (each spec targets a specific episode, no `.first()` race):
 - `a1111111`: `signoff-full-chain` (signs `b1111111` + `b1111112`), `signoff`
 - `a2222222`: `clinical-day-reopen` (reopens `b4444444`), `pdf-generation` (signs `b2222222`)
-- `a3333333`: `notes`, `notes-full`, `prescriptions`, `prescription-cancel`
+- `a3333333`: `notes`, `notes-full`, `prescriptions`, `prescription-cancel`, `scales-episode`
 
 ## Data Model
 
@@ -299,11 +192,11 @@ AuditLog (standalone, no BaseEntity)
 | `User` | BaseEntity | login(unique), passwordHash, fullName, role(UserRole), email, specialityCode/Name, phone | Role: DOCTOR/NURSE/HEAD_OF_DEPARTMENT/ADMINISTRATOR/AUDITOR |
 | `Episode` | BaseEntity | patientId, hospitalizationId, departmentId, admissionDate, dischargeDate, status(EpisodeStatus) | Status: DRAFT → ACTIVE → COMPLETED/ARCHIVED |
 | `ClinicalDay` | BaseEntity | episode(M→1), dayNumber, startDateTime, endDateTime, status(ClinicalDayStatus), doctorSigned, nurseSigned, closedAt | Status: OPEN → NURSE_SIGNED → DOCTOR_SIGNED → CLOSED/REOPENED |
-| `HourlyRecord` | BaseEntity | clinicalDay(M→1), recordTime, recordHour, consciousness, temperature(34-42), heartRate(0-300), respiratoryRate(0-60), systolicBP(50-250), diastolicBP(30-150), spo2(50-100), glucose(1-30), etco2, fio2, cvp, urineOutput, drainOutput, stool, vomit, painScore, notes | UNIQUE(clinical_day_id, record_hour); ranges validated in @PrePersist/@PreUpdate |
+| `HourlyRecord` | BaseEntity | clinicalDay(M→1), recordTime, recordHour, consciousness, temperature(34-42), heartRate(0-300), respiratoryRate(0-60), systolicBP(50-250), diastolicBP(30-150), meanArterialPressure, spo2(50-100), glucose(1-30), etco2, fio2, cvp, urineOutput, drainOutput, stool, vomit, painScore, notes | UNIQUE(clinical_day_id, record_hour); ranges validated in @PrePersist/@PreUpdate |
 | `MedicalOrder` | BaseEntity | clinicalDay(M→1), category, drugName, dose, unit, route, frequency, startTime, endTime, status(MedicalOrderStatus) | Status: DRAFT/ACTIVE/COMPLETED/CANCELLED |
 | `OrderExecution` | BaseEntity | order(M→1), executedBy, executedAt, actualDose, status(OrderExecutionStatus), comment | Status: PLANNED/IN_PROGRESS/COMPLETED/PARTIALLY_COMPLETED/CANCELLED |
 | `MedicalNote` | BaseEntity | clinicalDay(M→1), authorId, role, noteType, text(TEXT) | — |
-| `ScaleResult` | BaseEntity | clinicalDay(M→1), scale(M→1), result, calculatedAt, calculatedBy | Auto-calculates GCS/RASS from consciousness |
+| `ScaleResult` | BaseEntity | clinicalDay(M→1)(nullable), scale(M→1), result(text), episodeId(UUID), rawData(jsonb), calculatedAt, calculatedBy | Auto-calculates GCS/RASS from consciousness |
 | `FluidBalance` | BaseEntity | clinicalDay(M→1), hour, intake, output, balance, cumulativeBalance | Recalculated on HourlyRecord changes |
 | `Signature` | BaseEntity | clinicalDay(M→1), userId, role, signedAt, hash, status | — |
 | `GeneratedPdf` | BaseEntity | clinicalDay(M→1), fileName, fileVersion, generatedAt, generatedBy, checksum, fileData(byte[]), transferStatus(TransferStatus), transferError, transferredAt | TransferStatus: PENDING/SENT/FAILED |
@@ -386,6 +279,9 @@ All endpoints prefixed with `/api`.
 | GET | `/api/clinical-days/{id}/scales` | Yes | Get scale results for clinical day |
 | POST | `/api/clinical-days/{id}/scales` | Yes | Create scale result |
 | PATCH | `/api/scales/{id}` | Yes | Update (with version) |
+| GET | `/api/episodes/{episodeId}/scales` | Yes | Get episode-level scale results |
+| POST | `/api/episodes/{episodeId}/scales` | Yes | Create episode-level scale result |
+| POST | `/api/episodes/{episodeId}/scales/calculate` | Yes | Calculate and save scale from raw data |
 
 ### Fluid Balance
 | Method | Path | Auth | Description |
@@ -450,7 +346,7 @@ All endpoints prefixed with `/api`.
 | `nurse/NurseDashboardPage.tsx` | Nurse episode list with active patients |
 | `admin/AdminPage.tsx` | User management tables + audit log viewer |
 
-### Common Components (18)
+### Common Components
 | File | Description |
 |---|---|
 | `AuditLogTable.tsx` | Audit log viewer with filters |
@@ -467,7 +363,13 @@ All endpoints prefixed with `/api`.
 | `NurseDashboard.tsx` | Nurse dashboard quick-view |
 | `PatientSearch.tsx` | Patient search autocomplete (from mock MIS) |
 | `PatientStatePanel.tsx` | Patient state assessment panel |
-| `ScaleResultsPanel.tsx` | Clinical scale results display |
+| `ScaleResultsPanel.tsx` | Clinical scale results display with form integration |
+| `scales/ApacheIiForm.tsx` | APACHE II calculator form (20 parameters) |
+| `scales/SofaForm.tsx` | SOFA calculator form (6 organ systems) |
+| `scales/CamIcuForm.tsx` | CAM-ICU delirium assessment form |
+| `scales/BradenForm.tsx` | Braden pressure injury risk form |
+| `scales/RassSelector.tsx` | RASS sedation level dropdown |
+| `scales/ScaleFormFactory.tsx` | Routes scale names to form components |
 | `SignDialog.tsx` | Sign dialog with hash confirmation |
 | `VentilationPanel.tsx` | Ventilation settings panel |
 | `VitalSignsForm.tsx` | Vital signs entry form |
@@ -484,12 +386,12 @@ All endpoints prefixed with `/api`.
 ## DTOs
 
 ### Request DTOs
-`LoginRequest`, `EpisodeCreateRequest`, `EpisodePatchRequest`, `EpisodeCloseRequest`, `ClinicalDayCreateRequest`, `ClinicalDayPatchRequest`, `HourlyRecordCreateRequest`, `HourlyRecordPatchRequest`, `MedicalOrderCreateRequest`, `MedicalOrderPatchRequest`, `MedicalNoteCreateRequest`, `MedicalNotePatchRequest`, `ScaleResultCreateRequest`, `ScaleResultPatchRequest`, `OrderExecutionCreateRequest`, `OrderExecutionPatchRequest`, `SignRequest`, `ReopenRequest` (18 total)
+`LoginRequest`, `EpisodeCreateRequest`, `EpisodePatchRequest`, `EpisodeCloseRequest`, `ClinicalDayCreateRequest`, `ClinicalDayPatchRequest`, `HourlyRecordCreateRequest`, `HourlyRecordPatchRequest`, `MedicalOrderCreateRequest`, `MedicalOrderPatchRequest`, `MedicalNoteCreateRequest`, `MedicalNotePatchRequest`, `ScaleResultCreateRequest`, `ScaleResultPatchRequest`, `ScaleResultCalculateRequest`, `OrderExecutionCreateRequest`, `OrderExecutionPatchRequest`, `SignRequest`, `ReopenRequest` (19 total)
 
 ### Response DTOs
 `LoginResponse`, `EpisodeResponse`, `ClinicalDayResponse`, `HourlyRecordResponse`, `MedicalOrderResponse`, `OrderExecutionResponse`, `MedicalNoteResponse`, `ScaleResultResponse`, `FluidBalanceResponse`, `SignResponse`, `PdfResponse`, `UserResponse`, `AuditLogResponse`, `ErrorResponse` (14 total)
 
-## Backend Services (12)
+## Backend Services (13)
 
 | Service | Responsibility |
 |---|---|
@@ -500,8 +402,9 @@ All endpoints prefixed with `/api`.
 | `MedicalOrderService` | CRUD + cancel with status validation |
 | `OrderExecutionService` | CRUD with order status validation |
 | `MedicalNoteService` | CRUD with author role assignment |
-| `ClinicalScaleService` | Scale results + automatic GCS/RASS from consciousness |
+| `ClinicalScaleService` | Scale results + automatic GCS/RASS from consciousness + episode-level results + algorithm-based calculation (APACHE II, SOFA, CAM-ICU, Braden) |
 | `FluidBalanceService` | Recalculation from HourlyRecord + OrderExecution |
+| `ScaleAuthorizationService` | Per-scale role-based access control (APACHE II/SOFA → DOCTOR, others → NURSE) |
 | `SignatureService` | Create/revoke signatures, check existing signatures |
 | `PdfGeneratorService` | Generate PDF (iText) with all clinical day sections |
 | `AuditService` | Create/query audit log entries with pagination |
@@ -525,6 +428,7 @@ All endpoints prefixed with `/api`.
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer status tracking | `GeneratedPdf.transferStatus` + `TransferStatus` enum (PENDING/SENT/FAILED) + `GET /clinical-days/{id}/pdf/status` |
 | §98 | MIS calls audited | All `MockMisServiceImpl` methods call `auditService.logAction()` including `sendPdf()` |
+| §— | Liquibase schema management | `ddl-auto: none`, schema via `db/changelog/db.changelog-master.yaml` (6 changesets); `spring.sql.init.mode: always` for seed data |
 
 ## Key Patterns
 
@@ -549,7 +453,7 @@ All endpoints prefixed with `/api`.
 - **TypeScript**: `erasableSyntaxOnly: true` — no enums, no namespaces
 - **Roles**: Gate in backend (Spring Security `@PreAuthorize`) and frontend (`Guard` component)
 - **Routing**: `/doctor/*` for DOCTOR/HOD, `/nurse/*` for NURSE, `/admin/*` for ADMINISTRATOR
-- **DB**: `ddl-auto: update` — never write manual DDL; schema auto-created by Hibernate from entity annotations
+- **DB**: `ddl-auto: none` — schema managed by Liquibase changelogs in `db/changelog/changesets/`; never write manual DDL
 - **Data seeding**: Only via `data.sql` (`spring.sql.init.mode: always`)
 - **Test seed data**: Integration tests use `data-test.sql` (in `src/test/resources/`) with plain INSERTs on a fresh Testcontainers PostgreSQL database. The production `data.sql` keeps `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). Modified data may persist across restarts. Reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 
@@ -573,24 +477,24 @@ UseManual.md           ← User manual (Ukrainian)
 .gitignore             ← Global ignore rules
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire
-  src/main/java/       ← 161 Java source files
-  src/main/resources/  ← application.yml, data.sql, PDF template
-  src/test/java/       ← 54 test files (32 unit + 13 integration + 1 abstract + 8 more)
+  src/main/java/       ← 163 Java source files
+  src/main/resources/  ← application.yml, data.sql, PDF template, db/changelog/ (Liquibase)
+  src/test/java/       ← 62 test files (32 unit + 13 integration + 1 abstract + 16 more)
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 59 TS/TSX source + 22 test files
+  src/                 ← 88 TS/TSX source + 44 test files
 tests/
   playwright.config.ts ← Playwright config with 7 projects
   package.json         ← Test dependencies
-  specs/               ← 38 spec files
+  specs/               ← 45 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/
-  Технічне завдання карта Інтенсивної терапії.md  ← Full technical specification (2839 lines)
+  Технічне завдання карта Інтенсивної терапії.md  ← Full technical specification (3026 lines)
 .github/
   workflows/playwright.yml  ← CI pipeline (3 jobs: integration-tests, test, format-check)
 ```

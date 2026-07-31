@@ -30,6 +30,7 @@
         <jjwt.version>0.12.5</jjwt.version>
         <itext.version>8.0.4</itext.version>
         <mapstruct.version>1.6.3</mapstruct.version>
+        <springdoc.version>2.5.0</springdoc.version>
     </properties>
 
     <dependencyManagement>

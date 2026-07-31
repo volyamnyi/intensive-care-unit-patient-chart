@@ -175,7 +175,10 @@ spring:
     password: admin
   jpa:
     hibernate:
-      ddl-auto: update       # Auto-creates schema from entities
+      ddl-auto: none            # schema managed by Liquibase
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
 
 app:
   jwt:
@@ -290,9 +293,12 @@ java -jar backend/target/patient-chart-backend-*.jar
 | Method | URL | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/scales` | Yes | List available scales |
-| `GET` | `/api/clinical-days/{id}/scales` | Yes | Get scale results |
+| `GET` | `/api/clinical-days/{id}/scales` | Yes | Get scale results for clinical day |
 | `POST` | `/api/clinical-days/{id}/scales` | Yes | Create scale result |
 | `PATCH` | `/api/scales/{id}` | Yes | Update scale result |
+| `GET` | `/api/episodes/{episodeId}/scales` | Yes | Get episode-level scale results |
+| `POST` | `/api/episodes/{episodeId}/scales` | Yes | Create episode-level scale result |
+| `POST` | `/api/episodes/{episodeId}/scales/calculate` | Yes | Calculate and save scale from raw data |
 
 ### Fluid Balance
 | Method | URL | Auth | Description |
@@ -382,11 +388,13 @@ icu-patient-chart/
 │   ├── medication-sheet/     ← prescriptions module (entities, services, controllers)
 │   └── icu-chart/
 │       ├── pom.xml
+│       ├── src/main/resources/
+│       │   └── db/changelog/   # Liquibase migrations (6 changesets)
 │       └── src/main/java/com/superhumans/
 │           ├── SuperhumansApplication.java
 │           ├── auth/             # JWT authentication (filter + token provider)
 │           ├── config/           # Security, CORS
-│           ├── controller/       # REST controllers (18)
+│           ├── controller/       # REST controllers (19)
 │           ├── dto/              # Request/response DTOs (48 total)
 │           ├── entity/           # JPA entities (25 including enums)
 │           ├── exception/        # Domain exceptions + global handler
@@ -411,7 +419,7 @@ icu-patient-chart/
 │   ├── playwright.config.ts
 │   ├── pages/                # Page objects (7)
 │   ├── fixtures/             # Role-based test fixtures
-│   └── specs/                # Test specs (28 files, 79 tests)
+│   └── specs/                # Test specs (45 files, 190 tests)
 └── README.md
 ```
 
@@ -427,8 +435,8 @@ icu-patient-chart/
 | `mvn spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (422) |
-| `mvn test -Pintegration-test` | Run integration tests (101) — requires Docker |
+| `mvn test` | Run unit tests (526) |
+| `mvn test -Pintegration-test` | Run integration tests (163) — requires Docker |
 
 #### Frontend
 | Command | Action |
@@ -437,12 +445,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (300 across 38 files) |
+| `npm t` | Run Vitest tests (~350 across 44 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (38 spec files) |
+| `npx playwright test` | Run all E2E tests (45 spec files) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -454,27 +462,27 @@ icu-patient-chart/
 
 | Test type | CI job | Trigger |
 |---|---|---|
-| Backend unit (151) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
-| Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
-| Frontend Vitest (~190) | `test` → `npm test` | Same |
-| Playwright E2E (38 spec files) | `test` → `npx playwright test` | Same |
+| Backend unit (526) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
+| Backend integration (163) | `integration-tests` → `mvn test -Pintegration-test` | Same |
+| Frontend Vitest (~350) | `test` → `npm test` | Same |
+| Playwright E2E (45 spec files) | `test` → `npx playwright test` | Same |
 | Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
 
 Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
 
 ### Testing Summary
-- **Backend unit tests**: 422 tests — medication-sheet (88) + icu-chart (312) + common (22 skippable) — `mvn test`
-- **Backend integration tests**: 101 tests — medication-sheet (22) + icu-chart (79) — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 300 tests (38 files, 0 failures)
-- **E2E Playwright tests**: 38 spec files, 7 projects
-- **Total**: ~860 tests
+- **Backend unit tests**: 526 tests — medication-sheet (88) + icu-chart (416) + common (22 skippable) — `mvn test`
+- **Backend integration tests**: 163 tests — medication-sheet (22) + icu-chart (141) — `mvn test -Pintegration-test`
+- **Frontend Vitest tests**: ~350 tests (44 files, 0 failures)
+- **E2E Playwright tests**: 45 spec files, 7 projects
+- **Total**: ~1,040 tests
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
-### Known Issues (from exploratory testing — #71-#74)
-- [#71](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/71) (HIGH): Cyrillic text in `data.sql` stored as Windows-1251 in UTF-8 file
-- [#72](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/72) (MEDIUM): MockMIS patient names have department prefix
-- [#73](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/73) (MEDIUM): Nurse detail view — missing route and grid does not render
-- [#74](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/74) (LOW): Ghost empty button in doctor dashboard table
+### Resolved Issues (from exploratory testing — #71-#74)
+- [#71](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/71) **RESOLVED** — Cyrillic encoding: `data.sql` now uses explicit `ON CONFLICT` auto-heal clause
+- [#72](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/72) **RESOLVED** — MockMIS patient name prefix cleaned
+- [#73](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/73) **RESOLVED** — Nurse detail view fixed
+- [#74](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/74) **RESOLVED** — Ghost button removed
 
 > **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.
 
@@ -504,6 +512,8 @@ chore: maintenance tasks
 | Execute prescriptions | ✗ | ✓ | ✗ | ✗ |
 | Enter vitals | ✗ | ✓ | ✗ | ✗ |
 | View patient data | ✓ | ✓ | ✓ | ✓ |
+| Create clinical scale (APACHE II/SOFA) | ✓ | ✗ | ✓ | ✗ |
+| Create clinical scale (CAM-ICU/Braden/RASS) | ✓ | ✓ | ✓ | ✗ |
 | Audit log access | ✗ | ✗ | ✗ | ✓ |
 | AUDITOR read-only view | ✗ | ✗ | ✗ | ✗ |
 

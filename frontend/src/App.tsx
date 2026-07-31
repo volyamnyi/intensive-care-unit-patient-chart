@@ -95,7 +95,7 @@ function AppRoutes() {
           </Guard>
         } />
 
-        <Route path="/prescriptions/icu">
+        <Route path="/icu">
           <Route path="doctor" element={
             <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
               <DoctorLayout />

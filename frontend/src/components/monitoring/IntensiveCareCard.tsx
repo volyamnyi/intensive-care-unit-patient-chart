@@ -74,7 +74,8 @@ export default function IntensiveCareCard({
     const v = e.target.value; setNoteText(v); noteTextRef.current = v; markDirty();
   };
 
-  const [scales, setScales] = useState<{ id: string; name?: string; result: string }[]>([]);
+  const [scales, setScales] = useState<{ id: string; scaleId?: string; name?: string; result: string; scaleName?: string }[]>([]);
+  const [availableScales, setAvailableScales] = useState<{ id: string; name: string; isAutomatic: boolean; [k: string]: unknown }[]>([]);
   const [ventilation, setVentilation] = useState<{ id: string; mode?: string; [k: string]: unknown }[]>([]);
   const [labs, setLabs] = useState<{ id: string; testName?: string; result?: string }[]>([]);
   const [patientState, setPatientState] = useState<{ id: string; assessment?: string }[]>([]);
@@ -84,22 +85,26 @@ export default function IntensiveCareCard({
   const refreshSidebar = useCallback(async () => {
     if (!selectedDay) return;
     try {
-      const [n, s, v, l, p] = await Promise.all([
+      const [n, s, es, a, v, l, p] = await Promise.all([
         medicalNoteApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
         clinicalScaleApi.getResultsByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
+        clinicalScaleApi.getResultsByEpisode(episode.id).then(r => r.data ?? []).catch(() => []),
+        clinicalScaleApi.getAvailable().then(r => r.data ?? []).catch(() => []),
         ventilationApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
         labResultApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
         patientStateApi.getByClinicalDay(selectedDay.id).then(r => r.data ?? []).catch(() => []),
       ]);
       setNotes(n as unknown as { id: string; text: string; authorId?: string | null; role?: string | null; createdAt?: string | null }[]);
-      setScales(s as unknown as { id: string; name?: string; result: string }[]);
+      const allScales = [...(s ?? []), ...(es ?? [])] as { id: string; scaleId?: string; name?: string; result: string; scaleName?: string }[];
+      setScales(allScales);
+      setAvailableScales(a as unknown as { id: string; name: string; isAutomatic: boolean; [k: string]: unknown }[]);
       setVentilation(v as unknown as { id: string; mode?: string; [k: string]: unknown }[]);
       setLabs(l as unknown as { id: string; testName?: string; result?: string }[]);
       setPatientState(p as unknown as { id: string; assessment?: string }[]);
     } catch (err) {
       notifyParentRef.current(getErrorMessage(err, 'Не вдалося оновити бічну панель'), 'error');
     }
-  }, [selectedDay]);
+  }, [selectedDay, episode.id]);
 
   const createLab = async (data: LabResultCreateRequest) => {
     if (!selectedDay || isLocked) return;
@@ -115,6 +120,29 @@ export default function IntensiveCareCard({
     if (!selectedDay || isLocked) return;
     try { await patientStateApi.create(selectedDay.id, data); await refreshSidebar(); }
     catch (err) { notifyParentRef.current(getErrorMessage(err, 'Не вдалося зберегти стан пацієнта'), 'error'); }
+  };
+  const createScale = async (scaleId: string, result: string) => {
+    if (!selectedDay || isLocked) return;
+    try {
+      const scale = availableScales.find(s => s.id === scaleId);
+      if (scale && /APACHE|SOFA/i.test(scale.name)) {
+        await clinicalScaleApi.createEpisodeResult(episode.id, { scaleId, result });
+      } else {
+        await clinicalScaleApi.create(selectedDay.id, { scaleId, result });
+      }
+      await refreshSidebar();
+    } catch (err) {
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося зберегти шкалу'), 'error');
+    }
+  };
+  const calculateScale = async (scaleId: string, rawData: Record<string, unknown>) => {
+    if (!selectedDay || isLocked) return;
+    try {
+      await clinicalScaleApi.calculateAndSave(episode.id, scaleId, rawData, selectedDay.id);
+      await refreshSidebar();
+    } catch (err) {
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося розрахувати шкалу'), 'error');
+    }
   };
 
   const [orderFormOpen, setOrderFormOpen] = useState(false);
@@ -139,7 +167,10 @@ export default function IntensiveCareCard({
   const keyScales = useMemo(() => {
     const names = ['APACHE II', 'SOFA', 'RASS', 'CAM-ICU', 'Браден'];
     return names.map(name => {
-      const found = scales.find(s => s.name?.toLowerCase() === name.toLowerCase() || s.name?.includes(name));
+      const found = scales.find(s =>
+        (s.scaleName || s.name || '')?.toLowerCase() === name.toLowerCase()
+        || (s.scaleName || s.name || '')?.includes(name)
+      );
       return found ? { name, result: found.result } : null;
     }).filter(Boolean) as { name: string; result: string }[];
   }, [scales]);
@@ -239,6 +270,10 @@ export default function IntensiveCareCard({
           onCreateLab={createLab}
           onCreateVentilation={createVentilation}
           onCreatePatientState={createPatientState}
+          availableScales={availableScales}
+          onCreateScale={createScale}
+          onCalculateScale={calculateScale}
+          episodeId={episode.id}
         />
       </div>
     </SidebarProvider>

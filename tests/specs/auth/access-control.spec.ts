@@ -5,7 +5,7 @@ test.describe('Access Control', () => {
     await page.goto('/admin');
     await expect(page.getByText('Користувачі системи')).toBeVisible({ timeout: 10000 });
 
-    await page.goto('/nurse');
+    await page.goto('/icu/nurse');
     await expect(page).toHaveURL('/admin');
   });
 
@@ -13,17 +13,17 @@ test.describe('Access Control', () => {
     await page.goto('/admin');
     await expect(page.getByText('Користувачі системи')).toBeVisible({ timeout: 10000 });
 
-    await page.goto('/doctor');
+    await page.goto('/icu/doctor');
     await expect(page).toHaveURL('/admin');
   });
 
   test('doctor can access direct /doctor/create-card route', async ({ page }) => {
-    await page.goto('/doctor/create-card');
+    await page.goto('/icu/doctor/create-card');
     await expect(page.getByText('Нова карта інтенсивної терапії')).toBeVisible();
   });
 
   test('nurse can access direct /nurse/episode/:id route', async ({ page }) => {
-    await page.goto('/nurse');
+    await page.goto('/icu/nurse');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
     const episodeUrl = page.url();
 
@@ -31,10 +31,10 @@ test.describe('Access Control', () => {
     await page.getByLabel('Логін').fill('nurse1');
     await page.getByLabel('Пароль').fill('nurse123');
     await page.getByRole('button', { name: 'Увійти' }).click();
-    await expect(page).toHaveURL(/\/nurse/);
+    await expect(page).toHaveURL(/\/prescriptions\/icu\/nurse/);
 
     await page.goto(episodeUrl);
-    await expect(page).toHaveURL(/\/nurse\/episode\//);
+    await expect(page).toHaveURL(/\/prescriptions\/icu\/nurse\/episode\//);
     await expect(page.getByText('Показник / година')).toBeVisible();
   });
 });

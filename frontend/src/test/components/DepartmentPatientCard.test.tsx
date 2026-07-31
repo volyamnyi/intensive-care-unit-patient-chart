@@ -121,7 +121,7 @@ describe('DepartmentPatientCard', () => {
   it('navigates to episode on click', async () => {
     renderCard();
     await userEvent.click(screen.getByText('Петренко Іван'));
-    expect(mockNavigate).toHaveBeenCalledWith('/prescriptions/icu/doctor/episode/ep-1');
+    expect(mockNavigate).toHaveBeenCalledWith('/icu/doctor/episode/ep-1');
   });
 
   it('renders unknown patient when name is null', () => {

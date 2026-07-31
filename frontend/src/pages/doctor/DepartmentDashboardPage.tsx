@@ -176,7 +176,7 @@ export default function DepartmentDashboardPage() {
             updatedAt: p.admissionDate,
             version: 0,
           }))}
-          onSelect={(ep) => navigate('/prescriptions/icu/doctor/episode/' + ep.id)}
+          onSelect={(ep) => navigate('/icu/doctor/episode/' + ep.id)}
         />
       )}
     </div>

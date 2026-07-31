@@ -1,34 +1,47 @@
 package com.superhumans.config;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.Components;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class OpenApiConfig {
+
+    @Value("${app.api.title:Patient Chart API}")
+    String title;
+    @Value("${app.api.version:1.0.0}")
+    String version;
+    @Value("${app.api.description:API for the Patient Chart electronic medical record system}")
+    String description;
+    @Value("${app.api.contact-name:Superhumans}")
+    String contactName;
+    @Value("${app.api.contact-email:support@superhumans.com}")
+    String contactEmail;
+    @Value("${app.api.license-name:MIT License}")
+    String licenseName;
+    @Value("${app.api.license-url:https://opensource.org/licenses/MIT}")
+    String licenseUrl;
 
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("ICU Patient Chart API")
-                        .version("1.0.0")
-                        .description("API for Intensive Care Unit Patient Chart - Form 003-15/о electronic medical record system")
+                        .title(title)
+                        .version(version)
+                        .description(description)
                         .contact(new Contact()
-                                .name("Superhumans")
-                                .email("support@superhumans.com"))
+                                .name(contactName)
+                                .email(contactEmail))
                         .license(new License()
-                                .name("MIT License")
-                                .url("https://opensource.org/licenses/MIT")))
+                                .name(licenseName)
+                                .url(licenseUrl)))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
                 .components(new Components()
                         .addSecuritySchemes("Bearer Authentication",

@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useThemeMode } from '../../styles/ThemeContext';
+import ScaleFormFactory from './scales/ScaleFormFactory';
 import type { ScaleResult, ClinicalScale } from '../../types';
 
 interface ScaleResultsPanelProps {
   results: ScaleResult[];
   availableScales: ClinicalScale[];
   onCreateResult?: (scaleId: string, result: string) => void;
+  onCalculateScale?: (scaleId: string, rawData: Record<string, unknown>) => void;
+  disabled?: boolean;
+  episodeId?: string;
 }
 
-export default function ScaleResultsPanel({ results, availableScales, onCreateResult }: ScaleResultsPanelProps) {
+export default function ScaleResultsPanel({ results, availableScales, onCreateResult, onCalculateScale, disabled, episodeId }: ScaleResultsPanelProps) {
   const { mode } = useThemeMode();
   const isDark = mode === 'dark';
   const [selectedScaleId, setSelectedScaleId] = useState('');
@@ -30,27 +33,44 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
 
   const getResultForScale = (scaleId: string) => results.find((r) => r.scaleId === scaleId);
 
+  const selectedScale = availableScales.find(s => s.id === selectedScaleId);
+
   return (
     <>
-      {onCreateResult && availableScales.length > 0 && (
-        <div className="mb-2 flex flex-wrap items-start gap-2">
-          <Select value={selectedScaleId} onValueChange={(v: string | null) => { if (v !== null) setSelectedScaleId(v); }}>
-            <SelectTrigger aria-label="Шкала" className="h-7 w-full sm:w-[200px]">
-              <SelectValue placeholder="Шкала" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableScales.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="Результат"
-            value={resultValue}
-            onChange={(e) => setResultValue(e.target.value)}
-            className="h-7 w-full sm:w-[120px]"
-          />
-          <Button size="sm" onClick={handleCreate}>Додати</Button>
+      {(onCreateResult || onCalculateScale) && availableScales.length > 0 && (
+        <div className="mb-2">
+          <div className="flex flex-wrap items-start gap-2 mb-2">
+            <Select value={selectedScaleId} onValueChange={(v: string | null) => { if (v !== null) setSelectedScaleId(v); }}>
+              <SelectTrigger aria-label="Шкала" className="h-7 w-full sm:w-[200px]">
+                <SelectValue placeholder="Шкала" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableScales.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedScale && !selectedScale.isAutomatic && !onCalculateScale && (
+              <>
+                <input
+                  placeholder="Результат"
+                  value={resultValue}
+                  onChange={(e) => setResultValue(e.target.value)}
+                  className="flex h-7 w-full sm:w-[120px] rounded-md border border-input bg-transparent px-2.5 py-1 text-xs transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm"
+                />
+                <Button size="sm" onClick={handleCreate}>Додати</Button>
+              </>
+            )}
+          </div>
+          {selectedScale && onCalculateScale && !selectedScale.isAutomatic && (
+            <div className="mb-2 p-2 rounded-lg border border-border">
+              <ScaleFormFactory
+                scaleName={selectedScale.name}
+                onCalculate={(rawData) => onCalculateScale(selectedScale.id, rawData)}
+                disabled={disabled}
+              />
+            </div>
+          )}
         </div>
       )}
 

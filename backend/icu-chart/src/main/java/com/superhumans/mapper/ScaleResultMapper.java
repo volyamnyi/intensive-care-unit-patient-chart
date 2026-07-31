@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 public interface ScaleResultMapper {
 
     @Mapping(target = "clinicalDayId", source = "clinicalDay.id")
+    @Mapping(target = "episodeId", source = "episodeId")
     @Mapping(target = "scaleId", source = "scale.id")
     @Mapping(target = "scaleName", source = "scale.name")
     ScaleResultResponse toResponse(ScaleResult entity);
