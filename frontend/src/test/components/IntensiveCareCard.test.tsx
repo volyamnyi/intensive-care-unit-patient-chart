@@ -403,7 +403,8 @@ describe('IntensiveCareCard', () => {
       mockOrderExecutionGetByOrder.mockResolvedValue({ data: [plannedExecution()] });
       renderCard();
       fireEvent.click(cellAtHour('Амоксицилін 1г', 0));
-      fireEvent.click(screen.getByLabelText('Скасувати Амоксицилін 0:00'));
+      const cancelButton = await screen.findByLabelText('Скасувати Амоксицилін 0:00');
+      fireEvent.click(cancelButton);
       await waitFor(() => expect(mockOrderExecutionCancel).toHaveBeenCalledWith('o1', { hour: 0 }));
     });
 
@@ -411,7 +412,9 @@ describe('IntensiveCareCard', () => {
       vi.spyOn(Date.prototype, 'getHours').mockReturnValue(0);
       mockOrderExecutionGetByOrder.mockResolvedValue({ data: [plannedExecution()] });
       renderCard({ isNurse: true });
-      fireEvent.click(cellAtHour('Амоксицилін 1г', 0));
+      const cell = cellAtHour('Амоксицилін 1г', 0);
+      await waitFor(() => expect(cell.textContent).toContain('1'));
+      fireEvent.click(cell);
       const input = screen.getByLabelText('Виконати Амоксицилін 0:00');
       await fireEvent.change(input, { target: { value: '0.8' } });
       await fireEvent.blur(input);
@@ -427,7 +430,9 @@ describe('IntensiveCareCard', () => {
         })],
       });
       renderCard({ isNurse: true });
-      fireEvent.click(cellAtHour('Амоксицилін 1г', 0));
+      const cell = cellAtHour('Амоксицилін 1г', 0);
+      await waitFor(() => expect(cell.textContent).toContain('✓'));
+      fireEvent.click(cell);
       fireEvent.click(screen.getByRole('button', { name: 'Завершити' }));
       await waitFor(() => expect(mockOrderExecutionExecuteFinish).toHaveBeenCalledWith('o1', { hour: 0 }));
     });

@@ -17,10 +17,6 @@ import static org.assertj.core.api.Assertions.*;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:postgresql://localhost:5432/my_fullstack_db",
-    "spring.datasource.username=postgres",
-    "spring.datasource.password=admin",
-    "spring.datasource.driver-class-name=org.postgresql.Driver",
     "spring.jpa.hibernate.ddl-auto=update",
     "spring.liquibase.enabled=false"
 })

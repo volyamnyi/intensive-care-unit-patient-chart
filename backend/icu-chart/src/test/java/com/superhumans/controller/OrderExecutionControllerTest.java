@@ -92,13 +92,13 @@ class OrderExecutionControllerTest {
                 .status(OrderExecutionStatus.COMPLETED)
                 .build();
 
-        when(orderExecutionService.createExecution(eq(orderId), any(OrderExecutionCreateRequest.class), eq(1L)))
+        when(orderExecutionService.execute(eq(orderId), any(OrderExecutionCreateRequest.class), eq(1L)))
                 .thenReturn(response);
 
         mockMvc.perform(post("/api/orders/{orderId}/execute", orderId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"executedBy":1,"executedAt":"2024-01-01T10:00:00","actualDose":"5 mg"}
+                                {"hour":13,"actualDose":"5 mg"}
                                 """)
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isCreated())

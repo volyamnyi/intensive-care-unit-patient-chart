@@ -149,7 +149,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         createReq.setUnit("ОД");
         createReq.setRoute("п/ш");
         createReq.setFrequency("2 рази");
-        createReq.setStartTime(LocalDateTime.now());
+        createReq.setStartTime(LocalDateTime.now().withHour(8));
 
         var createEntity = authEntity(createReq, getDoctorToken());
         var createRes = restTemplate.exchange(
@@ -158,8 +158,15 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = createRes.getBody().getId();
 
-        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                13L, LocalDateTime.now(), "5000", "Виконано");
+        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(13, "5000");
+        var planEntity = authEntity(planReq, getDoctorToken());
+        var planRes = restTemplate.exchange(
+                "/api/orders/{orderId}/plan", HttpMethod.PUT, planEntity,
+                OrderExecutionResponse.class, orderId);
+
+        assertThat(planRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(13, "5000", "Виконано");
         var execEntity = authEntity(execReq, getNurseToken());
 
         var execRes = restTemplate.exchange(
@@ -178,7 +185,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         createReq.setUnit("10 мл");
         createReq.setRoute("в/в");
         createReq.setFrequency("1 раз");
-        createReq.setStartTime(LocalDateTime.now());
+        createReq.setStartTime(LocalDateTime.now().withHour(8));
 
         var createEntity = authEntity(createReq, getDoctorToken());
         var createRes = restTemplate.exchange(
@@ -187,8 +194,13 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = createRes.getBody().getId();
 
-        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                13L, LocalDateTime.now(), "10 мл", "");
+        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(13, "10 мл");
+        var planEntity = authEntity(planReq, getDoctorToken());
+        restTemplate.exchange(
+                "/api/orders/{orderId}/plan", HttpMethod.PUT, planEntity,
+                OrderExecutionResponse.class, orderId);
+
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(13, "10 мл", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,

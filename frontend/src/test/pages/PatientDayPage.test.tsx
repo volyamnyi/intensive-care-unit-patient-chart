@@ -69,6 +69,22 @@ vi.mock('../../api/endpoints', () => ({
     getByClinicalDay: (...args: unknown[]) => mockGetBalanceItems(...args),
     recalculate: vi.fn(),
   },
+  settingsApi: {
+    getByKey: vi.fn().mockResolvedValue({ data: { value: '' } }),
+  },
+  patientApi: {
+    getById: vi.fn().mockResolvedValue({ data: { birthDate: null } }),
+  },
+  pdfApi: {
+    generate: vi.fn().mockResolvedValue({ data: {} }),
+  },
+  orderExecutionApi: {
+    getByOrder: vi.fn().mockResolvedValue({ data: [] }),
+    plan: vi.fn().mockResolvedValue({ data: {} }),
+    cancel: vi.fn().mockResolvedValue({ data: {} }),
+    execute: vi.fn().mockResolvedValue({ data: {} }),
+    executeFinish: vi.fn().mockResolvedValue({ data: {} }),
+  },
 }));
 
 const TEST_USER = { id: 1, login: 'doctor1', fullName: 'Доктор', role: 'DOCTOR', email: '' } as const;

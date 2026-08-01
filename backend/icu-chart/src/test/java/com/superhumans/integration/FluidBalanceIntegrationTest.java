@@ -69,7 +69,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
         orderReq.setUnit("мл");
         orderReq.setRoute("в/в");
         orderReq.setFrequency("крапельно");
-        orderReq.setStartTime(futureTime);
+        orderReq.setStartTime(LocalDateTime.now().withHour(8));
 
         var hrEntity = authEntity(hrReq1, getNurseToken());
         restTemplate.exchange(
@@ -82,8 +82,13 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
                 MedicalOrderResponse.class, SEED_DAY_ID);
 
         UUID orderId = orderRes.getBody().getId();
-        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                13L, futureTime, "500", "");
+        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(13, "500");
+        var planEntity = authEntity(planReq, getDoctorToken());
+        restTemplate.exchange(
+                "/api/orders/{orderId}/plan", HttpMethod.PUT, planEntity,
+                OrderExecutionResponse.class, orderId);
+
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(13, "500", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,
@@ -136,7 +141,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
         orderReq.setUnit("мл");
         orderReq.setRoute("в/в");
         orderReq.setFrequency("крапельно");
-        orderReq.setStartTime(LocalDateTime.now().plusHours(2));
+        orderReq.setStartTime(LocalDateTime.now().withHour(8));
 
         var orderEntity = authEntity(orderReq, getDoctorToken());
         var orderRes = restTemplate.exchange(
@@ -144,8 +149,13 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
                 MedicalOrderResponse.class, OTHER_OPEN_DAY_ID);
 
         UUID orderId = orderRes.getBody().getId();
-        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(
-                13L, LocalDateTime.now().plusHours(2), "500", "");
+        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(13, "500");
+        var planEntity = authEntity(planReq, getDoctorToken());
+        restTemplate.exchange(
+                "/api/orders/{orderId}/plan", HttpMethod.PUT, planEntity,
+                OrderExecutionResponse.class, orderId);
+
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(13, "500", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,
