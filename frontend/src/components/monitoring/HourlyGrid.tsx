@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { medicalOrderApi } from '../../api/endpoints';
-import type { ClinicalDay, HourlyRecord, MedicalOrder } from '../../types';
+import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => (i + 8) % 24);
 
@@ -128,67 +128,149 @@ const Cell = memo(function Cell({
 interface TherapyCellProps {
   order: MedicalOrder;
   hour: number;
+  execution: OrderExecution | null;
   isDark: boolean;
   isPast: boolean;
+  canPlan: boolean;
   canExecute: boolean;
   isExecuting: boolean;
-  onToggle: (orderId: string, hour: number, actualDose: string) => void;
+  onPlan: (orderId: string, hour: number, dose: string) => void;
+  onCancel: (orderId: string, hour: number) => void;
+  onExecute: (orderId: string, hour: number, actualDose: string) => void;
+  onExecuteFinish: (orderId: string, hour: number) => void;
 }
 
 const TherapyCell = memo(function TherapyCell({
-  order, hour, isDark: _isDark, isPast, canExecute, isExecuting, onToggle,
+  order, hour, execution, isDark: _isDark, isPast, canPlan, canExecute, isExecuting,
+  onPlan, onCancel, onExecute, onExecuteFinish,
 }: TherapyCellProps) {
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<'plan' | 'execute' | 'finish' | null>(null);
   const [doseInput, setDoseInput] = useState('');
 
+  const cancelled = execution?.status === 'CANCELLED';
+  const completed = execution?.status === 'COMPLETED' || execution?.status === 'PARTIALLY_COMPLETED';
+  const planned = !!execution?.planned && !cancelled && !completed;
+  const planFinished = !!execution?.plannedFinished;
+  const completedFinished = !!execution?.completedFinished;
+
+  const clickable = !isPast && !isExecuting && !cancelled
+    && ((canPlan && (!execution || planned))
+      || (canExecute && (planned || (completed && !completedFinished))));
+
   const handleClick = useCallback(() => {
-    if (!canExecute || isPast || isExecuting) return;
-    setDoseInput(order.dose || '');
-    setEditing(true);
-  }, [canExecute, isPast, isExecuting, order.dose]);
+    if (!clickable) return;
+    if (completed) {
+      if (canExecute && !completedFinished) setMode('finish');
+      return;
+    }
+    if (planned && canExecute) {
+      setDoseInput(execution?.plannedDose || order.dose || '');
+      setMode('execute');
+      return;
+    }
+    if (canPlan) {
+      setDoseInput(execution?.plannedDose || order.dose || '');
+      setMode('plan');
+    }
+  }, [clickable, completed, canExecute, completedFinished, planned, canPlan, execution, order.dose]);
 
   const handleConfirm = useCallback(() => {
-    if (!doseInput.trim()) return;
-    onToggle(order.id, hour, doseInput);
-    setEditing(false);
-  }, [onToggle, order.id, hour, doseInput]);
+    if (mode === 'plan' || mode === 'execute') {
+      const dose = doseInput.trim();
+      if (!dose) return;
+      if (mode === 'plan') onPlan(order.id, hour, dose);
+      else onExecute(order.id, hour, dose);
+      setMode(null);
+    }
+  }, [mode, doseInput, onPlan, onExecute, order.id, hour]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleConfirm();
-    if (e.key === 'Escape') setEditing(false);
+    if (e.key === 'Escape') setMode(null);
   }, [handleConfirm]);
 
-  if (editing) {
+  const tooltipText = `${order.drugName} ${hour}:00`
+    + (cancelled ? ' (скасовано)' : '')
+    + (completed ? ` (виконано${execution?.actualDose ? `, доза ${execution.actualDose}` : ''}${completedFinished ? ', завершено' : ''})` : '')
+    + (planned ? ` (план: ${execution?.plannedDose || order.dose || '—'}${planFinished ? ', план завершено' : ''})` : '');
+
+  if (mode === 'plan' || mode === 'execute') {
     return (
-      <TableCell className="p-0 text-center bg-muted dark:bg-warning/20" style={{ minWidth: 44 }}>
-        <Input
-          autoFocus
-          value={doseInput}
-          onChange={(e) => setDoseInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={handleConfirm}
-          className="h-full w-9 rounded-none border-0 text-center text-xs"
-        />
+      <TableCell className={cn('p-0 text-center bg-muted dark:bg-warning/20')} style={{ minWidth: 44 }}>
+        <div className="flex items-center">
+          <Input
+            autoFocus
+            value={doseInput}
+            onChange={(e) => setDoseInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleConfirm}
+            aria-label={mode === 'plan' ? `Запланувати ${order.drugName} ${hour}:00` : `Виконати ${order.drugName} ${hour}:00`}
+            className="h-full w-9 rounded-none border-0 text-center text-xs"
+          />
+          {mode === 'plan' && execution && !completed && (
+            <button
+              type="button"
+              aria-label={`Скасувати ${order.drugName} ${hour}:00`}
+              onClick={() => { setMode(null); onCancel(order.id, hour); }}
+              className="px-0.5 text-[10px] text-destructive"
+            >
+              {'✕'}
+            </button>
+          )}
+        </div>
       </TableCell>
     );
   }
 
+  if (mode === 'finish') {
+    return (
+      <TableCell className="p-0 text-center bg-[#C8E6C9]" style={{ minWidth: 44 }}>
+        <div className="flex items-center justify-center gap-0.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-5 px-1 text-[10px]"
+            onClick={() => { setMode(null); onExecuteFinish(order.id, hour); }}
+          >
+            {'Завершити'}
+          </Button>
+          <button
+            type="button"
+            aria-label={`Закрити ${order.drugName} ${hour}:00`}
+            onClick={() => setMode(null)}
+            className="px-0.5 text-[10px] text-muted-foreground"
+          >
+            {'✕'}
+          </button>
+        </div>
+      </TableCell>
+    );
+  }
+
+  const bgClass = cancelled
+    ? 'bg-[#E1BEE7]'
+    : completed
+      ? 'bg-[#C8E6C9]'
+      : planned
+        ? (planFinished ? 'bg-[#E1BEE7]' : 'bg-[#BBDEFB]')
+        : (isPast ? 'bg-success/10 dark:bg-success/20' : '');
+
   return (
     <TableCell
       onClick={handleClick}
-      className={cn('p-1 text-center', isPast && 'bg-success/10 dark:bg-success/20')}
-      style={{ minWidth: 44, cursor: canExecute && !isPast ? 'pointer' : 'default' }}
+      className={cn('p-1 text-center', bgClass)}
+      style={{ minWidth: 44, cursor: clickable ? 'pointer' : 'default' }}
     >
       {isExecuting ? <Loader2 className="inline size-3 animate-spin" /> : (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger>
-              <span className={cn('text-sm', isPast && 'text-success')}>
-                {isPast ? '\u2713' : '\u279A'}
+              <span className={cn('text-sm', cancelled && 'text-[#7B1FA2]', completed && 'text-[#2E7D32]', planned && 'text-[#1565C0]')}>
+                {cancelled ? '✕' : completed ? '✓' : planned ? (execution?.plannedDose || order.dose || '') : (isPast ? '✓' : '➚')}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              {`${order.drugName}${isPast ? ' (виконано)' : ''}`}
+              {tooltipText}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -311,21 +393,26 @@ export interface HourlyGridProps {
   recByHour: Map<number, HourlyRecord>;
   orders: MedicalOrder[];
   activeOrders: MedicalOrder[];
+  executionsByOrder: Record<string, OrderExecution[]>;
   executing: string | null;
   orderFormOpen: boolean;
   realClockHour: number;
   canEditSidebar: boolean;
   onSetOrderFormOpen: (open: boolean) => void;
   onSaveCell: (hour: number, key: keyof HourlyRecord, raw: string) => void;
-  onToggleOrder: (orderId: string, hour: number, actualDose: string) => void;
+  onPlanOrder: (orderId: string, hour: number, dose: string) => void;
+  onCancelOrder: (orderId: string, hour: number) => void;
+  onExecuteOrder: (orderId: string, hour: number, actualDose: string) => void;
+  onExecuteFinishOrder: (orderId: string, hour: number) => void;
   onRefresh?: () => void;
   onError?: (msg: string) => void;
 }
 
 export default function HourlyGrid({
   isMobile, isNurse, isLocked, user, selectedDay,
-  recByHour, activeOrders, executing, orderFormOpen, realClockHour,
-  canEditSidebar, onSetOrderFormOpen, onSaveCell, onToggleOrder,
+  recByHour, activeOrders, executionsByOrder, executing, orderFormOpen, realClockHour,
+  canEditSidebar, onSetOrderFormOpen, onSaveCell,
+  onPlanOrder, onCancelOrder, onExecuteOrder, onExecuteFinishOrder,
   onRefresh, onError,
 }: HourlyGridProps) {
   const boundValue = (hour: number, key: keyof HourlyRecord): string => {
@@ -483,11 +570,16 @@ export default function HourlyGrid({
                     key={h}
                     order={order}
                     hour={h}
+                    execution={(executionsByOrder[order.id] ?? []).find(e => e.hour === h) ?? null}
                     isDark={false}
                     isPast={isPastMedDay(h, realClockHour)}
-                    canExecute={!isLocked && !!user}
+                    canPlan={!isLocked && !isNurse && !!user}
+                    canExecute={!isLocked && isNurse && !!user}
                     isExecuting={executing === `${order.id}-${h}`}
-                    onToggle={onToggleOrder}
+                    onPlan={onPlanOrder}
+                    onCancel={onCancelOrder}
+                    onExecute={onExecuteOrder}
+                    onExecuteFinish={onExecuteFinishOrder}
                   />
                 ))}
               </TableRow>

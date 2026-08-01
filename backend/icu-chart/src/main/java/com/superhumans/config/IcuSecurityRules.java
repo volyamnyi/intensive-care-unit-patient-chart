@@ -34,11 +34,15 @@ public class IcuSecurityRules implements SecurityRuleContributor {
                 // Hourly records (PATCH)
                 .requestMatchers("/api/hourly-records/**").hasAnyRole(CLINICAL_ROLES)
                 // Medical orders
-                .requestMatchers(HttpMethod.POST, "/api/orders/*/execute").hasAnyRole(CLINICAL_ROLES)
+                .requestMatchers(HttpMethod.POST, "/api/orders/*/execute/finish").hasAnyRole(EXECUTOR_ROLES)
+                .requestMatchers(HttpMethod.POST, "/api/orders/*/execute").hasAnyRole(EXECUTOR_ROLES)
+                .requestMatchers(HttpMethod.PUT, "/api/orders/*/plan/finish").hasAnyRole(PRESCRIBER_ROLES)
+                .requestMatchers(HttpMethod.PUT, "/api/orders/*/plan").hasAnyRole(PRESCRIBER_ROLES)
+                .requestMatchers(HttpMethod.PUT, "/api/orders/*/cancel").hasAnyRole(PRESCRIBER_ROLES)
                 .requestMatchers(HttpMethod.POST, "/api/orders/**").hasAnyRole(PRESCRIBER_ROLES)
                 .requestMatchers("/api/orders/**").hasAnyRole(CLINICAL_ROLES)
                 // Order executions (PATCH)
-                .requestMatchers("/api/executions/**").hasAnyRole(CLINICAL_ROLES)
+                .requestMatchers(HttpMethod.PATCH, "/api/executions/**").hasAnyRole(EXECUTOR_ROLES)
                 // Audit - admins and auditors
                 .requestMatchers("/api/audit/**").hasAnyRole("ADMINISTRATOR", "AUDITOR")
                 // Patient search from MIS

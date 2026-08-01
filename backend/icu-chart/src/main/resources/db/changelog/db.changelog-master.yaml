@@ -23,3 +23,6 @@
   - include:
       relativeToChangelogFile: true
       file: changesets/008-hourly-record-care.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/009-order-execution-planning.sql

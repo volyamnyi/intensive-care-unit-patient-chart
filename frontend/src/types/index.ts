@@ -115,10 +115,18 @@ export interface MedicalOrderCreateRequest {
 }
 
 export interface OrderExecutionCreateRequest {
-  executedBy: number;
-  executedAt: string;
+  hour: number;
   actualDose: string;
   comment?: string;
+}
+
+export interface OrderExecutionPlanRequest {
+  hour: number;
+  dose: string;
+}
+
+export interface OrderExecutionFinishRequest {
+  hour: number;
 }
 
 export interface MedicalNoteCreateRequest {
@@ -335,9 +343,16 @@ export interface MedicalOrder {
 export interface OrderExecution {
   id: string;
   orderId: string;
-  executedBy: number;
-  executedAt: string;
-  actualDose: string;
+  hour: number | null;
+  planned: boolean;
+  plannedBy: number | null;
+  plannedAt: string | null;
+  plannedDose: string | null;
+  plannedFinished: boolean;
+  completedFinished: boolean;
+  executedBy: number | null;
+  executedAt: string | null;
+  actualDose: string | null;
   status: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'PARTIALLY_COMPLETED' | 'CANCELLED';
   comment: string | null;
   createdBy: number;

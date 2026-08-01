@@ -9,11 +9,10 @@ import lombok.experimental.FieldDefaults;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class OrderExecutionCreateRequest {
+public class OrderExecutionPlanRequest {
     @NotNull
     @Min(0)
     Integer hour;
     @NotBlank
-    String actualDose;
-    String comment;
+    String dose;
 }

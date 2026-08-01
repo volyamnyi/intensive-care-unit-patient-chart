@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import IntensiveCareCard from '../../components/monitoring/IntensiveCareCard';
-import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, OrderExecution } from '../../types';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -34,6 +34,16 @@ const mockOrders: MedicalOrder[] = [
   { id: 'o1', clinicalDayId: 'day-1', category: 'MEDICATION', drugName: 'Амоксицилін', dose: '1', unit: 'г', route: 'в/в', frequency: 'кожні 8 год', startTime: '2025-06-01T08:00', endTime: null, status: 'ACTIVE', createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1 },
   { id: 'o2', clinicalDayId: 'day-1', category: 'MEDICATION', drugName: 'Гепарин', dose: '5000', unit: 'од', route: 'п/ш', frequency: '2 рази/день', startTime: '2025-06-01T08:00', endTime: null, status: 'ACTIVE', createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1 },
 ];
+
+function plannedExecution(overrides: Partial<OrderExecution> = {}): OrderExecution {
+  return {
+    id: 'e1', orderId: 'o1', hour: 0, planned: true, plannedBy: 1, plannedAt: '2025-06-01T08:00:00',
+    plannedDose: '1', plannedFinished: false, completedFinished: false,
+    executedBy: null, executedAt: null, actualDose: null,
+    status: 'PLANNED', comment: null, createdBy: 1, createdAt: '', updatedBy: 1, updatedAt: '', version: 1,
+    ...overrides,
+  };
+}
 
 const mockRecords: HourlyRecord[] = [
   {
@@ -90,6 +100,11 @@ let mockVentilationGetByClinicalDay = vi.fn();
 let mockLabResultGetByClinicalDay = vi.fn();
 let mockPatientStateGetByClinicalDay = vi.fn();
 let mockOrderCreate = vi.fn();
+let mockOrderExecutionGetByOrder = vi.fn();
+let mockOrderExecutionPlan = vi.fn();
+let mockOrderExecutionCancel = vi.fn();
+let mockOrderExecutionExecute = vi.fn();
+let mockOrderExecutionExecuteFinish = vi.fn();
 
 vi.mock('../../api/endpoints', () => ({
   hourlyRecordApi: {
@@ -121,7 +136,11 @@ vi.mock('../../api/endpoints', () => ({
     create: vi.fn(),
   },
   orderExecutionApi: {
-    create: vi.fn(),
+    getByOrder: (...args: unknown[]) => mockOrderExecutionGetByOrder(...args),
+    plan: (...args: unknown[]) => mockOrderExecutionPlan(...args),
+    cancel: (...args: unknown[]) => mockOrderExecutionCancel(...args),
+    execute: (...args: unknown[]) => mockOrderExecutionExecute(...args),
+    executeFinish: (...args: unknown[]) => mockOrderExecutionExecuteFinish(...args),
   },
   medicalOrderApi: {
     create: (...args: unknown[]) => mockOrderCreate(...args),
@@ -143,6 +162,15 @@ describe('IntensiveCareCard', () => {
     mockLabResultGetByClinicalDay.mockResolvedValue({ data: [] });
     mockPatientStateGetByClinicalDay.mockResolvedValue({ data: [] });
     mockOrderCreate.mockResolvedValue({ data: {} });
+    mockOrderExecutionGetByOrder.mockResolvedValue({ data: [] });
+    mockOrderExecutionPlan.mockResolvedValue({ data: {} });
+    mockOrderExecutionCancel.mockResolvedValue({ data: {} });
+    mockOrderExecutionExecute.mockResolvedValue({ data: {} });
+    mockOrderExecutionExecuteFinish.mockResolvedValue({ data: {} });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('Rendering basics', () => {
@@ -347,6 +375,61 @@ describe('IntensiveCareCard', () => {
       expect(document.body.style.cursor).toBe('col-resize');
       fireEvent.mouseUp(window);
       expect(document.body.style.cursor).toBe('');
+    });
+  });
+
+  describe('Order execution (plan/execute)', () => {
+    const HOURS_ORDER = Array.from({ length: 24 }, (_, i) => (i + 8) % 24);
+
+    function cellAtHour(orderName: string, hour: number): HTMLElement {
+      const row = screen.getByText(orderName).closest('tr');
+      expect(row).not.toBeNull();
+      const tds = (row as HTMLElement).querySelectorAll('td');
+      return tds[HOURS_ORDER.indexOf(hour) + 1] as HTMLElement;
+    }
+
+    it('doctor plans a dose for a future hour', async () => {
+      vi.spyOn(Date.prototype, 'getHours').mockReturnValue(0);
+      renderCard();
+      fireEvent.click(cellAtHour('Амоксицилін 1г', 0));
+      const input = screen.getByLabelText('Запланувати Амоксицилін 0:00');
+      await fireEvent.change(input, { target: { value: '1' } });
+      await fireEvent.blur(input);
+      await waitFor(() => expect(mockOrderExecutionPlan).toHaveBeenCalledWith('o1', { hour: 0, dose: '1' }));
+    });
+
+    it('doctor cancels a planned execution', async () => {
+      vi.spyOn(Date.prototype, 'getHours').mockReturnValue(0);
+      mockOrderExecutionGetByOrder.mockResolvedValue({ data: [plannedExecution()] });
+      renderCard();
+      fireEvent.click(cellAtHour('Амоксицилін 1г', 0));
+      fireEvent.click(screen.getByLabelText('Скасувати Амоксицилін 0:00'));
+      await waitFor(() => expect(mockOrderExecutionCancel).toHaveBeenCalledWith('o1', { hour: 0 }));
+    });
+
+    it('nurse executes a planned dose with actual value', async () => {
+      vi.spyOn(Date.prototype, 'getHours').mockReturnValue(0);
+      mockOrderExecutionGetByOrder.mockResolvedValue({ data: [plannedExecution()] });
+      renderCard({ isNurse: true });
+      fireEvent.click(cellAtHour('Амоксицилін 1г', 0));
+      const input = screen.getByLabelText('Виконати Амоксицилін 0:00');
+      await fireEvent.change(input, { target: { value: '0.8' } });
+      await fireEvent.blur(input);
+      await waitFor(() => expect(mockOrderExecutionExecute).toHaveBeenCalledWith('o1', { hour: 0, actualDose: '0.8' }));
+    });
+
+    it('nurse finishes a completed execution', async () => {
+      vi.spyOn(Date.prototype, 'getHours').mockReturnValue(0);
+      mockOrderExecutionGetByOrder.mockResolvedValue({
+        data: [plannedExecution({
+          status: 'COMPLETED', planned: false, plannedDose: null,
+          executedBy: 1, executedAt: '2025-06-01T08:30:00', actualDose: '1',
+        })],
+      });
+      renderCard({ isNurse: true });
+      fireEvent.click(cellAtHour('Амоксицилін 1г', 0));
+      fireEvent.click(screen.getByRole('button', { name: 'Завершити' }));
+      await waitFor(() => expect(mockOrderExecutionExecuteFinish).toHaveBeenCalledWith('o1', { hour: 0 }));
     });
   });
 });

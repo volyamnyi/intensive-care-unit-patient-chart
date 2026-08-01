@@ -5,7 +5,7 @@ import { useAutoSave } from '../../hooks/useAutoSave';
 import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/endpoints';
 import HourlyGrid from './HourlyGrid';
 import PatientSidebar from './PatientSidebar';
-import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, ClinicalScale, ScaleResult, HourlyRecordCreateRequest, MedicalNoteCreateRequest, LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, ClinicalScale, ScaleResult, HourlyRecordCreateRequest, MedicalNoteCreateRequest, LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest, OrderExecution } from '../../types';
 
 interface UserLike { id: number; }
 
@@ -198,17 +198,63 @@ export default function IntensiveCareCard({
   }, [selectedDay, isLocked, recByHour, onRefresh]);
 
   const activeOrders = orders.filter(o => o.status === 'ACTIVE' || o.status === 'DRAFT');
+  const [executionsByOrder, setExecutionsByOrder] = useState<Record<string, OrderExecution[]>>({});
 
-  const toggleOrder = useCallback(async (orderId: string, hour: number, actualDose: string) => {
-    if (!user || !selectedDay) return;
-    const execTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
+  const refreshExecutions = useCallback(async (orderIds: string[]) => {
+    const unique = [...new Set(orderIds)];
+    if (unique.length === 0) return;
     try {
-      setExecuting(`${orderId}-${hour}`);
-      await orderExecutionApi.create(orderId, { executedBy: user.id, executedAt: execTime, actualDose });
+      const results = await Promise.all(
+        unique.map(id => orderExecutionApi.getByOrder(id).then(r => r.data ?? []).catch(() => [] as OrderExecution[])),
+      );
+      setExecutionsByOrder(prev => {
+        const next = { ...prev };
+        unique.forEach((id, i) => { next[id] = results[i]; });
+        return next;
+      });
     } catch (err) {
-      notifyParentRef.current(getErrorMessage(err, 'Не вдалося виконати призначення'), 'error');
-    } finally { setExecuting(null); }
-  }, [user, selectedDay]);
+      notifyParentRef.current(getErrorMessage(err, 'Не вдалося завантажити виконання'), 'error');
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshExecutions(activeOrders.map(o => o.id));
+  }, [selectedDay?.id, orders]);
+
+  const runExecutionAction = useCallback(async (
+    key: string, orderId: string, action: () => Promise<unknown>, failMessage: string,
+  ) => {
+    try {
+      setExecuting(key);
+      await action();
+      await refreshExecutions([orderId]);
+      onRefresh?.();
+    } catch (err) {
+      notifyParentRef.current(getErrorMessage(err, failMessage), 'error');
+    } finally {
+      setExecuting(null);
+    }
+  }, [refreshExecutions, onRefresh]);
+
+  const handlePlanOrder = useCallback((orderId: string, hour: number, dose: string) =>
+    runExecutionAction(`${orderId}-${hour}`, orderId,
+      () => orderExecutionApi.plan(orderId, { hour, dose }), 'Не вдалося запланувати виконання'),
+  [runExecutionAction]);
+
+  const handleCancelOrder = useCallback((orderId: string, hour: number) =>
+    runExecutionAction(`${orderId}-${hour}`, orderId,
+      () => orderExecutionApi.cancel(orderId, { hour }), 'Не вдалося скасувати виконання'),
+  [runExecutionAction]);
+
+  const handleExecuteOrder = useCallback((orderId: string, hour: number, actualDose: string) =>
+    runExecutionAction(`${orderId}-${hour}`, orderId,
+      () => orderExecutionApi.execute(orderId, { hour, actualDose }), 'Не вдалося виконати призначення'),
+  [runExecutionAction]);
+
+  const handleExecuteFinishOrder = useCallback((orderId: string, hour: number) =>
+    runExecutionAction(`${orderId}-${hour}`, orderId,
+      () => orderExecutionApi.executeFinish(orderId, { hour }), 'Не вдалося завершити виконання'),
+  [runExecutionAction]);
 
   const totalIntake = balanceItems.reduce((s, i) => s + (i.intake || 0), 0);
   const totalOutput = balanceItems.reduce((s, i) => s + (i.output || 0), 0);
@@ -236,13 +282,17 @@ export default function IntensiveCareCard({
           recByHour={recByHour}
           orders={orders}
           activeOrders={activeOrders}
+          executionsByOrder={executionsByOrder}
           executing={executing}
           orderFormOpen={orderFormOpen}
           realClockHour={realClockHour}
           canEditSidebar={canEditSidebar}
           onSetOrderFormOpen={setOrderFormOpen}
           onSaveCell={saveCell}
-          onToggleOrder={toggleOrder}
+          onPlanOrder={handlePlanOrder}
+          onCancelOrder={handleCancelOrder}
+          onExecuteOrder={handleExecuteOrder}
+          onExecuteFinishOrder={handleExecuteFinishOrder}
           onRefresh={onRefresh}
           onError={(msg) => notifyParentRef.current(msg, 'error')}
         />

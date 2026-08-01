@@ -17,10 +17,31 @@ public class OrderExecution extends BaseEntity {
     @JoinColumn(name = "order_id", nullable = false)
     MedicalOrder order;
 
-    @Column(name = "executed_by", nullable = false)
+    @Column(name = "hour")
+    Integer hour;
+
+    @Column(nullable = false)
+    boolean planned;
+
+    @Column(name = "planned_by")
+    Long plannedBy;
+
+    @Column(name = "planned_at")
+    LocalDateTime plannedAt;
+
+    @Column(name = "planned_dose", length = 100)
+    String plannedDose;
+
+    @Column(name = "planned_finished", nullable = false)
+    boolean plannedFinished;
+
+    @Column(name = "completed_finished", nullable = false)
+    boolean completedFinished;
+
+    @Column(name = "executed_by")
     Long executedBy;
 
-    @Column(name = "executed_at", nullable = false)
+    @Column(name = "executed_at")
     LocalDateTime executedAt;
 
     @Column(name = "actual_dose", length = 100)

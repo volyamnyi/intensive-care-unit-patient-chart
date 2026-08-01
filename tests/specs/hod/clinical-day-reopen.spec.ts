@@ -12,7 +12,7 @@ async function getHodToken(request: any) {
 
 test.describe('HOD Clinical Day Reopen', () => {
   test('reopens a nurse-signed clinical day via API', async ({ request }) => {
-    // Uses a2222222 day 2 (b4444444) — starts NURSE_SIGNED after seed reset.
+    // Uses a2222222 day 1 (b4444444) — starts NURSE_SIGNED after seed reset.
     const token = await getHodToken(request);
 
     const dayRes = await request.get(`${API}/clinical-days/b4444444-4444-4444-4444-444444444444`, {
@@ -39,19 +39,19 @@ test.describe('HOD Clinical Day Reopen', () => {
     expect(reopened.nurseSigned).toBe(false);
   });
 
-  test('HOD can open episode page and see reopen button on a1111111 day 2', async ({ page }) => {
-    // a1111111 day 2 (b1111112) is NURSE_SIGNED — stable seed, never reopened here.
+  test('HOD can open episode page and see reopen button on a1111111 day 1', async ({ page }) => {
+    // a1111111 day 1 (b1111112) is NURSE_SIGNED — stable seed, never reopened here.
     await page.goto('/icu/doctor/episode/a1111111-1111-1111-1111-111111111111');
 
-    // Select the NURSE_SIGNED day (Доба 2) so the reopen action appears.
-    await page.getByText('Доба 2').click();
+    // Select the NURSE_SIGNED day (Доба 1) so the reopen action appears.
+    await page.getByText('Доба 1').click();
     await expect(page.getByRole('button', { name: 'Перевідкрити' })).toBeVisible({ timeout: 10000 });
   });
 
   test('HOD reopen form blocks empty reason (regression F2/UC-14)', async ({ hodPage }) => {
     await hodPage.goto('/icu/doctor/episode/a1111111-1111-1111-1111-111111111111');
 
-    await hodPage.getByText('Доба 2').click();
+    await hodPage.getByText('Доба 1').click();
     await expect(hodPage.getByRole('button', { name: 'Перевідкрити' })).toBeVisible({ timeout: 10000 });
 
     await hodPage.getByRole('button', { name: 'Перевідкрити' }).click();

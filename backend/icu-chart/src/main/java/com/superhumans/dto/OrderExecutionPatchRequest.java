@@ -2,7 +2,6 @@ package com.superhumans.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -13,5 +12,4 @@ public class OrderExecutionPatchRequest {
     String comment;
     @NotNull
     Integer version;
-    Long executedBy;
 }

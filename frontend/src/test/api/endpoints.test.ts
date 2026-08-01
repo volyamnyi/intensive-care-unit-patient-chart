@@ -87,9 +87,39 @@ describe('medicalOrderApi', () => {
 });
 
 describe('orderExecutionApi', () => {
-  it('create posts to /orders/:id/execute', () => {
-    orderExecutionApi.create('ord-1', { executedBy: 1, executedAt: '2024-01-01T00:00:00Z', actualDose: '5mg' });
-    expect(mockClient.post).toHaveBeenCalledWith('/orders/ord-1/execute', { executedBy: 1, executedAt: '2024-01-01T00:00:00Z', actualDose: '5mg' });
+  it('getByOrder gets /orders/:id/executions', () => {
+    orderExecutionApi.getByOrder('ord-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/orders/ord-1/executions');
+  });
+
+  it('plan puts to /orders/:id/plan', () => {
+    orderExecutionApi.plan('ord-1', { hour: 10, dose: '5мг' });
+    expect(mockClient.put).toHaveBeenCalledWith('/orders/ord-1/plan', { hour: 10, dose: '5мг' });
+  });
+
+  it('planFinish puts to /orders/:id/plan/finish', () => {
+    orderExecutionApi.planFinish('ord-1', { hour: 10 });
+    expect(mockClient.put).toHaveBeenCalledWith('/orders/ord-1/plan/finish', { hour: 10 });
+  });
+
+  it('cancel puts to /orders/:id/cancel', () => {
+    orderExecutionApi.cancel('ord-1', { hour: 10 });
+    expect(mockClient.put).toHaveBeenCalledWith('/orders/ord-1/cancel', { hour: 10 });
+  });
+
+  it('execute posts to /orders/:id/execute', () => {
+    orderExecutionApi.execute('ord-1', { hour: 10, actualDose: '5мг', comment: 'ок' });
+    expect(mockClient.post).toHaveBeenCalledWith('/orders/ord-1/execute', { hour: 10, actualDose: '5мг', comment: 'ок' });
+  });
+
+  it('executeFinish posts to /orders/:id/execute/finish', () => {
+    orderExecutionApi.executeFinish('ord-1', { hour: 10 });
+    expect(mockClient.post).toHaveBeenCalledWith('/orders/ord-1/execute/finish', { hour: 10 });
+  });
+
+  it('update patches to /executions/:id', () => {
+    orderExecutionApi.update('ex-1', { actualDose: '6мг', version: 2 });
+    expect(mockClient.patch).toHaveBeenCalledWith('/executions/ex-1', { actualDose: '6мг', version: 2 });
   });
 });
 

@@ -11,4 +11,5 @@ public interface OrderExecutionRepository extends JpaRepository<OrderExecution, 
     List<OrderExecution> findByOrderId(UUID orderId);
     List<OrderExecution> findByOrderIdAndStatus(UUID orderId, OrderExecutionStatus status);
     List<OrderExecution> findByExecutedAtBetween(LocalDateTime start, LocalDateTime end);
+    java.util.Optional<OrderExecution> findByOrderIdAndHour(UUID orderId, Integer hour);
 }

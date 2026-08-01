@@ -12,6 +12,13 @@ import lombok.experimental.FieldDefaults;
 public class OrderExecutionResponse {
     UUID id;
     UUID orderId;
+    Integer hour;
+    boolean planned;
+    Long plannedBy;
+    LocalDateTime plannedAt;
+    String plannedDose;
+    boolean plannedFinished;
+    boolean completedFinished;
     Long executedBy;
     LocalDateTime executedAt;
     String actualDose;

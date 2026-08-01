@@ -125,4 +125,57 @@ test.describe('API Security Rules', () => {
     });
     expect(nurseRes.ok()).toBeTruthy();
   });
+
+  test('order plan and cancel endpoints require the prescriber role', async ({ request }) => {
+    const orderId = 'd3333001-3333-3333-0000-333333330001';
+
+    const nurse = await getToken(request, 'nurse1', 'nurse123');
+    const nursePlan = await request.put(`${API}/orders/${orderId}/plan`, {
+      headers: { Authorization: `Bearer ${nurse}` },
+      data: { hour: 6, dose: '500' },
+    });
+    expect(nursePlan.status()).toBe(403);
+
+    const nurseFinish = await request.put(`${API}/orders/${orderId}/plan/finish`, {
+      headers: { Authorization: `Bearer ${nurse}` },
+      data: { hour: 6 },
+    });
+    expect(nurseFinish.status()).toBe(403);
+
+    const nurseCancel = await request.put(`${API}/orders/${orderId}/cancel`, {
+      headers: { Authorization: `Bearer ${nurse}` },
+      data: { hour: 6 },
+    });
+    expect(nurseCancel.status()).toBe(403);
+
+    const doctor = await getToken(request, 'doctor1', 'doctor123');
+    const doctorPlan = await request.put(`${API}/orders/${orderId}/plan`, {
+      headers: { Authorization: `Bearer ${doctor}` },
+      data: { hour: 6, dose: '500' },
+    });
+    expect(doctorPlan.ok()).toBeTruthy();
+  });
+
+  test('order execution endpoints require the executor role (nurse)', async ({ request }) => {
+    const orderId = 'd3333001-3333-3333-0000-333333330001';
+    const doctor = await getToken(request, 'doctor1', 'doctor123');
+
+    const doctorExecute = await request.post(`${API}/orders/${orderId}/execute`, {
+      headers: { Authorization: `Bearer ${doctor}` },
+      data: { hour: 6, actualDose: '500' },
+    });
+    expect(doctorExecute.status()).toBe(403);
+
+    const doctorFinish = await request.post(`${API}/orders/${orderId}/execute/finish`, {
+      headers: { Authorization: `Bearer ${doctor}` },
+      data: { hour: 6 },
+    });
+    expect(doctorFinish.status()).toBe(403);
+
+    const doctorPatch = await request.patch(`${API}/executions/ffffffff-ffff-ffff-ffff-fffffffffff1`, {
+      headers: { Authorization: `Bearer ${doctor}` },
+      data: { version: 0 },
+    });
+    expect(doctorPatch.status()).toBe(403);
+  });
 });

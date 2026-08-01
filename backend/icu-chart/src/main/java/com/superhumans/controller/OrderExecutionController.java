@@ -1,7 +1,9 @@
 package com.superhumans.controller;
 
 import com.superhumans.dto.OrderExecutionCreateRequest;
+import com.superhumans.dto.OrderExecutionFinishRequest;
 import com.superhumans.dto.OrderExecutionPatchRequest;
+import com.superhumans.dto.OrderExecutionPlanRequest;
 import com.superhumans.dto.OrderExecutionResponse;
 import com.superhumans.service.OrderExecutionService;
 import jakarta.validation.Valid;
@@ -30,14 +32,50 @@ public class OrderExecutionController {
         return ResponseEntity.ok(orderExecutionService.getExecutionsByOrder(orderId));
     }
 
+    @PutMapping("/orders/{orderId}/plan")
+    public ResponseEntity<OrderExecutionResponse> plan(
+            @PathVariable UUID orderId,
+            @Valid @RequestBody OrderExecutionPlanRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.ok(orderExecutionService.plan(orderId, request, userId));
+    }
+
+    @PutMapping("/orders/{orderId}/plan/finish")
+    public ResponseEntity<OrderExecutionResponse> planFinish(
+            @PathVariable UUID orderId,
+            @Valid @RequestBody OrderExecutionFinishRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.ok(orderExecutionService.planFinish(orderId, request.getHour(), userId));
+    }
+
+    @PutMapping("/orders/{orderId}/cancel")
+    public ResponseEntity<OrderExecutionResponse> cancel(
+            @PathVariable UUID orderId,
+            @Valid @RequestBody OrderExecutionFinishRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.ok(orderExecutionService.cancel(orderId, request.getHour(), userId));
+    }
+
     @PostMapping("/orders/{orderId}/execute")
-    public ResponseEntity<OrderExecutionResponse> createExecution(
+    public ResponseEntity<OrderExecutionResponse> execute(
             @PathVariable UUID orderId,
             @Valid @RequestBody OrderExecutionCreateRequest request,
             Authentication auth) {
         Long userId = (Long) auth.getCredentials();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orderExecutionService.createExecution(orderId, request, userId));
+                .body(orderExecutionService.execute(orderId, request, userId));
+    }
+
+    @PostMapping("/orders/{orderId}/execute/finish")
+    public ResponseEntity<OrderExecutionResponse> executeFinish(
+            @PathVariable UUID orderId,
+            @Valid @RequestBody OrderExecutionFinishRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.ok(orderExecutionService.executeFinish(orderId, request.getHour(), userId));
     }
 
     @PatchMapping("/executions/{id}")

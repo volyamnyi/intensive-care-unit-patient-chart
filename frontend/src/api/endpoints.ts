@@ -9,6 +9,8 @@ import type {
   HourlyRecordCreateRequest,
   MedicalOrderCreateRequest,
   OrderExecutionCreateRequest,
+  OrderExecutionPlanRequest,
+  OrderExecutionFinishRequest,
   MedicalNoteCreateRequest,
   ScaleResultCreateRequest,
   LabResult, LabResultCreateRequest,
@@ -88,10 +90,18 @@ export const medicalOrderApi = {
 export const orderExecutionApi = {
   getByOrder: (orderId: string) =>
     client.get<OrderExecution[]>(`/orders/${orderId}/executions`),
-  create: (orderId: string, data: OrderExecutionCreateRequest) =>
+  plan: (orderId: string, data: OrderExecutionPlanRequest) =>
+    client.put<OrderExecution>(`/orders/${orderId}/plan`, data),
+  planFinish: (orderId: string, data: OrderExecutionFinishRequest) =>
+    client.put<OrderExecution>(`/orders/${orderId}/plan/finish`, data),
+  cancel: (orderId: string, data: OrderExecutionFinishRequest) =>
+    client.put<OrderExecution>(`/orders/${orderId}/cancel`, data),
+  execute: (orderId: string, data: OrderExecutionCreateRequest) =>
     client.post<OrderExecution>(`/orders/${orderId}/execute`, data),
+  executeFinish: (orderId: string, data: OrderExecutionFinishRequest) =>
+    client.post<OrderExecution>(`/orders/${orderId}/execute/finish`, data),
   update: (id: string, data: { actualDose?: string; comment?: string; version: number }) =>
-    client.patch<OrderExecution>(`/executions/${id}`, data),
+    client.patch<void>(`/executions/${id}`, data),
 };
 
 export const medicalNoteApi = {
