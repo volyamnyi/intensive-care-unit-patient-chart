@@ -23,10 +23,10 @@ for (const fp of files) {
   let c = readFileSync(fp, 'utf8');
   const o = c;
 
-  c = c.replaceAll('\\/doctor\\/episode\\/', '\\/prescriptions\\/icu\\/doctor\\/episode\\/');
-  c = c.replaceAll('\\/nurse\\/episode\\/', '\\/prescriptions\\/icu\\/nurse\\/episode\\/');
-  c = c.replaceAll("'/doctor/create-card'", "'/prescriptions/icu/doctor/create-card'");
-  c = c.replace(/(\\\/prescriptions\\\/)(?!icu\\\/)nurse/g, '$1icu\\/nurse');
+  c = c.replaceAll('\\/doctor\\/episode\\/', '\\/icu\\/doctor\\/episode\\/');
+  c = c.replaceAll('\\/nurse\\/episode\\/', '\\/icu\\/nurse\\/episode\\/');
+  c = c.replaceAll("'/doctor/create-card'", "'/icu/doctor/create-card'");
+  c = c.replace(/(\\\/prescriptions\\\/icu\\\/)/g, '\\/icu\\/');
 
   if (c !== o) {
     writeFileSync(fp, c, 'utf8');

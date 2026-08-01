@@ -18,7 +18,7 @@ test.describe('Doctor day flow', () => {
     // Лікар відкриває сторінку клінічного дня епізоду Сидоренка (seed a3333333)
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
     // Очікуваний редірект на маршрут під-застосунку призначень
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     // Єдина ICU-картка: сітка показників/втрат + терапія
     await expect(page.getByText('Показник / година')).toBeVisible();
@@ -33,7 +33,7 @@ test.describe('Doctor day flow', () => {
 
   test('shows seeded vital values in the hourly grid', async ({ page }) => {
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     // Година 0 — seed-запис c3333001 (Темп 37.2, ЧСС 78, АТсист 122, АТдіас 68, SpO2 98.0, сеча 20)
     await expect(page.getByLabel('АТсист 0:00')).toHaveValue('122');
@@ -48,7 +48,7 @@ test.describe('Doctor day flow', () => {
 
   test('seeded record exposes computed MAP in the API response', async ({ page }) => {
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     // Перехоплюємо відповідь GET /hourly-records після перезавантаження сторінки
     const respPromise = page.waitForResponse(
@@ -71,7 +71,7 @@ test.describe('Doctor day flow', () => {
 
   test('creates a medication order via the quick form', async ({ page }) => {
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     // Відкриваємо форму швидкого створення призначення
     await page.getByRole('button', { name: '+ Нове призначення' }).click();

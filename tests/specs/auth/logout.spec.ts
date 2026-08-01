@@ -8,7 +8,7 @@ test.describe('Logout', () => {
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
     await page.goto('/icu/doctor');
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor/);
+    await expect(page).toHaveURL(/\/icu\/doctor/);
 
     await page.getByRole('button', { name: 'Меню користувача' }).click();
     await page.getByRole('menuitem', { name: 'Вийти' }).click();
@@ -23,7 +23,7 @@ test.describe('Logout', () => {
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
     await page.goto('/icu/nurse');
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/nurse/);
+    await expect(page).toHaveURL(/\/icu\/nurse/);
 
     await page.getByRole('button', { name: 'Меню користувача' }).click();
     await page.getByRole('menuitem', { name: 'Вийти' }).click();
@@ -38,7 +38,7 @@ test.describe('Logout', () => {
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
     await page.goto('/icu/doctor');
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor/);
+    await expect(page).toHaveURL(/\/icu\/doctor/);
 
     await page.getByRole('button', { name: 'Меню користувача' }).click();
     await page.getByRole('menuitem', { name: 'Вийти' }).click();

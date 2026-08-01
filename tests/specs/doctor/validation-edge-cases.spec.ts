@@ -16,7 +16,7 @@ function startAt(offsetHours: number): string {
 test.describe('Validation edge cases', () => {
   test('rejects a medication order started in the past (422 PAST_HOUR_ORDER)', async ({ page }) => {
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     // Форма швидкого створення з початком на 2 години в минулому
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
@@ -87,7 +87,7 @@ test.describe('Validation edge cases', () => {
     const cellIndex = pastHour - 8 + 1;
 
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     const row = page.locator('tr', { hasText: 'Glucose 5%' });
     await expect(row).toBeVisible();
 

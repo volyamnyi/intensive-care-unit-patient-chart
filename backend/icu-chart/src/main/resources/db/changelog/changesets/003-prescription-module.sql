@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset phase-1:1
-CREATE TABLE prescription_lists (
+CREATE TABLE IF NOT EXISTS prescription_lists (
     id UUID NOT NULL,
     patient_id BIGINT NOT NULL,
     hospitalization_id UUID,
@@ -22,7 +22,7 @@ CREATE TABLE prescription_lists (
 --rollback DROP TABLE prescription_lists;
 
 --changeset phase-1:2
-CREATE TABLE prescription_items (
+CREATE TABLE IF NOT EXISTS prescription_items (
     id UUID NOT NULL,
     list_id UUID NOT NULL,
     medicine_name VARCHAR(500) NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE prescription_items (
 --rollback DROP TABLE prescription_items;
 
 --changeset phase-1:3
-CREATE TABLE prescription_item_days (
+CREATE TABLE IF NOT EXISTS prescription_item_days (
     id UUID NOT NULL,
     item_id UUID NOT NULL,
     day_date DATE NOT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE prescription_item_days (
 --rollback DROP TABLE prescription_item_days;
 
 --changeset phase-1:4
-CREATE TABLE prescription_day_parts (
+CREATE TABLE IF NOT EXISTS prescription_day_parts (
     id UUID NOT NULL,
     day_id UUID NOT NULL,
     period VARCHAR(8) NOT NULL CHECK (period IN ('morning','evening')),
@@ -84,7 +84,7 @@ CREATE TABLE prescription_day_parts (
 --rollback DROP TABLE prescription_day_parts;
 
 --changeset phase-1:5
-CREATE TABLE prescription_executions (
+CREATE TABLE IF NOT EXISTS prescription_executions (
     id UUID NOT NULL,
     day_part_id UUID NOT NULL,
     executed_by UUID,
@@ -107,7 +107,7 @@ CREATE TABLE prescription_executions (
 --rollback DROP TABLE prescription_executions;
 
 --changeset phase-1:6
-CREATE TABLE prescription_signatures (
+CREATE TABLE IF NOT EXISTS prescription_signatures (
     id UUID NOT NULL,
     item_id UUID,
     user_id UUID NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE prescription_signatures (
 --rollback DROP TABLE prescription_signatures;
 
 --changeset phase-1:7
-CREATE TABLE vital_sign_lists (
+CREATE TABLE IF NOT EXISTS vital_sign_lists (
     id UUID NOT NULL,
     prescription_list_id UUID NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -144,7 +144,7 @@ CREATE TABLE vital_sign_lists (
 --rollback DROP TABLE vital_sign_lists;
 
 --changeset phase-1:8
-CREATE TABLE vital_sign_days (
+CREATE TABLE IF NOT EXISTS vital_sign_days (
     id UUID NOT NULL,
     vital_list_id UUID NOT NULL,
     day_date DATE NOT NULL,
@@ -161,7 +161,7 @@ CREATE TABLE vital_sign_days (
 --rollback DROP TABLE vital_sign_days;
 
 --changeset phase-1:9
-CREATE TABLE vital_sign_entries (
+CREATE TABLE IF NOT EXISTS vital_sign_entries (
     id UUID NOT NULL,
     day_id UUID NOT NULL,
     period VARCHAR(8) NOT NULL CHECK (period IN ('morning','evening')),
@@ -185,7 +185,7 @@ CREATE TABLE vital_sign_entries (
 --rollback DROP TABLE vital_sign_entries;
 
 --changeset phase-1:10
-CREATE TABLE medicine_catalog_cache (
+CREATE TABLE IF NOT EXISTS medicine_catalog_cache (
     id BIGINT NOT NULL,
     name VARCHAR(500) NOT NULL,
     category_ref INTEGER,
@@ -198,7 +198,7 @@ CREATE TABLE medicine_catalog_cache (
 --rollback DROP TABLE medicine_catalog_cache;
 
 --changeset phase-1:11
-CREATE TABLE allergy_cache (
+CREATE TABLE IF NOT EXISTS allergy_cache (
     id UUID NOT NULL,
     patient_id BIGINT NOT NULL,
     allergen_name VARCHAR(500) NOT NULL,
@@ -211,7 +211,7 @@ CREATE TABLE allergy_cache (
 --rollback DROP TABLE allergy_cache;
 
 --changeset phase-1:12
-CREATE TABLE drug_interaction_rules (
+CREATE TABLE IF NOT EXISTS drug_interaction_rules (
     id UUID NOT NULL,
     ptg_code_a VARCHAR(50) NOT NULL,
     ptg_code_b VARCHAR(50) NOT NULL,
@@ -230,7 +230,7 @@ CREATE TABLE drug_interaction_rules (
 --rollback DROP TABLE drug_interaction_rules;
 
 --changeset phase-1:13
-CREATE TABLE telegram_subscriptions (
+CREATE TABLE IF NOT EXISTS telegram_subscriptions (
     chat_id BIGINT NOT NULL,
     subscribed_at TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT pk_telegram_subscriptions PRIMARY KEY (chat_id)
@@ -239,17 +239,17 @@ CREATE TABLE telegram_subscriptions (
 --rollback DROP TABLE telegram_subscriptions;
 
 --changeset phase-1:14
-CREATE INDEX idx_prescription_lists_patient ON prescription_lists(patient_id);
-CREATE INDEX idx_prescription_lists_status ON prescription_lists(status);
-CREATE INDEX idx_prescription_items_list ON prescription_items(list_id);
-CREATE INDEX idx_prescription_item_days_item ON prescription_item_days(item_id);
-CREATE INDEX idx_prescription_day_parts_day ON prescription_day_parts(day_id);
-CREATE INDEX idx_prescription_executions_day_part ON prescription_executions(day_part_id);
-CREATE INDEX idx_vital_sign_lists_prescription ON vital_sign_lists(prescription_list_id);
-CREATE INDEX idx_vital_sign_days_list ON vital_sign_days(vital_list_id);
-CREATE INDEX idx_vital_sign_entries_day ON vital_sign_entries(day_id);
-CREATE INDEX idx_allergy_cache_patient ON allergy_cache(patient_id);
-CREATE INDEX idx_medicine_catalog_name ON medicine_catalog_cache(name);
+CREATE INDEX IF NOT EXISTS idx_prescription_lists_patient ON prescription_lists(patient_id);
+CREATE INDEX IF NOT EXISTS idx_prescription_lists_status ON prescription_lists(status);
+CREATE INDEX IF NOT EXISTS idx_prescription_items_list ON prescription_items(list_id);
+CREATE INDEX IF NOT EXISTS idx_prescription_item_days_item ON prescription_item_days(item_id);
+CREATE INDEX IF NOT EXISTS idx_prescription_day_parts_day ON prescription_day_parts(day_id);
+CREATE INDEX IF NOT EXISTS idx_prescription_executions_day_part ON prescription_executions(day_part_id);
+CREATE INDEX IF NOT EXISTS idx_vital_sign_lists_prescription ON vital_sign_lists(prescription_list_id);
+CREATE INDEX IF NOT EXISTS idx_vital_sign_days_list ON vital_sign_days(vital_list_id);
+CREATE INDEX IF NOT EXISTS idx_vital_sign_entries_day ON vital_sign_entries(day_id);
+CREATE INDEX IF NOT EXISTS idx_allergy_cache_patient ON allergy_cache(patient_id);
+CREATE INDEX IF NOT EXISTS idx_medicine_catalog_name ON medicine_catalog_cache(name);
 
 --rollback DROP INDEX IF EXISTS idx_medicine_catalog_name;
 --rollback DROP INDEX IF EXISTS idx_allergy_cache_patient;

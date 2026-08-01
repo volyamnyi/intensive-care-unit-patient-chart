@@ -44,7 +44,7 @@ test.describe('HOD Dashboard', () => {
 
     await expect(page.getByText('���� �������� (� ̲�)')).toBeVisible();
     await page.getByRole('button', { name: '�������� �����' }).click();
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
   });
 
   test('can view prescriptions section on episode page', async ({ page }) => {

@@ -4,14 +4,14 @@ foreach ($f in $files) {
     $c = Get-Content $f -Raw
     $o = $c
 
-    # \/doctor\/episode\/ -> \/prescriptions\/icu\/doctor\/episode\/
-    $c = $c -replace [regex]::Escape('\/doctor\/episode\/'), '\/prescriptions\/icu\/doctor\/episode\/'
-    # \/nurse\/episode\/ -> \/prescriptions\/icu\/nurse\/episode\/
-    $c = $c -replace [regex]::Escape('\/nurse\/episode\/'), '\/prescriptions\/icu\/nurse\/episode\/
-    # '/doctor/create-card' -> '/prescriptions/icu/doctor/create-card'
-    $c = $c -replace [regex]::Escape("'/doctor/create-card'"), "'/prescriptions/icu/doctor/create-card'"
-    # \/prescriptions\/nurse (not followed by icu) -> \/prescriptions\/icu\/nurse
-    $c = $c -replace '\\/prescriptions\\/(?!icu\\/)nurse', '\/prescriptions\/icu\/nurse'
+    # \/doctor\/episode\/ -> \/icu\/doctor\/episode\/
+    $c = $c -replace [regex]::Escape('\/doctor\/episode\/'), '\/icu\/doctor\/episode\/'
+    # \/nurse\/episode\/ -> \/icu\/nurse\/episode\/
+    $c = $c -replace [regex]::Escape('\/nurse\/episode\/'), '\/icu\/nurse\/episode\/''
+    # '/doctor/create-card' -> '/icu/doctor/create-card'
+    $c = $c -replace [regex]::Escape("'/doctor/create-card'"), "'/icu/doctor/create-card'"
+    # \/prescriptions\/icu (not needed anymore, but keep for safety)
+    $c = $c -replace '\\/prescriptions\\/icu\\/', '\/icu\/'
 
     if ($c -ne $o) {
         Set-Content -Path $f -Value $c -NoNewline
