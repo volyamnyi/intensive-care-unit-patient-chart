@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import IntensiveCareCard from '../../components/monitoring/IntensiveCareCard';
@@ -52,7 +52,8 @@ const mockRecords: HourlyRecord[] = [
     temperature: 36.6, cvp: 8, respiratoryRate: 16,
     consciousness: null, gcs: null, meanArterialPressure: null, etco2: null, fio2: null,
     dopamine: null, dobutamine: null, norepinephrine: null, epinephrine: null,
-    urineOutput: null, drainOutput: null, stool: null, vomit: null,
+    urineOutput: null, drainOutput: null, gastricOutput: null, stool: null, vomit: null,
+    bedPosition: null, headEnd: null,
     painScore: null, notes: null,
     createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1,
   },
@@ -62,7 +63,8 @@ const mockRecords: HourlyRecord[] = [
     temperature: 36.8, cvp: 7, respiratoryRate: 18,
     consciousness: 'Ясна', gcs: 14, meanArterialPressure: null, etco2: null, fio2: null,
     dopamine: null, dobutamine: null, norepinephrine: null, epinephrine: null,
-    urineOutput: 150, drainOutput: 50, stool: null, vomit: null,
+    urineOutput: 150, drainOutput: 50, gastricOutput: null, stool: null, vomit: null,
+    bedPosition: null, headEnd: null,
     painScore: null, notes: null,
     createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1,
   },

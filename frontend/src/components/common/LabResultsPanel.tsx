@@ -41,15 +41,19 @@ interface LabResultsPanelProps {
   onCreate: (data: LabResultCreateRequest) => Promise<void>;
 }
 
+function recordHourOf(r: HourlyRecord): number {
+  return r.recordTime ? new Date(r.recordTime).getHours() : -1;
+}
+
 function findFio2(records: HourlyRecord[] | undefined, hour: number | null): number | null {
   if (!records?.length) return null;
   if (hour != null) {
-    const same = records.find(r => r.recordHour === hour && r.fio2 != null);
+    const same = records.find(r => recordHourOf(r) === hour && r.fio2 != null);
     if (same?.fio2 != null) return same.fio2;
   }
   const latest = records
     .filter(r => r.fio2 != null)
-    .sort((a, b) => b.recordHour - a.recordHour)[0];
+    .sort((a, b) => recordHourOf(b) - recordHourOf(a))[0];
   return latest?.fio2 ?? null;
 }
 

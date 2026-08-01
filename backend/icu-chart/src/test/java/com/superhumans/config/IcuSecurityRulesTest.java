@@ -110,11 +110,13 @@ class IcuSecurityRulesTest {
     }
 
     @Test
-    void orderExecute_isAccessibleToClinicalRoles() throws Exception {
+    void orderExecute_requiresExecutorRole() throws Exception {
         mockMvc.perform(post(ORDER_PATH + "/execute").with(TestSecurityHelper.nurse()))
                 .andExpect(status().isOk());
-        mockMvc.perform(post(ORDER_PATH + "/execute").with(TestSecurityHelper.doctor()))
+        mockMvc.perform(post(ORDER_PATH + "/execute").with(TestSecurityHelper.hod()))
                 .andExpect(status().isOk());
+        mockMvc.perform(post(ORDER_PATH + "/execute").with(TestSecurityHelper.doctor()))
+                .andExpect(status().isForbidden());
     }
 
     @Test

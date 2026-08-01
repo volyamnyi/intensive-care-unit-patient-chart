@@ -383,6 +383,7 @@ class OrderExecutionServiceTest {
     void updateExecution_updatesFields() {
         OrderExecution exec = plannedExec();
         when(orderExecutionRepository.findById(executionId)).thenReturn(Optional.of(exec));
+        when(medicalOrderRepository.findById(orderId)).thenReturn(Optional.of(medicalOrder));
         OrderExecution saved = plannedExec();
         saved.setVersion(1);
         when(orderExecutionRepository.save(any(OrderExecution.class))).thenReturn(saved);
@@ -406,6 +407,7 @@ class OrderExecutionServiceTest {
         OrderExecution exec = plannedExec();
         exec.setStatus(OrderExecutionStatus.COMPLETED);
         when(orderExecutionRepository.findById(executionId)).thenReturn(Optional.of(exec));
+        when(medicalOrderRepository.findById(orderId)).thenReturn(Optional.of(medicalOrder));
 
         OrderExecutionPatchRequest req = new OrderExecutionPatchRequest();
         req.setActualDose("20");
