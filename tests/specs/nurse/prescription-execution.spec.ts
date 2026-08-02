@@ -10,7 +10,7 @@ test.describe('Prescription Execution (Nurse)', () => {
   test('nurse prescription page shows patient selector', async ({ page }) => {
     await page.goto('/prescriptions/nurse');
     // Should prompt to select a patient or show patient list
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/nurse/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/prescriptions\/nurse/, { timeout: 10000 });
   });
 
   test('nurse sees info message without patient context', async ({ page }) => {

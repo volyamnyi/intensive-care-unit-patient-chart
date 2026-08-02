@@ -149,7 +149,10 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         createReq.setUnit("ОД");
         createReq.setRoute("п/ш");
         createReq.setFrequency("2 рази");
-        createReq.setStartTime(LocalDateTime.now().withHour(8));
+        LocalDateTime startTime = LocalDateTime.now().plusHours(1)
+                .withMinute(0).withSecond(0).withNano(0);
+        createReq.setStartTime(startTime);
+        int hour = startTime.getHour();
 
         var createEntity = authEntity(createReq, getDoctorToken());
         var createRes = restTemplate.exchange(
@@ -158,7 +161,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = createRes.getBody().getId();
 
-        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(13, "5000");
+        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(hour, "5000");
         var planEntity = authEntity(planReq, getDoctorToken());
         var planRes = restTemplate.exchange(
                 "/api/orders/{orderId}/plan", HttpMethod.PUT, planEntity,
@@ -166,7 +169,7 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(planRes.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(13, "5000", "Виконано");
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(hour, "5000", "Виконано");
         var execEntity = authEntity(execReq, getNurseToken());
 
         var execRes = restTemplate.exchange(
@@ -185,7 +188,10 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
         createReq.setUnit("10 мл");
         createReq.setRoute("в/в");
         createReq.setFrequency("1 раз");
-        createReq.setStartTime(LocalDateTime.now().withHour(8));
+        LocalDateTime startTime = LocalDateTime.now().plusHours(1)
+                .withMinute(0).withSecond(0).withNano(0);
+        createReq.setStartTime(startTime);
+        int hour = startTime.getHour();
 
         var createEntity = authEntity(createReq, getDoctorToken());
         var createRes = restTemplate.exchange(
@@ -194,13 +200,13 @@ class MedicalOrderIntegrationTest extends AbstractIntegrationTest {
 
         UUID orderId = createRes.getBody().getId();
 
-        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(13, "10 мл");
+        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(hour, "10 мл");
         var planEntity = authEntity(planReq, getDoctorToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/plan", HttpMethod.PUT, planEntity,
                 OrderExecutionResponse.class, orderId);
 
-        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(13, "10 мл", "");
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(hour, "10 мл", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,

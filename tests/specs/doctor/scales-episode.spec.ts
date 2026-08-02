@@ -36,7 +36,8 @@ test.describe('Episode-Level Scales', () => {
     await scaleSelect.click();
     await page.getByRole('option', { name: 'SOFA' }).click();
 
-    await expect(page.getByText(/PaO₂\/FiO₂/i)).toBeVisible();
+    await expect(page.getByPlaceholder('PaO₂ (mmHg)')).toBeVisible();
+    await expect(page.getByPlaceholder('FiO₂ (%)')).toBeVisible();
     await expect(page.getByText(/Розрахувати SOFA/i)).toBeVisible();
   });
 
@@ -50,7 +51,7 @@ test.describe('Episode-Level Scales', () => {
     await page.getByRole('option', { name: 'CAM-ICU' }).click();
 
     await expect(page.getByText(/Гострий початок/i)).toBeVisible();
-    await expect(page.getByText(/Розрахувати/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Зберегти CAM-ICU' })).toBeVisible();
   });
 
   test('Braden form renders with pressure injury risk options', async ({ page }) => {
@@ -63,7 +64,7 @@ test.describe('Episode-Level Scales', () => {
     await page.getByRole('option', { name: 'Браден' }).click();
 
     await expect(page.getByText(/Сенсорне сприйняття/i)).toBeVisible();
-    await expect(page.getByText(/Розрахувати/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Зберегти Браден' })).toBeVisible();
   });
 
   test('APACHE II appears in key scales header after calculation', async ({ page }) => {

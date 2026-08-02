@@ -25,7 +25,7 @@ test.describe('Doctor Dashboard', () => {
     const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
     await expect(openBtn).toBeVisible({ timeout: 10000 });
     await openBtn.click();
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
   });
 
   test('page title is set correctly', async ({ page }) => {

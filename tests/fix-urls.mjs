@@ -23,10 +23,16 @@ for (const fp of files) {
   let c = readFileSync(fp, 'utf8');
   const o = c;
 
-  c = c.replaceAll('\\/doctor\\/episode\\/', '\\/icu\\/doctor\\/episode\\/');
-  c = c.replaceAll('\\/nurse\\/episode\\/', '\\/icu\\/nurse\\/episode\\/');
-  c = c.replaceAll("'/doctor/create-card'", "'/icu/doctor/create-card'");
+  // Heal double prefixes introduced by earlier runs of this script.
+  c = c.replaceAll('\\/icu\\/icu\\/', '\\/icu\\/');
+
+  // Strip the stale /prescriptions/icu/ prefix BEFORE inserting /icu/ again.
   c = c.replace(/(\\\/prescriptions\\\/icu\\\/)/g, '\\/icu\\/');
+
+  // Insert the /icu/ route prefix, but only when it is not already present.
+  c = c.replace(/(?<!\\\/icu)\\\/doctor\\\/episode\\\//g, '\\/icu\\/doctor\\/episode\\/');
+  c = c.replace(/(?<!\\\/icu)\\\/nurse\\\/episode\\\//g, '\\/icu\\/nurse\\/episode\\/');
+  c = c.replaceAll("'/doctor/create-card'", "'/icu/doctor/create-card'");
 
   if (c !== o) {
     writeFileSync(fp, c, 'utf8');

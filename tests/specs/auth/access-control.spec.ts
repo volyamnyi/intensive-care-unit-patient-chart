@@ -31,10 +31,10 @@ test.describe('Access Control', () => {
     await page.getByLabel('Логін').fill('nurse1');
     await page.getByLabel('Пароль').fill('nurse123');
     await page.getByRole('button', { name: 'Увійти' }).click();
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/nurse/);
+    await expect(page).toHaveURL(/\/icu\/nurse/);
 
     await page.goto(episodeUrl);
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/nurse\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/nurse\/episode\//);
     await expect(page.getByText('Показник / година')).toBeVisible();
   });
 });

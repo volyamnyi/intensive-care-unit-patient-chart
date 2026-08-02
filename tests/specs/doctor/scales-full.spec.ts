@@ -22,7 +22,7 @@ test.describe('Scales Full', () => {
 
     await page.goto('/icu/doctor');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     await page.getByText('Шкали').first().click();
     await expect(page.getByText('Немає даних шкал').or(page.getByText('Не заповнено'))).toBeVisible();
@@ -31,7 +31,7 @@ test.describe('Scales Full', () => {
   test('scales section is accessible from episode page', async ({ page }) => {
     await page.goto('/icu/doctor');
     await page.getByRole('button', { name: 'Відкрити' }).first().click();
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     const scalesSection = page.getByText('Шкали').first();
     await expect(scalesSection).toBeVisible();

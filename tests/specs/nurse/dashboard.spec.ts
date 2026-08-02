@@ -12,7 +12,7 @@ test.describe('Nurse Dashboard', () => {
     const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
     await expect(openBtn).toBeVisible({ timeout: 10000 });
     await openBtn.click();
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/nurse\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/nurse\/episode\//);
   });
 
   test('search filters the patients table', async ({ page }) => {

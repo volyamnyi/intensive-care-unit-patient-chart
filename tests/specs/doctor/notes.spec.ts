@@ -6,11 +6,11 @@ test.describe('Doctor Notes', () => {
   test('adds a clinical note to a patient day', async ({ page }) => {
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
-    await page.getByText('�������').first().click();
+    await page.getByText('Нотатки').first().click();
 
-    const noteText = '������� ������� �� ����� � E2E ��������';
-    await page.getByLabel('���� �������').fill(noteText);
-    await page.getByRole('button', { name: '������ �������' }).click();
+    const noteText = 'Тестова нотатка від лікаря — E2E перевірка';
+    await page.getByLabel('Нова нотатка').fill(noteText);
+    await page.getByRole('button', { name: 'Додати нотатку' }).click();
 
     await expect(page.getByText(noteText).first()).toBeVisible({ timeout: 10000 });
   });
@@ -18,6 +18,6 @@ test.describe('Doctor Notes', () => {
   test('shows note field when section is open', async ({ page }) => {
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
-    await expect(page.getByLabel('���� �������')).toBeVisible();
+    await expect(page.getByLabel('Нова нотатка')).toBeVisible();
   });
 });

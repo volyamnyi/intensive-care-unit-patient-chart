@@ -456,19 +456,20 @@ icu-patient-chart/
 | `npx playwright test --list` | List tests |
 | `npx playwright show-report` | View HTML report |
 
-### Main Test Scenario
+### Repeatable CI Development Workflow
 
-**All tests run exclusively via GitHub Actions CI — never locally.**
+**All tests run exclusively via GitHub Actions CI — never locally.** The loop: pre-flight local checks → implement → stage/commit (Conventional Commits) → `git push origin main` → GitHub Actions auto-triggers → poll with `gh run watch <run-id>` (or `gh run list`) → triage failures via `gh run view <run-id> --job <job-id> --log` and `gh run download <run-id>` → fix in a new commit → repeat until green.
 
-| Test type | CI job | Trigger |
+| Job | What it runs | Trigger |
 |---|---|---|
-| Backend unit (526) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
-| Backend integration (163) | `integration-tests` → `mvn test -Pintegration-test` | Same |
-| Frontend Vitest (~350) | `test` → `npm test` | Same |
-| Playwright E2E (45 spec files) | `test` → `npx playwright test` | Same |
-| Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
+| `format-check` | Checkstyle + oxlint + `tsc --noEmit` | Push to `main` / `develop` or PR to `main` |
+| `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
+| `backend-integration` | `mvn test -Pintegration-test` | Same |
+| `frontend-test` | Vitest + production build | Same |
+| `e2e-test` | Playwright (45 spec files; `needs: backend-test, frontend-test`) | Same |
+| `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
-Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
+Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
 - **Backend unit tests**: 526 tests — medication-sheet (88) + icu-chart (416) + common (22 skippable) — `mvn test`

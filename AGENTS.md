@@ -80,19 +80,58 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 - CI: `.github/workflows/playwright.yml` — Postgres service, JDK 17, Node 22, Playwright chromium, 40min timeout.
 - Mock MIS: `MockMisServiceImpl` provides 5 test patients + department/user data.
 
-## Main Test Scenario
+## Repeatable CI Development Workflow (THE Loop)
 
-**All tests run exclusively via GitHub Actions CI — never locally.**
+**All tests run exclusively via GitHub Actions CI — never locally.** Local `mvn test` / `npm test` / Playwright are FORBIDDEN; `mvn compile`, `npm run lint`, `npx tsc --noEmit` are permitted for pre-flight only.
 
-| Test type | CI job | Trigger |
+The complete development loop:
+
+```
+1. PRE-FLIGHT   → local checks only (fast feedback, no tests)
+2. IMPLEMENT    → make code changes for the issue
+3. STAGE/COMMIT → git add intended files only + Conventional Commits message
+4. PUSH/TRIGGER → git push → GitHub Actions starts automatically
+5. POLL         → gh run watch / periodic gh run list until all jobs finish
+6. TRIAGE       → failing jobs: view logs, download artifacts, root-cause, fix code or tests
+7. REPEAT       → steps 3–6 until every check passes
+```
+
+### Phase 0 — Pre-flight (local, test-free)
+| Check | Command | Catches |
 |---|---|---|
-| Backend unit + integration (557) | `test` → `mvn clean verify` | Push to `main` / `develop` or PR to `main` |
-| Backend integration (79) | `integration-tests` → `mvn test -Pintegration-test` | Same |
-| Frontend Vitest (~350) | `test` → `npm test` | Same |
-| Playwright E2E (45 spec files) | `test` → `npx playwright test` | Same |
-| Format / Checkstyle | `format-check` → `mvn compile checkstyle:check` | Same |
+| Backend compiles | `mvn compile` (in `backend/`) | Compile errors |
+| Frontend lint | `npm run lint` (in `frontend/`) | Oxlint violations |
+| Frontend types | `npx tsc --noEmit` (in `frontend/`) | TypeScript errors |
+| Frontend build | `npm run build` (in `frontend/`) | Production build breaks |
 
-Push → CI runs all 3 jobs in parallel → if any fails, fix and repeat until green.
+### Phase 1 — Implement
+- Scope changes to the GitHub issue; do not touch unrelated files (medication-sheet module is off-limits except clinical scales).
+- Fix defects in a NEW commit on failure — never amend or force-push.
+
+### Phase 2 — Stage & commit
+- `git status` / `git diff` first; stage ONLY intended files (never secrets, never `playwright-results/`).
+- Conventional Commits: `feat:` / `fix:` / `refactor:` / `docs:` / `chore:` / `test:`.
+
+### Phase 3 — Push & trigger
+- `git push origin main` (or push a feature branch and open a PR to `main`).
+- Workflow `.github/workflows/playwright.yml` triggers on push to `main`/`develop` and PR to `main`; the push output prints the run URL.
+
+### Phase 4 — Poll
+- `gh run list --limit 5` → find the run ID; `gh run watch <run-id>` blocks until completion, or poll with periodic `gh run list`.
+- `gh run view <run-id>` → per-job status; `gh run view <run-id> --job <job-id> --log` → failed-job logs.
+
+### Phase 5 — Triage failures
+| Job (actual ID) | What it runs | Failure artifacts (`gh run download <run-id> -n <name> -D <dir>`) |
+|---|---|---|
+| `format-check` | Checkstyle + oxlint + `tsc --noEmit` | — |
+| `backend-test` | `mvn clean test` (unit, PostgreSQL service) | `backend-test-results` (surefire-reports) |
+| `backend-integration` | `mvn test -Pintegration-test` | `backend-integration-results` |
+| `frontend-test` | Vitest + production build | `vitest-coverage` |
+| `e2e-test` | Playwright (45 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
+| `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
+
+### Exit criteria
+All checks pass: `format-check`, `backend-test`, `backend-integration`, `frontend-test`, `e2e-test` (plus `build` on `main`). Green run = done; start the next issue at Phase 1.
 
 ## Commands
 

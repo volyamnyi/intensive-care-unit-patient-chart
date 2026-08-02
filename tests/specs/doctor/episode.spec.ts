@@ -3,7 +3,7 @@ import { test, expect } from '../../fixtures/index';
 test.describe('Episode Page', () => {
   test('shows all sections on a single screen', async ({ page }) => {
     await page.goto('/icu/doctor/episode/a3333333-3333-3333-3333-333333333333');
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     // Single ICU card: vitals/losses grid + therapy
     await expect(page.getByText('Показник / година')).toBeVisible();
@@ -17,7 +17,7 @@ test.describe('Episode Page', () => {
 
   test('single screen has no tab navigation', async ({ page }) => {
     await page.goto('/icu/doctor/episode/a3333333-3333-3333-3333-333333333333');
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     await expect(page.getByText('Показник / година')).toBeVisible();
     await expect(page.getByRole('tab')).toHaveCount(0);
@@ -25,7 +25,7 @@ test.describe('Episode Page', () => {
 
   test('back button returns to doctor dashboard', async ({ page }) => {
     await page.goto('/icu/doctor/episode/a3333333-3333-3333-3333-333333333333');
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
     await page.getByRole('button', { name: 'Назад' }).click();
     await expect(page).toHaveURL('/icu/doctor');

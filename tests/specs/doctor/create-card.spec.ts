@@ -40,7 +40,7 @@ test.describe('Create Card', () => {
     await expect(page.getByText('Дані пацієнта (з МІС)')).toBeVisible();
 
     await page.getByRole('button', { name: 'Створити карту' }).click();
-    await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+    await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
   });
 
   test('shows info message for short search query', async ({ page }) => {

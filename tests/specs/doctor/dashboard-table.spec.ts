@@ -93,19 +93,19 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
     test('clicking the first row navigates to episode page', async ({ page }) => {
       const firstRow = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]').first();
       await firstRow.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('clicking the last row navigates to episode page', async ({ page }) => {
       const lastRow = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]').last();
       await lastRow.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('clicking the patient name cell navigates to episode page', async ({ page }) => {
       const firstName = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"] td[data-slot="table-cell"]').first();
       await firstName.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('clicking different rows opens different episodes', async ({ page }) => {
@@ -125,8 +125,8 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
 
       // URLs should be different (different episode IDs)
       expect(firstUrl).not.toBe(secondUrl);
-      expect(firstUrl).toMatch(/\/prescriptions\/icu\/doctor\/episode\/[^/]+/);
-      expect(secondUrl).toMatch(/\/prescriptions\/icu\/doctor\/episode\/[^/]+/);
+      expect(firstUrl).toMatch(/\/icu\/doctor\/episode\/[^/]+/);
+      expect(secondUrl).toMatch(/\/icu\/doctor\/episode\/[^/]+/);
     });
   });
 
@@ -134,7 +134,7 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
     test('clicking the Відкрити button on the first row navigates to episode page', async ({ page }) => {
       const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
       await openBtn.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('clicking the Відкрити button on a middle row navigates correctly', async ({ page }) => {
@@ -142,7 +142,7 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       const count = await openBtns.count();
       if (count > 2) {
         await openBtns.nth(2).click();
-        await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+        await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
       }
     });
 
@@ -245,7 +245,7 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
   test.describe('Negative: Invalid / Edge Navigation', () => {
     test('doctor cannot access nurse routes from dashboard', async ({ page }) => {
       await page.goto('/icu/nurse');
-      await expect(page).not.toHaveURL(/\/prescriptions\/icu\/nurse/);
+      await expect(page).not.toHaveURL(/\/icu\/nurse/);
     });
 
     test('doctor cannot access admin routes from dashboard', async ({ page }) => {
@@ -266,20 +266,20 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
     test('rapid double-click on a row does not break navigation', async ({ page }) => {
       const firstRow = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]').first();
       await firstRow.dblclick();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('clicking exactly on the patient name cell navigates', async ({ page }) => {
       const nameCell = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"] td[data-slot="table-cell"]').first();
       await nameCell.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('clicking on the status badge cell navigates (row-level click)', async ({ page }) => {
       // Status badge is in the 6th cell (index 5)
       const statusCell = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"] td[data-slot="table-cell"]').nth(5);
       await statusCell.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('clicking on the open button does not trigger row click handler twice', async ({ page }) => {
@@ -287,11 +287,11 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       // so clicking it should result in exactly one navigation event.
       const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
       await openBtn.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
       // Verify we are on exactly one episode page (URL has one episode ID)
       const url = page.url();
-      const episodeIdMatch = url.match(/\/prescriptions\/icu\/doctor\/episode\/([^/]+)/);
+      const episodeIdMatch = url.match(/\/icu\/doctor\/episode\/([^/]+)/);
       expect(episodeIdMatch).not.toBeNull();
       expect(episodeIdMatch![1].length).toBeGreaterThan(0);
     });
@@ -313,7 +313,7 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
       await openBtn.focus();
       await page.keyboard.press('Enter');
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
   });
 
@@ -417,7 +417,7 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       await openBtn.click();
 
       // Should navigate away, not affect search
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
     });
 
     test('page title is set correctly on dashboard', async ({ page }) => {
@@ -428,7 +428,7 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       // Open an episode
       const openBtn = page.getByRole('button', { name: 'Відкрити' }).first();
       await openBtn.click();
-      await expect(page).toHaveURL(/\/prescriptions\/icu\/doctor\/episode\//);
+      await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
       // Navigate back
       await page.goto('/icu/doctor');
