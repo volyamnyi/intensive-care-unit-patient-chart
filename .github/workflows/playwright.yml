@@ -243,6 +243,8 @@ jobs:
           timeout 60 bash -c 'until curl -s http://localhost:8085/api/auth/login > /dev/null 2>&1; do sleep 2; done'
           echo "Backend is ready"
         working-directory: backend
+        env:
+          APP_SCHEDULING_SIGNING_WINDOW_ENABLED: "false"
       
       - name: Install frontend dependencies
         run: npm ci
