@@ -73,17 +73,14 @@ test.describe('Doctor day flow', () => {
     await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
     await expect(page).toHaveURL(/\/icu\/doctor\/episode\//);
 
-    // Відкриваємо форму швидкого створення призначення
+    // Відкриваємо форму швидкого створення призначення.
+    // Категорія вже має значення за замовчуванням (MEDICATION), початок — наступна година.
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
-    await page.getByPlaceholder('Категорія').fill('Ліки');
     await page.getByPlaceholder('Препарат').fill('Dobutamine');
     await page.getByPlaceholder('Доза').fill('250');
     await page.getByPlaceholder('Од.').fill('мг');
     await page.getByPlaceholder('Шлях').fill('в/в');
     await page.getByPlaceholder('Частота').fill('1 р/д');
-    // Початок/кінець — у майбутньому, щоб пройти валідацію минулої години
-    await page.getByPlaceholder('Початок').fill(startAt(2));
-    await page.getByPlaceholder('Кінець').fill(startAt(26));
 
     // Підтверджуємо створення через браузерний запит POST /orders
     const respPromise = page.waitForResponse(

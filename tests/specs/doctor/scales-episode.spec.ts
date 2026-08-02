@@ -63,7 +63,7 @@ test.describe('Episode-Level Scales', () => {
     await scaleSelect.click();
     await page.getByRole('option', { name: 'Браден' }).click();
 
-    await expect(page.getByText(/Сенсорне сприйняття/i)).toBeVisible();
+    await expect(page.getByText('Шкала Браден — ризик пролежнів')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Зберегти Браден' })).toBeVisible();
   });
 
@@ -96,8 +96,8 @@ test.describe('Episode-Level Scales', () => {
 
     await page.getByText('Шкали').first().click();
 
-    await expect(page.getByText(/GCS/)).toBeVisible();
-    await expect(page.getByText(/SOFA/)).toBeVisible();
+    await expect(page.getByText(/GCS/).first()).toBeVisible();
+    await expect(page.getByText(/SOFA/).first()).toBeVisible();
   });
 
   test('scale dropdown lists all available scales', async ({ page }) => {

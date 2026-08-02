@@ -24,7 +24,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -226,11 +228,32 @@ public class OrderExecutionService {
     }
 
     private void assertHourInRange(MedicalOrder order, Integer hour) {
-        if (order.getStartTime() != null && hour < order.getStartTime().getHour()) {
+        if (hour == null || hour < 0 || hour > 23) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Hour is outside the valid range 0-23");
+        }
+        LocalDateTime start = order.getStartTime();
+        LocalDateTime end = order.getEndTime();
+        if (start == null || end == null) {
+            return;
+        }
+
+        LocalDate planDate = LocalDate.now();
+        ClinicalDay day = order.getClinicalDay();
+        if (day != null && day.getStartDateTime() != null) {
+            LocalDateTime dayStart = day.getStartDateTime();
+            planDate = dayStart.toLocalDate();
+            if (hour < dayStart.getHour()) {
+                planDate = planDate.plusDays(1);
+            }
+        }
+        LocalDateTime planTime = LocalDateTime.of(planDate, LocalTime.of(hour, 0));
+
+        if (planTime.isBefore(start)) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
                     "Hour is before the order start time");
         }
-        if (order.getEndTime() != null && hour > order.getEndTime().getHour()) {
+        if (planTime.isAfter(end)) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
                     "Hour is after the order end time");
         }

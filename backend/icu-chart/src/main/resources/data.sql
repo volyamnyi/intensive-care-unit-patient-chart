@@ -3010,8 +3010,8 @@ ON CONFLICT (id) DO NOTHING;
 -- b1111111 (OPEN, today 08:00 -> tomorrow 08:00) -- hourly records
 INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
 VALUES
-('c1111001-1111-1111-0000-111111110001','b1111111-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',37.0,76,18,120,68,85,98.0,5.4,NULL,0.30,NULL,30,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
-('c1111002-1111-1111-0200-111111110002','b1111111-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',36.9,74,16,122,70,87,99.0,5.1,NULL,0.32,8,45,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
+('c1111001-1111-1111-0000-111111110001','b1111111-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) + INTERVAL '0 hours',0,'CLEAR',37.0,76,18,120,68,85,98.0,5.4,NULL,0.30,NULL,30,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c1111002-1111-1111-0200-111111110002','b1111111-1111-1111-1111-111111111111',DATE_TRUNC('day', NOW()) + INTERVAL '2 hours',2,'CLEAR',36.9,74,16,122,70,87,99.0,5.1,NULL,0.32,8,45,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
@@ -3075,8 +3075,8 @@ ON CONFLICT (id) DO NOTHING;
 -- b2222222 (OPEN, today 08:00 -> tomorrow 08:00) -- hourly records
 INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
 VALUES
-('c2222001-2222-2222-0000-222222220001','b2222222-2222-2222-2222-222222222222',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',37.0,80,18,125,70,88,98.0,5.5,NULL,0.32,NULL,25,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
-('c2222002-2222-2222-0200-222222220002','b2222222-2222-2222-2222-222222222222',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',36.8,76,16,120,68,85,99.0,5.2,NULL,0.30,7,40,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
+('c2222001-2222-2222-0000-222222220001','b2222222-2222-2222-2222-222222222222',DATE_TRUNC('day', NOW()) + INTERVAL '0 hours',0,'CLEAR',37.0,80,18,125,70,88,98.0,5.5,NULL,0.32,NULL,25,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0),
+('c2222002-2222-2222-0200-222222220002','b2222222-2222-2222-2222-222222222222',DATE_TRUNC('day', NOW()) + INTERVAL '2 hours',2,'CLEAR',36.8,76,16,120,68,85,99.0,5.2,NULL,0.30,7,40,0,NULL,NULL,0,NULL,NOW(),11,NOW(),11,0)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
@@ -3096,8 +3096,8 @@ ON CONFLICT (id) DO NOTHING;
 -- b3333333 (OPEN, today 08:00 -> tomorrow 08:00) -- hourly records
 INSERT INTO hourly_records (id, clinical_day_id, record_time, record_hour, consciousness, temperature, heart_rate, respiratory_rate, systolic_bp, diastolic_bp, mean_arterial_pressure, spo2, glucose, etco2, fio2, cvp, urine_output, drain_output, stool, vomit, pain_score, notes, created_at, created_by, updated_at, updated_by, version)
 VALUES
-('c3333001-3333-3333-0000-333333330001','b3333333-3333-3333-3333-333333333333',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '0 hours',0,'CLEAR',37.2,78,16,122,68,86,98.0,5.6,NULL,0.31,NULL,20,0,NULL,NULL,0,NULL,NOW(),12,NOW(),12,0),
-('c3333002-3333-3333-0200-333333330002','b3333333-3333-3333-3333-333333333333',DATE_TRUNC('day', NOW()) + INTERVAL '8 hours' + INTERVAL '2 hours',2,'CLEAR',36.9,74,14,118,65,83,99.0,5.3,NULL,0.29,6,35,0,NULL,NULL,0,NULL,NOW(),12,NOW(),12,0)
+('c3333001-3333-3333-0000-333333330001','b3333333-3333-3333-3333-333333333333',DATE_TRUNC('day', NOW()) + INTERVAL '0 hours',0,'CLEAR',37.2,78,16,122,68,86,98.0,5.6,NULL,0.31,NULL,20,0,NULL,NULL,0,NULL,NOW(),12,NOW(),12,0),
+('c3333002-3333-3333-0200-333333330002','b3333333-3333-3333-3333-333333333333',DATE_TRUNC('day', NOW()) + INTERVAL '2 hours',2,'CLEAR',36.9,74,14,118,65,83,99.0,5.3,NULL,0.29,6,35,0,NULL,NULL,0,NULL,NOW(),12,NOW(),12,0)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO medical_orders (id, clinical_day_id, category, drug_name, dose, unit, route, frequency, start_time, end_time, status, created_at, created_by, updated_at, updated_by, version)
@@ -16343,11 +16343,8 @@ VALUES
 ('e1111111-1111-1111-1111-111111111106', 'b1111111-1111-1111-1111-111111111111', NULL, 'c1111111-1111-1111-1111-111111111106', '19', NOW(), 11, NOW(), 11, NOW(), 11, 0),
 
 -- Episode a2222222 (Коваленко, patient 1002) - Day 1 (b4444444, NURSE_SIGNED)
-('e2222222-4444-4444-4444-444444444401', 'b4444444-4444-4444-4444-444444444444', NULL, 'c1111111-1111-1111-1111-111111111101', '10', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
-('e2222222-4444-4444-4444-444444444402', 'b4444444-4444-4444-4444-444444444444', NULL, 'c1111111-1111-1111-1111-111111111102', '-2', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
-('e2222222-4444-4444-4444-444444444403', 'b4444444-4444-4444-4444-444444444444', NULL, 'c1111111-1111-1111-1111-111111111103', '8', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
-('e2222222-4444-4444-4444-444444444405', 'b4444444-4444-4444-4444-444444444444', NULL, 'c1111111-1111-1111-1111-111111111105', 'Негативний', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
-('e2222222-4444-4444-4444-444444444406', 'b4444444-4444-4444-4444-444444444444', NULL, 'c1111111-1111-1111-1111-111111111106', '12', NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, NOW() - INTERVAL '1 day', 11, 0),
+-- Deliberately has NO day-level scale results: E2E (scales-full, scales) expects the
+-- episode page to show the scales empty state ('Не заповнено') with episode-level APACHE II only.
 
 -- Episode a2222222 (Коваленко, patient 1002) - Day 2 (b2222222, OPEN)
 ('e2222222-2222-2222-2222-222222222201', 'b2222222-2222-2222-2222-222222222222', NULL, 'c1111111-1111-1111-1111-111111111101', '12', NOW(), 11, NOW(), 11, NOW(), 11, 0),
