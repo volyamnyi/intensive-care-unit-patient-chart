@@ -134,6 +134,10 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void autoRecalculate_afterOrderExecution_includesIntake() {
+        LocalDateTime startTime = LocalDateTime.now().plusHours(1)
+                .withMinute(0).withSecond(0).withNano(0);
+        int hour = startTime.getHour();
+
         MedicalOrderCreateRequest orderReq = new MedicalOrderCreateRequest();
         orderReq.setCategory("INFUSION");
         orderReq.setDrugName("Фізрозчин");
@@ -141,7 +145,7 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
         orderReq.setUnit("мл");
         orderReq.setRoute("в/в");
         orderReq.setFrequency("крапельно");
-        orderReq.setStartTime(LocalDateTime.now().withHour(8));
+        orderReq.setStartTime(startTime);
 
         var orderEntity = authEntity(orderReq, getDoctorToken());
         var orderRes = restTemplate.exchange(
@@ -149,13 +153,13 @@ class FluidBalanceIntegrationTest extends AbstractIntegrationTest {
                 MedicalOrderResponse.class, OTHER_OPEN_DAY_ID);
 
         UUID orderId = orderRes.getBody().getId();
-        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(13, "500");
+        OrderExecutionPlanRequest planReq = new OrderExecutionPlanRequest(hour, "500");
         var planEntity = authEntity(planReq, getDoctorToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/plan", HttpMethod.PUT, planEntity,
                 OrderExecutionResponse.class, orderId);
 
-        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(13, "500", "");
+        OrderExecutionCreateRequest execReq = new OrderExecutionCreateRequest(hour, "500", "");
         var execEntity = authEntity(execReq, getNurseToken());
         restTemplate.exchange(
                 "/api/orders/{orderId}/execute", HttpMethod.POST, execEntity,
