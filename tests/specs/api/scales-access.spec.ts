@@ -4,6 +4,7 @@ const API = 'http://localhost:8085/api';
 const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
 const APACHE_SCALE_ID = 'c1111111-1111-1111-1111-111111111104';
 const SOFA_SCALE_ID = 'c1111111-1111-1111-1111-111111111103';
+const RASS_SCALE_ID = 'c1111111-1111-1111-1111-111111111101';
 const CLINICAL_DAY_ID = 'b3333333-3333-3333-3333-333333333333';
 
 async function getToken(request: any, login: string, password: string) {
@@ -18,17 +19,18 @@ test.describe('Scales API Access Control', () => {
   test('doctor can calculate APACHE II via episode endpoint', async ({ request }) => {
     const token = await getToken(request, 'doctor1', 'doctor123');
 
-    const res = await request.post(`${API}/episodes/${EPISODE_ID}/scales/calculate`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        scaleId: APACHE_SCALE_ID,
-        clinicalDayId: CLINICAL_DAY_ID,
-        rawData: {
-          age: 65, temperatureC: 38.5, heartRate: 110,
-          respiratoryRate: 28, meanArterialPressure: 70,
+    const res = await request.post(
+      `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+          rawData: {
+            age: 65, temperatureC: 38.5, heartRate: 110,
+            respiratoryRate: 28, meanArterialPressure: 70,
+          },
         },
       },
-    });
+    );
 
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
@@ -39,14 +41,15 @@ test.describe('Scales API Access Control', () => {
   test('nurse is blocked from APACHE II calculation', async ({ request }) => {
     const token = await getToken(request, 'nurse1', 'nurse123');
 
-    const res = await request.post(`${API}/episodes/${EPISODE_ID}/scales/calculate`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        scaleId: APACHE_SCALE_ID,
-        clinicalDayId: CLINICAL_DAY_ID,
-        rawData: { age: 50, temperatureC: 37.0 },
+    const res = await request.post(
+      `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+          rawData: { age: 50, temperatureC: 37.0 },
+        },
       },
-    });
+    );
 
     expect(res.status()).toBe(403);
   });
@@ -67,7 +70,7 @@ test.describe('Scales API Access Control', () => {
 
     const res = await request.post(`${API}/clinical-days/${CLINICAL_DAY_ID}/scales`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: { scaleId: SOFA_SCALE_ID, result: '3' },
+      data: { scaleId: RASS_SCALE_ID, result: '0' },
     });
 
     expect(res.ok()).toBeTruthy();

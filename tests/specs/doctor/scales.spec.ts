@@ -8,6 +8,6 @@ test.describe('Scales Section', () => {
 
     const scalesSection = page.getByText('Шкали').first();
     await scalesSection.click();
-    await expect(page.getByText('Немає даних шкал').or(page.getByText('Не заповнено'))).toBeVisible();
+    await expect(page.getByText('Немає даних шкал').or(page.getByText('Не заповнено')).first()).toBeVisible();
   });
 });

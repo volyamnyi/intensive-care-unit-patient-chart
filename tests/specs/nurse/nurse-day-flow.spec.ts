@@ -1,6 +1,7 @@
 import { test, expect } from '../../fixtures/index';
 
 const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
+const DAY_ID = 'b3333333-3333-3333-3333-333333333333';
 const ORDER_NAME = 'Glucose 5%';
 const PLAN_DOSE = '500';
 
@@ -51,9 +52,10 @@ test.describe('Nurse day flow', () => {
     const current = await input.inputValue();
     const next = current === '' ? '250' : String(Number(current) + 10);
 
-    // Вводимо значення і підтверджуємо збереження через браузерний PATCH
+    // Вводимо значення і підтверджуємо збереження через браузерний POST (створення) або PATCH (оновлення)
     const respPromise = page.waitForResponse(
-      (r) => r.request().method() === 'PATCH' && r.url().includes('/api/hourly-records/'),
+      (r) => (r.request().method() === 'POST' && r.url().includes(`/api/clinical-days/${DAY_ID}/hourly-records`))
+        || (r.request().method() === 'PATCH' && r.url().includes('/api/hourly-records/')),
     );
     await input.fill(next);
     await input.press('Enter');

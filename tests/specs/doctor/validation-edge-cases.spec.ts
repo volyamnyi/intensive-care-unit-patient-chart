@@ -20,14 +20,12 @@ test.describe('Validation edge cases', () => {
 
     // Форма швидкого створення з початком на 2 години в минулому
     await page.getByRole('button', { name: '+ Нове призначення' }).click();
-    await page.getByPlaceholder('Категорія').fill('Ліки');
     await page.getByPlaceholder('Препарат').fill('Past Hour Drug');
     await page.getByPlaceholder('Доза').fill('10');
     await page.getByPlaceholder('Од.').fill('мг');
     await page.getByPlaceholder('Шлях').fill('в/в');
     await page.getByPlaceholder('Частота').fill('1 р/д');
-    await page.getByPlaceholder('Початок').fill(startAt(-2));
-    await page.getByPlaceholder('Кінець').fill(startAt(22));
+    await page.locator('input[type="datetime-local"]').fill(startAt(-2));
 
     // Бекенд відхиляє запит з кодом PAST_HOUR_ORDER (422)
     const respPromise = page.waitForResponse(
@@ -44,13 +42,13 @@ test.describe('Validation edge cases', () => {
   });
 
   test('rejects out-of-range heart rate with 400 VALIDATION_ERROR', async ({ page }) => {
-    await page.goto(`/icu/nurse/episode/${EPISODE_ID}`);
+    await page.goto(`/icu/doctor/episode/${EPISODE_ID}`);
 
     // Година 5:00 не має seed-запису; ЧСС 301 перевищує верхню межу 300
     const input = page.getByLabel('ЧСС 5:00');
     await expect(input).toBeEnabled();
     const respPromise = page.waitForResponse(
-      (r) => r.request().method() === 'PATCH' && r.url().includes('/api/hourly-records/'),
+      (r) => r.request().method() === 'POST' && r.url().includes(`/api/clinical-days/${DAY_ID}/hourly-records`),
     );
     await input.fill('301');
     await input.press('Enter');
@@ -60,7 +58,8 @@ test.describe('Validation edge cases', () => {
     expect(resp.status()).toBe(400);
     const body = (await resp.json()) as { code?: string };
     expect(body.code).toBe('VALIDATION_ERROR');
-    await expect(input).not.toHaveValue('301');
+    await page.reload();
+    await expect(page.getByLabel('ЧСС 5:00')).toHaveValue('');
   });
 
   test('shows a friendly message when the episode does not exist (404)', async ({ page }) => {
