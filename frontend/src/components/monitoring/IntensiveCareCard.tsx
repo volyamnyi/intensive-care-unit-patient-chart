@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Maximize2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '../ui/Sidebar';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/endpoints';
-import HourlyGrid from './HourlyGrid';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import HourlyGrid, { type HourlyGridProps } from './HourlyGrid';
+import HourlyGridDialog from './HourlyGridDialog';
 import PatientSidebar from './PatientSidebar';
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, ClinicalScale, ScaleResult, HourlyRecordCreateRequest, MedicalNoteCreateRequest, LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest, OrderExecution } from '../../types';
 
@@ -146,6 +150,7 @@ export default function IntensiveCareCard({
   };
 
   const [orderFormOpen, setOrderFormOpen] = useState(false);
+  const [gridExpanded, setGridExpanded] = useState(false);
 
   useEffect(() => {
     if (!selectedDay) return;
@@ -270,31 +275,84 @@ export default function IntensiveCareCard({
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  const gridProps: HourlyGridProps = {
+    isMobile,
+    isNurse,
+    isLocked,
+    user,
+    selectedDay,
+    recByHour,
+    orders,
+    activeOrders,
+    executionsByOrder,
+    executing,
+    orderFormOpen,
+    realClockHour,
+    canEditSidebar,
+    onSetOrderFormOpen: setOrderFormOpen,
+    onSaveCell: saveCell,
+    onPlanOrder: handlePlanOrder,
+    onCancelOrder: handleCancelOrder,
+    onExecuteOrder: handleExecuteOrder,
+    onExecuteFinishOrder: handleExecuteFinishOrder,
+    onRefresh,
+    onError: (msg) => notifyParentRef.current(msg, 'error'),
+  };
+
+  const gridToolbar = (
+    <div className="flex h-9 items-center justify-between gap-2 border-b border-border bg-card px-2">
+      <span className="text-sm font-semibold text-card-foreground">{'Погодинна карта'}</span>
+      <div className="flex items-center gap-1">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={(
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setGridExpanded(true)}
+                  disabled={!selectedDay}
+                  aria-label="Розгорнути на весь екран"
+                  aria-keyshortcuts="Alt+Enter"
+                >
+                  <Maximize2 className="size-3.5" />
+                  {'На весь екран'}
+                </Button>
+              )}
+            />
+            <TooltipContent side="bottom">{'На весь екран (Alt+Enter)'}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={(
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onRefresh}
+                  disabled={!selectedDay}
+                  aria-label="Оновити показники"
+                >
+                  <RefreshCw className="size-4" />
+                </Button>
+              )}
+            />
+            <TooltipContent side="bottom">{'Оновити показники'}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
+  );
+
   return (
-    <SidebarProvider defaultWidth={300} minWidth={200} maxWidth={600}>
+    <>
+      <SidebarProvider defaultWidth={300} minWidth={200} maxWidth={600}>
       <div className={cn('flex items-start relative', isMobile ? 'flex-col' : 'flex-row')}>
         <HourlyGrid
-          isMobile={isMobile}
-          isNurse={isNurse}
-          isLocked={isLocked}
-          user={user}
-          selectedDay={selectedDay}
-          recByHour={recByHour}
-          orders={orders}
-          activeOrders={activeOrders}
-          executionsByOrder={executionsByOrder}
-          executing={executing}
-          orderFormOpen={orderFormOpen}
-          realClockHour={realClockHour}
-          canEditSidebar={canEditSidebar}
-          onSetOrderFormOpen={setOrderFormOpen}
-          onSaveCell={saveCell}
-          onPlanOrder={handlePlanOrder}
-          onCancelOrder={handleCancelOrder}
-          onExecuteOrder={handleExecuteOrder}
-          onExecuteFinishOrder={handleExecuteFinishOrder}
-          onRefresh={onRefresh}
-          onError={(msg) => notifyParentRef.current(msg, 'error')}
+          {...gridProps}
+          toolbar={gridToolbar}
+          onHeaderDoubleClick={() => setGridExpanded(true)}
         />
         <PatientSidebar
           episode={episode}
@@ -329,5 +387,19 @@ export default function IntensiveCareCard({
         />
       </div>
     </SidebarProvider>
+    <HourlyGridDialog
+      open={gridExpanded}
+      onOpenChange={setGridExpanded}
+      episode={episode}
+      selectedDay={selectedDay}
+      isLocked={isLocked}
+      saveStatus={autoSaveStatus}
+      onRefresh={onRefresh}
+    >
+      {selectedDay && (
+        <HourlyGrid {...gridProps} isMobile={false} />
+      )}
+      </HourlyGridDialog>
+    </>
   );
 }

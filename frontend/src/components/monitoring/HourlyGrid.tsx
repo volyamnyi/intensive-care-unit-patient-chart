@@ -406,6 +406,8 @@ export interface HourlyGridProps {
   onExecuteFinishOrder: (orderId: string, hour: number) => void;
   onRefresh?: () => void;
   onError?: (msg: string) => void;
+  toolbar?: React.ReactNode;
+  onHeaderDoubleClick?: () => void;
 }
 
 export default function HourlyGrid({
@@ -413,7 +415,7 @@ export default function HourlyGrid({
   recByHour, activeOrders, executionsByOrder, executing, orderFormOpen, realClockHour,
   canEditSidebar, onSetOrderFormOpen, onSaveCell,
   onPlanOrder, onCancelOrder, onExecuteOrder, onExecuteFinishOrder,
-  onRefresh, onError,
+  onRefresh, onError, toolbar, onHeaderDoubleClick,
 }: HourlyGridProps) {
   const boundValue = (hour: number, key: keyof HourlyRecord): string => {
     const r = recByHour.get(hour);
@@ -424,11 +426,34 @@ export default function HourlyGrid({
 
   return (
     <main className={cn('min-w-0', isMobile ? 'w-full' : 'flex-1')}>
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <Table className="min-w-[1100px]" style={{ tableLayout: 'fixed' }}>
-          <TableHeader>
-            <TableRow className="bg-muted">
-              <TableHead className="font-bold min-w-[130px] border-r border-border">Показник / година</TableHead>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {toolbar}
+        <div className="overflow-x-auto">
+          <Table className="min-w-[1100px]" style={{ tableLayout: 'fixed' }}>
+            <TableHeader>
+              <TableRow className="bg-muted">
+                <TableHead className="font-bold min-w-[130px] border-r border-border">
+                  {onHeaderDoubleClick ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={(
+                            <span
+                              className="block w-full cursor-pointer select-none"
+                              onDoubleClick={onHeaderDoubleClick}
+                              tabIndex={-1}
+                            />
+                          )}
+                        >
+                          {'Показник / година'}
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{'Двічі клацніть, щоб розгорнути'}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    'Показник / година'
+                  )}
+                </TableHead>
               {HOURS.map((h) => (
                 <TableHead key={h} className="text-center font-bold text-xs p-1 border-r border-border last:border-r-0">{h}:00</TableHead>
               ))}
@@ -585,7 +610,8 @@ export default function HourlyGrid({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
     </main>
   );
