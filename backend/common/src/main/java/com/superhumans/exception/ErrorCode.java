@@ -1,5 +1,4 @@
 package com.superhumans.exception;
-
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -20,5 +19,6 @@ public final class ErrorCode {
     public static String VALIDATION_ERROR = "VALIDATION_ERROR";
     public static String DUPLICATE_HOURLY_RECORD = "DUPLICATE_HOURLY_RECORD";
     public static String BUSINESS_RULE = "BUSINESS_RULE";
+    public static String FORBIDDEN = "FORBIDDEN";
     public static String PAST_HOUR_ORDER = "PAST_HOUR_ORDER";
 }
