@@ -1,4 +1,4 @@
-﻿package com.superhumans.controller;
+package com.superhumans.controller;
 
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.entity.User;
@@ -50,33 +50,33 @@ class UserControllerTest {
 
     @BeforeEach
     void setUpJwt() {
-        when(jwtTokenProvider.validateToken("test-jwt-token")).thenReturn(true);
-        when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
-        when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
-        when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
+        when(jwtTokenProvider.validateToken(\"test-jwt-token\")).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(\"test-jwt-token\")).thenReturn(\"doctor1\");
+        when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn(\"DOCTOR\");
+        when(jwtTokenProvider.getUserIdFromToken(\"test-jwt-token\")).thenReturn(1L);
     }
 
     @Test
     void getMe_returnsCurrentUser() throws Exception {
         User user = new User();
         user.setId(1L);
-        user.setLogin("doctor1");
-        user.setFullName("Doctor One");
+        user.setLogin(\"doctor1\");
+        user.setFullName(\"Doctor One\");
         user.setRole(UserRole.DOCTOR);
 
-        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(user));
+        when(userRepository.findByLogin(\"doctor1\")).thenReturn(Optional.of(user));
 
-        mockMvc.perform(get("/api/users/me").with(csrf()).with(doctor()))
+        mockMvc.perform(get(\"/api/users/me\").with(csrf()).with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.login").value("doctor1"))
-                .andExpect(jsonPath("$.role").value("DOCTOR"));
+                .andExpect(jsonPath(\"$.login\").value(\"doctor1\"))
+                .andExpect(jsonPath(\"$.role\").value(\"DOCTOR\"));
     }
 
     @Test
     void getMe_notFound_returnsNotFound() throws Exception {
-        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.empty());
+        when(userRepository.findByLogin(\"doctor1\")).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/users/me").with(csrf()).with(doctor()))
+        mockMvc.perform(get(\"/api/users/me\").with(csrf()).with(doctor()))
                 .andExpect(status().isNotFound());
     }
 
@@ -84,59 +84,59 @@ class UserControllerTest {
     void getDoctors_returnsDoctorList() throws Exception {
         User user = new User();
         user.setId(1L);
-        user.setLogin("doctor1");
+        user.setLogin(\"doctor1\");
         user.setRole(UserRole.DOCTOR);
 
         when(userRepository.findByRole(UserRole.DOCTOR)).thenReturn(List.of(user));
 
-        mockMvc.perform(get("/api/users/doctors").with(doctor()))
+        mockMvc.perform(get(\"/api/users/doctors\").with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].login").value("doctor1"));
+                .andExpect(jsonPath(\"$[0].login\").value(\"doctor1\"));
     }
 
     @Test
     void getDoctors_emptyList_returnsOk() throws Exception {
         when(userRepository.findByRole(UserRole.DOCTOR)).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/users/doctors").with(doctor()))
+        mockMvc.perform(get(\"/api/users/doctors\").with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").isEmpty());
+                .andExpect(jsonPath(\"$\").isArray())
+                .andExpect(jsonPath(\"$\").isEmpty());
     }
 
     @Test
     void getNurses_returnsNurseList() throws Exception {
         User user = new User();
         user.setId(2L);
-        user.setLogin("nurse1");
+        user.setLogin(\"nurse1\");
         user.setRole(UserRole.NURSE);
 
         when(userRepository.findByRole(UserRole.NURSE)).thenReturn(List.of(user));
 
-        mockMvc.perform(get("/api/users/nurses").with(doctor()))
+        mockMvc.perform(get(\"/api/users/nurses\").with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].login").value("nurse1"));
+                .andExpect(jsonPath(\"$[0].login\").value(\"nurse1\"));
     }
 
     @Test
     void getMisUser_returnsUser() throws Exception {
         UserMisDTO dto = UserMisDTO.builder()
                 .id(1L)
-                .fullName("Doctor One")
+                .fullName(\"Doctor One\")
                 .build();
 
         when(misService.getUser(1L)).thenReturn(Optional.of(dto));
 
-        mockMvc.perform(get("/api/users/{id}", 1L).with(doctor()))
+        mockMvc.perform(get(\"/api/users/{id}\", 1L).with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fullName").value("Doctor One"));
+                .andExpect(jsonPath(\"$.fullName\").value(\"Doctor One\"));
     }
 
     @Test
     void getMisUser_notFound_returnsNotFound() throws Exception {
         when(misService.getUser(999L)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/users/{id}", 999L).with(doctor()))
+        mockMvc.perform(get(\"/api/users/{id}\", 999L).with(doctor()))
                 .andExpect(status().isNotFound());
     }
 }

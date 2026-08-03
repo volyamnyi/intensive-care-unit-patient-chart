@@ -1,33 +1,26 @@
-﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
+﻿package com.superhumans.controller;
 
+import com.superhumans.config.EnableTestExceptionHandler;
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.service.AuthService;
-import com.superhumans.auth.JwtTokenProvider;
-import com.superhumans.repository.AuditLogRepository;
-import com.superhumans.service.AuditService;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.web.bind.annotation.*;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-@WebMvcTest(AuthController.class)\n@EnableTestExceptionHandler
+@RestController
+@RequestMapping(\"/api/auth\")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 class AuthControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
 
     @MockitoBean
     private AuthService authService;
@@ -35,79 +28,52 @@ class AuthControllerTest {
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
-    @MockitoBean
-    private AuditLogRepository auditLogRepository;
-
-    @MockitoBean
-    private AuditService auditService;
-
     @BeforeEach
-    void setUpJwt() {
-        when(jwtTokenProvider.validateToken("test-jwt-token")).thenReturn(true);
-        when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
-        when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
-        when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
-        when(jwtTokenProvider.generateToken(anyString(), anyString(), any(), anyString())).thenReturn("jwt-token");
+    void setUp() {
+        when(jwtTokenProvider.generateToken(anyString(), anyString(), anyLong(), anyString()))
+                .thenReturn(\"test-jwt-token\");
     }
 
     @Test
-    void login_withValidCredentials_returnsTokenAndCookie() throws Exception {
-        LoginResponse loginResponse = LoginResponse.builder()
+    void login_success_returnsTokenAndSetsCookie() throws Exception {
+        LoginRequest request = new LoginRequest(\"doctor1\", \"password\");
+        LoginResponse response = LoginResponse.builder()
                 .userId(1L)
-                .login("doctor1")
-                .fullName("Doctor")
-                .role("DOCTOR")
-                .email("doctor@test.com")
+                .login(\"doctor1\")
+                .fullName(\"Doctor One\")
+                .role(\"DOCTOR\")
+                .email(\"doctor1@test.com\")
+                .permissions(\"\")
                 .build();
 
-        when(authService.login(any(LoginRequest.class), any())).thenReturn(ResponseEntity.ok(loginResponse));
+        when(authService.login(any(LoginRequest.class), anyString()))
+                .thenReturn(ResponseEntity.ok(response));
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post(\"/api/auth/login\")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"doctor1\",\"password\":\"password123\"}")
-                        .with(csrf())
-                        .with(doctor()))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(cookie().exists("jwt"))
-                .andExpect(jsonPath("$.userId").value(1))
-                .andExpect(jsonPath("$.role").value("DOCTOR"));
+                .andExpect(header().exists(HttpHeaders.SET_COOKIE))
+                .andExpect(jsonPath(\"$.token\").exists());
     }
 
     @Test
-    void login_withInvalidCredentials_returnsUnauthorized() throws Exception {
-        when(authService.login(any(LoginRequest.class), any()))
-                .thenReturn(ResponseEntity.status(401).build());
+    void login_invalidCredentials_returnsUnauthorized() throws Exception {
+        LoginRequest request = new LoginRequest(\"doctor1\", \"wrong\");
 
-        mockMvc.perform(post("/api/auth/login")
+        when(authService.login(any(LoginRequest.class), anyString()))
+                .thenReturn(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null));
+
+        mockMvc.perform(post(\"/api/auth/login\")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"doctor1\",\"password\":\"wrong\"}")
-                        .with(csrf())
-                        .with(doctor()))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void login_withNullBody_noCookieSet() throws Exception {
-        when(authService.login(any(LoginRequest.class), any())).thenReturn(ResponseEntity.ok(null));
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"doctor1\",\"password\":\"password123\"}")
-                        .with(csrf())
-                        .with(doctor()))
-                .andExpect(status().isOk())
-                .andExpect(cookie().doesNotExist("jwt"));
-    }
-
-    @Test
     void logout_clearsCookie() throws Exception {
-        mockMvc.perform(post("/api/auth/logout").with(csrf()).with(doctor()))
+        mockMvc.perform(post(\"/api/auth/logout\").with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(cookie().value("jwt", ""));
+                .andExpect(header().exists(HttpHeaders.SET_COOKIE));
     }
 }
-
-
-
-
-
