@@ -11,10 +11,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Verifies the {@code server.ssl.enabled} boundary of the common
- * {@link SecurityConfig}: when HTTPS is enabled, the channel rule
- * ({@code anyRequest().requiresSecure()}) applies to every request, so plain
- * HTTP requests — even to permit-all endpoints like {@code /api/auth/login} —
- * are redirected to HTTPS.
+ * {@link SecurityConfig}: when HTTPS is enabled, the HTTPS redirect
+ * ({@code redirectToHttps}) applies to every request, so plain HTTP requests
+ * — even to permit-all endpoints like {@code /api/auth/login} — are
+ * redirected to HTTPS.
  */
 @SpringBootTest(properties = "server.ssl.enabled=true")
 @AutoConfigureMockMvc

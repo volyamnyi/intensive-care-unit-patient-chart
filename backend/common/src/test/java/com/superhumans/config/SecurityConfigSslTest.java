@@ -22,9 +22,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * Verifies the {@code server.ssl.enabled} boundary of the generic
- * {@link SecurityConfig}: when HTTPS is enabled, the channel rule applies to
- * every request, including the otherwise public permit-all endpoints, and
- * plain HTTP requests are redirected to HTTPS.
+ * {@link SecurityConfig}: when HTTPS is enabled, the HTTPS redirect
+ * ({@code redirectToHttps}) applies to every request, including the otherwise
+ * public permit-all endpoints, and plain HTTP requests are redirected to HTTPS.
  */
 @WebMvcTest(value = SecurityFixtureController.class, properties = "server.ssl.enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
