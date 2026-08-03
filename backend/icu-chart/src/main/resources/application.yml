@@ -38,6 +38,8 @@ spring:
   jackson:
     serialization:
       fail-on-empty-beans: false
+    deserialization:
+      fail-on-null-for-primitives: false
     datatype:
       datetime:
         write-dates-as-timestamps: false
