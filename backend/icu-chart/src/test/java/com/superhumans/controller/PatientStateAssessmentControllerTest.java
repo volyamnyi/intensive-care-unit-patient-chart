@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.dto.PatientStateCreateRequest;
 import com.superhumans.dto.PatientStatePatchRequest;
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 
-@WebMvcTest(PatientStateAssessmentController.class)
+@WebMvcTest(PatientStateAssessmentController.class)\n@EnableTestExceptionHandler
 @Import(com.superhumans.config.SecurityConfig.class)
 class PatientStateAssessmentControllerTest {
 

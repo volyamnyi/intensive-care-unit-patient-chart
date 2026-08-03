@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.mis.MockMisServiceImpl;
 import com.superhumans.auth.JwtTokenProvider;
@@ -19,7 +19,7 @@ import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(MockMedicalInformationSystemController.class)
+@WebMvcTest(MockMedicalInformationSystemController.class)\n@EnableTestExceptionHandler
 class MockMedicalInformationSystemControllerTest {
 
     @Autowired

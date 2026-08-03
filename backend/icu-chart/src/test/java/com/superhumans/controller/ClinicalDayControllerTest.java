@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.dto.*;
 import com.superhumans.entity.ClinicalDayStatus;
@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 
-@WebMvcTest(ClinicalDayController.class)
+@WebMvcTest(ClinicalDayController.class)\n@EnableTestExceptionHandler
 @Import(com.superhumans.config.SecurityConfig.class)
 class ClinicalDayControllerTest {
 

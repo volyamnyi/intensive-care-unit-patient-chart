@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.dto.LabResultCreateRequest;
 import com.superhumans.dto.LabResultPatchRequest;
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 
-@WebMvcTest(LabResultController.class)
+@WebMvcTest(LabResultController.class)\n@EnableTestExceptionHandler
 @Import(com.superhumans.config.SecurityConfig.class)
 class LabResultControllerTest {
 

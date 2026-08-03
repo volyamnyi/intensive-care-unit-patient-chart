@@ -1,5 +1,6 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;
 
+import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.entity.User;
 import com.superhumans.entity.UserRole;
 import com.superhumans.mis.MisService;
@@ -26,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
+@EnableTestExceptionHandler
 class UserControllerTest {
 
     @Autowired
@@ -45,13 +47,15 @@ class UserControllerTest {
 
     @MockitoBean
     private AuditService auditService;
-@BeforeEach
+
+    @BeforeEach
     void setUpJwt() {
         when(jwtTokenProvider.validateToken("test-jwt-token")).thenReturn(true);
         when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
     }
+
     @Test
     void getMe_returnsCurrentUser() throws Exception {
         User user = new User();

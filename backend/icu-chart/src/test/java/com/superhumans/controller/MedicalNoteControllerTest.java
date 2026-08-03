@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.dto.MedicalNoteCreateRequest;
 import com.superhumans.dto.MedicalNotePatchRequest;
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 
-@WebMvcTest(MedicalNoteController.class)
+@WebMvcTest(MedicalNoteController.class)\n@EnableTestExceptionHandler
 @Import(com.superhumans.config.SecurityConfig.class)
 class MedicalNoteControllerTest {
 

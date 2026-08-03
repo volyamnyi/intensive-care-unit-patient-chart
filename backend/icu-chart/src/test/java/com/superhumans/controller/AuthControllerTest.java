@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
@@ -23,7 +23,7 @@ import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AuthController.class)
+@WebMvcTest(AuthController.class)\n@EnableTestExceptionHandler
 class AuthControllerTest {
 
     @Autowired
@@ -106,3 +106,4 @@ class AuthControllerTest {
                 .andExpect(cookie().value("jwt", ""));
     }
 }
+

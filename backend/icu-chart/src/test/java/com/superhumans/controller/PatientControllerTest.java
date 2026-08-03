@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.PatientDTO;
@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(PatientController.class)
+@WebMvcTest(PatientController.class)\n@EnableTestExceptionHandler
 class PatientControllerTest {
 
     @Autowired
@@ -49,28 +49,28 @@ class PatientControllerTest {
     void searchPatients_returnsList() throws Exception {
         PatientDTO patient = PatientDTO.builder()
                 .id(1L)
-                .fullName("Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•")
+                .fullName("Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў")
                 .build();
 
-        when(misService.searchPatients("Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•")).thenReturn(List.of(patient));
+        when(misService.searchPatients("Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў")).thenReturn(List.of(patient));
 
-        mockMvc.perform(get("/api/patients").param("query", "Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•").with(doctor()))
+        mockMvc.perform(get("/api/patients").param("query", "Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў").with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].fullName").value("Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•"));
+                .andExpect(jsonPath("$[0].fullName").value("Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў"));
     }
 
     @Test
     void searchPatients_withoutQuery_returnsAll() throws Exception {
         PatientDTO patient = PatientDTO.builder()
                 .id(1L)
-                .fullName("Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•")
+                .fullName("Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў")
                 .build();
 
         when(misService.searchPatients(null)).thenReturn(List.of(patient));
 
         mockMvc.perform(get("/api/patients").with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].fullName").value("Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•"));
+                .andExpect(jsonPath("$[0].fullName").value("Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў"));
     }
 
     @Test
@@ -87,14 +87,14 @@ class PatientControllerTest {
     void getPatient_returnsPatient() throws Exception {
         PatientDTO patient = PatientDTO.builder()
                 .id(1L)
-                .fullName("Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•")
+                .fullName("Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў")
                 .build();
 
         when(misService.getPatient(1L)).thenReturn(Optional.of(patient));
 
         mockMvc.perform(get("/api/patients/{id}", 1L).with(doctor()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fullName").value("Р СџР ВµРЎвЂљРЎР‚Р ВµР Р…Р С”Р С•"));
+                .andExpect(jsonPath("$.fullName").value("Р В РЎСџР В Р’ВµР РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂќР В РЎвЂў"));
     }
 
     @Test

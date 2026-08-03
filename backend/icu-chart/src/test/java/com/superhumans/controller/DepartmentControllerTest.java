@@ -1,4 +1,4 @@
-package com.superhumans.controller;
+﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
 
 import com.superhumans.dto.DepartmentPatientResponse;
 import com.superhumans.dto.DepartmentStatsResponse;
@@ -22,7 +22,7 @@ import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(DepartmentController.class)
+@WebMvcTest(DepartmentController.class)\n@EnableTestExceptionHandler
 class DepartmentControllerTest {
 
     @Autowired
