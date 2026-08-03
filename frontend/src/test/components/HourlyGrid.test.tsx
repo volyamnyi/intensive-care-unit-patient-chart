@@ -84,6 +84,7 @@ describe('HourlyGrid', () => {
     const input = screen.getByLabelText('ЧСС 8:00');
     fireEvent.change(input, { target: { value: '90' } });
     fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.blur(input);
     expect(onSaveCell).toHaveBeenCalledTimes(1);
     expect(onSaveCell).toHaveBeenCalledWith(8, 'heartRate', '90');
 
