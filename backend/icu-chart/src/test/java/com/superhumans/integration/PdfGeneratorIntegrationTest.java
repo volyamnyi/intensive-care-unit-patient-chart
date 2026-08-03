@@ -26,7 +26,7 @@ class PdfGeneratorIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/pdf", HttpMethod.POST, entity,
                 String.class, SEED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Test

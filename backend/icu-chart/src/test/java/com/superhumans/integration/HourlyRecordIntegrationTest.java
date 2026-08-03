@@ -144,7 +144,7 @@ class HourlyRecordIntegrationTest extends AbstractIntegrationTest {
                 String.class, record.getId());
 
         assertThat(patchRes.getStatusCode()).isIn(
-                java.util.Set.of(HttpStatus.LOCKED, HttpStatus.UNPROCESSABLE_ENTITY, HttpStatus.CONFLICT));
+                java.util.Set.of(HttpStatus.LOCKED, HttpStatus.UNPROCESSABLE_CONTENT, HttpStatus.CONFLICT));
     }
 
     @Test

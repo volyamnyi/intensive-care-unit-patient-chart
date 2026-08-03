@@ -66,7 +66,7 @@ class LabResultIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/lab-results", HttpMethod.POST, entity,
                 String.class, NURSE_SIGNED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Test

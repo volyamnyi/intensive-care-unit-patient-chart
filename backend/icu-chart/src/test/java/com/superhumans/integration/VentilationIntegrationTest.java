@@ -68,7 +68,7 @@ class VentilationIntegrationTest extends AbstractIntegrationTest {
                 "/api/clinical-days/{dayId}/ventilation", HttpMethod.POST, entity,
                 String.class, NURSE_SIGNED_DAY_ID);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Test

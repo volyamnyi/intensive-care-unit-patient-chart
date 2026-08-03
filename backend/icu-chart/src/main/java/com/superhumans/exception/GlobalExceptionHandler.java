@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DocumentLockedException.class)
     public ResponseEntity<ErrorResponse> handleDocumentLocked(DocumentLockedException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
                 new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
     }
 
@@ -55,13 +55,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ClinicalDayAlreadyOpenException.class)
     public ResponseEntity<ErrorResponse> handleClinicalDayAlreadyOpen(ClinicalDayAlreadyOpenException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
                 new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
     }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
                 new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
     }
 
