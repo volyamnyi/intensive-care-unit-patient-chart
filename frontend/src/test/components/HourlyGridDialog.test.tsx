@@ -17,7 +17,7 @@ const selectedDay = {
 
 const episode = { id: 'ep-1', patientName: 'Тестовий Пацієнт' } as Episode;
 
-function renderDialog(status: string) {
+function renderDialog(status: ClinicalDay['status']) {
   return render(
     <HourlyGridDialog
       open
@@ -39,13 +39,14 @@ describe('HourlyGridDialog', () => {
     expect(screen.getByText('Погодинна карта — Тестовий Пацієнт')).toBeInTheDocument();
   });
 
-  it.each([
+  const badgeRows: Array<[ClinicalDay['status'], string, string, string]> = [
     ['OPEN', 'Відкрито', 'text-warning', 'text-success'],
     ['NURSE_SIGNED', 'Підписано м/с', 'text-info', 'text-warning'],
     ['DOCTOR_SIGNED', 'Підписано лікарем', 'text-success', 'text-warning'],
     ['CLOSED', 'Закрито', 'text-muted-foreground', 'text-warning'],
     ['REOPENED', 'Перевідкрито', 'text-warning', 'text-success'],
-  ])(
+  ];
+  it.each(badgeRows)(
     'status %s badge is visually distinct (has %s, lacks %s)',
     (status, label, expected, forbidden) => {
       renderDialog(status);
