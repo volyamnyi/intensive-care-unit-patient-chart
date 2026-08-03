@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import type { ClinicalDay, Episode } from '../../types';
 
 const STATUS_STYLES: Record<string, string> = {
-  OPEN: 'bg-success/10 text-success border-success',
+  OPEN: 'bg-warning/10 text-warning border-warning',
   NURSE_SIGNED: 'bg-info/10 text-info border-info',
   DOCTOR_SIGNED: 'bg-success/10 text-success border-success',
   CLOSED: 'bg-muted text-muted-foreground border-border',
