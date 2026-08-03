@@ -6,7 +6,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 
 @Configuration
-public class IcuSecurityRules implements SecurityRuleContributor {
+public class ClinicalSecurityRules implements SecurityRuleContributor {
 
     static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR", "ADJACENT_SPECIALIST"};
     static final String[] PRESCRIBER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};

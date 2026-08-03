@@ -1,4 +1,4 @@
-﻿package com.superhumans.config;
+package com.superhumans.config;
 
 import com.superhumans.exception.GlobalExceptionHandler;
 import org.springframework.context.annotation.Configuration;
