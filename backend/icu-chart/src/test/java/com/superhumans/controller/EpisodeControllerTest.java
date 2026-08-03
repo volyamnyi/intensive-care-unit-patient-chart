@@ -69,7 +69,7 @@ class EpisodeControllerTest {
     void searchEpisodes_returnsList() throws Exception {
         when(episodeService.searchEpisodes(any(), any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/episodes"))
+        mockMvc.perform(get("/api/episodes").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -79,7 +79,7 @@ class EpisodeControllerTest {
 
         mockMvc.perform(get("/api/episodes")
                         .param("patientId", "1")
-                        .param("status", "ACTIVE"))
+                        .param("status", "ACTIVE").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -88,7 +88,7 @@ class EpisodeControllerTest {
         EpisodeResponse response = EpisodeResponse.builder().id(UUID.randomUUID()).build();
         when(episodeService.getEpisode(any())).thenReturn(response);
 
-        mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000"))
+        mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -96,7 +96,7 @@ class EpisodeControllerTest {
     void getEpisodeClinicalDays_returnsList() throws Exception {
         when(clinicalDayService.getClinicalDaysByEpisode(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000/clinical-days"))
+        mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000/clinical-days").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -107,7 +107,7 @@ class EpisodeControllerTest {
 
         mockMvc.perform(post("/api/episodes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"patientId\":1,\"hospitalizationId\":1,\"departmentId\":\"123e4567-e89b-12d3-a456-426614174000\"}"))
+                        .content("{\"patientId\":1,\"hospitalizationId\":1,\"departmentId\":\"123e4567-e89b-12d3-a456-426614174000\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -115,7 +115,7 @@ class EpisodeControllerTest {
     void updateEpisode_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/episodes/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
@@ -123,13 +123,13 @@ class EpisodeControllerTest {
     void closeEpisode_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/close")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void archiveEpisode_returnsNoContent() throws Exception {
-        mockMvc.perform(put("/api/episodes/123e4567-e89b-12d3-a456-426614174000/archive"))
+        mockMvc.perform(put("/api/episodes/123e4567-e89b-12d3-a456-426614174000/archive").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

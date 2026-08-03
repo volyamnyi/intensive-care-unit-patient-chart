@@ -20,6 +20,7 @@ import java.util.UUID;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -60,7 +61,7 @@ class VentilationSettingsControllerTest {
         when(ventilationSettingsService.getByClinicalDay(any())).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/ventilation")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -75,7 +76,7 @@ class VentilationSettingsControllerTest {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/ventilation")
                         .with(doctor())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 }

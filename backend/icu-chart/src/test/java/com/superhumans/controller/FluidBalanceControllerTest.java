@@ -56,7 +56,7 @@ class FluidBalanceControllerTest {
     void getFluidBalance_returnsList() throws Exception {
         when(fluidBalanceService.getBalances(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/fluid-balance"))
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/fluid-balance").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -64,7 +64,7 @@ class FluidBalanceControllerTest {
     void recalculateFluidBalance_returnsList() throws Exception {
         when(fluidBalanceService.recalculate(any(), anyLong())).thenReturn(List.of());
 
-        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/fluid-balance/recalculate"))
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/fluid-balance/recalculate").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 }

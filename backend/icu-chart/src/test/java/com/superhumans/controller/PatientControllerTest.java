@@ -56,7 +56,7 @@ class PatientControllerTest {
     void searchPatients_returnsList() throws Exception {
         when(misService.searchPatients(anyString())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/patients").with(doctor()))
+        mockMvc.perform(get("/api/patients").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -66,7 +66,7 @@ class PatientControllerTest {
 
         mockMvc.perform(get("/api/patients")
                         .param("query", "test")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -78,7 +78,7 @@ class PatientControllerTest {
                 .build();
         when(misService.getPatient(anyLong())).thenReturn(Optional.of(patient));
 
-        mockMvc.perform(get("/api/patients/1").with(doctor()))
+        mockMvc.perform(get("/api/patients/1").with(csrf()).with(doctor()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.fullName").value("Test Patient"));
@@ -88,7 +88,7 @@ class PatientControllerTest {
     void getPatient_notFound_returnsNotFound() throws Exception {
         when(misService.getPatient(anyLong())).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/patients/999").with(doctor()))
+        mockMvc.perform(get("/api/patients/999").with(csrf()).with(doctor()))
                 .andExpect(status().isNotFound());
     }
 }

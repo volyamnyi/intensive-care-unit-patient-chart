@@ -63,7 +63,7 @@ class MedicalNoteControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/notes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"Test\"}"))
+                        .content("{\"text\":\"Test\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -71,7 +71,7 @@ class MedicalNoteControllerTest {
     void getByClinicalDay_returnsList() throws Exception {
         when(medicalNoteService.getNotesByClinicalDay(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/notes"))
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/notes").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -79,7 +79,7 @@ class MedicalNoteControllerTest {
     void patch_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/notes/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

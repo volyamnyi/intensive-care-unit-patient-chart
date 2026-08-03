@@ -63,7 +63,7 @@ class ClinicalDayControllerTest {
         ClinicalDayResponse response = ClinicalDayResponse.builder().id(UUID.randomUUID()).build();
         when(clinicalDayService.getClinicalDay(any())).thenReturn(response);
 
-        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000"))
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -74,7 +74,7 @@ class ClinicalDayControllerTest {
 
         mockMvc.perform(post("/api/clinical-days")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"episodeId\":\"123e4567-e89b-12d3-a456-426614174000\"}"))
+                        .content("{\"episodeId\":\"123e4567-e89b-12d3-a456-426614174000\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -82,7 +82,7 @@ class ClinicalDayControllerTest {
     void updateClinicalDay_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
@@ -90,7 +90,7 @@ class ClinicalDayControllerTest {
     void signNurse_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/sign/nurse")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hash\":\"test\",\"version\":1}"))
+                        .content("{\"hash\":\"test\",\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
@@ -98,7 +98,7 @@ class ClinicalDayControllerTest {
     void signDoctor_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/sign/doctor")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hash\":\"test\",\"version\":1}"))
+                        .content("{\"hash\":\"test\",\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
@@ -106,7 +106,7 @@ class ClinicalDayControllerTest {
     void reopenClinicalDay_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/reopen")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
@@ -114,7 +114,7 @@ class ClinicalDayControllerTest {
     void closeEarly_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/close-early")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"test\"}"))
+                        .content("{\"reason\":\"test\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

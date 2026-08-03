@@ -64,7 +64,7 @@ class PatientStateAssessmentControllerTest {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"recordHour\":10,\"consciousness\":\"CLEAR\"}")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -73,7 +73,7 @@ class PatientStateAssessmentControllerTest {
         when(patientStateService.getByClinicalDay(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -82,7 +82,7 @@ class PatientStateAssessmentControllerTest {
         mockMvc.perform(patch("/api/patient-state/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"version\":1}")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

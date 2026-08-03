@@ -60,7 +60,7 @@ class PdfControllerTest {
         when(pdfGeneratorService.getLatestPdf(any())).thenReturn(response);
 
         mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -73,7 +73,7 @@ class PdfControllerTest {
         when(pdfGeneratorService.getLatestPdf(any())).thenReturn(response);
 
         mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf/status")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -86,7 +86,7 @@ class PdfControllerTest {
         when(pdfGeneratorService.generatePdf(any(), anyLong())).thenReturn(response);
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 }

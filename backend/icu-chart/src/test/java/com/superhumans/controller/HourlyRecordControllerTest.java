@@ -63,7 +63,7 @@ class HourlyRecordControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/hourly-records")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"recordTime\":\"2024-01-01T10:00:00\"}"))
+                        .content("{\"recordTime\":\"2024-01-01T10:00:00\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -71,7 +71,7 @@ class HourlyRecordControllerTest {
     void getByClinicalDay_returnsList() throws Exception {
         when(hourlyRecordService.getHourlyRecordsByClinicalDay(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/hourly-records"))
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/hourly-records").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -79,7 +79,7 @@ class HourlyRecordControllerTest {
     void patch_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/hourly-records/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

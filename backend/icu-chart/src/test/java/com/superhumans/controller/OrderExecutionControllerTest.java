@@ -65,7 +65,7 @@ class OrderExecutionControllerTest {
     void getExecutions_returnsList() throws Exception {
         when(orderExecutionService.getExecutionsByOrder(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/orders/123e4567-e89b-12d3-a456-426614174000/executions"))
+        mockMvc.perform(get("/api/orders/123e4567-e89b-12d3-a456-426614174000/executions").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -76,7 +76,7 @@ class OrderExecutionControllerTest {
 
         mockMvc.perform(put("/api/orders/123e4567-e89b-12d3-a456-426614174000/plan")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hour\":10,\"dose\":\"100\"}"))
+                        .content("{\"hour\":10,\"dose\":\"100\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -87,7 +87,7 @@ class OrderExecutionControllerTest {
 
         mockMvc.perform(put("/api/orders/123e4567-e89b-12d3-a456-426614174000/plan/finish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hour\":10}"))
+                        .content("{\"hour\":10}").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -98,7 +98,7 @@ class OrderExecutionControllerTest {
 
         mockMvc.perform(put("/api/orders/123e4567-e89b-12d3-a456-426614174000/cancel")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hour\":10}"))
+                        .content("{\"hour\":10}").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -109,7 +109,7 @@ class OrderExecutionControllerTest {
 
         mockMvc.perform(post("/api/orders/123e4567-e89b-12d3-a456-426614174000/execute")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hour\":10,\"actualDose\":\"100\"}"))
+                        .content("{\"hour\":10,\"actualDose\":\"100\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -120,7 +120,7 @@ class OrderExecutionControllerTest {
 
         mockMvc.perform(post("/api/orders/123e4567-e89b-12d3-a456-426614174000/execute/finish")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hour\":10}"))
+                        .content("{\"hour\":10}").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -128,7 +128,7 @@ class OrderExecutionControllerTest {
     void updateExecution_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/executions/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

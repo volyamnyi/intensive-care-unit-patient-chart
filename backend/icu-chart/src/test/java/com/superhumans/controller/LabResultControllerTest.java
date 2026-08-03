@@ -63,7 +63,7 @@ class LabResultControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/lab-results")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\"}"))
+                        .content("{\"name\":\"Test\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -71,7 +71,7 @@ class LabResultControllerTest {
     void getByClinicalDay_returnsList() throws Exception {
         when(labResultService.getLabResultsByClinicalDay(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/lab-results"))
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/lab-results").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -79,7 +79,7 @@ class LabResultControllerTest {
     void patch_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/lab-results/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

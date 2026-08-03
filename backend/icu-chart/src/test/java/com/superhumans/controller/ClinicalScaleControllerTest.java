@@ -21,6 +21,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,7 +62,7 @@ class ClinicalScaleControllerTest {
     void getAvailableScales_returnsList() throws Exception {
         when(clinicalScaleService.getAvailableScales()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/scales").with(doctor()))
+        mockMvc.perform(get("/api/scales").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -70,7 +71,7 @@ class ClinicalScaleControllerTest {
         when(clinicalScaleService.getScaleResultsByClinicalDay(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/scales")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -82,7 +83,7 @@ class ClinicalScaleControllerTest {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/scales")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\"}")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -91,7 +92,7 @@ class ClinicalScaleControllerTest {
         when(clinicalScaleService.getScaleResultsByEpisode(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000/scales")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -103,7 +104,7 @@ class ClinicalScaleControllerTest {
         mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/scales")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\"}")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -116,7 +117,7 @@ class ClinicalScaleControllerTest {
                         .param("scaleId", "123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -125,7 +126,7 @@ class ClinicalScaleControllerTest {
         mockMvc.perform(patch("/api/scales/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"version\":1}")
-                        .with(doctor()))
+                        .with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }

@@ -55,7 +55,7 @@ class DepartmentControllerTest {
     void getStats_returnsStats() throws Exception {
         when(departmentService.getStats(any())).thenReturn(DepartmentStatsResponse.builder().build());
 
-        mockMvc.perform(get("/api/department/stats"))
+        mockMvc.perform(get("/api/department/stats").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -64,7 +64,7 @@ class DepartmentControllerTest {
         when(departmentService.getStats(any())).thenReturn(DepartmentStatsResponse.builder().build());
 
         mockMvc.perform(get("/api/department/stats")
-                        .param("departmentId", "123e4567-e89b-12d3-a456-426614174000"))
+                        .param("departmentId", "123e4567-e89b-12d3-a456-426614174000").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -72,7 +72,7 @@ class DepartmentControllerTest {
     void getPatients_returnsList() throws Exception {
         when(departmentService.getPatients(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/department/patients"))
+        mockMvc.perform(get("/api/department/patients").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -81,7 +81,7 @@ class DepartmentControllerTest {
         when(departmentService.getPatients(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/department/patients")
-                        .param("departmentId", "123e4567-e89b-12d3-a456-426614174000"))
+                        .param("departmentId", "123e4567-e89b-12d3-a456-426614174000").with(csrf()).with(doctor()))
                 .andExpect(status().isOk());
     }
 }
