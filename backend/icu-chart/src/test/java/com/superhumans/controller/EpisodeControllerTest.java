@@ -1,5 +1,6 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.ClinicalDayResponse;
 import com.superhumans.dto.EpisodeCloseRequest;
@@ -9,6 +10,9 @@ import com.superhumans.dto.EpisodeResponse;
 import com.superhumans.entity.EpisodeStatus;
 import com.superhumans.service.ClinicalDayService;
 import com.superhumans.service.EpisodeService;
+import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.service.AuditService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -43,6 +47,23 @@ class EpisodeControllerTest {
 
     @MockitoBean
     private ClinicalDayService clinicalDayService;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private AuditLogRepository auditLogRepository;
+
+    @MockitoBean
+    private AuditService auditService;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtTokenProvider.validateToken(any())).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("user");
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+    }
 
     @Test
     void searchEpisodes_returnsList() throws Exception {

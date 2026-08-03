@@ -1,5 +1,6 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.ClinicalDayCreateRequest;
 import com.superhumans.dto.ClinicalDayPatchRequest;
@@ -7,6 +8,9 @@ import com.superhumans.dto.ClinicalDayResponse;
 import com.superhumans.dto.CloseEarlyRequest;
 import com.superhumans.dto.ReopenRequest;
 import com.superhumans.service.ClinicalDayService;
+import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.service.AuditService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -36,6 +40,23 @@ class ClinicalDayControllerTest {
 
     @MockitoBean
     private ClinicalDayService clinicalDayService;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private AuditLogRepository auditLogRepository;
+
+    @MockitoBean
+    private AuditService auditService;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtTokenProvider.validateToken(any())).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("user");
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+    }
 
     @Test
     void getClinicalDay_returnsOk() throws Exception {

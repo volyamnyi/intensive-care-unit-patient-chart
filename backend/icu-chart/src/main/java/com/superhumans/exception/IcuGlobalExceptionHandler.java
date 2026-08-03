@@ -1,27 +1,21 @@
 package com.superhumans.exception;
 
 import com.superhumans.dto.ErrorResponse;
-import jakarta.persistence.OptimisticLockException;
-import jakarta.validation.ConstraintViolationException;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public class GlobalExceptionHandler {
+public class IcuGlobalExceptionHandler {
 
     @ExceptionHandler(ClinicalDayAlreadyOpenException.class)
     public ResponseEntity<ErrorResponse> handleClinicalDayAlreadyOpen(ClinicalDayAlreadyOpenException ex) {

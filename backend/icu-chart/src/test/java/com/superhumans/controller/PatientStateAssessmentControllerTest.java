@@ -6,6 +6,8 @@ import com.superhumans.dto.PatientStatePatchRequest;
 import com.superhumans.dto.PatientStateResponse;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.service.PatientStateAssessmentService;
+import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,12 @@ class PatientStateAssessmentControllerTest {
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private AuditLogRepository auditLogRepository;
+
+    @MockitoBean
+    private AuditService auditService;
 
     @BeforeEach
     void setUp() {

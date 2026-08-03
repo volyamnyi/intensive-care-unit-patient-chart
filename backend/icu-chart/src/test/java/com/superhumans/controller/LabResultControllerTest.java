@@ -1,10 +1,14 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.LabResultCreateRequest;
 import com.superhumans.dto.LabResultPatchRequest;
 import com.superhumans.dto.LabResultResponse;
 import com.superhumans.service.LabResultService;
+import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.service.AuditService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -34,6 +38,23 @@ class LabResultControllerTest {
 
     @MockitoBean
     private LabResultService labResultService;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private AuditLogRepository auditLogRepository;
+
+    @MockitoBean
+    private AuditService auditService;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtTokenProvider.validateToken(any())).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("user");
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+    }
 
     @Test
     void create_returnsCreated() throws Exception {

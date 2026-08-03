@@ -1,8 +1,12 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.PatientDTO;
+import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.service.AuditService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -12,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -30,11 +35,28 @@ class PatientControllerTest {
     @MockitoBean
     private MisService misService;
 
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private AuditLogRepository auditLogRepository;
+
+    @MockitoBean
+    private AuditService auditService;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtTokenProvider.validateToken(any())).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("doctor1");
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+    }
+
     @Test
     void searchPatients_returnsList() throws Exception {
         when(misService.searchPatients(anyString())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/patients"))
+        mockMvc.perform(get("/api/patients").with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -43,7 +65,8 @@ class PatientControllerTest {
         when(misService.searchPatients(anyString())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/patients")
-                        .param("query", "test"))
+                        .param("query", "test")
+                        .with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -55,7 +78,7 @@ class PatientControllerTest {
                 .build();
         when(misService.getPatient(anyLong())).thenReturn(Optional.of(patient));
 
-        mockMvc.perform(get("/api/patients/1"))
+        mockMvc.perform(get("/api/patients/1").with(doctor()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.fullName").value("Test Patient"));
@@ -65,7 +88,7 @@ class PatientControllerTest {
     void getPatient_notFound_returnsNotFound() throws Exception {
         when(misService.getPatient(anyLong())).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/patients/999"))
+        mockMvc.perform(get("/api/patients/999").with(doctor()))
                 .andExpect(status().isNotFound());
     }
 }
