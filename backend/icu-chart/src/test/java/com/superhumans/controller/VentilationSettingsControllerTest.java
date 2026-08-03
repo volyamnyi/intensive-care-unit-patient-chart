@@ -1,8 +1,10 @@
 package com.superhumans.controller;
 
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.VentilationResponse;
 import com.superhumans.service.VentilationSettingsService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -13,9 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.Mockito.when;
-import static org.mockito.ArgumentMatchers.any;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -29,6 +31,17 @@ class VentilationSettingsControllerTest {
 
     @MockitoBean
     private VentilationSettingsService ventilationSettingsService;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtTokenProvider.validateToken(any())).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("user");
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+    }
 
     @Test
     void getVentilationSettings_returnsOk() throws Exception {

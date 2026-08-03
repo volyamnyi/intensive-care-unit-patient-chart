@@ -4,7 +4,9 @@ import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.PatientStateCreateRequest;
 import com.superhumans.dto.PatientStatePatchRequest;
 import com.superhumans.dto.PatientStateResponse;
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.service.PatientStateAssessmentService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -35,6 +37,17 @@ class PatientStateAssessmentControllerTest {
     @MockitoBean
     private PatientStateAssessmentService patientStateService;
 
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtTokenProvider.validateToken(any())).thenReturn(true);
+        when(jwtTokenProvider.getLoginFromToken(any())).thenReturn("user");
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
+        when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(1L);
+    }
+
     @Test
     void create_returnsCreated() throws Exception {
         PatientStateResponse response = PatientStateResponse.builder().id(UUID.randomUUID()).build();
@@ -42,7 +55,8 @@ class PatientStateAssessmentControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"recordHour\":10,\"consciousness\":\"CLEAR\"}"))
+                        .content("{\"recordHour\":10,\"consciousness\":\"CLEAR\"}")
+                        .with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -50,7 +64,8 @@ class PatientStateAssessmentControllerTest {
     void getByClinicalDay_returnsList() throws Exception {
         when(patientStateService.getByClinicalDay(any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state"))
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state")
+                        .with(doctor()))
                 .andExpect(status().isOk());
     }
 
@@ -58,7 +73,8 @@ class PatientStateAssessmentControllerTest {
     void update_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/patient-state/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}"))
+                        .content("{\"version\":1}")
+                        .with(doctor()))
                 .andExpect(status().isNoContent());
     }
 }
