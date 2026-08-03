@@ -4,35 +4,63 @@ import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.DepartmentPatientResponse;
 import com.superhumans.dto.DepartmentStatsResponse;
 import com.superhumans.service.DepartmentService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/departments")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(DepartmentController.class)
+@EnableTestExceptionHandler
 class DepartmentControllerTest {
 
-    DepartmentService departmentService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @GetMapping
-    public ResponseEntity<List<DepartmentPatientResponse>> getAll() {
-        return ResponseEntity.ok(departmentService.getAllDepartments());
+    @MockitoBean
+    private DepartmentService departmentService;
+
+    @Test
+    void getStats_returnsStats() throws Exception {
+        when(departmentService.getStats(any())).thenReturn(DepartmentStatsResponse.builder().build());
+
+        mockMvc.perform(get("/api/department/stats"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{id}/stats")
-    public ResponseEntity<DepartmentStatsResponse> getStats(@PathVariable Long id) {
-        return ResponseEntity.ok(departmentService.getDepartmentStats(id));
+    @Test
+    void getStats_withDepartmentId_returnsStats() throws Exception {
+        when(departmentService.getStats(any())).thenReturn(DepartmentStatsResponse.builder().build());
+
+        mockMvc.perform(get("/api/department/stats")
+                        .param("departmentId", "123e4567-e89b-12d3-a456-426614174000"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{id}/patients")
-    public ResponseEntity<List<DepartmentPatientResponse>> getPatients(@PathVariable Long id) {
-        return ResponseEntity.ok(departmentService.getDepartmentPatients(id));
+    @Test
+    void getPatients_returnsList() throws Exception {
+        when(departmentService.getPatients(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/department/patients"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getPatients_withDepartmentId_returnsList() throws Exception {
+        when(departmentService.getPatients(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/department/patients")
+                        .param("departmentId", "123e4567-e89b-12d3-a456-426614174000"))
+                .andExpect(status().isOk());
     }
 }

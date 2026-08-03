@@ -9,75 +9,106 @@ import com.superhumans.dto.EpisodeResponse;
 import com.superhumans.entity.EpisodeStatus;
 import com.superhumans.service.ClinicalDayService;
 import com.superhumans.service.EpisodeService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 import java.util.UUID;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 
-@RestController
-@RequestMapping("/api/episodes")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(EpisodeController.class)
+@EnableTestExceptionHandler
 class EpisodeControllerTest {
 
-    EpisodeService episodeService;
-    ClinicalDayService clinicalDayService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @GetMapping
-    public ResponseEntity<List<EpisodeResponse>> searchEpisodes(
-            @RequestParam(required = false) Long patientId,
-            @RequestParam(required = false) EpisodeStatus status) {
-        return ResponseEntity.ok(episodeService.searchEpisodes(patientId, status));
+    @MockitoBean
+    private EpisodeService episodeService;
+
+    @MockitoBean
+    private ClinicalDayService clinicalDayService;
+
+    @Test
+    void searchEpisodes_returnsList() throws Exception {
+        when(episodeService.searchEpisodes(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/episodes"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<EpisodeResponse> getEpisode(@PathVariable UUID id) {
-        return ResponseEntity.ok(episodeService.getEpisode(id));
+    @Test
+    void searchEpisodes_withParams_returnsList() throws Exception {
+        when(episodeService.searchEpisodes(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/episodes")
+                        .param("patientId", "1")
+                        .param("status", "ACTIVE"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{id}/clinical-days")
-    public ResponseEntity<List<ClinicalDayResponse>> getEpisodeClinicalDays(@PathVariable UUID id) {
-        return ResponseEntity.ok(clinicalDayService.getClinicalDaysByEpisode(id));
+    @Test
+    void getEpisode_returnsOk() throws Exception {
+        EpisodeResponse response = EpisodeResponse.builder().id(UUID.randomUUID()).build();
+        when(episodeService.getEpisode(any())).thenReturn(response);
+
+        mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000"))
+                .andExpect(status().isOk());
     }
 
-    @PostMapping
-    public ResponseEntity<EpisodeResponse> createEpisode(
-            @Valid @RequestBody EpisodeCreateRequest request,
-            Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        return ResponseEntity.status(HttpStatus.CREATED).body(episodeService.createEpisode(request, userId));
+    @Test
+    void getEpisodeClinicalDays_returnsList() throws Exception {
+        when(clinicalDayService.getClinicalDaysByEpisode(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000/clinical-days"))
+                .andExpect(status().isOk());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<Void> updateEpisode(
-            @PathVariable UUID id,
-            @Valid @RequestBody EpisodePatchRequest request,
-            Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        episodeService.updateEpisode(id, request, userId);
-        return ResponseEntity.noContent().build();
+    @Test
+    void createEpisode_returnsCreated() throws Exception {
+        EpisodeResponse response = EpisodeResponse.builder().id(UUID.randomUUID()).build();
+        when(episodeService.createEpisode(any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/episodes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":1,\"hospitalizationId\":1,\"departmentId\":\"123e4567-e89b-12d3-a456-426614174000\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @PostMapping("/{id}/close")
-    public ResponseEntity<Void> closeEpisode(
-            @PathVariable UUID id,
-            @Valid @RequestBody EpisodeCloseRequest request,
-            Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        episodeService.closeEpisode(id, request, userId);
-        return ResponseEntity.noContent().build();
+    @Test
+    void updateEpisode_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/episodes/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 
-    @PutMapping("/{id}/archive")
-    public ResponseEntity<Void> archiveEpisode(@PathVariable UUID id) {
-        episodeService.archiveEpisode(id);
-        return ResponseEntity.noContent().build();
+    @Test
+    void closeEpisode_returnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/close")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void archiveEpisode_returnsNoContent() throws Exception {
+        mockMvc.perform(put("/api/episodes/123e4567-e89b-12d3-a456-426614174000/archive"))
+                .andExpect(status().isNoContent());
     }
 }

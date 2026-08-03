@@ -4,55 +4,106 @@ import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
+import com.superhumans.entity.ClinicalScale;
 import com.superhumans.service.ClinicalScaleService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import com.superhumans.service.ScaleAuthorizationService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.Map;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/scales")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(ClinicalScaleController.class)
+@EnableTestExceptionHandler
 class ClinicalScaleControllerTest {
 
-    ClinicalScaleService clinicalScaleService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @GetMapping
-    public ResponseEntity<List<ScaleResultResponse>> getAll(@RequestParam Long episodeId) {
-        return ResponseEntity.ok(clinicalScaleService.getAllByEpisodeId(episodeId));
+    @MockitoBean
+    private ClinicalScaleService clinicalScaleService;
+
+    @MockitoBean
+    private ScaleAuthorizationService scaleAuthorizationService;
+
+    @Test
+    void getAvailableScales_returnsList() throws Exception {
+        when(clinicalScaleService.getAvailableScales()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/scales"))
+                .andExpect(status().isOk());
     }
 
-    @PostMapping
-    public ResponseEntity<ScaleResultResponse> create(@Valid @RequestBody ScaleResultCreateRequest request, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        return ResponseEntity.status(HttpStatus.CREATED).body(clinicalScaleService.createScaleResult(request, userId));
+    @Test
+    void getScaleResultsByClinicalDay_returnsList() throws Exception {
+        when(clinicalScaleService.getScaleResultsByClinicalDay(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/scales"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ScaleResultResponse> get(@PathVariable Long id) {
-        return clinicalScaleService.getScaleResult(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Test
+    void createScaleResult_returnsCreated() throws Exception {
+        ScaleResultResponse response = ScaleResultResponse.builder().id(UUID.randomUUID()).build();
+        when(clinicalScaleService.createScaleResult(any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/scales")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<ScaleResultResponse> patch(@PathVariable Long id, @Valid @RequestBody ScaleResultPatchRequest request, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        return clinicalScaleService.patchScaleResult(id, request, userId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Test
+    void getScaleResultsByEpisode_returnsList() throws Exception {
+        when(clinicalScaleService.getScaleResultsByEpisode(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/episodes/123e4567-e89b-12d3-a456-426614174000/scales"))
+                .andExpect(status().isOk());
     }
 
-    @PostMapping("/calculate")
-    public ResponseEntity<ScaleResultResponse> calculate(@RequestBody ScaleResultCreateRequest request, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        return ResponseEntity.ok(clinicalScaleService.calculateScale(request.getScaleType(), request.getRawData(), userId));
+    @Test
+    void createEpisodeScaleResult_returnsCreated() throws Exception {
+        ScaleResultResponse response = ScaleResultResponse.builder().id(UUID.randomUUID()).build();
+        when(clinicalScaleService.createEpisodeScaleResult(any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/scales")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void calculateAndSaveScale_returnsCreated() throws Exception {
+        ScaleResultResponse response = ScaleResultResponse.builder().id(UUID.randomUUID()).build();
+        when(clinicalScaleService.calculateAndSaveScale(any(), any(), any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/scales/calculate")
+                        .param("scaleId", "123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void updateScaleResult_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/scales/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 }

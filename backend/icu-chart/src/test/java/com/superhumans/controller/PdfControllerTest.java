@@ -3,34 +3,66 @@ package com.superhumans.controller;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.PdfResponse;
 import com.superhumans.service.PdfGeneratorService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 
-@RestController
-@RequestMapping("/api/pdf")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(PdfController.class)
+@EnableTestExceptionHandler
 class PdfControllerTest {
 
-    PdfGeneratorService pdfGeneratorService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @PostMapping("/{clinicalDayId}")
-    public ResponseEntity<PdfResponse> generate(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(pdfGeneratorService.generatePdf(clinicalDayId));
+    @MockitoBean
+    private PdfGeneratorService pdfGeneratorService;
+
+    @Test
+    void getPdf_returnsOk() throws Exception {
+        PdfResponse response = PdfResponse.builder()
+                .id(UUID.randomUUID())
+                .clinicalDayId(UUID.randomUUID())
+                .build();
+        when(pdfGeneratorService.getLatestPdf(any())).thenReturn(response);
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{clinicalDayId}")
-    public ResponseEntity<PdfResponse> getLatest(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(pdfGeneratorService.getLatestPdf(clinicalDayId));
+    @Test
+    void getPdfStatus_returnsOk() throws Exception {
+        PdfResponse response = PdfResponse.builder()
+                .id(UUID.randomUUID())
+                .clinicalDayId(UUID.randomUUID())
+                .build();
+        when(pdfGeneratorService.getLatestPdf(any())).thenReturn(response);
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf/status"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{clinicalDayId}/status")
-    public ResponseEntity<String> getStatus(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(pdfGeneratorService.getTransferStatus(clinicalDayId));
+    @Test
+    void generatePdf_returnsCreated() throws Exception {
+        PdfResponse response = PdfResponse.builder()
+                .id(UUID.randomUUID())
+                .clinicalDayId(UUID.randomUUID())
+                .build();
+        when(pdfGeneratorService.generatePdf(any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf"))
+                .andExpect(status().isCreated());
     }
 }

@@ -5,43 +5,60 @@ import com.superhumans.dto.HourlyRecordCreateRequest;
 import com.superhumans.dto.HourlyRecordPatchRequest;
 import com.superhumans.dto.HourlyRecordResponse;
 import com.superhumans.service.HourlyRecordService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/hourly-records")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(HourlyRecordController.class)
+@EnableTestExceptionHandler
 class HourlyRecordControllerTest {
 
-    HourlyRecordService hourlyRecordService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @PostMapping
-    public ResponseEntity<HourlyRecordResponse> create(@Valid @RequestBody HourlyRecordCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(hourlyRecordService.createHourlyRecord(request));
+    @MockitoBean
+    private HourlyRecordService hourlyRecordService;
+
+    @Test
+    void create_returnsCreated() throws Exception {
+        HourlyRecordResponse response = HourlyRecordResponse.builder().id(UUID.randomUUID()).build();
+        when(hourlyRecordService.createHourlyRecord(any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/hourly-records")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"recordTime\":\"2024-01-01T10:00:00\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @GetMapping("/{clinicalDayId}")
-    public ResponseEntity<List<HourlyRecordResponse>> getByClinicalDay(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(hourlyRecordService.getByClinicalDay(clinicalDayId));
+    @Test
+    void getByClinicalDay_returnsList() throws Exception {
+        when(hourlyRecordService.getHourlyRecordsByClinicalDay(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/hourly-records"))
+                .andExpect(status().isOk());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<HourlyRecordResponse> patch(@PathVariable Long id, @Valid @RequestBody HourlyRecordPatchRequest request) {
-        return ResponseEntity.ok(hourlyRecordService.patchHourlyRecord(id, request));
-    }
-
-    @GetMapping("/{clinicalDayId}/hour/{hour}")
-    public ResponseEntity<HourlyRecordResponse> getByHour(@PathVariable Long clinicalDayId, @PathVariable Integer hour) {
-        return hourlyRecordService.getByClinicalDayAndHour(clinicalDayId, hour)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Test
+    void patch_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/hourly-records/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 }

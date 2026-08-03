@@ -5,36 +5,60 @@ import com.superhumans.dto.LabResultCreateRequest;
 import com.superhumans.dto.LabResultPatchRequest;
 import com.superhumans.dto.LabResultResponse;
 import com.superhumans.service.LabResultService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/lab-results")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(LabResultController.class)
+@EnableTestExceptionHandler
 class LabResultControllerTest {
 
-    LabResultService labResultService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @PostMapping
-    public ResponseEntity<LabResultResponse> create(@Valid @RequestBody LabResultCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(labResultService.createLabResult(request));
+    @MockitoBean
+    private LabResultService labResultService;
+
+    @Test
+    void create_returnsCreated() throws Exception {
+        LabResultResponse response = LabResultResponse.builder().id(UUID.randomUUID()).build();
+        when(labResultService.createLabResult(any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/lab-results")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Test\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @GetMapping("/{clinicalDayId}")
-    public ResponseEntity<List<LabResultResponse>> getByClinicalDay(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(labResultService.getByClinicalDay(clinicalDayId));
+    @Test
+    void getByClinicalDay_returnsList() throws Exception {
+        when(labResultService.getLabResultsByClinicalDay(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/lab-results"))
+                .andExpect(status().isOk());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<LabResultResponse> patch(@PathVariable Long id, @Valid @RequestBody LabResultPatchRequest request) {
-        return ResponseEntity.ok(labResultService.patchLabResult(id, request));
+    @Test
+    void patch_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/lab-results/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 }

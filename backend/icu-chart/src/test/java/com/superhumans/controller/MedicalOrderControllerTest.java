@@ -5,60 +5,68 @@ import com.superhumans.dto.MedicalOrderCreateRequest;
 import com.superhumans.dto.MedicalOrderPatchRequest;
 import com.superhumans.dto.MedicalOrderResponse;
 import com.superhumans.service.MedicalOrderService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/orders")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(MedicalOrderController.class)
+@EnableTestExceptionHandler
 class MedicalOrderControllerTest {
 
-    MedicalOrderService medicalOrderService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @PostMapping
-    public ResponseEntity<MedicalOrderResponse> create(@Valid @RequestBody MedicalOrderCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(medicalOrderService.createMedicalOrder(request));
+    @MockitoBean
+    private MedicalOrderService medicalOrderService;
+
+    @Test
+    void create_returnsCreated() throws Exception {
+        MedicalOrderResponse response = MedicalOrderResponse.builder().id(UUID.randomUUID()).build();
+        when(medicalOrderService.createOrder(any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Test\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @GetMapping("/{clinicalDayId}")
-    public ResponseEntity<List<MedicalOrderResponse>> getByClinicalDay(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(medicalOrderService.getByClinicalDay(clinicalDayId));
+    @Test
+    void getByClinicalDay_returnsList() throws Exception {
+        when(medicalOrderService.getOrdersByClinicalDay(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/orders"))
+                .andExpect(status().isOk());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<MedicalOrderResponse> patch(@PathVariable Long id, @Valid @RequestBody MedicalOrderPatchRequest request) {
-        return ResponseEntity.ok(medicalOrderService.patchMedicalOrder(id, request));
+    @Test
+    void patch_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/orders/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 
-    @PostMapping("/{id}/cancel")
-    public ResponseEntity<Void> cancel(@PathVariable Long id) {
-        medicalOrderService.cancelMedicalOrder(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{id}/plan")
-    public ResponseEntity<Void> plan(@PathVariable Long id) {
-        medicalOrderService.planMedicalOrder(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{id}/plan/finish")
-    public ResponseEntity<Void> finishPlan(@PathVariable Long id) {
-        medicalOrderService.finishPlanMedicalOrder(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<Void> cancelPlan(@PathVariable Long id) {
-        medicalOrderService.cancelPlanMedicalOrder(id);
-        return ResponseEntity.noContent().build();
+    @Test
+    void cancel_returnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/orders/123e4567-e89b-12d3-a456-426614174000")
+                        .with(csrf()).with(doctor()))
+                .andExpect(status().isNoContent());
     }
 }

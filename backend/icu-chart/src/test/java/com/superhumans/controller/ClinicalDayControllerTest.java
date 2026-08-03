@@ -7,76 +7,93 @@ import com.superhumans.dto.ClinicalDayResponse;
 import com.superhumans.dto.CloseEarlyRequest;
 import com.superhumans.dto.ReopenRequest;
 import com.superhumans.service.ClinicalDayService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/clinical-days")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(ClinicalDayController.class)
+@EnableTestExceptionHandler
 class ClinicalDayControllerTest {
 
-    ClinicalDayService clinicalDayService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @PostMapping
-    public ResponseEntity<ClinicalDayResponse> create(@Valid @RequestBody ClinicalDayCreateRequest request, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        return ResponseEntity.status(HttpStatus.CREATED).body(clinicalDayService.createClinicalDay(request, userId));
+    @MockitoBean
+    private ClinicalDayService clinicalDayService;
+
+    @Test
+    void getClinicalDay_returnsOk() throws Exception {
+        ClinicalDayResponse response = ClinicalDayResponse.builder().id(UUID.randomUUID()).build();
+        when(clinicalDayService.getClinicalDay(any())).thenReturn(response);
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ClinicalDayResponse> get(@PathVariable Long id) {
-        return clinicalDayService.getClinicalDay(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Test
+    void createClinicalDay_returnsCreated() throws Exception {
+        ClinicalDayResponse response = ClinicalDayResponse.builder().id(UUID.randomUUID()).build();
+        when(clinicalDayService.createClinicalDay(any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"episodeId\":\"123e4567-e89b-12d3-a456-426614174000\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<ClinicalDayResponse> patch(@PathVariable Long id, @Valid @RequestBody ClinicalDayPatchRequest request, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        return clinicalDayService.patchClinicalDay(id, request, userId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Test
+    void updateClinicalDay_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 
-    @PostMapping("/{id}/sign/nurse")
-    public ResponseEntity<Void> signNurse(@PathVariable Long id, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        clinicalDayService.signClinicalDayByNurse(id, userId);
-        return ResponseEntity.noContent().build();
+    @Test
+    void signNurse_returnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/sign/nurse")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"hash\":\"test\",\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 
-    @PostMapping("/{id}/sign/doctor")
-    public ResponseEntity<Void> signDoctor(@PathVariable Long id, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        clinicalDayService.signClinicalDayByDoctor(id, userId);
-        return ResponseEntity.noContent().build();
+    @Test
+    void signDoctor_returnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/sign/doctor")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"hash\":\"test\",\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 
-    @PostMapping("/{id}/reopen")
-    public ResponseEntity<Void> reopen(@PathVariable Long id, @RequestBody ReopenRequest request, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        clinicalDayService.reopenClinicalDay(id, request.getVersion(), userId);
-        return ResponseEntity.noContent().build();
+    @Test
+    void reopenClinicalDay_returnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/reopen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 
-    @PostMapping("/{id}/close-early")
-    public ResponseEntity<Void> closeEarly(@PathVariable Long id, @RequestBody CloseEarlyRequest request, Authentication auth) {
-        Long userId = (Long) auth.getCredentials();
-        clinicalDayService.closeEarly(id, request.getReason(), userId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping
-    public ResponseEntity<List<ClinicalDayResponse>> getAllByEpisode(@RequestParam Long episodeId) {
-        return ResponseEntity.ok(clinicalDayService.getAllByEpisodeId(episodeId));
+    @Test
+    void closeEarly_returnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/close-early")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"test\"}"))
+                .andExpect(status().isNoContent());
     }
 }

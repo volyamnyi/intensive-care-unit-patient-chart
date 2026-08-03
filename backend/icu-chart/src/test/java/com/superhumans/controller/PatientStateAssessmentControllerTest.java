@@ -5,36 +5,60 @@ import com.superhumans.dto.PatientStateCreateRequest;
 import com.superhumans.dto.PatientStatePatchRequest;
 import com.superhumans.dto.PatientStateResponse;
 import com.superhumans.service.PatientStateAssessmentService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/patient-state")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(PatientStateAssessmentController.class)
+@EnableTestExceptionHandler
 class PatientStateAssessmentControllerTest {
 
-    PatientStateAssessmentService patientStateAssessmentService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @PostMapping
-    public ResponseEntity<PatientStateResponse> create(@Valid @RequestBody PatientStateCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(patientStateAssessmentService.createPatientState(request));
+    @MockitoBean
+    private PatientStateAssessmentService patientStateService;
+
+    @Test
+    void create_returnsCreated() throws Exception {
+        PatientStateResponse response = PatientStateResponse.builder().id(UUID.randomUUID()).build();
+        when(patientStateService.create(any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"recordHour\":10,\"consciousness\":\"CLEAR\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @GetMapping("/{clinicalDayId}")
-    public ResponseEntity<List<PatientStateResponse>> getByClinicalDay(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(patientStateAssessmentService.getByClinicalDay(clinicalDayId));
+    @Test
+    void getByClinicalDay_returnsList() throws Exception {
+        when(patientStateService.getByClinicalDay(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state"))
+                .andExpect(status().isOk());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<PatientStateResponse> patch(@PathVariable Long id, @Valid @RequestBody PatientStatePatchRequest request) {
-        return ResponseEntity.ok(patientStateAssessmentService.patchPatientState(id, request));
+    @Test
+    void update_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/patient-state/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 }

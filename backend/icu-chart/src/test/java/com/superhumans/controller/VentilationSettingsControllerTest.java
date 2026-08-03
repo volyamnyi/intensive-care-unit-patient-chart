@@ -5,36 +5,60 @@ import com.superhumans.dto.VentilationCreateRequest;
 import com.superhumans.dto.VentilationPatchRequest;
 import com.superhumans.dto.VentilationResponse;
 import com.superhumans.service.VentilationSettingsService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 
-@RestController
-@RequestMapping("/api/ventilation")
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static com.superhumans.controller.TestSecurityHelper.doctor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(VentilationSettingsController.class)
+@EnableTestExceptionHandler
 class VentilationSettingsControllerTest {
 
-    VentilationSettingsService ventilationSettingsService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @PostMapping
-    public ResponseEntity<VentilationResponse> create(@Valid @RequestBody VentilationCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ventilationSettingsService.createVentilationSettings(request));
+    @MockitoBean
+    private VentilationSettingsService ventilationService;
+
+    @Test
+    void getVentilationSettings_returnsList() throws Exception {
+        when(ventilationService.getByClinicalDay(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/ventilation"))
+                .andExpect(status().isOk());
     }
 
-    @GetMapping("/{clinicalDayId}")
-    public ResponseEntity<List<VentilationResponse>> getByClinicalDay(@PathVariable Long clinicalDayId) {
-        return ResponseEntity.ok(ventilationSettingsService.getByClinicalDay(clinicalDayId));
+    @Test
+    void createVentilationSettings_returnsCreated() throws Exception {
+        VentilationResponse response = VentilationResponse.builder().id(UUID.randomUUID()).build();
+        when(ventilationService.create(any(), any(), anyLong())).thenReturn(response);
+
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/ventilation")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"recordHour\":10,\"mode\":\"VC\"}"))
+                .andExpect(status().isCreated());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<VentilationResponse> patch(@PathVariable Long id, @Valid @RequestBody VentilationPatchRequest request) {
-        return ResponseEntity.ok(ventilationSettingsService.patchVentilationSettings(id, request));
+    @Test
+    void updateVentilationSettings_returnsNoContent() throws Exception {
+        mockMvc.perform(patch("/api/ventilation/123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1}"))
+                .andExpect(status().isNoContent());
     }
 }
