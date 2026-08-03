@@ -152,3 +152,4 @@ class MedicalOrderControllerTest {
                 .andExpect(status().isNoContent());
     }
 }
+

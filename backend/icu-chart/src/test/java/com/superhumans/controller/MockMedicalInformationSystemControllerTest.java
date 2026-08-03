@@ -76,3 +76,4 @@ class MockMedicalInformationSystemControllerTest {
         verify(mockMisService).setErrorMode("none");
     }
 }
+

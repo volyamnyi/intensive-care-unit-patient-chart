@@ -124,3 +124,4 @@ class AuditControllerTest {
                 .andExpect(status().isOk());
     }
 }
+

@@ -20,10 +20,10 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionSchedulerService {
 
-    private final MisService misService;
-    private final PrescriptionListRepository listRepository;
-    private final PrescriptionListService listService;
-    private final NotificationService notificationService;
+    MisService misService;
+    PrescriptionListRepository listRepository;
+    PrescriptionListService listService;
+    NotificationService notificationService;
 
     @Scheduled(fixedRate = 300000)
     public void autoCreatePrescriptionLists() {

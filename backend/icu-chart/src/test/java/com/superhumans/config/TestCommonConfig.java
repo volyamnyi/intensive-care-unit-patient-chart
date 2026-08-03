@@ -1,4 +1,4 @@
-﻿package com.superhumans.config;
+package com.superhumans.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;

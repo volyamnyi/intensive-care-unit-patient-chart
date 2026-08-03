@@ -24,10 +24,10 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class VitalSignService {
 
-    private final VitalSignListRepository vitalListRepository;
-    private final VitalSignDayRepository vitalDayRepository;
-    private final VitalSignEntryRepository vitalEntryRepository;
-    private final PrescriptionListRepository listRepository;
+    VitalSignListRepository vitalListRepository;
+    VitalSignDayRepository vitalDayRepository;
+    VitalSignEntryRepository vitalEntryRepository;
+    PrescriptionListRepository listRepository;
 
     @Transactional
     public VitalSignList getOrCreate(UUID prescriptionListId) {

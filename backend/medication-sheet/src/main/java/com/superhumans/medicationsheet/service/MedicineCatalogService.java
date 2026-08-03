@@ -19,8 +19,8 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MedicineCatalogService {
 
-    private final MedicineCatalogCacheRepository cacheRepository;
-    private final MisService misService;
+    MedicineCatalogCacheRepository cacheRepository;
+    MisService misService;
 
     @Transactional(readOnly = true)
     public List<MedicineCatalogCache> search(String keyword) {

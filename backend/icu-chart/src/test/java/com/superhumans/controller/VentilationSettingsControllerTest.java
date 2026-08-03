@@ -137,3 +137,4 @@ class VentilationSettingsControllerTest {
                 .andExpect(status().isConflict());
     }
 }
+

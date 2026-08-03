@@ -110,3 +110,4 @@ class PdfControllerTest {
                 .andExpect(jsonPath("$.fileName").value("clinical_day.pdf"));
     }
 }
+

@@ -25,10 +25,10 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionItemService {
 
-    private final PrescriptionItemRepository itemRepository;
-    private final PrescriptionItemDayRepository dayRepository;
-    private final PrescriptionDayPartRepository partRepository;
-    private final PrescriptionListRepository listRepository;
+    PrescriptionItemRepository itemRepository;
+    PrescriptionItemDayRepository dayRepository;
+    PrescriptionDayPartRepository partRepository;
+    PrescriptionListRepository listRepository;
 
     @Transactional(readOnly = true)
     public List<PrescriptionItem> getByList(UUID listId) {

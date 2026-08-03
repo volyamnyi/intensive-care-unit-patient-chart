@@ -270,3 +270,4 @@ class ClinicalScaleControllerTest {
                 .andExpect(status().isForbidden());
     }
 }
+

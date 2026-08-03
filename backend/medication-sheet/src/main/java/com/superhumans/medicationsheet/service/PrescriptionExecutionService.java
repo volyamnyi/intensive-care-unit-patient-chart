@@ -24,11 +24,11 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionExecutionService {
 
-    private final PrescriptionExecutionRepository executionRepository;
-    private final PrescriptionDayPartRepository partRepository;
-    private final DrugInteractionService drugInteractionService;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    PrescriptionExecutionRepository executionRepository;
+    PrescriptionDayPartRepository partRepository;
+    DrugInteractionService drugInteractionService;
+    UserRepository userRepository;
+    PasswordEncoder passwordEncoder;
 
     @Transactional
     public PrescriptionExecution execute(UUID dayPartId, Long currentUserId, String currentUserLogin, String actualDose, String secondPersonLogin, String secondPersonPassword, boolean requires2pAuth) {

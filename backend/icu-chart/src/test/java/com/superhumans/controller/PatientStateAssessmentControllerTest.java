@@ -136,3 +136,4 @@ class PatientStateAssessmentControllerTest {
                 .andExpect(status().isConflict());
     }
 }
+

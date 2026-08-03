@@ -20,7 +20,7 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionListService {
 
-    private final PrescriptionListRepository listRepository;
+    PrescriptionListRepository listRepository;
 
     @Transactional(readOnly = true)
     public List<PrescriptionList> getByPatient(Long patientId) {

@@ -15,7 +15,7 @@ import java.util.*;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class DrugInteractionService {
 
-    private final DrugInteractionRuleRepository ruleRepository;
+    DrugInteractionRuleRepository ruleRepository;
 
     public List<String> checkConflicts(List<String> ptgCodes) {
         if (ptgCodes == null || ptgCodes.size() < 2) {

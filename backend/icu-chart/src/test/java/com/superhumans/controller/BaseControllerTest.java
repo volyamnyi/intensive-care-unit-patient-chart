@@ -1,4 +1,4 @@
-﻿package com.superhumans.controller;
+package com.superhumans.controller;
 
 import com.superhumans.config.TestCommonConfig;
 import org.springframework.context.annotation.Import;
