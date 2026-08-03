@@ -63,7 +63,7 @@ class MedicalNoteControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/notes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"Test\"}").with(csrf()).with(doctor()))
+                        .content("{\"noteType\":\"Progress Note\",\"text\":\"New note\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 

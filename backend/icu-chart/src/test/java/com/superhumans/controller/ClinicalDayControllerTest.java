@@ -74,7 +74,7 @@ class ClinicalDayControllerTest {
 
         mockMvc.perform(post("/api/clinical-days")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"episodeId\":\"123e4567-e89b-12d3-a456-426614174000\"}").with(csrf()).with(doctor()))
+                        .content("{\"episodeId\":\"123e4567-e89b-12d3-a456-426614174000\",\"startDateTime\":\"2024-01-01T08:00:00\",\"endDateTime\":\"2024-01-01T20:00:00\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -90,7 +90,7 @@ class ClinicalDayControllerTest {
     void signNurse_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/sign/nurse")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hash\":\"test\",\"version\":1}").with(csrf()).with(doctor()))
+                        .content("{\"userId\":1,\"hash\":\"test\",\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
@@ -98,7 +98,7 @@ class ClinicalDayControllerTest {
     void signDoctor_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/sign/doctor")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"hash\":\"test\",\"version\":1}").with(csrf()).with(doctor()))
+                        .content("{\"userId\":1,\"hash\":\"test\",\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 
@@ -106,7 +106,7 @@ class ClinicalDayControllerTest {
     void reopenClinicalDay_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/reopen")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}").with(csrf()).with(doctor()))
+                        .content("{\"reason\":\"error\",\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 

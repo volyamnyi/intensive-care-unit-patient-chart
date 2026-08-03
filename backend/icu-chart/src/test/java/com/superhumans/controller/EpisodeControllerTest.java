@@ -107,7 +107,7 @@ class EpisodeControllerTest {
 
         mockMvc.perform(post("/api/episodes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"patientId\":1,\"hospitalizationId\":1,\"departmentId\":\"123e4567-e89b-12d3-a456-426614174000\"}").with(csrf()).with(doctor()))
+                        .content("{\"patientId\":1,\"admissionDate\":\"2024-01-01T00:00:00\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
@@ -123,7 +123,7 @@ class EpisodeControllerTest {
     void closeEpisode_returnsNoContent() throws Exception {
         mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/close")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}").with(csrf()).with(doctor()))
+                        .content("{\"dischargeDate\":\"2024-01-05T00:00:00\",\"version\":1}").with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
     }
 

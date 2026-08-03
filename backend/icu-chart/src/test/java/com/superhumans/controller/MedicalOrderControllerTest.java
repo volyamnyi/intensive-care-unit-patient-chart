@@ -63,7 +63,7 @@ class MedicalOrderControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/orders")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\"}").with(csrf()).with(doctor()))
+                        .content("{\"category\":\"Vasopressor\",\"drugName\":\"Dopamine\",\"dose\":\"5\",\"unit\":\"mcg/kg/min\",\"route\":\"IV\",\"frequency\":\"continuous\",\"startTime\":\"2024-01-01T08:00:00\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 

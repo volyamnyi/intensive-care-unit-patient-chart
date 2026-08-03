@@ -74,9 +74,8 @@ class VentilationSettingsControllerTest {
         when(ventilationSettingsService.create(any(), any(), any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/ventilation")
-                        .with(doctor())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}").with(csrf()).with(doctor()))
+                        .content("{\"recordHour\":8,\"mode\":\"CMV\",\"fio2\":0.5}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 }

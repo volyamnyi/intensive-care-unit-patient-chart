@@ -82,7 +82,7 @@ class ClinicalScaleControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/scales")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\"}")
+                        .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\",\"result\":\"15\"}")
                         .with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
@@ -103,7 +103,7 @@ class ClinicalScaleControllerTest {
 
         mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/scales")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\"}")
+                        .content("{\"scaleId\":\"123e4567-e89b-12d3-a456-426614174000\",\"result\":\"25\"}")
                         .with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }

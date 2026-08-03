@@ -63,7 +63,7 @@ class LabResultControllerTest {
 
         mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/lab-results")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\"}").with(csrf()).with(doctor()))
+                        .content("{\"testCode\":\"WBC\",\"testName\":\"White Blood Count\",\"result\":\"8.5\",\"measuredAt\":\"2024-01-01T10:00:00\"}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
 
