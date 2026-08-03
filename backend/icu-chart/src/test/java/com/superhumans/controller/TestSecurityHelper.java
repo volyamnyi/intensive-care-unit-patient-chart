@@ -3,6 +3,7 @@ package com.superhumans.controller;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
@@ -19,45 +20,32 @@ public final class TestSecurityHelper {
     private TestSecurityHelper() {}
 
     public static RequestPostProcessor doctor() {
-        return request -> {
-            MockHttpServletRequest req = (MockHttpServletRequest)
-                    authentication(new UsernamePasswordAuthenticationToken(
-                            "user", 1L, List.of(new SimpleGrantedAuthority("ROLE_DOCTOR"))))
-                            .postProcessRequest(request);
-            req.addHeader("Authorization", "Bearer " + TEST_JWT_DOCTOR);
-            return req;
-        };
+        return authenticatedUser("user", 1L, "ROLE_DOCTOR", TEST_JWT_DOCTOR);
     }
 
     public static RequestPostProcessor nurse() {
-        return request -> {
-            MockHttpServletRequest req = (MockHttpServletRequest)
-                    authentication(new UsernamePasswordAuthenticationToken(
-                            "user", 2L, List.of(new SimpleGrantedAuthority("ROLE_NURSE"))))
-                            .postProcessRequest(request);
-            req.addHeader("Authorization", "Bearer " + TEST_JWT_NURSE);
-            return req;
-        };
+        return authenticatedUser("user", 2L, "ROLE_NURSE", TEST_JWT_NURSE);
     }
 
     public static RequestPostProcessor admin() {
-        return request -> {
-            MockHttpServletRequest req = (MockHttpServletRequest)
-                    authentication(new UsernamePasswordAuthenticationToken(
-                            "user", 3L, List.of(new SimpleGrantedAuthority("ROLE_ADMINISTRATOR"))))
-                            .postProcessRequest(request);
-            req.addHeader("Authorization", "Bearer " + TEST_JWT_ADMIN);
-            return req;
-        };
+        return authenticatedUser("user", 3L, "ROLE_ADMINISTRATOR", TEST_JWT_ADMIN);
     }
 
     public static RequestPostProcessor hod() {
+        return authenticatedUser("user", 4L, "ROLE_HEAD_OF_DEPARTMENT", TEST_JWT_HOD);
+    }
+
+    public static RequestPostProcessor auditor() {
+        return authenticatedUser("user", 5L, "ROLE_AUDITOR", "test-auditor-token");
+    }
+
+    private static RequestPostProcessor authenticatedUser(String login, Long userId, String role, String jwt) {
         return request -> {
-            MockHttpServletRequest req = (MockHttpServletRequest)
-                    authentication(new UsernamePasswordAuthenticationToken(
-                            "user", 4L, List.of(new SimpleGrantedAuthority("ROLE_HEAD_OF_DEPARTMENT"))))
-                            .postProcessRequest(request);
-            req.addHeader("Authorization", "Bearer " + TEST_JWT_HOD);
+            UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
+                    login, userId, List.of(new SimpleGrantedAuthority(role)));
+            MockHttpServletRequest req = (MockHttpServletRequest) authentication(token).postProcessRequest(request);
+            req.addHeader("Authorization", "Bearer " + jwt);
+            SecurityContextHolder.getContext().setAuthentication(token);
             return req;
         };
     }
