@@ -12,9 +12,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -56,28 +56,28 @@ class PrescriptionControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private PrescriptionListService listService;
 
-    @MockBean
+    @MockitoBean
     private PrescriptionItemService itemService;
 
-    @MockBean
+    @MockitoBean
     private PrescriptionExecutionService executionService;
 
-    @MockBean
+    @MockitoBean
     private VitalSignService vitalSignService;
 
-    @MockBean
+    @MockitoBean
     private MisService misService;
 
-    @MockBean
+    @MockitoBean
     private com.superhumans.auth.JwtTokenProvider jwtTokenProvider;
 
-    @MockBean
+    @MockitoBean
     private com.superhumans.repository.AuditLogRepository auditLogRepository;
 
-    @MockBean
+    @MockitoBean
     private AuditService auditService;
 
     private UUID listId;

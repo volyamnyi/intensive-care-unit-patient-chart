@@ -60,7 +60,7 @@ frontend/  (React 19 + TS 6 + Vite 8 + MUI 9, single app)
   src/icu-chart/            ← ICU chart feature module
   src/medication-sheet/     ← Medication sheet (prescriptions) feature module
   src/shared/               ← shared types, API client, components, auth
-backend/   (Spring Boot 3.2.5 + Java 17 + Maven, multi-module)
+backend/   (Spring Boot 4.1.0 + Java 25 + Maven, multi-module)
   pom.xml                   ← parent POM (pom packaging, 3 modules)
   common/                   ← shared entities, JWT/security, base classes
   icu-chart/                ← existing app (@SpringBootApplication, single-deployment JAR)

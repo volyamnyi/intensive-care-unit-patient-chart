@@ -1,7 +1,7 @@
 # Карта інтенсивної терапії (ICU Patient Chart)
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk)](https://jdk.java.net/17/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk)](https://jdk.java.net/25/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?logo=vite)](https://vite.dev/)
@@ -63,8 +63,8 @@
 ### Backend
 | Technology | Version | Purpose |
 |---|---|---|
-| Java | 17 | Runtime |
-| Spring Boot | 3.2.5 | Application framework |
+| Java | 25 | Runtime |
+| Spring Boot | 4.1.0 | Application framework |
 | Spring Data JPA | — | ORM / database access |
 | Spring Security | — | JWT-based authentication |
 | PostgreSQL | 16 | Relational database |

@@ -2,7 +2,7 @@ package com.superhumans.mis;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.superhumans.mis.dto.*;
 import com.superhumans.service.AuditService;
 import lombok.RequiredArgsConstructor;

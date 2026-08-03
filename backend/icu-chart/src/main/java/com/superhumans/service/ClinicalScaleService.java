@@ -3,8 +3,8 @@ package com.superhumans.service;
 import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.entity.*;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
@@ -124,7 +124,7 @@ public class ClinicalScaleService {
         String rawJson;
         try {
             rawJson = objectMapper.writeValueAsString(rawData);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             rawJson = rawData.toString();
         }
 

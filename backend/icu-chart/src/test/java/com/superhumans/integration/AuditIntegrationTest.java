@@ -1,9 +1,8 @@
 package com.superhumans.integration;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.dto.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
@@ -19,8 +18,7 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
     private static final UUID SEED_DAY_ID =
             UUID.fromString("b1111111-1111-1111-1111-111111111111");
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule());
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private List<AuditLogResponse> parseContent(String json) throws Exception {
         JsonNode root = mapper.readTree(json);
