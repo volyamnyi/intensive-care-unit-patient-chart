@@ -397,7 +397,7 @@ export default function IntensiveCareCard({
       onRefresh={onRefresh}
     >
       {selectedDay && (
-        <HourlyGrid {...gridProps} isMobile={false} />
+        <HourlyGrid {...gridProps} isMobile={false} sticky bare />
       )}
       </HourlyGridDialog>
     </>

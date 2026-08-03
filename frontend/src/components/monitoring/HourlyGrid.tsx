@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useState, useCallback, useRef, useEffect, memo, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,23 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { medicalOrderApi } from '../../api/endpoints';
 import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types';
+
+function GridTable({ sticky, children }: { sticky: boolean; children: ReactNode }) {
+  if (!sticky) {
+    return <Table className="min-w-[1100px]" style={{ tableLayout: 'fixed' }}>{children}</Table>;
+  }
+  // Sticky-режим: без обгортки ui Table (вона має власний overflow-x-auto —
+  // два скрол-контейнери зламали б закріплення рядка годин при вертикальному скролі).
+  return (
+    <table
+      data-slot="table"
+      className="w-full caption-bottom text-sm min-w-[1100px] border-separate"
+      style={{ tableLayout: 'fixed' }}
+    >
+      {children}
+    </table>
+  );
+}
 
 const HOURS = Array.from({ length: 24 }, (_, i) => (i + 8) % 24);
 
@@ -408,6 +425,8 @@ export interface HourlyGridProps {
   onError?: (msg: string) => void;
   toolbar?: React.ReactNode;
   onHeaderDoubleClick?: () => void;
+  sticky?: boolean;
+  bare?: boolean;
 }
 
 export default function HourlyGrid({
@@ -416,6 +435,7 @@ export default function HourlyGrid({
   canEditSidebar, onSetOrderFormOpen, onSaveCell,
   onPlanOrder, onCancelOrder, onExecuteOrder, onExecuteFinishOrder,
   onRefresh, onError, toolbar, onHeaderDoubleClick,
+  sticky = false, bare = false,
 }: HourlyGridProps) {
   const boundValue = (hour: number, key: keyof HourlyRecord): string => {
     const r = recByHour.get(hour);
@@ -424,15 +444,23 @@ export default function HourlyGrid({
     return String(v);
   };
 
+  // Fallback (Chromium CI): якщо sticky-панелі у <table> виявляться нестабільними,
+  // перекомпонувати сітку на CSS-grid: grid-template-columns: 132px repeat(24, minmax(44px, 1fr)).
+  // Cell/TherapyCell вже проп-декомпозовані — aria-label та E2E-селектори збережуться.
+  const Root = bare ? 'div' : 'main';
+  const stickyRowClass = sticky ? 'sticky top-0 z-20 border-b border-border' : '';
+  const stickyColClass = sticky ? 'sticky left-0 z-10 bg-card border-r border-border' : '';
+  const stickyCornerClass = sticky ? 'sticky left-0 top-0 z-30 bg-muted' : '';
+
   return (
-    <main className={cn('min-w-0', isMobile ? 'w-full' : 'flex-1')}>
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <Root className={cn('min-w-0', isMobile ? 'w-full' : 'flex-1', sticky && 'h-full min-h-0')}>
+      <div className={cn('overflow-hidden rounded-xl border border-border bg-card', sticky && 'flex h-full flex-col')}>
         {toolbar}
-        <div className="overflow-x-auto">
-          <Table className="min-w-[1100px]" style={{ tableLayout: 'fixed' }}>
+        <div className={sticky ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'}>
+          <GridTable sticky={sticky}>
             <TableHeader>
-              <TableRow className="bg-muted">
-                <TableHead className="font-bold min-w-[130px] border-r border-border">
+              <TableRow className={cn('bg-muted', stickyRowClass)}>
+                <TableHead className={cn('font-bold min-w-[130px] border-r border-border', stickyCornerClass)}>
                   {onHeaderDoubleClick ? (
                     <TooltipProvider>
                       <Tooltip>
@@ -463,7 +491,7 @@ export default function HourlyGrid({
             <GroupHeader label="Показники" nurseEditable={!isNurse} />
             {VITAL_ROWS.map((row) => (
               <TableRow key={String(row.key)}>
-                <TableCell className="font-semibold text-xs whitespace-nowrap border-r border-border">{row.label}</TableCell>
+                <TableCell className={cn('font-semibold text-xs whitespace-nowrap border-r border-border', stickyColClass)}>{row.label}</TableCell>
                 {HOURS.map((h) => (
                   <Cell
                     key={h}
@@ -486,7 +514,7 @@ export default function HourlyGrid({
             <GroupHeader label="Втрати (мл)" nurseEditable />
             {LOSS_ROWS.map((row) => (
               <TableRow key={String(row.key)}>
-                <TableCell className="font-semibold text-xs border-r border-border">{row.label}</TableCell>
+                <TableCell className={cn('font-semibold text-xs border-r border-border', stickyColClass)}>{row.label}</TableCell>
                 {HOURS.map((h) => (
                   <Cell
                     key={h}
@@ -509,7 +537,7 @@ export default function HourlyGrid({
             <GroupHeader label="Заходи по догляду" nurseEditable />
             {CARE_ROWS.map((row) => (
               <TableRow key={String(row.key)}>
-                <TableCell className="font-semibold text-xs border-r border-border">{row.label}</TableCell>
+                <TableCell className={cn('font-semibold text-xs border-r border-border', stickyColClass)}>{row.label}</TableCell>
                 {HOURS.map((h) => (
                   <Cell
                     key={h}
@@ -532,7 +560,7 @@ export default function HourlyGrid({
             <GroupHeader label="Вазопресорна та інотропна підтримка (мкг/кг/хв)" nurseEditable />
             {VASOPRESSOR_ROWS.map((row) => (
               <TableRow key={String(row.key)}>
-                <TableCell className="font-semibold text-xs border-r border-border">{row.label}</TableCell>
+                <TableCell className={cn('font-semibold text-xs border-r border-border', stickyColClass)}>{row.label}</TableCell>
                 {HOURS.map((h) => (
                   <Cell
                     key={h}
@@ -586,7 +614,7 @@ export default function HourlyGrid({
             )}
             {activeOrders.map((order) => (
               <TableRow key={order.id}>
-                <TableCell className="text-[10px] whitespace-nowrap overflow-hidden text-ellipsis border-r border-border">
+                <TableCell className={cn('text-[10px] whitespace-nowrap overflow-hidden text-ellipsis border-r border-border', stickyColClass)}>
                   {order.drugName} {order.dose}{order.unit}{' '}
                   <span className="text-xs font-bold text-success">{order.status === 'ACTIVE' ? 'Активне' : order.status === 'DRAFT' ? 'Чернетка' : ''}</span>
                 </TableCell>
@@ -610,9 +638,9 @@ export default function HourlyGrid({
               </TableRow>
             ))}
           </TableBody>
-          </Table>
+          </GridTable>
         </div>
       </div>
-    </main>
+    </Root>
   );
 }
