@@ -89,9 +89,10 @@ export default function HourlyGridDialog({
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal data-fullscreen="true">
+    <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal>
       <DialogContent
         showCloseButton={false}
+        data-fullscreen="true"
         style={{ inset: 0, translate: 'none', transformOrigin: origin }}
         className="grid w-full max-w-none grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 rounded-none bg-card p-0 ring-0 sm:max-w-none print:hidden"
       >

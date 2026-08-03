@@ -158,12 +158,12 @@
 
 /* Fullscreen dialog overlay: no backdrop blur (F-6 resolution — scoped via :has,
    ui/dialog.tsx untouched) and darker tint in dark theme */
-body:has([data-slot="dialog"][data-fullscreen="true"]) [data-slot="dialog-overlay"] {
+body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialog-overlay"] {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 
-.dark body:has([data-slot="dialog"][data-fullscreen="true"]) [data-slot="dialog-overlay"] {
+.dark body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialog-overlay"] {
   background-color: rgb(0 0 0 / 0.2);
 }
 

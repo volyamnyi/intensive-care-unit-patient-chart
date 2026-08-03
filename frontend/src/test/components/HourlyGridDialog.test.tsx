@@ -56,9 +56,9 @@ describe('HourlyGridDialog', () => {
     }
   );
 
-  it('marks the dialog root with data-fullscreen for the CSS morph scoping', () => {
+  it('marks the dialog popup with data-fullscreen for the CSS morph scoping', () => {
     renderDialog('OPEN');
-    expect(document.querySelector('[data-slot="dialog"][data-fullscreen="true"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="dialog-content"][data-fullscreen="true"]')).not.toBeNull();
   });
 
   it('sets transformOrigin on the popup from the trigger rect (morph anchor)', () => {
