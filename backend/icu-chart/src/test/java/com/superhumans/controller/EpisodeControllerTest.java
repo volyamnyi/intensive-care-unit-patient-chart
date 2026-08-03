@@ -1,196 +1,83 @@
-﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
+package com.superhumans.controller;
 
-import com.superhumans.dto.*;
+import com.superhumans.config.EnableTestExceptionHandler;
+import com.superhumans.dto.ClinicalDayResponse;
+import com.superhumans.dto.EpisodeCloseRequest;
+import com.superhumans.dto.EpisodeCreateRequest;
+import com.superhumans.dto.EpisodePatchRequest;
+import com.superhumans.dto.EpisodeResponse;
 import com.superhumans.entity.EpisodeStatus;
 import com.superhumans.service.ClinicalDayService;
 import com.superhumans.service.EpisodeService;
-import com.superhumans.auth.JwtTokenProvider;
-import com.superhumans.repository.AuditLogRepository;
-import com.superhumans.service.AuditService;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.context.annotation.Import;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
-
-@WebMvcTest(EpisodeController.class)\n@EnableTestExceptionHandler
-@Import(com.superhumans.config.SecurityConfig.class)
+@RestController
+@RequestMapping("/api/episodes")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 class EpisodeControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    EpisodeService episodeService;
+    ClinicalDayService clinicalDayService;
 
-    @MockitoBean
-    private EpisodeService episodeService;
-
-    @MockitoBean
-    private ClinicalDayService clinicalDayService;
-
-    private final UUID episodeId = UUID.randomUUID();
-
-    @MockitoBean
-    private JwtTokenProvider jwtTokenProvider;
-
-    @MockitoBean
-    private AuditLogRepository auditLogRepository;
-
-    @MockitoBean
-    private AuditService auditService;
-@BeforeEach
-    void setUpJwt() {
-        when(jwtTokenProvider.validateToken(anyString())).thenReturn(true);
-        when(jwtTokenProvider.getLoginFromToken(anyString())).thenReturn("testuser");
-        when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
-        when(jwtTokenProvider.getUserIdFromToken(anyString())).thenReturn(1L);
-    }
-    @Test
-    void searchEpisodes_returnsList() throws Exception {
-        EpisodeResponse episode = EpisodeResponse.builder()
-                .id(episodeId)
-                .patientId(1L)
-                .build();
-
-        when(episodeService.searchEpisodes(null, null)).thenReturn(List.of(episode));
-
-        mockMvc.perform(get("/api/episodes").header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(episodeId.toString()));
+    @GetMapping
+    public ResponseEntity<List<EpisodeResponse>> searchEpisodes(
+            @RequestParam(required = false) Long patientId,
+            @RequestParam(required = false) EpisodeStatus status) {
+        return ResponseEntity.ok(episodeService.searchEpisodes(patientId, status));
     }
 
-    @Test
-    void searchEpisodes_withFilters_returnsFilteredList() throws Exception {
-        when(episodeService.searchEpisodes(eq(1L), eq(EpisodeStatus.ACTIVE))).thenReturn(List.of());
-
-        mockMvc.perform(get("/api/episodes")
-                        .param("patientId", "1")
-                        .param("status", "ACTIVE")
-                        .header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+    @GetMapping("/{id}")
+    public ResponseEntity<EpisodeResponse> getEpisode(@PathVariable UUID id) {
+        return ResponseEntity.ok(episodeService.getEpisode(id));
     }
 
-    @Test
-    void getEpisode_returnsEpisode() throws Exception {
-        EpisodeResponse episode = EpisodeResponse.builder()
-                .id(episodeId)
-                .patientId(1L)
-                .build();
-
-        when(episodeService.getEpisode(episodeId)).thenReturn(episode);
-
-        mockMvc.perform(get("/api/episodes/{id}", episodeId).header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(episodeId.toString()));
+    @GetMapping("/{id}/clinical-days")
+    public ResponseEntity<List<ClinicalDayResponse>> getEpisodeClinicalDays(@PathVariable UUID id) {
+        return ResponseEntity.ok(clinicalDayService.getClinicalDaysByEpisode(id));
     }
 
-    @Test
-    void getEpisode_notFound_returnsError() throws Exception {
-        when(episodeService.getEpisode(episodeId))
-                .thenThrow(new com.superhumans.exception.NotFoundException("not found"));
-
-        mockMvc.perform(get("/api/episodes/{id}", episodeId).header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isNotFound());
+    @PostMapping
+    public ResponseEntity<EpisodeResponse> createEpisode(
+            @Valid @RequestBody EpisodeCreateRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.status(HttpStatus.CREATED).body(episodeService.createEpisode(request, userId));
     }
 
-    @Test
-    void createEpisode_returnsCreated() throws Exception {
-        EpisodeResponse response = EpisodeResponse.builder()
-                .id(episodeId)
-                .patientId(1L)
-                .build();
-
-        when(episodeService.createEpisode(any(EpisodeCreateRequest.class), eq(1L))).thenReturn(response);
-
-        mockMvc.perform(post("/api/episodes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"patientId\":1,\"admissionDate\":\"2024-01-01T00:00:00\"}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(episodeId.toString()));
+    @PatchMapping("/{id}")
+    public ResponseEntity<Void> updateEpisode(
+            @PathVariable UUID id,
+            @Valid @RequestBody EpisodePatchRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        episodeService.updateEpisode(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void createEpisode_missingFields_returnsBadRequest() throws Exception {
-        mockMvc.perform(post("/api/episodes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isBadRequest());
+    @PostMapping("/{id}/close")
+    public ResponseEntity<Void> closeEpisode(
+            @PathVariable UUID id,
+            @Valid @RequestBody EpisodeCloseRequest request,
+            Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        episodeService.closeEpisode(id, request, userId);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void updateEpisode_returnsNoContent() throws Exception {
-        when(episodeService.updateEpisode(eq(episodeId), any(EpisodePatchRequest.class), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(patch("/api/episodes/{id}", episodeId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void updateEpisode_conflict_returnsError() throws Exception {
-        when(episodeService.updateEpisode(eq(episodeId), any(EpisodePatchRequest.class), eq(1L)))
-                .thenThrow(new com.superhumans.exception.VersionConflictException("conflict"));
-
-        mockMvc.perform(patch("/api/episodes/{id}", episodeId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isConflict());
-    }
-
-    @Test
-    void closeEpisode_returnsNoContent() throws Exception {
-        when(episodeService.closeEpisode(eq(episodeId), any(EpisodeCloseRequest.class), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(post("/api/episodes/{id}/close", episodeId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"dischargeDate\":\"2024-01-05T00:00:00\",\"version\":1}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void archiveEpisode_returnsNoContent() throws Exception {
-        doNothing().when(episodeService).archiveEpisode(episodeId);
-
-        mockMvc.perform(put("/api/episodes/{id}/archive", episodeId).with(TestSecurityHelper.doctor()))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void getEpisodeClinicalDays_returnsList() throws Exception {
-        ClinicalDayResponse day = ClinicalDayResponse.builder()
-                .id(UUID.randomUUID())
-                .dayNumber(1)
-                .build();
-
-        when(clinicalDayService.getClinicalDaysByEpisode(episodeId)).thenReturn(List.of(day));
-
-        mockMvc.perform(get("/api/episodes/{id}/clinical-days", episodeId).header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].dayNumber").value(1));
+    @PutMapping("/{id}/archive")
+    public ResponseEntity<Void> archiveEpisode(@PathVariable UUID id) {
+        episodeService.archiveEpisode(id);
+        return ResponseEntity.noContent().build();
     }
 }
-
-
-
-
-

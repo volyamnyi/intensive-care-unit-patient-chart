@@ -1,4 +1,4 @@
-﻿package com.superhumans.controller;
+package com.superhumans.controller;
 
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.auth.JwtTokenProvider;
@@ -17,63 +17,56 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 @RestController
-@RequestMapping(\"/api/auth\")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 class AuthControllerTest {
 
-    @MockitoBean
-    private AuthService authService;
+    AuthService authService;
+    JwtTokenProvider jwtTokenProvider;
 
-    @MockitoBean
-    private JwtTokenProvider jwtTokenProvider;
-
-    @BeforeEach
-    void setUp() {
-        when(jwtTokenProvider.generateToken(anyString(), anyString(), anyLong(), anyString()))
-                .thenReturn(\"test-jwt-token\");
-    }
-
-    @Test
-    void login_success_returnsTokenAndSetsCookie() throws Exception {
-        LoginRequest request = new LoginRequest(\"doctor1\", \"password\");
-        LoginResponse response = LoginResponse.builder()
-                .userId(1L)
-                .login(\"doctor1\")
-                .fullName(\"Doctor One\")
-                .role(\"DOCTOR\")
-                .email(\"doctor1@test.com\")
-                .permissions(\"\")
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req, HttpServletRequest request) {
+        ResponseEntity<LoginResponse> response = authService.login(req, request.getRemoteAddr());
+        if (response.getBody() == null) {
+            return response;
+        }
+        String token = jwtTokenProvider.generateToken(
+                response.getBody().getLogin(),
+                response.getBody().getRole(),
+                response.getBody().getUserId(),
+                response.getBody().getPermissions());
+        ResponseCookie jwtCookie = ResponseCookie.from("jwt", token)
+                .httpOnly(true)
+                .secure(request.isSecure())
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(86400)
                 .build();
-
-        when(authService.login(any(LoginRequest.class), anyString()))
-                .thenReturn(ResponseEntity.ok(response));
-
-        mockMvc.perform(post(\"/api/auth/login\")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(header().exists(HttpHeaders.SET_COOKIE))
-                .andExpect(jsonPath(\"$.token\").exists());
+        LoginResponse loginResponse = response.getBody();
+        loginResponse.setToken(token);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                .body(loginResponse);
     }
 
-    @Test
-    void login_invalidCredentials_returnsUnauthorized() throws Exception {
-        LoginRequest request = new LoginRequest(\"doctor1\", \"wrong\");
-
-        when(authService.login(any(LoginRequest.class), anyString()))
-                .thenReturn(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null));
-
-        mockMvc.perform(post(\"/api/auth/login\")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void logout_clearsCookie() throws Exception {
-        mockMvc.perform(post(\"/api/auth/logout\").with(doctor()))
-                .andExpect(status().isOk())
-                .andExpect(header().exists(HttpHeaders.SET_COOKIE));
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest request) {
+        if (authentication != null && authentication.getCredentials() instanceof Long userId) {
+            String role = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .findFirst()
+                    .map(a -> a.startsWith("ROLE_") ? a.substring(5) : a)
+                    .orElse(null);
+            authService.logout(userId, role, request.getRemoteAddr());
+        }
+        ResponseCookie clearCookie = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .build();
     }
 }

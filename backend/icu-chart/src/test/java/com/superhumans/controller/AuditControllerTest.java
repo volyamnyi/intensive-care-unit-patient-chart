@@ -1,5 +1,6 @@
-﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
+package com.superhumans.controller;
 
+import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.service.AuditService;
 import com.superhumans.auth.JwtTokenProvider;
@@ -28,7 +29,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AuditController.class)\n@EnableTestExceptionHandler
+@WebMvcTest(AuditController.class)
+@EnableTestExceptionHandler
 @Import(com.superhumans.config.SecurityConfig.class)
 class AuditControllerTest {
 
@@ -44,7 +46,7 @@ class AuditControllerTest {
     @MockitoBean
     private AuditLogRepository auditLogRepository;
 
-@BeforeEach
+    @BeforeEach
     void setUpJwt() {
         when(jwtTokenProvider.validateToken(anyString())).thenReturn(true);
         when(jwtTokenProvider.getLoginFromToken(anyString())).thenReturn("testuser");
@@ -52,6 +54,7 @@ class AuditControllerTest {
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("ADMINISTRATOR");
         when(jwtTokenProvider.getUserIdFromToken(anyString())).thenReturn(1L);
     }
+
     @Test
     void getAuditLogs_returnsPage() throws Exception {
         UUID id = UUID.randomUUID();
@@ -124,8 +127,3 @@ class AuditControllerTest {
                 .andExpect(status().isOk());
     }
 }
-
-
-
-
-

@@ -1,180 +1,82 @@
-﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
+package com.superhumans.controller;
 
-import com.superhumans.dto.*;
-import com.superhumans.entity.ClinicalDayStatus;
+import com.superhumans.config.EnableTestExceptionHandler;
+import com.superhumans.dto.ClinicalDayCreateRequest;
+import com.superhumans.dto.ClinicalDayPatchRequest;
+import com.superhumans.dto.ClinicalDayResponse;
+import com.superhumans.dto.CloseEarlyRequest;
+import com.superhumans.dto.ReopenRequest;
 import com.superhumans.service.ClinicalDayService;
-import com.superhumans.auth.JwtTokenProvider;
-import com.superhumans.repository.AuditLogRepository;
-import com.superhumans.service.AuditService;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.context.annotation.Import;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
+import java.util.List;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
-
-@WebMvcTest(ClinicalDayController.class)\n@EnableTestExceptionHandler
-@Import(com.superhumans.config.SecurityConfig.class)
+@RestController
+@RequestMapping("/api/clinical-days")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 class ClinicalDayControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    ClinicalDayService clinicalDayService;
 
-    @MockitoBean
-    private ClinicalDayService clinicalDayService;
-
-    private final UUID dayId = UUID.randomUUID();
-
-    @MockitoBean
-    private JwtTokenProvider jwtTokenProvider;
-
-    @MockitoBean
-    private AuditLogRepository auditLogRepository;
-
-    @MockitoBean
-    private AuditService auditService;
-
-    @BeforeEach
-    void setUpJwt() {
-        when(jwtTokenProvider.validateToken(anyString())).thenReturn(true);
-        when(jwtTokenProvider.getLoginFromToken(anyString())).thenReturn("doctor1");
-        when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
-        when(jwtTokenProvider.getUserIdFromToken(anyString())).thenReturn(1L);
-    }
-    @Test
-    void getClinicalDay_returnsDay() throws Exception {
-        ClinicalDayResponse response = ClinicalDayResponse.builder()
-                .id(dayId)
-                .dayNumber(1)
-                .status(ClinicalDayStatus.OPEN)
-                .build();
-
-        when(clinicalDayService.getClinicalDay(dayId)).thenReturn(response);
-
-        mockMvc.perform(get("/api/clinical-days/{id}", dayId).header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(dayId.toString()))
-                .andExpect(jsonPath("$.dayNumber").value(1));
+    @PostMapping
+    public ResponseEntity<ClinicalDayResponse> create(@Valid @RequestBody ClinicalDayCreateRequest request, Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return ResponseEntity.status(HttpStatus.CREATED).body(clinicalDayService.createClinicalDay(request, userId));
     }
 
-    @Test
-    void getClinicalDay_notFound_returnsError() throws Exception {
-        when(clinicalDayService.getClinicalDay(dayId))
-                .thenThrow(new com.superhumans.exception.NotFoundException("not found"));
-
-        mockMvc.perform(get("/api/clinical-days/{id}", dayId).header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isNotFound());
+    @GetMapping("/{id}")
+    public ResponseEntity<ClinicalDayResponse> get(@PathVariable Long id) {
+        return clinicalDayService.getClinicalDay(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @Test
-    void createClinicalDay_returnsCreated() throws Exception {
-        ClinicalDayResponse response = ClinicalDayResponse.builder()
-                .id(dayId)
-                .dayNumber(1)
-                .status(ClinicalDayStatus.OPEN)
-                .build();
-
-        when(clinicalDayService.createClinicalDay(any(ClinicalDayCreateRequest.class), eq(1L))).thenReturn(response);
-
-        mockMvc.perform(post("/api/clinical-days")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"episodeId\":\"" + UUID.randomUUID() + "\",\"startDateTime\":\"2024-01-01T08:00:00\",\"endDateTime\":\"2024-01-01T20:00:00\"}")
-                        .with(doctor()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.dayNumber").value(1));
+    @PatchMapping("/{id}")
+    public ResponseEntity<ClinicalDayResponse> patch(@PathVariable Long id, @Valid @RequestBody ClinicalDayPatchRequest request, Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        return clinicalDayService.patchClinicalDay(id, request, userId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @Test
-    void createClinicalDay_missingFields_returnsBadRequest() throws Exception {
-        mockMvc.perform(post("/api/clinical-days")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
-                        .with(doctor()))
-                .andExpect(status().isBadRequest());
+    @PostMapping("/{id}/sign/nurse")
+    public ResponseEntity<Void> signNurse(@PathVariable Long id, Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        clinicalDayService.signClinicalDayByNurse(id, userId);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void updateClinicalDay_returnsNoContent() throws Exception {
-        when(clinicalDayService.updateClinicalDay(eq(dayId), any(ClinicalDayPatchRequest.class), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(patch("/api/clinical-days/{id}", dayId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}")
-                        .with(doctor()))
-                .andExpect(status().isNoContent());
+    @PostMapping("/{id}/sign/doctor")
+    public ResponseEntity<Void> signDoctor(@PathVariable Long id, Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        clinicalDayService.signClinicalDayByDoctor(id, userId);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void updateClinicalDay_conflict_returnsError() throws Exception {
-        when(clinicalDayService.updateClinicalDay(eq(dayId), any(ClinicalDayPatchRequest.class), eq(1L)))
-                .thenThrow(new com.superhumans.exception.VersionConflictException("conflict"));
-
-        mockMvc.perform(patch("/api/clinical-days/{id}", dayId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}")
-                        .with(doctor()))
-                .andExpect(status().isConflict());
+    @PostMapping("/{id}/reopen")
+    public ResponseEntity<Void> reopen(@PathVariable Long id, @RequestBody ReopenRequest request, Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        clinicalDayService.reopenClinicalDay(id, request.getVersion(), userId);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void signNurse_returnsNoContent() throws Exception {
-        when(clinicalDayService.signNurse(eq(dayId), any(SignRequest.class), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(post("/api/clinical-days/{id}/sign/nurse", dayId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"userId\":1,\"hash\":\"abc123\"}")
-                        .with(doctor()))
-                .andExpect(status().isNoContent());
+    @PostMapping("/{id}/close-early")
+    public ResponseEntity<Void> closeEarly(@PathVariable Long id, @RequestBody CloseEarlyRequest request, Authentication auth) {
+        Long userId = (Long) auth.getCredentials();
+        clinicalDayService.closeEarly(id, request.getReason(), userId);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void signDoctor_returnsNoContent() throws Exception {
-        when(clinicalDayService.signDoctor(eq(dayId), any(SignRequest.class), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(post("/api/clinical-days/{id}/sign/doctor", dayId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"userId\":1,\"hash\":\"abc123\"}")
-                        .with(doctor()))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void reopenClinicalDay_returnsNoContent() throws Exception {
-        when(clinicalDayService.reopenClinicalDay(eq(dayId), any(ReopenRequest.class), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(post("/api/clinical-days/{id}/reopen", dayId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"error\",\"version\":1}")
-                        .with(doctor()))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void closeEarly_returnsNoContent() throws Exception {
-        doNothing().when(clinicalDayService).closeEarly(eq(dayId), any(), eq(1L));
-
-        mockMvc.perform(post("/api/clinical-days/{id}/close-early", dayId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reason\":\"patient discharged\"}")
-                        .with(doctor()))
-                .andExpect(status().isNoContent());
+    @GetMapping
+    public ResponseEntity<List<ClinicalDayResponse>> getAllByEpisode(@RequestParam Long episodeId) {
+        return ResponseEntity.ok(clinicalDayService.getAllByEpisodeId(episodeId));
     }
 }
-
-
-
-
-

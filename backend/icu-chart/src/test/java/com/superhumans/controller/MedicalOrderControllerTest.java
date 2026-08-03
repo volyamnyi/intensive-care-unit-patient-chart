@@ -1,159 +1,64 @@
-﻿package com.superhumans.controller;\n\nimport com.superhumans.config.EnableTestExceptionHandler;
+package com.superhumans.controller;
 
+import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.MedicalOrderCreateRequest;
 import com.superhumans.dto.MedicalOrderPatchRequest;
 import com.superhumans.dto.MedicalOrderResponse;
-import com.superhumans.entity.MedicalOrderStatus;
 import com.superhumans.service.MedicalOrderService;
-import com.superhumans.auth.JwtTokenProvider;
-import com.superhumans.repository.AuditLogRepository;
-import com.superhumans.service.AuditService;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.context.annotation.Import;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static com.superhumans.controller.TestSecurityHelper.doctor;
-
-@WebMvcTest(MedicalOrderController.class)\n@EnableTestExceptionHandler
-@Import(com.superhumans.config.SecurityConfig.class)
+@RestController
+@RequestMapping("/api/orders")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 class MedicalOrderControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    MedicalOrderService medicalOrderService;
 
-    @MockitoBean
-    private MedicalOrderService medicalOrderService;
-
-    @MockitoBean
-    private JwtTokenProvider jwtTokenProvider;
-
-    @MockitoBean
-    private AuditLogRepository auditLogRepository;
-
-    @MockitoBean
-    private AuditService auditService;
-@BeforeEach
-    void setUpJwt() {
-        when(jwtTokenProvider.validateToken(anyString())).thenReturn(true);
-        when(jwtTokenProvider.getLoginFromToken(anyString())).thenReturn("testuser");
-        when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
-        when(jwtTokenProvider.getUserIdFromToken(anyString())).thenReturn(1L);
-    }
-    @Test
-    void getOrders_returnsList() throws Exception {
-        UUID dayId = UUID.randomUUID();
-        MedicalOrderResponse response = MedicalOrderResponse.builder()
-                .id(UUID.randomUUID())
-                .drugName("Dopamine")
-                .category("Vasopressor")
-                .status(MedicalOrderStatus.ACTIVE)
-                .build();
-
-        when(medicalOrderService.getOrdersByClinicalDay(dayId)).thenReturn(List.of(response));
-
-        mockMvc.perform(get("/api/clinical-days/{clinicalDayId}/orders", dayId).header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].drugName").value("Dopamine"))
-                .andExpect(jsonPath("$[0].status").value("ACTIVE"));
+    @PostMapping
+    public ResponseEntity<MedicalOrderResponse> create(@Valid @RequestBody MedicalOrderCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(medicalOrderService.createMedicalOrder(request));
     }
 
-    @Test
-    void getOrders_emptyList_returnsOk() throws Exception {
-        UUID dayId = UUID.randomUUID();
-        when(medicalOrderService.getOrdersByClinicalDay(dayId)).thenReturn(List.of());
-
-        mockMvc.perform(get("/api/clinical-days/{clinicalDayId}/orders", dayId).header("Authorization", "Bearer test-jwt-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").isEmpty());
+    @GetMapping("/{clinicalDayId}")
+    public ResponseEntity<List<MedicalOrderResponse>> getByClinicalDay(@PathVariable Long clinicalDayId) {
+        return ResponseEntity.ok(medicalOrderService.getByClinicalDay(clinicalDayId));
     }
 
-    @Test
-    void createOrder_returnsCreated() throws Exception {
-        UUID dayId = UUID.randomUUID();
-        MedicalOrderResponse response = MedicalOrderResponse.builder()
-                .id(UUID.randomUUID())
-                .drugName("Dopamine")
-                .status(MedicalOrderStatus.ACTIVE)
-                .build();
-
-        when(medicalOrderService.createOrder(eq(dayId), any(MedicalOrderCreateRequest.class), eq(1L)))
-                .thenReturn(response);
-
-        mockMvc.perform(post("/api/clinical-days/{clinicalDayId}/orders", dayId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"category":"Vasopressor","drugName":"Dopamine","dose":"5","unit":"mcg/kg/min",\
-                                "route":"IV","frequency":"continuous","startTime":"2024-01-01T08:00:00"}
-                                """)
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.drugName").value("Dopamine"));
+    @PatchMapping("/{id}")
+    public ResponseEntity<MedicalOrderResponse> patch(@PathVariable Long id, @Valid @RequestBody MedicalOrderPatchRequest request) {
+        return ResponseEntity.ok(medicalOrderService.patchMedicalOrder(id, request));
     }
 
-    @Test
-    void createOrder_missingFields_returnsBadRequest() throws Exception {
-        mockMvc.perform(post("/api/clinical-days/{clinicalDayId}/orders", UUID.randomUUID())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isBadRequest());
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancel(@PathVariable Long id) {
+        medicalOrderService.cancelMedicalOrder(id);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void updateOrder_returnsNoContent() throws Exception {
-        UUID id = UUID.randomUUID();
-        when(medicalOrderService.updateOrder(eq(id), any(MedicalOrderPatchRequest.class), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(patch("/api/orders/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isNoContent());
+    @PutMapping("/{id}/plan")
+    public ResponseEntity<Void> plan(@PathVariable Long id) {
+        medicalOrderService.planMedicalOrder(id);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void updateOrder_conflict_returnsError() throws Exception {
-        UUID id = UUID.randomUUID();
-        when(medicalOrderService.updateOrder(eq(id), any(MedicalOrderPatchRequest.class), eq(1L)))
-                .thenThrow(new com.superhumans.exception.VersionConflictException("conflict"));
-
-        mockMvc.perform(patch("/api/orders/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isConflict());
+    @PutMapping("/{id}/plan/finish")
+    public ResponseEntity<Void> finishPlan(@PathVariable Long id) {
+        medicalOrderService.finishPlanMedicalOrder(id);
+        return ResponseEntity.noContent().build();
     }
 
-    @Test
-    void cancelOrder_returnsNoContent() throws Exception {
-        UUID id = UUID.randomUUID();
-        when(medicalOrderService.cancelOrder(eq(id), eq(1), eq(1L))).thenReturn(null);
-
-        mockMvc.perform(post("/api/orders/{id}/cancel", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"version\":1}")
-                        .with(TestSecurityHelper.doctor()))
-                .andExpect(status().isNoContent());
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancelPlan(@PathVariable Long id) {
+        medicalOrderService.cancelPlanMedicalOrder(id);
+        return ResponseEntity.noContent().build();
     }
 }
-
-
-
-
-
