@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/patients")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@EnableTestExceptionHandler
 class PatientControllerTest {
 
     MisService misService;
