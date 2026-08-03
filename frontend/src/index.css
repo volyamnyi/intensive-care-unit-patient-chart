@@ -125,6 +125,48 @@
   animation: rotate 2s linear infinite;
 }
 
+/* Fullscreen hourly grid dialog morph (#136, Phase 3) */
+@keyframes modalMorphIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modalMorphOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+[data-slot="dialog-content"][data-fullscreen] {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-slot="dialog-content"][data-fullscreen][data-open] {
+  animation-name: modalMorphIn;
+}
+
+[data-slot="dialog-content"][data-fullscreen][data-closed] {
+  animation-name: modalMorphOut;
+  animation-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="dialog-content"][data-fullscreen] {
+    animation: none;
+  }
+}
+
+/* Fullscreen dialog overlay: no backdrop blur (F-6 resolution — scoped via :has,
+   ui/dialog.tsx untouched) and darker tint in dark theme */
+body:has([data-slot="dialog"][data-fullscreen="true"]) [data-slot="dialog-overlay"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.dark body:has([data-slot="dialog"][data-fullscreen="true"]) [data-slot="dialog-overlay"] {
+  background-color: rgb(0 0 0 / 0.2);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

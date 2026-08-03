@@ -1,7 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import HourlyGridDialog from '../../components/monitoring/HourlyGridDialog';
 import type { ClinicalDay, Episode } from '../../types';
+
+afterEach(() => {
+  document.querySelector('[aria-label="Розгорнути на весь екран"]')?.remove();
+});
 
 const selectedDay = {
   id: 'day-1', episodeId: 'ep-1', dayNumber: 1,
@@ -50,4 +54,19 @@ describe('HourlyGridDialog', () => {
       expect(badge.className).not.toContain(forbidden);
     }
   );
+
+  it('marks the dialog root with data-fullscreen for the CSS morph scoping', () => {
+    renderDialog('OPEN');
+    expect(document.querySelector('[data-slot="dialog"][data-fullscreen="true"]')).not.toBeNull();
+  });
+
+  it('sets transformOrigin on the popup from the trigger rect (morph anchor)', () => {
+    const trigger = document.createElement('button');
+    trigger.setAttribute('aria-label', 'Розгорнути на весь екран');
+    document.body.appendChild(trigger);
+    renderDialog('OPEN');
+    const popup = document.querySelector('[data-slot="dialog-content"]');
+    expect(popup).not.toBeNull();
+    expect((popup as HTMLElement).style.transformOrigin).toBe('0px 0px');
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Clock, RefreshCw, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -67,12 +67,32 @@ export default function HourlyGridDialog({
   const time = useClock();
   const patientName = episode?.patientName || 'Пацієнт';
   const status = selectedDay?.status ?? '';
+  const [origin, setOrigin] = useState<string | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const trigger = document.querySelector('[aria-label="Розгорнути на весь екран"]');
+    if (trigger) {
+      const rect = trigger.getBoundingClientRect();
+      setOrigin(`${Math.round(rect.left + rect.width / 2)}px ${Math.round(rect.top + rect.height / 2)}px`);
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const container = document.querySelector('main[class*="flex-1"] > div[class*="overflow-hidden"]');
+    container?.classList.add('ring-2', 'ring-primary');
+    const id = window.setTimeout(() => {
+      container?.classList.remove('ring-2', 'ring-primary');
+    }, 150);
+    return () => {
+      window.clearTimeout(id);
+      container?.classList.remove('ring-2', 'ring-primary');
+    };
+  }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal>
+    <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal data-fullscreen="true">
       <DialogContent
         showCloseButton={false}
-        style={{ inset: 0, translate: 'none' }}
+        style={{ inset: 0, translate: 'none', transformOrigin: origin }}
         className="grid w-full max-w-none grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 rounded-none bg-card p-0 ring-0 sm:max-w-none print:hidden"
       >
         <DialogTitle className="sr-only">{`Погодинна карта — ${patientName}`}</DialogTitle>
