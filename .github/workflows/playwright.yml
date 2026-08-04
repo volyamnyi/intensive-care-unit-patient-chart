@@ -137,6 +137,23 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U icu_user; then
+              echo "PostgreSQL is ready";
+              break;
+            fi
+            echo "Waiting for PostgreSQL...";
+            sleep 2;
+          done
+      
+      - name: Reset database schema for integration tests
+        run: |
+          PGPASSWORD=icu_pass psql -h localhost -U icu_user -d icu_chart_test -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO icu_user;"
+        env:
+          PGPASSWORD: icu_pass
+      
       - name: Run integration tests
         run: mvn test -Pintegration-test -Dspring.datasource.url=jdbc:postgresql://localhost:5432/icu_chart_test
         working-directory: backend
