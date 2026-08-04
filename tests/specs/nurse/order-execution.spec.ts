@@ -8,13 +8,14 @@ function cellIndexForHour(hour: number): number {
   return hour >= 8 ? hour - 8 + 1 : hour + 16 + 1;
 }
 
-function planHour(retry: number): number {
-  const hour = new Date(Date.now() + 60 * 60 * 1000).getHours();
-  // Зсув +13 розводить цей тест з nurse-day-flow.spec.ts, який планує/виконує
-  // те саме seed-призначення Glucose 5% на епізоді a3333333 у тій самій годині:
-  // у fullyParallel вони натискали одну й ту саму комірку, і програвший не отримував
-  // план-інпут після того, як комірка ставала виконаною.
-  return (hour + 13 + retry) % 24;
+function planHour(): number {
+  // CI запускає E2E у ранковому вікні (~05:00-08:00Z), коли для доби 08:00->07:59
+  // клікабельними є лише години >= поточної реальної години: HourlyGrid позначає
+  // минулі комірки через isPastMedDay(h, realClockHour) — вони рендеряться як '✓'
+  // і не клікабельні (план-інпут не з'являється). Тому цілимося в поточну реальну
+  // годину: вона ніколи не вважається минулою. nurse-day-flow.spec.ts планує
+  // в real+1, тож години розведені без накладок.
+  return new Date().getHours();
 }
 
 test('nurse opens the patient day from the dashboard and sees the therapy grid', async ({ page }) => {
@@ -27,8 +28,8 @@ test('nurse opens the patient day from the dashboard and sees the therapy grid',
   await expect(page.getByText(ORDER_NAME)).toBeVisible();
 });
 
-test('doctor plans and nurse executes medication in the hourly grid', async ({ page, doctorPage }, testInfo) => {
-  let hour = planHour(testInfo.retry);
+test('doctor plans and nurse executes medication in the hourly grid', async ({ page, doctorPage }) => {
+  let hour = planHour();
   let cellIndex = cellIndexForHour(hour);
 
   await doctorPage.goto(`/icu/doctor/episode/${EPISODE_ID}`);
