@@ -1,5 +1,6 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
@@ -53,6 +54,7 @@ class FlowInstanceControllerTest {
     UUID executionId = UUID.randomUUID();
     UUID gateId = UUID.randomUUID();
     UUID fileId = UUID.randomUUID();
+    ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
@@ -81,7 +83,7 @@ class FlowInstanceControllerTest {
     void create_returnsCreated() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/api/prosthesis-manufacturing/instances")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(Map.of("orderId", UUID.randomUUID(), "templateId", UUID.randomUUID()))))
                 .andExpect(status().isCreated());
     }
 
@@ -115,7 +117,7 @@ class FlowInstanceControllerTest {
                         "/api/prosthesis-manufacturing/instances/{id}/steps/{executionId}/complete",
                         instanceId, executionId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(Map.of("values", "{}"))))
                 .andExpect(status().isOk());
     }
 
@@ -124,7 +126,7 @@ class FlowInstanceControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/pause", instanceId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(Map.of("category", "MATERIAL"))))
                 .andExpect(status().isOk());
     }
 
@@ -140,7 +142,7 @@ class FlowInstanceControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/fail", instanceId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(Map.of("category", "technical"))))
                 .andExpect(status().isOk());
     }
 
@@ -157,7 +159,7 @@ class FlowInstanceControllerTest {
                         "/api/prosthesis-manufacturing/instances/{id}/gates/{gateId}/decision",
                         instanceId, gateId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content(objectMapper.writeValueAsString(Map.of("decision", "PASS"))))
                 .andExpect(status().isOk());
     }
 

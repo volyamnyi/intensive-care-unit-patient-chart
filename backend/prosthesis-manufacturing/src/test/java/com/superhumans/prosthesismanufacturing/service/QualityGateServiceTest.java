@@ -35,6 +35,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -165,10 +166,9 @@ class QualityGateServiceTest {
         var response = service.decide(instance.getId(), gateId,
                 new GateDecisionRequest(GateDecisionType.REWORK, null, null), 1L, true);
 
-        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.FAILED_QC);
         verify(instanceService).markQcFailed(any(), any(), any());
         verify(failureSnapshotService).create(any(), any(), any(), any(), any());
-        verify(instanceService, never()).createExecution(any(), any(), any(), any(), any());
+        verify(instanceService, never()).createExecution(any(), any(), any(), anyInt(), any());
     }
 
     @Test

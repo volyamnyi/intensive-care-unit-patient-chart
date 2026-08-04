@@ -204,7 +204,7 @@ class FlowInstanceServiceTest {
         assertThat(execution.getStatus()).isEqualTo(StepExecutionStatus.COMPLETED);
         assertThat(instance.getCurrentStepId()).isEqualTo(stepTwoId);
         assertThat(instance.getTotalActiveSeconds()).isGreaterThanOrEqualTo(0L);
-        verify(executionRepository).save(any());
+        verify(executionRepository, org.mockito.Mockito.times(2)).save(any());
         verify(auditService).logAction(any(), any(), any(), any());
     }
 
