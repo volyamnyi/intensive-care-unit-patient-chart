@@ -10,7 +10,11 @@ function cellIndexForHour(hour: number): number {
 
 function planHour(retry: number): number {
   const hour = new Date(Date.now() + 60 * 60 * 1000).getHours();
-  return (hour + retry) % 24;
+  // Зсув +13 розводить цей тест з nurse-day-flow.spec.ts, який планує/виконує
+  // те саме seed-призначення Glucose 5% на епізоді a3333333 у тій самій годині:
+  // у fullyParallel вони натискали одну й ту саму комірку, і програвший не отримував
+  // план-інпут після того, як комірка ставала виконаною.
+  return (hour + 13 + retry) % 24;
 }
 
 test('nurse opens the patient day from the dashboard and sees the therapy grid', async ({ page }) => {
