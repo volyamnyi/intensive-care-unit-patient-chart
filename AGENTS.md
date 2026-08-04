@@ -16,9 +16,20 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-08-04: Fullscreen Grid Modal Phase 6 — outlier rail, alarm chip, status strip (Issue #139, master #133)**
+**2026-08-04: Fullscreen Grid Modal Phase 8–9 — E2E tests + docs (Issues #141, #142, master #133)**
 
-All 6 CI jobs green (run `30884720811`: Code Quality 51s, Backend 2m7s, Frontend 2m31s, Integration 2m27s, E2E 5m45s, Build 1m6s). Commits: `9d453ea`, `06f2368`, `aad1568`, `688398d`.
+All 6 CI jobs green (run `30911073343`: Code Quality 46s, Backend 2m8s, Integration 2m22s, Frontend 2m28s, E2E 6m55s, Build 1m17s). Commit: `35dac79`.
+
+- **modal-therapy E2E** (`tests/specs/doctor/modal-therapy.spec.ts`): locked modal (day 1 NURSE_SIGNED — banner, undo disabled, cells disabled, close via «Закрити карту») + open-day plan/cancel/restore on a3333333/b3333333 (always-OPEN, seeded Glucose 5% order; plan at `planHour()`, advance if occupied, cancel → «Виконання скасовано» toast → «Скасувати» restore).
+- **modal-grid E2E** (`tests/specs/nurse/modal-grid.spec.ts`): nurse edits Сеча 4:00 in modal, value persists after reopen; a11y (dialog name, live region, focus trap, reduced motion) + sticky panels (cornerDy ≤ 4, labelDx ≤ 4 tolerance).
+- **`getNextHourISO` timezone fix** (`HourlyGrid.tsx:333–338`): changed from `toISOString()` (UTC) to manual local `YYYY-MM-DDTHH:mm` — `toISOString()` caused `PAST_HOUR_ORDER` 422 in non-UTC zones (CI = UTC, always green; local UTC+2/3 would fail most of the day). The quick form, doctor-day-flow, and any order creation are now immune.
+- **Plan-mode ✕ race fix**: `onMouseDown={(e) => e.preventDefault()}` on the ✕ button prevents the input's `onBlur` → `handleConfirm` from re-planning the dose after cancel.
+- **Vitest**: 419/419 across 47 files (including `HourlyGridDialog.test.tsx`, `criticalRanges.test.ts`, `IntensiveCareCard.test.tsx`); lint 0 errors; tsc clean.
+- **E2E isolation**: Both modal specs use always-OPEN episode `a3333333` to avoid in-run sign conflict (pdf-generation signs b2222222 in the same doctor project; the nurse project inherits the signed state). Locked-day test uses `a2222222` day 1 (NURSE_SIGNED, intact during doctor project).
+
+### Previous sessions (condensed):
+
+**2026-08-04: Fullscreen Grid Modal Phase 6 — outlier rail, alarm chip, status strip (Issue #139, master #133)** — All 6 CI jobs green (run `30884720811`). Commits: `9d453ea`, `06f2368`, `aad1568`, `688398d`.
 
 - **Critical ranges extraction**: `CRITICAL_RANGES` + `isCritical()` moved from `HourlyGrid.tsx` into `frontend/src/components/monitoring/criticalRanges.ts` — single source of truth (8 inclusive ranges) shared by rail, chip and cell flash; `''`/NaN/unknown values non-critical; `countCriticalByHour`/`countCriticalTotal` + `pluralCritical` (1 → «критичне значення», 2–4 → «критичні значення», else «критичних значень»; 21/12 plural edges); unit tests in `criticalRanges.test.ts`.
 - **Rail & chip**: OutlierRail (pin rail on mobile, highlight in main grid) shows violation cells from the same ranges as cell highlighting and updates after save; alarm chip counter matches critical cells, click focuses the first visible one; no animated/blinking elements in rail/chip (criteria 3); status span must NOT have `role="status"`/`aria-live`; dialog tests use fixture `realClockHour:10`.
@@ -405,8 +416,11 @@ All endpoints prefixed with `/api`.
 | `EpisodeTable.tsx` | Table of episodes with search/filter |
 | `FluidBalancePanel.tsx` | Fluid balance display with intake/output chart |
 | `HourSelector.tsx` | Hour picker for vital signs entry |
+| `HourlyGrid.tsx` | Hourly grid with monitoring data, therapy cells, plan/execute |
+| `HourlyGridDialog.tsx` | Fullscreen modal dialog wrapping HourlyGrid with undo, status, critical chip |
 | `HourlyRecordTable.tsx` | Hourly vital signs grid |
 | `IntensiveCareCard.tsx` | Central ICU card component |
+| `criticalRanges.ts` | Critical range definitions + `isCritical`, `countCriticalByHour`, `pluralCritical` |
 | `LabResultsPanel.tsx` | Lab results entry and display |
 | `MedicalNotesPanel.tsx` | Medical notes list and create/edit |
 | `MedicalOrdersPanel.tsx` | Medical orders list and create/edit/cancel |
@@ -496,6 +510,8 @@ All endpoints prefixed with `/api`.
 - **Signing flow**: Nurse must sign before doctor; signatures can be revoked on reopen
 - **Frontend error display**: All API catch blocks in `IntensiveCareCard.tsx` use `getErrorMessage(err, fallback)` which extracts `err.response?.data?.message` from Axios errors (shows the backend validation message instead of generic "Request failed with status code 400")
 - **Backend validation exceptions**: `ConstraintViolationException` (JSR-380) and `InvalidDataAccessApiUsageException` (wraps `IllegalArgumentException` from `@PrePersist`) are both caught in `GlobalExceptionHandler` and return 400 with the validation message
+- **Fullscreen modal keyboard model** (`HourlyGridDialog.tsx`): initial focus on the close button (✕), not the first editable cell, to prevent accidental data change before reviewing patient state (WCAG 2.4.3). `Tab`/`Shift+Tab` cycles within the dialog (focus trap). `Esc` closes; `Alt+Enter` toggles. `Escape` in a dirty cell reverts the draft; `Enter` commits.
+- **Custom keyframes** (`frontend/src/index.css`): non-Tailwind keyframes (`scale-in`, `fade-in`, `slide-in-from-left`, `content-show`) live in `index.css` under `@layer base`, scoped via `[data-fullscreen="true"]` so they don't affect non-modal use. `animate-in` utilities (`duration-…`, `fade-in`, `slide-in-from-…`, `zoom-in-…`) from a motion library are inert — the dialog overrides them with its own `style={{ animation: 'none' }}` on initial render to avoid double-animation. On `prefers-reduced-motion`, all animations are gated by a media-query guard.
 
 ## Conventions
 
@@ -536,11 +552,11 @@ frontend/
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 88 TS/TSX source + 44 test files
+  src/                 ← 90 TS/TSX source + 47 test files
 tests/
   playwright.config.ts ← Playwright config with 7 projects
   package.json         ← Test dependencies
-  specs/               ← 45 spec files
+  specs/               ← 47 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/
