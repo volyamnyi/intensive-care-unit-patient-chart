@@ -21,6 +21,15 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
+interface UndoEntry {
+  hour: number;
+  key: keyof HourlyRecord;
+  prevValue: number | string;
+  newValue: number | string;
+  version: number;
+  id: string;
+}
+
 interface IntensiveCareCardProps {
   episode: Episode;
   selectedDay: ClinicalDay | null;
@@ -48,6 +57,11 @@ export default function IntensiveCareCard({
 
   const localRecordMap = useRef<Map<number, { id: string; version: number }>>(new Map());
   useEffect(() => { localRecordMap.current.clear(); }, [records]);
+
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const undoStackRef = useRef<UndoEntry[]>([]);
+  undoStackRef.current = undoStack;
+  useEffect(() => { setUndoStack([]); }, [selectedDay?.id]);
 
   const notifyParentRef = useRef(onFeedback ?? (() => {}));
   notifyParentRef.current = onFeedback ?? (() => {});
@@ -189,18 +203,56 @@ export default function IntensiveCareCard({
     }).filter(Boolean) as { name: string; result: string }[];
   }, [scales]);
 
+  const pushUndo = useCallback((entry: UndoEntry) => {
+    setUndoStack(prev => [...prev.slice(-19), entry]);
+  }, []);
+
+  const undoLastChange = useCallback(async () => {
+    if (!selectedDay || isLocked) return;
+    const entry = undoStackRef.current[undoStackRef.current.length - 1];
+    if (!entry) return;
+    setUndoStack(prev => prev.slice(0, -1));
+    try {
+      const patch: Partial<HourlyRecordCreateRequest> & { version: number } = { version: entry.version };
+      (patch as Record<string, unknown>)[entry.key] = entry.prevValue;
+      const res = await hourlyRecordApi.update(entry.id, patch);
+      localRecordMap.current.set(entry.hour, { id: res.data.id, version: res.data.version });
+      onRefresh?.();
+      setGridFeedback({ message: 'Зміну скасовано', severity: 'success' });
+    } catch (err) {
+      setUndoStack(prev => [...prev, entry]);
+      const is409 = !!(err && typeof err === 'object' && 'response' in err
+        && (err as { response?: { status?: number } }).response?.status === 409);
+      if (is409) {
+        setConflict({ hour: entry.hour, key: entry.key, raw: String(entry.newValue) });
+        setGridFeedback({ message: 'Запис змінено іншим користувачем', severity: 'error' });
+      } else {
+        const message = getErrorMessage(err, 'Не вдалося скасувати зміну');
+        setGridFeedback({ message, severity: 'error' });
+        notifyParentRef.current(message, 'error');
+      }
+    }
+  }, [selectedDay, isLocked, onRefresh]);
+
   const saveCell = useCallback(async (hour: number, key: keyof HourlyRecord, raw: string) => {
     if (!selectedDay || isLocked) return;
     const textKeys: (keyof HourlyRecord)[] = ['consciousness', 'stool', 'vomit', 'bedPosition', 'headEnd'];
     const numeric = !textKeys.includes(key);
     const value = raw.trim() === '' ? null : numeric ? Number(raw) : raw;
     const existing: { id: string; version: number } | undefined = recByHour.get(hour) || localRecordMap.current.get(hour);
+    const prevRecord = existing ? (recByHour.get(hour) ?? null) : null;
+    const prevValue: number | string | null =
+      prevRecord && prevRecord[key] != null ? (prevRecord[key] as number | string) : null;
     const recTime = `${new Date().toISOString().split('T')[0]}T${String(hour).padStart(2, '0')}:00:00`;
     try {
       if (existing) {
         const patch: Partial<HourlyRecordCreateRequest> & { version: number } = { version: existing.version };
         if (value !== null) { (patch as Record<string, unknown>)[key] = value; }
-        await hourlyRecordApi.update(existing.id, patch);
+        const res = await hourlyRecordApi.update(existing.id, patch);
+        localRecordMap.current.set(hour, { id: existing.id, version: res.data.version });
+        if (value !== null && prevValue !== null && prevValue !== value) {
+          pushUndo({ hour, key, prevValue, newValue: value, version: res.data.version, id: existing.id });
+        }
       } else if (value !== null) {
         const res = await hourlyRecordApi.create(selectedDay.id, { recordTime: recTime, [key]: value } as HourlyRecordCreateRequest);
         localRecordMap.current.set(hour, { id: res.data.id, version: res.data.version });
@@ -220,7 +272,7 @@ export default function IntensiveCareCard({
       setGridFeedback({ message, severity: 'error' });
       notifyParentRef.current(message, 'error');
     }
-  }, [selectedDay, isLocked, recByHour, onRefresh, gridExpanded]);
+  }, [selectedDay, isLocked, recByHour, onRefresh, gridExpanded, pushUndo]);
 
   const saveCellRef = useRef(saveCell);
   saveCellRef.current = saveCell;
@@ -265,14 +317,16 @@ export default function IntensiveCareCard({
 
   const runExecutionAction = useCallback(async (
     key: string, orderId: string, action: () => Promise<unknown>, failMessage: string,
-  ) => {
+  ): Promise<boolean> => {
     try {
       setExecuting(key);
       await action();
       await refreshExecutions([orderId]);
       onRefresh?.();
+      return true;
     } catch (err) {
       notifyParentRef.current(getErrorMessage(err, failMessage), 'error');
+      return false;
     } finally {
       setExecuting(null);
     }
@@ -283,10 +337,36 @@ export default function IntensiveCareCard({
       () => orderExecutionApi.plan(orderId, { hour, dose }), 'Не вдалося запланувати виконання'),
   [runExecutionAction]);
 
-  const handleCancelOrder = useCallback((orderId: string, hour: number) =>
-    runExecutionAction(`${orderId}-${hour}`, orderId,
-      () => orderExecutionApi.cancel(orderId, { hour }), 'Не вдалося скасувати виконання'),
-  [runExecutionAction]);
+  const [undoToast, setUndoToast] = useState<{ orderId: string; hour: number; dose: string } | null>(null);
+  const undoToastRef = useRef<{ orderId: string; hour: number; dose: string } | null>(null);
+  undoToastRef.current = undoToast;
+  const undoToastTimerRef = useRef<number | null>(null);
+  const showUndoToast = useCallback((toast: { orderId: string; hour: number; dose: string }) => {
+    setUndoToast(toast);
+    if (undoToastTimerRef.current !== null) window.clearTimeout(undoToastTimerRef.current);
+    undoToastTimerRef.current = window.setTimeout(() => setUndoToast(null), 5000);
+  }, []);
+  useEffect(() => () => {
+    if (undoToastTimerRef.current !== null) window.clearTimeout(undoToastTimerRef.current);
+  }, []);
+
+  const handleCancelOrder = useCallback(async (orderId: string, hour: number) => {
+    const execution = (executionsByOrder[orderId] ?? []).find(e => e.hour === hour);
+    const dose = execution?.plannedDose || orders.find(o => o.id === orderId)?.dose || '';
+    const ok = await runExecutionAction(`${orderId}-${hour}`, orderId,
+      () => orderExecutionApi.cancel(orderId, { hour }), 'Не вдалося скасувати виконання');
+    if (ok && dose) showUndoToast({ orderId, hour, dose });
+  }, [runExecutionAction, executionsByOrder, orders, showUndoToast]);
+
+  const restoreExecution = useCallback(async () => {
+    const toast = undoToastRef.current;
+    if (!toast) return;
+    if (undoToastTimerRef.current !== null) window.clearTimeout(undoToastTimerRef.current);
+    setUndoToast(null);
+    await runExecutionAction(`undo-${toast.orderId}-${toast.hour}`, toast.orderId,
+      () => orderExecutionApi.plan(toast.orderId, { hour: toast.hour, dose: toast.dose }),
+      'Не вдалося відновити виконання');
+  }, [runExecutionAction]);
 
   const handleExecuteOrder = useCallback((orderId: string, hour: number, actualDose: string) =>
     runExecutionAction(`${orderId}-${hour}`, orderId,
@@ -441,6 +521,10 @@ export default function IntensiveCareCard({
       onResolveConflict={resolveConflict}
       loading={loading}
       recByHour={recByHour}
+      undoCount={undoStack.length}
+      onUndo={undoLastChange}
+      undoToast={undoToast}
+      onUndoExecution={restoreExecution}
     >
       {selectedDay && (
         <HourlyGrid {...gridProps} sticky={!isMobile} bare />

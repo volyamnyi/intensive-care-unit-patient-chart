@@ -1,8 +1,9 @@
 import { useEffect, useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Clock, Loader2, Lock, RefreshCw, TriangleAlert, X } from 'lucide-react';
+import { Clock, Loader2, Lock, RefreshCw, TriangleAlert, Undo2, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { countCriticalTotal, pluralCritical } from './criticalRanges';
 import type { ClinicalDay, Episode, HourlyRecord } from '../../types';
@@ -74,12 +75,16 @@ interface HourlyGridDialogProps {
   onResolveConflict?: (keep: boolean) => void;
   loading?: boolean;
   recByHour?: Map<number, HourlyRecord>;
+  undoCount?: number;
+  onUndo?: () => void;
+  undoToast?: { orderId: string; hour: number; dose: string } | null;
+  onUndoExecution?: () => void;
   children: ReactNode;
 }
 
 export default function HourlyGridDialog({
   open, onOpenChange, episode, selectedDay, isLocked, saveStatus, onRefresh, feedback, finalFocusRef,
-  conflict, onResolveConflict, loading, recByHour, children,
+  conflict, onResolveConflict, loading, recByHour, undoCount = 0, onUndo, undoToast, onUndoExecution, children,
 }: HourlyGridDialogProps) {
   const time = useClock();
   const patientName = episode?.patientName || 'Пацієнт';
@@ -232,12 +237,47 @@ export default function HourlyGridDialog({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={(
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 px-2 text-xs"
+                      disabled={isLocked || undoCount === 0}
+                      onClick={onUndo}
+                      aria-label="Скасувати останню зміну"
+                    >
+                      <Undo2 className="size-3.5" />
+                      {'Скасувати останню зміну'}
+                    </Button>
+                  )}
+                />
+                <TooltipContent side="top">
+                  {isLocked ? 'Доба підписана — відкотити неможливо' : undoCount === 0 ? 'Немає змін для скасування' : 'Скасувати останню зміну'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <DialogClose render={<Button aria-label="Закрити карту">{'Назад до карти'}</Button>} />
-            <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити вікно (Esc)" />}>
+            <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити вікно" />}>
               <X className="size-4" />
             </DialogClose>
           </div>
         </footer>
+
+        {undoToast && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="absolute bottom-16 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs shadow-lg"
+          >
+            <span className="text-card-foreground">{'Виконання скасовано'}</span>
+            <Button size="sm" variant="outline" className="h-6 shrink-0 px-2 text-[11px]" onClick={onUndoExecution}>
+              {'Скасувати'}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

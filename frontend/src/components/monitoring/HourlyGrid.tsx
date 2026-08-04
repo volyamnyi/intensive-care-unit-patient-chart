@@ -137,6 +137,19 @@ const Cell = memo(function Cell({
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
             (e.target as HTMLInputElement).blur();
+            return;
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            if (draft !== valueRef.current) {
+              e.preventDefault();
+              setDraft(valueRef.current);
+            }
+            return;
+          }
+          if (e.key === 'Escape' && draft !== valueRef.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            setDraft(valueRef.current);
           }
         }}
         className={cn(

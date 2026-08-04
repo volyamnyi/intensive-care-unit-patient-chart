@@ -107,7 +107,8 @@ describe('HourlyGridDialog', () => {
 
   it('gives close buttons a unique accessible label (no ambiguous "Закрити (Esc)")', () => {
     renderDialog('OPEN');
-    expect(screen.getAllByRole('button', { name: 'Закрити вікно (Esc)' }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('button', { name: 'Закрити вікно (Esc)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Закрити вікно' })).toBeInTheDocument();
     expect(screen.queryAllByRole('button', { name: 'Закрити (Esc)' })).toHaveLength(0);
   });
 

@@ -94,6 +94,32 @@ describe('HourlyGrid', () => {
     expect(onSaveCell).toHaveBeenCalledTimes(1);
   });
 
+  it('Cell: Ctrl+Z reverts the draft to the last saved value without saving (#140)', () => {
+    const onSaveCell = vi.fn();
+    render(<HourlyGrid {...makeProps({ onSaveCell })} />);
+
+    const input = screen.getByLabelText('ЧСС 8:00');
+    fireEvent.change(input, { target: { value: '90' } });
+    fireEvent.keyDown(input, { key: 'z', ctrlKey: true });
+    expect(input).toHaveValue(null);
+    expect(onSaveCell).not.toHaveBeenCalled();
+  });
+
+  it('Cell: first Escape reverts a dirty draft instead of saving so a second press closes the dialog (#140)', () => {
+    const onSaveCell = vi.fn();
+    render(<HourlyGrid {...makeProps({ onSaveCell })} />);
+
+    const input = screen.getByLabelText('ЧСС 8:00');
+    fireEvent.change(input, { target: { value: '90' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input).toHaveValue(null);
+    expect(onSaveCell).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input).toHaveValue(null);
+    expect(onSaveCell).not.toHaveBeenCalled();
+  });
+
   it('Cell: Enter during IME composition does not blur or save (isComposing guard)', () => {
     const onSaveCell = vi.fn();
     render(<HourlyGrid {...makeProps({ onSaveCell })} />);

@@ -503,4 +503,48 @@ describe('IntensiveCareCard', () => {
       await waitFor(() => expect(mockOrderExecutionExecuteFinish).toHaveBeenCalledWith('o1', { hour: 0 }));
     });
   });
+
+  describe('Undo journal and toast undo (#140)', () => {
+    it('footer undo in the modal restores the previous value with the saved version', async () => {
+      mockHourlyRecordUpdate.mockResolvedValue({ data: { id: 'r1', version: 2 } });
+      renderCard();
+      fireEvent.click(screen.getByRole('button', { name: 'Розгорнути на весь екран' }));
+      const modalInput = (await screen.findAllByLabelText('ЧСС 8:00'))[1];
+      fireEvent.change(modalInput, { target: { value: '90' } });
+      fireEvent.blur(modalInput);
+      await waitFor(() => expect(mockHourlyRecordUpdate)
+        .toHaveBeenCalledWith('r1', expect.objectContaining({ heartRate: 90, version: 1 })));
+      const undoButton = await screen.findByRole('button', { name: 'Скасувати останню зміну' });
+      expect(undoButton).toBeEnabled();
+      fireEvent.click(undoButton);
+      await waitFor(() => expect(mockHourlyRecordUpdate)
+        .toHaveBeenCalledWith('r1', expect.objectContaining({ heartRate: 72, version: 2 })));
+    });
+
+    it('undo is disabled on a locked day (відкотити неможливо)', async () => {
+      renderCard({ selectedDay: mockLockedDay, isLocked: true });
+      fireEvent.click(screen.getByRole('button', { name: 'Розгорнути на весь екран' }));
+      const undoButton = await screen.findByRole('button', { name: 'Скасувати останню зміну' });
+      expect(undoButton).toBeDisabled();
+    });
+
+    it('cancelling an execution in the modal shows the toast and "Скасувати" restores the plan', async () => {
+      vi.spyOn(Date.prototype, 'getHours').mockReturnValue(0);
+      mockOrderExecutionGetByOrder.mockResolvedValue({ data: [plannedExecution()] });
+      renderCard();
+      fireEvent.click(screen.getByRole('button', { name: 'Розгорнути на весь екран' }));
+      const modalRow = screen.getAllByText('Амоксицилін 1г')[1].closest('tr');
+      expect(modalRow).not.toBeNull();
+      const tds = (modalRow as HTMLElement).querySelectorAll('td');
+      const modalCell = tds[Array.from({ length: 24 }, (_, i) => (i + 8) % 24).indexOf(0) + 1] as HTMLElement;
+      await waitFor(() => expect(modalCell.textContent).toContain('1'));
+      fireEvent.click(modalCell);
+      const modalCancel = await screen.findByLabelText('Скасувати Амоксицилін 0:00');
+      fireEvent.click(modalCancel);
+      await waitFor(() => expect(mockOrderExecutionCancel).toHaveBeenCalledWith('o1', { hour: 0 }));
+      expect(await screen.findByText('Виконання скасовано')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Скасувати' }));
+      await waitFor(() => expect(mockOrderExecutionPlan).toHaveBeenCalledWith('o1', { hour: 0, dose: '1' }));
+    });
+  });
 });
