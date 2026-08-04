@@ -115,7 +115,6 @@ class FlowInstanceServiceTest {
         when(orderRepository.findById(request.getOrderId()))
                 .thenReturn(Optional.of(orderWithId(request.getOrderId())));
         when(templateRepository.findById(request.getTemplateId())).thenReturn(Optional.of(template));
-        when(instanceRepository.findByOrderId(request.getOrderId())).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.create(request, 1L))
                 .isInstanceOf(BadRequestException.class)
@@ -262,6 +261,7 @@ class FlowInstanceServiceTest {
                 .orderId(UUID.randomUUID())
                 .assignedUserId(1L)
                 .status(status)
+                .currentStageId(stageId)
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
                 .reworkCount(0)

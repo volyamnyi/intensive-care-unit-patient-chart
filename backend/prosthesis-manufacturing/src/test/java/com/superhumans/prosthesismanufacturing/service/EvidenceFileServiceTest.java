@@ -52,7 +52,7 @@ class EvidenceFileServiceTest {
         UUID instanceId = UUID.randomUUID();
         UUID executionId = UUID.randomUUID();
         FlowInstance instance = newInstance();
-        StepExecution execution = executionFor(instance);
+        StepExecution execution = executionFor(instance, executionId);
         when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
         when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
         MockMultipartFile file = new MockMultipartFile("file", "notes.txt", "text/plain",
@@ -69,9 +69,7 @@ class EvidenceFileServiceTest {
         UUID instanceId = UUID.randomUUID();
         UUID executionId = UUID.randomUUID();
         FlowInstance instance = newInstance();
-        StepExecution execution = executionFor(instance);
         when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
-        when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
         byte[] big = new byte[(int) EvidenceFile.MAX_SIZE_BYTES + 1];
         MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png", big);
 
@@ -86,7 +84,7 @@ class EvidenceFileServiceTest {
         UUID instanceId = UUID.randomUUID();
         UUID executionId = UUID.randomUUID();
         FlowInstance instance = newInstance();
-        StepExecution execution = executionFor(instance);
+        StepExecution execution = executionFor(instance, executionId);
         when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
         when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
         when(evidenceFileRepository.save(any())).thenAnswer(invocation -> {
@@ -120,7 +118,7 @@ class EvidenceFileServiceTest {
         evidence.setId(fileId);
         FlowInstance instance = newInstance();
         instance.setAssignedUserId(99L);
-        evidence.setStepExecution(executionFor(instance));
+        evidence.setStepExecution(executionFor(instance, UUID.randomUUID()));
         when(evidenceFileRepository.findById(fileId)).thenReturn(Optional.of(evidence));
 
         assertThatThrownBy(() -> service.download(fileId, 1L, false))
@@ -140,7 +138,7 @@ class EvidenceFileServiceTest {
         evidence.setId(fileId);
         FlowInstance instance = newInstance();
         instance.setAssignedUserId(99L);
-        evidence.setStepExecution(executionFor(instance));
+        evidence.setStepExecution(executionFor(instance, UUID.randomUUID()));
         when(evidenceFileRepository.findById(fileId)).thenReturn(Optional.of(evidence));
 
         EvidenceFile result = service.download(fileId, 1L, true);
@@ -159,14 +157,14 @@ class EvidenceFileServiceTest {
         return instance;
     }
 
-    private StepExecution executionFor(FlowInstance instance) {
+    private StepExecution executionFor(FlowInstance instance, UUID execId) {
         StepExecution execution = StepExecution.builder()
                 .instance(instance)
                 .stepId(UUID.randomUUID())
                 .attemptNumber(1)
                 .status(StepExecutionStatus.IN_PROGRESS)
                 .build();
-        execution.setId(UUID.randomUUID());
+        execution.setId(execId);
         return execution;
     }
 }
