@@ -16,20 +16,17 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-08-04: Fullscreen Grid Modal Phase 5 — edge-case hardening (Issue #138, master #133)**
+**2026-08-04: Fullscreen Grid Modal Phase 6 — outlier rail, alarm chip, status strip (Issue #139, master #133)**
 
-All 5 CI jobs green: Code Quality, Backend Tests, Backend Integration Tests, Frontend Tests (393 across 46 files), E2E (183 tests). Commits: `6598efd`, `272d654`, `aab6700`.
+All 6 CI jobs green (run `30884720811`: Code Quality 51s, Backend 2m7s, Frontend 2m31s, Integration 2m27s, E2E 5m45s, Build 1m6s). Commits: `9d453ea`, `06f2368`, `aad1568`, `688398d`.
 
-- **409 conflict**: `IntensiveCareCard.saveCell` detects HTTP 409 → `setConflict({hour, key, raw})`; modal banner «Запис змінено іншим користувачем (ключ година:00)» with «Оновити дані» (`resolveConflict(false)` → refresh) / «Залишити мій варіант» (`resolveConflict(true)` → `retryRef`, re-saves on next `records` change via effect with fresh `version`). Cell draft is preserved (no silent overwrite). Inline grid notifies parent snackbar instead.
-- **Day lock**: `HourlyGridDialog` lock banner (Lock icon, «Доба підписана — перегляд»); footer label switches to «Перегляд підписаної доби». aria-labels disambiguated: header refresh «Оновити показники» vs banner «Оновити дані».
-- **Print**: `index.css` `@media print` hides `[data-slot="dialog-overlay"]` (`display:none !important`) so modal content prints without the full-page backdrop.
-- **Rapid toggle**: `handleOpenChange` early-returns when `next === open`; expand trigger `disabled={!selectedDay || gridExpanded}`.
-- **Loading**: `dayLoading` threaded `PatientDayPage` → `Doctor/NurseDashboard` → `IntensiveCareCard` `loading` prop → dialog spinner (Loader2 in `<span role="img" aria-label="Завантаження">`).
-- **Mobile**: `HourlyGrid` rows `min-h-[44px]` touch targets via `isMobile` prop (from card's matchMedia ≤1200px); dialog uses `sticky={!isMobile}`; `PatientSidebar` wrapped in `div.hidden` on mobile.
-- **Safe area**: dialog header `pt-[env(safe-area-inset-top)]`, footer `pb-[env(safe-area-inset-bottom)]`.
-- E2E fix: 404 status capture in `validation-edge-cases.spec.ts` scoped to episode GET (excludes `/clinical-days`, which returns 200 empty for unknown episodes).
+- **Critical ranges extraction**: `CRITICAL_RANGES` + `isCritical()` moved from `HourlyGrid.tsx` into `frontend/src/components/monitoring/criticalRanges.ts` — single source of truth (8 inclusive ranges) shared by rail, chip and cell flash; `''`/NaN/unknown values non-critical; `countCriticalByHour`/`countCriticalTotal` + `pluralCritical` (1 → «критичне значення», 2–4 → «критичні значення», else «критичних значень»; 21/12 plural edges); unit tests in `criticalRanges.test.ts`.
+- **Rail & chip**: OutlierRail (pin rail on mobile, highlight in main grid) shows violation cells from the same ranges as cell highlighting and updates after save; alarm chip counter matches critical cells, click focuses the first visible one; no animated/blinking elements in rail/chip (criteria 3); status span must NOT have `role="status"`/`aria-live`; dialog tests use fixture `realClockHour:10`.
+- **E2E flake root cause (order-execution.spec.ts)** — NOT a parallel race (CI `workers: 1`): `HourlyGrid.isPastMedDay(h, realClockHour)` marks hours below the current real hour non-clickable (they render '✓'); CI runs ~05:00–08:00Z, so only hours {real, real+1} are ever clickable. The `+13` shift (`aad1568`) targeted hours 20–23 → always past → guaranteed failure (retry2 `Запланувати Glucose 5% 23:00`); fixed in `688398d` to `new Date().getHours()` (the real hour is never past; disjoint from `nurse-day-flow` at real+1; CI uses fresh ephemeral Postgres per run, so no cross-run depletion). Green on first attempt.
 
 ### Previous sessions (condensed):
+
+**2026-08-04 (earlier): Fullscreen Grid Modal Phase 5 — edge-case hardening (Issue #138, master #133)** — 409 conflict banner («Оновити дані»/«Залишити мій варіант»), day-lock banner, print CSS for dialog overlay, rapid-toggle guards, `dayLoading` spinner, mobile 44px touch targets + `PatientSidebar` hidden, safe-area insets; 404 capture scoped to episode GET. Commits `6598efd`, `272d654`, `aab6700`. E2E 183 tests.
 
 **2026-07-31: ТЗ v1.2 — SOFA input parameters formalized (docs only)**
 
