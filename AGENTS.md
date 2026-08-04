@@ -1,6 +1,6 @@
 # ICU Patient Chart — AI Agent Guide
 
-## CI-ONLY RULE (DO NOT VIOLATE)
+## CI-ONLY RULE (may be violated if the user explicitly states so)
 
 **TESTS MUST NEVER BE RUN LOCALLY.** The only valid testing workflow is:
 
@@ -93,7 +93,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 ## Repeatable CI Development Workflow (THE Loop)
 
-**All tests run exclusively via GitHub Actions CI — never locally.** Local `mvn test` / `npm test` / Playwright are FORBIDDEN; `mvn compile`, `npm run lint`, `npx tsc --noEmit` are permitted for pre-flight only.
+**All tests run exclusively via GitHub Actions CI — never locally (may be violated if the user explicitly states so).** Local `mvn test` / `npm test` / Playwright are FORBIDDEN; `mvn compile`, `npm run lint`, `npx tsc --noEmit` are permitted for pre-flight only.
 
 The complete development loop:
 
