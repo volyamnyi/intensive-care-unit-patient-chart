@@ -13,7 +13,7 @@ interface AuthContextType {
   loading: boolean;
   hasRole: (...roles: string[]) => boolean;
   hasPermission: (permission: string) => boolean;
-  selectApp: (app: 'icu' | 'prescriptions') => void;
+  selectApp: (app: 'icu' | 'prescriptions' | 'prosthetics') => void;
   clearApp: () => void;
 }
 
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user.permissions.split(',').some((p) => p.trim().toUpperCase() === permission.toUpperCase());
   };
 
-  const selectApp = (app: 'icu' | 'prescriptions') => {
+  const selectApp = (app: 'icu' | 'prescriptions' | 'prosthetics') => {
     setUser((prev) => prev ? { ...prev, app } : null);
   };
 

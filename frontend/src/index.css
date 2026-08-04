@@ -9,6 +9,12 @@
 @import '@fontsource/mulish/500.css';
 @import '@fontsource/mulish/600.css';
 @import '@fontsource/mulish/700.css';
+@import '@fontsource/inter/300.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+
 @theme {
   --color-primary: #FF5F33;
   --color-primary-foreground: #FFFFFF;
@@ -33,6 +39,12 @@
   --color-popover: #FFFFFF;
   --color-popover-foreground: #1F1F1F;
   --color-ring: #FF5F33;
+
+  /* Prosthetics module theme tokens */
+  --color-mint: #059669;
+  --color-mint-foreground: #F0FDFA;
+  --font-display: "Inter", sans-serif;
+
   --font-sans: "Rubik", sans-serif;
   --font-rubik: "Rubik", sans-serif;
   --font-mulish: "Mulish", sans-serif;
@@ -56,6 +68,10 @@
   --color-popover: #1A1A1A;
   --color-popover-foreground: #FFFFFF;
   --color-ring: #FF8C66;
+
+  /* Prosthetics module dark theme tokens */
+  --color-mint: #10b981;
+  --color-mint-foreground: #020617;
 }
 
 /* Base animations */

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Hospital, FileText, Shield } from 'lucide-react';
+import { Hospital, FileText, Shield, Syringe } from 'lucide-react';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '../services/AuthContext';
 
@@ -20,6 +20,14 @@ const cards = [
     icon: <FileText className="size-12" />,
     color: '#2e7d32',
     path: '/prescriptions/doctor',
+  },
+  {
+    app: 'prosthetics' as const,
+    title: 'Виробництво протезів',
+    subtitle: 'Технологічні процеси протезування',
+    icon: <Syringe className="size-12" />,
+    color: '#059669',
+    path: '/prosthetics',
   },
 ];
 

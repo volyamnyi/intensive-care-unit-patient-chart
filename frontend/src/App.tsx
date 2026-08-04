@@ -17,6 +17,14 @@ import PrescriptionPage from './pages/prescription/PrescriptionPage';
 import PrescriptionDetailPage from './pages/prescription/PrescriptionDetailPage';
 import NursePrescriptionPage from './pages/prescription/NursePrescriptionPage';
 import AppSelectorPage from './pages/AppSelectorPage';
+import ProstheticsDashboard from './pages/prosthetics/ProstheticsDashboard';
+import PatientStep from './pages/prosthetics/setup/PatientStep';
+import OrderStep from './pages/prosthetics/setup/OrderStep';
+import TemplateStep from './pages/prosthetics/setup/TemplateStep';
+import ReviewStep from './pages/prosthetics/setup/ReviewStep';
+import ProcessLayout from './pages/prosthetics/process/ProcessLayout';
+import ProcessDetail from './pages/prosthetics/process/ProcessDetail';
+import { ProstheticsProvider } from './prosthetics/ProstheticsContext';
 
 function Guard({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const { isAuthenticated, hasRole, user, loading } = useAuth();
@@ -142,6 +150,55 @@ function AppRoutes() {
               <PrescriptionDetailPage />
             </Guard>
           } />
+        </Route>
+
+        <Route path="/prosthetics" element={
+          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+            <ProstheticsProvider>
+              <ProstheticsDashboard />
+            </ProstheticsProvider>
+          </Guard>
+        } />
+
+        <Route path="/prosthetics/new">
+          <Route path="patient" element={
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+              <ProstheticsProvider>
+                <PatientStep />
+              </ProstheticsProvider>
+            </Guard>
+          } />
+          <Route path="order" element={
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+              <ProstheticsProvider>
+                <OrderStep />
+              </ProstheticsProvider>
+            </Guard>
+          } />
+          <Route path="template" element={
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+              <ProstheticsProvider>
+                <TemplateStep />
+              </ProstheticsProvider>
+            </Guard>
+          } />
+          <Route path="review" element={
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+              <ProstheticsProvider>
+                <ReviewStep />
+              </ProstheticsProvider>
+            </Guard>
+          } />
+        </Route>
+
+        <Route path="/prosthetics/process/:id" element={
+          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+            <ProstheticsProvider>
+              <ProcessLayout />
+            </ProstheticsProvider>
+          </Guard>
+        }>
+          <Route index element={<ProcessDetail />} />
         </Route>
 
         <Route path="/admin" element={

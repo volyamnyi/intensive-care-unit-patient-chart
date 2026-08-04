@@ -8,7 +8,7 @@
   specialityName: string;
   phone: string;
   permissions: string;
-  app: 'icu' | 'prescriptions' | null;
+  app: 'icu' | 'prescriptions' | 'prosthetics' | null;
   deleted?: boolean;
 }
 
