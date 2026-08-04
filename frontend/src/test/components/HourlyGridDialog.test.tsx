@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import HourlyGridDialog from '../../components/monitoring/HourlyGridDialog';
 import type { ClinicalDay, Episode } from '../../types';
 
@@ -18,7 +18,7 @@ const selectedDay = {
 
 const episode = { id: 'ep-1', patientName: 'Тестовий Пацієнт' } as Episode;
 
-function renderDialog(status: ClinicalDay['status']) {
+function renderDialog(status: ClinicalDay['status'], props: Partial<ComponentProps<typeof HourlyGridDialog>> = {}) {
   return render(
     <HourlyGridDialog
       open
@@ -27,6 +27,7 @@ function renderDialog(status: ClinicalDay['status']) {
       selectedDay={{ ...selectedDay, status }}
       isLocked={false}
       saveStatus="saved"
+      {...props}
     >
       <div>{'вміст карти'}</div>
     </HourlyGridDialog>
@@ -139,5 +140,32 @@ describe('HourlyGridDialog', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => expect(document.activeElement).toBe(trigger));
     expect(document.activeElement).not.toBe(input);
+  });
+
+  it('shows a lock banner between the toolbar and body when the day is signed while open', () => {
+    renderDialog('NURSE_SIGNED', { isLocked: true });
+    expect(screen.getByText('Доба підписана — перегляд')).toBeInTheDocument();
+    expect(screen.getByText('Перегляд підписаної доби')).toBeInTheDocument();
+  });
+
+  it('shows a subtle loading spinner in the toolbar while day data is refreshing', () => {
+    const { unmount } = renderDialog('OPEN', { loading: true });
+    expect(screen.getByRole('img', { name: 'Завантаження' })).toBeInTheDocument();
+    unmount();
+    renderDialog('OPEN');
+    expect(screen.queryByRole('img', { name: 'Завантаження' })).not.toBeInTheDocument();
+  });
+
+  it('renders the 409 conflict banner with both resolution actions', () => {
+    const onResolveConflict = vi.fn();
+    renderDialog('OPEN', {
+      conflict: { hour: 8, key: 'heartRate', raw: '99' },
+      onResolveConflict,
+    });
+    expect(screen.getByText('Запис змінено іншим користувачем (heartRate 8:00)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Оновити дані' }));
+    expect(onResolveConflict).toHaveBeenCalledWith(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Залишити мій варіант' }));
+    expect(onResolveConflict).toHaveBeenCalledWith(true);
   });
 });

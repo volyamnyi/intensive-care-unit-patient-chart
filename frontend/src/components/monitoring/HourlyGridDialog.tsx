@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Clock, RefreshCw, X } from 'lucide-react';
+import { Clock, Loader2, Lock, RefreshCw, TriangleAlert, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,11 +60,15 @@ interface HourlyGridDialogProps {
   onRefresh?: () => void;
   feedback?: { message: string; severity: 'success' | 'error' } | null;
   finalFocusRef?: React.RefObject<HTMLElement | null>;
+  conflict?: { hour: number; key: string; raw: string } | null;
+  onResolveConflict?: (keep: boolean) => void;
+  loading?: boolean;
   children: ReactNode;
 }
 
 export default function HourlyGridDialog({
-  open, onOpenChange, episode, selectedDay, isLocked, saveStatus, onRefresh, feedback, finalFocusRef, children,
+  open, onOpenChange, episode, selectedDay, isLocked, saveStatus, onRefresh, feedback, finalFocusRef,
+  conflict, onResolveConflict, loading, children,
 }: HourlyGridDialogProps) {
   const time = useClock();
   const patientName = episode?.patientName || 'Пацієнт';
@@ -80,6 +84,7 @@ export default function HourlyGridDialog({
     popupRef.current?.querySelector<HTMLElement>('[aria-label="Закрити вікно (Esc)"]') ?? null;
 
   const handleOpenChange = (next: boolean) => {
+    if (next === open) return;
     if (!next && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -119,7 +124,7 @@ export default function HourlyGridDialog({
       >
         <DialogTitle className="sr-only">{`Погодинна карта — ${patientName}`}</DialogTitle>
 
-        <header className="flex h-12 min-w-0 items-center justify-between gap-2 border-b border-border bg-card px-3">
+        <header className="flex min-h-12 min-w-0 items-center justify-between gap-2 border-b border-border bg-card px-3 pt-[env(safe-area-inset-top)]">
           <div className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm font-semibold text-card-foreground">{patientName}</span>
             {selectedDay && (
@@ -138,7 +143,7 @@ export default function HourlyGridDialog({
               <Clock className="size-3.5" />
               {time}
             </span>
-            <Button variant="ghost" size="icon-sm" aria-label="Оновити дані" onClick={onRefresh}>
+            <Button variant="ghost" size="icon-sm" aria-label="Оновити показники" onClick={onRefresh}>
               <RefreshCw className="size-4" />
             </Button>
             <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити вікно (Esc)" />}>
@@ -147,20 +152,47 @@ export default function HourlyGridDialog({
           </div>
         </header>
 
-        <div className="flex h-9 min-w-0 items-center justify-between gap-2 border-b border-border bg-card px-2">
-          <span className="text-sm font-semibold text-card-foreground">{'Погодинна карта'}</span>
-          <span role="status" aria-live="polite" className="sr-only">{feedback?.message}</span>
-          <span className="text-xs text-muted-foreground">
-            {formatDayRange(selectedDay?.startDateTime, selectedDay?.endDateTime)}
-          </span>
+        <div className="min-w-0">
+          <div className="flex h-9 min-w-0 items-center justify-between gap-2 border-b border-border bg-card px-2">
+            <span className="text-sm font-semibold text-card-foreground">{'Погодинна карта'}</span>
+            <span role="status" aria-live="polite" className="sr-only">{feedback?.message}</span>
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              {loading && (
+                <span role="img" aria-label="Завантаження" className="inline-flex">
+                  <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                </span>
+              )}
+              {formatDayRange(selectedDay?.startDateTime, selectedDay?.endDateTime)}
+            </span>
+          </div>
+          {conflict && (
+            <div role="status" aria-live="polite" className="flex min-h-9 min-w-0 items-center gap-2 border-b border-border bg-warning/10 px-3 py-1.5">
+              <TriangleAlert className="size-4 shrink-0 text-warning" />
+              <span className="min-w-0 flex-1 truncate text-xs font-medium text-warning">
+                {`Запис змінено іншим користувачем (${conflict.key} ${conflict.hour}:00)`}
+              </span>
+              <Button size="sm" variant="outline" className="h-6 shrink-0 px-2 text-[11px]" onClick={() => onResolveConflict?.(false)}>
+                {'Оновити дані'}
+              </Button>
+              <Button size="sm" className="h-6 shrink-0 px-2 text-[11px]" onClick={() => onResolveConflict?.(true)}>
+                {'Залишити мій варіант'}
+              </Button>
+            </div>
+          )}
+          {isLocked && (
+            <div className="flex h-8 min-w-0 items-center gap-2 border-b border-border bg-muted/40 px-3">
+              <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate text-xs font-medium text-muted-foreground">{'Доба підписана — перегляд'}</span>
+            </div>
+          )}
         </div>
 
         <div className="h-full min-h-0 overflow-y-auto">
           {children}
         </div>
 
-        <footer className="flex h-11 min-w-0 items-center justify-between gap-2 border-t border-border bg-card px-3">
-          <span className="truncate text-xs text-muted-foreground">{saveStatusLabel(saveStatus, isLocked)}</span>
+        <footer className="flex min-h-11 min-w-0 items-center justify-between gap-2 border-t border-border bg-card px-3 pb-[env(safe-area-inset-bottom)]">
+          <span className="truncate text-xs text-muted-foreground">{isLocked ? 'Перегляд підписаної доби' : saveStatusLabel(saveStatus, isLocked)}</span>
           <div className="flex shrink-0 items-center gap-1.5">
             <DialogClose render={<Button aria-label="Закрити карту">{'Назад до карти'}</Button>} />
             <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити вікно (Esc)" />}>

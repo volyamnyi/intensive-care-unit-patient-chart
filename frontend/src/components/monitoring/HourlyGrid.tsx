@@ -94,11 +94,12 @@ interface CellProps {
   isLossRow: boolean;
   isDark: boolean;
   isPast: boolean;
+  isMobile: boolean;
   onSave: (hour: number, key: keyof HourlyRecord, raw: string) => void;
 }
 
 const Cell = memo(function Cell({
-  hour, rowKey, numeric, label, value, isLocked, isNurse, isLossRow, isDark: _isDark, isPast, onSave,
+  hour, rowKey, numeric, label, value, isLocked, isNurse, isLossRow, isDark: _isDark, isPast, isMobile, onSave,
 }: CellProps) {
   const [draft, setDraft] = useState(value);
   const focusedRef = useRef(false);
@@ -135,6 +136,7 @@ const Cell = memo(function Cell({
         }}
         className={cn(
           'h-full w-full rounded-none p-0 text-center text-xs',
+          isMobile && 'min-h-[44px]',
           critical && 'font-bold border border-destructive',
           !critical && 'border-0',
           readOnly && 'disabled:opacity-100',
@@ -152,6 +154,7 @@ interface TherapyCellProps {
   execution: OrderExecution | null;
   isDark: boolean;
   isPast: boolean;
+  isMobile: boolean;
   canPlan: boolean;
   canExecute: boolean;
   isExecuting: boolean;
@@ -162,7 +165,7 @@ interface TherapyCellProps {
 }
 
 const TherapyCell = memo(function TherapyCell({
-  order, hour, execution, isDark: _isDark, isPast, canPlan, canExecute, isExecuting,
+  order, hour, execution, isDark: _isDark, isPast, isMobile, canPlan, canExecute, isExecuting,
   onPlan, onCancel, onExecute, onExecuteFinish,
 }: TherapyCellProps) {
   const [mode, setMode] = useState<'plan' | 'execute' | 'finish' | null>(null);
@@ -217,7 +220,7 @@ const TherapyCell = memo(function TherapyCell({
 
   if (mode === 'plan' || mode === 'execute') {
     return (
-      <TableCell className={cn('p-0 text-center bg-muted dark:bg-warning/20')} style={{ minWidth: 44 }}>
+      <TableCell className={cn('p-0 text-center bg-muted dark:bg-warning/20', isMobile && 'min-h-[44px]')} style={{ minWidth: 44 }}>
         <div className="flex items-center">
           <Input
             autoFocus
@@ -245,7 +248,7 @@ const TherapyCell = memo(function TherapyCell({
 
   if (mode === 'finish') {
     return (
-      <TableCell className="p-0 text-center bg-[#C8E6C9]" style={{ minWidth: 44 }}>
+      <TableCell className={cn('p-0 text-center bg-[#C8E6C9]', isMobile && 'min-h-[44px]')} style={{ minWidth: 44 }}>
         <div className="flex items-center justify-center gap-0.5">
           <Button
             size="sm"
@@ -279,7 +282,7 @@ const TherapyCell = memo(function TherapyCell({
   return (
     <TableCell
       onClick={handleClick}
-      className={cn('p-1 text-center', bgClass)}
+      className={cn('p-1 text-center', bgClass, isMobile && 'min-h-[44px]')}
       style={{ minWidth: 44, cursor: clickable ? 'pointer' : 'default' }}
     >
       {isExecuting ? <Loader2 className="inline size-3 animate-spin" /> : (
@@ -509,6 +512,7 @@ export default function HourlyGrid({
                     isLossRow={false}
                     isDark={false}
                     isPast={isPastMedDay(h, realClockHour)}
+                    isMobile={isMobile}
                     onSave={onSaveCell}
                   />
                 ))}
@@ -532,6 +536,7 @@ export default function HourlyGrid({
                     isLossRow
                     isDark={false}
                     isPast={isPastMedDay(h, realClockHour)}
+                    isMobile={isMobile}
                     onSave={onSaveCell}
                   />
                 ))}
@@ -555,6 +560,7 @@ export default function HourlyGrid({
                     isLossRow
                     isDark={false}
                     isPast={isPastMedDay(h, realClockHour)}
+                    isMobile={isMobile}
                     onSave={onSaveCell}
                   />
                 ))}
@@ -578,6 +584,7 @@ export default function HourlyGrid({
                     isLossRow
                     isDark={false}
                     isPast={isPastMedDay(h, realClockHour)}
+                    isMobile={isMobile}
                     onSave={onSaveCell}
                   />
                 ))}
@@ -630,6 +637,7 @@ export default function HourlyGrid({
                     execution={(executionsByOrder[order.id] ?? []).find(e => e.hour === h) ?? null}
                     isDark={false}
                     isPast={isPastMedDay(h, realClockHour)}
+                    isMobile={isMobile}
                     canPlan={!isLocked && !isNurse && !!user}
                     canExecute={!isLocked && isNurse && !!user}
                     isExecuting={executing === `${order.id}-${h}`}

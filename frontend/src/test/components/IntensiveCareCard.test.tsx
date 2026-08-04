@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import IntensiveCareCard from '../../components/monitoring/IntensiveCareCard';
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, OrderExecution } from '../../types';
@@ -74,6 +75,7 @@ interface CardProps {
   episode?: Episode; selectedDay?: ClinicalDay | null; records?: HourlyRecord[];
   orders?: MedicalOrder[]; balanceItems?: FluidBalanceItem[]; isNurse?: boolean;
   isLocked?: boolean; user?: { id: number } | null; onRefresh?: () => void;
+  onFeedback?: (message: string, severity: 'success' | 'error') => void;
 }
 
 function renderCard(props: CardProps = {}) {
@@ -89,6 +91,27 @@ function renderCard(props: CardProps = {}) {
         isLocked={false}
         user={{ id: 1 }}
         {...props}
+      />
+    </ThemeModeProvider>
+  );
+}
+
+function ConflictHarness() {
+  const [records, setRecords] = useState<HourlyRecord[]>(mockRecords);
+  return (
+    <ThemeModeProvider>
+      <IntensiveCareCard
+        episode={mockEpisode}
+        selectedDay={mockDay}
+        records={records}
+        orders={mockOrders}
+        balanceItems={mockBalanceItems}
+        isNurse={false}
+        isLocked={false}
+        user={{ id: 1 }}
+        onRefresh={() =>
+          setRecords(prev => prev.map(r => (r.id === 'r1' ? { ...r, version: r.version + 1 } : r)))
+        }
       />
     </ThemeModeProvider>
   );
@@ -266,6 +289,47 @@ describe('IntensiveCareCard', () => {
       await fireEvent.change(input, { target: { value: '' } });
       await fireEvent.blur(input);
       await waitFor(() => expect(mockHourlyRecordCreate).not.toHaveBeenCalled());
+    });
+  });
+
+  describe('Version conflict (HTTP 409)', () => {
+    it('keeps the cell draft and notifies the parent without silently overwriting', async () => {
+      const onFeedback = vi.fn();
+      mockHourlyRecordUpdate.mockRejectedValue({ response: { status: 409 } });
+      renderCard({ onFeedback });
+      const input = screen.getByLabelText('ЧСС 8:00');
+      await fireEvent.change(input, { target: { value: '99' } });
+      await fireEvent.blur(input);
+      await waitFor(() => expect(onFeedback).toHaveBeenCalledWith('Запис змінено іншим користувачем', 'error'));
+      expect(screen.getByLabelText('ЧСС 8:00')).toHaveValue('99');
+      expect(mockHourlyRecordUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the conflict banner in the modal and "keep my variant" retries with the new version', async () => {
+      mockHourlyRecordUpdate
+        .mockRejectedValueOnce({ response: { status: 409 } })
+        .mockResolvedValueOnce({ data: {} });
+      render(<ConflictHarness />);
+      fireEvent.click(screen.getByRole('button', { name: 'Розгорнути на весь екран' }));
+      const modalInput = (await screen.findAllByLabelText('ЧСС 8:00'))[1];
+      await fireEvent.change(modalInput, { target: { value: '99' } });
+      await fireEvent.blur(modalInput);
+      await waitFor(() => expect(screen.getByText(/heartRate 8:00/)).toBeInTheDocument());
+      fireEvent.click(screen.getByRole('button', { name: 'Залишити мій варіант' }));
+      await waitFor(() => expect(mockHourlyRecordUpdate)
+        .toHaveBeenLastCalledWith('r1', expect.objectContaining({ heartRate: 99, version: 2 })));
+    });
+
+    it('shows the conflict banner in the modal and "update data" dismisses it after refresh', async () => {
+      mockHourlyRecordUpdate.mockRejectedValue({ response: { status: 409 } });
+      render(<ConflictHarness />);
+      fireEvent.click(screen.getByRole('button', { name: 'Розгорнути на весь екран' }));
+      const modalInput = (await screen.findAllByLabelText('ЧСС 8:00'))[1];
+      await fireEvent.change(modalInput, { target: { value: '99' } });
+      await fireEvent.blur(modalInput);
+      await waitFor(() => expect(screen.getByText(/heartRate 8:00/)).toBeInTheDocument());
+      fireEvent.click(screen.getByRole('button', { name: 'Оновити дані' }));
+      await waitFor(() => expect(screen.queryByText(/heartRate 8:00/)).not.toBeInTheDocument());
     });
   });
 

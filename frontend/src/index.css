@@ -266,6 +266,9 @@ html {
   button {
     display: none !important;
   }
+  [data-slot="dialog-overlay"] {
+    display: none !important;
+  }
   tr, .document-header {
     page-break-inside: avoid;
   }

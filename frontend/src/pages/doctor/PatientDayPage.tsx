@@ -263,6 +263,7 @@ export default function PatientDayPage() {
               user={user}
               onRefresh={handleRefresh}
               onFeedback={(msg, sev) => setFeedback({ message: msg, severity: sev })}
+              dayLoading={dayLoading}
             />
           ) : (
             <DoctorDashboard
@@ -278,6 +279,7 @@ export default function PatientDayPage() {
               user={user}
               onRefresh={handleRefresh}
               onFeedback={(msg, sev) => setFeedback({ message: msg, severity: sev })}
+              dayLoading={dayLoading}
             />
           )}
         </div>

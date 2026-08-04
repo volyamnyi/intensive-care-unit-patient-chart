@@ -32,10 +32,11 @@ interface IntensiveCareCardProps {
   user: UserLike | null;
   onRefresh?: () => void;
   onFeedback?: (message: string, severity: 'success' | 'error') => void;
+  loading?: boolean;
 }
 
 export default function IntensiveCareCard({
-  episode, selectedDay, records, orders, balanceItems, isNurse, isLocked, user, onRefresh, onFeedback,
+  episode, selectedDay, records, orders, balanceItems, isNurse, isLocked, user, onRefresh, onFeedback, loading,
 }: IntensiveCareCardProps) {
   const [executing, setExecuting] = useState<string | null>(null);
   const [notes, setNotes] = useState<{ id: string; text: string; authorId?: string | null; role?: string | null; createdAt?: string | null }[]>([]);
@@ -53,6 +54,8 @@ export default function IntensiveCareCard({
 
   const [gridFeedback, setGridFeedback] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
   const [gridExpanded, setGridExpanded] = useState(false);
+  const [conflict, setConflict] = useState<{ hour: number; key: keyof HourlyRecord; raw: string } | null>(null);
+  const retryRef = useRef<{ hour: number; key: keyof HourlyRecord; raw: string } | null>(null);
   useEffect(() => {
     if (gridExpanded) setGridFeedback(null);
   }, [gridExpanded]);
@@ -205,11 +208,36 @@ export default function IntensiveCareCard({
       onRefresh?.();
       setGridFeedback({ message: `Збережено ${String(hour).padStart(2, '0')}:00`, severity: 'success' });
     } catch (err) {
+      const is409 = !!(err && typeof err === 'object' && 'response' in err
+        && (err as { response?: { status?: number } }).response?.status === 409);
+      if (is409) {
+        setConflict({ hour, key, raw });
+        setGridFeedback({ message: 'Запис змінено іншим користувачем', severity: 'error' });
+        if (!gridExpanded) notifyParentRef.current('Запис змінено іншим користувачем', 'error');
+        return;
+      }
       const message = getErrorMessage(err, 'Не вдалося зберегти показник');
       setGridFeedback({ message, severity: 'error' });
       notifyParentRef.current(message, 'error');
     }
-  }, [selectedDay, isLocked, recByHour, onRefresh]);
+  }, [selectedDay, isLocked, recByHour, onRefresh, gridExpanded]);
+
+  const saveCellRef = useRef(saveCell);
+  saveCellRef.current = saveCell;
+
+  const resolveConflict = useCallback((keep: boolean) => {
+    if (!conflict) return;
+    if (keep) retryRef.current = conflict;
+    setConflict(null);
+    onRefresh?.();
+  }, [conflict, onRefresh]);
+
+  useEffect(() => {
+    const pending = retryRef.current;
+    if (!pending) return;
+    retryRef.current = null;
+    void saveCellRef.current(pending.hour, pending.key, pending.raw);
+  }, [records]);
 
   const activeOrders = orders.filter(o => o.status === 'ACTIVE' || o.status === 'DRAFT');
   const [executionsByOrder, setExecutionsByOrder] = useState<Record<string, OrderExecution[]>>({});
@@ -321,7 +349,7 @@ export default function IntensiveCareCard({
                   size="sm"
                   ref={expandTriggerRef}
                   onClick={() => setGridExpanded(true)}
-                  disabled={!selectedDay}
+                  disabled={!selectedDay || gridExpanded}
                   aria-label="Розгорнути на весь екран"
                   aria-keyshortcuts="Alt+Enter"
                 >
@@ -364,37 +392,39 @@ export default function IntensiveCareCard({
           toolbar={gridToolbar}
           onHeaderDoubleClick={() => setGridExpanded(true)}
         />
-        <PatientSidebar
-          episode={episode}
-          selectedDay={selectedDay}
-          isLocked={isLocked}
-          records={records}
-          notes={notes}
-          noteText={noteText}
-          autoSaveStatus={autoSaveStatus}
-          savingNote={savingNote}
-          scales={scales}
-          ventilation={ventilation}
-          labs={labs}
-          patientState={patientState}
-          loadingSidebar={loadingSidebar}
-          balanceItems={balanceItems}
-          totalIntake={totalIntake}
-          totalOutput={totalOutput}
-          dailyBalance={dailyBalance}
-          cumulativeBalance={cumulativeBalance}
-          keyScales={keyScales}
-          canEditSidebar={canEditSidebar}
-          onNoteChange={handleNoteChange}
-          onSaveNote={saveNow}
-          onCreateLab={createLab}
-          onCreateVentilation={createVentilation}
-          onCreatePatientState={createPatientState}
-          availableScales={availableScales}
-          onCreateScale={createScale}
-          onCalculateScale={calculateScale}
-          episodeId={episode.id}
-        />
+        <div className={cn(isMobile && 'hidden')}>
+          <PatientSidebar
+            episode={episode}
+            selectedDay={selectedDay}
+            isLocked={isLocked}
+            records={records}
+            notes={notes}
+            noteText={noteText}
+            autoSaveStatus={autoSaveStatus}
+            savingNote={savingNote}
+            scales={scales}
+            ventilation={ventilation}
+            labs={labs}
+            patientState={patientState}
+            loadingSidebar={loadingSidebar}
+            balanceItems={balanceItems}
+            totalIntake={totalIntake}
+            totalOutput={totalOutput}
+            dailyBalance={dailyBalance}
+            cumulativeBalance={cumulativeBalance}
+            keyScales={keyScales}
+            canEditSidebar={canEditSidebar}
+            onNoteChange={handleNoteChange}
+            onSaveNote={saveNow}
+            onCreateLab={createLab}
+            onCreateVentilation={createVentilation}
+            onCreatePatientState={createPatientState}
+            availableScales={availableScales}
+            onCreateScale={createScale}
+            onCalculateScale={calculateScale}
+            episodeId={episode.id}
+          />
+        </div>
       </div>
     </SidebarProvider>
     <HourlyGridDialog
@@ -407,9 +437,12 @@ export default function IntensiveCareCard({
       onRefresh={onRefresh}
       feedback={gridFeedback}
       finalFocusRef={expandTriggerRef}
+      conflict={conflict}
+      onResolveConflict={resolveConflict}
+      loading={loading}
     >
       {selectedDay && (
-        <HourlyGrid {...gridProps} isMobile={false} sticky bare />
+        <HourlyGrid {...gridProps} sticky={!isMobile} bare />
       )}
       </HourlyGridDialog>
     </>

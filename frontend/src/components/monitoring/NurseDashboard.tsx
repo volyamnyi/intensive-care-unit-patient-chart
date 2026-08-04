@@ -8,7 +8,7 @@ export default function NurseDashboard(props: DashboardProps) {
   const {
     episode, clinicalDays, selectedDay, onSelectDay,
     records, orders, balanceItems,
-    isLocked, isNurse, user, onRefresh, onFeedback,
+    isLocked, isNurse, user, onRefresh, onFeedback, dayLoading,
   } = props;
 
   const paperClass = cn('rounded-xl border border-border bg-card p-3 shadow-sm');
@@ -67,6 +67,7 @@ export default function NurseDashboard(props: DashboardProps) {
         user={user ?? null}
         onRefresh={onRefresh}
         onFeedback={onFeedback}
+        loading={dayLoading}
       />
     </div>
   );

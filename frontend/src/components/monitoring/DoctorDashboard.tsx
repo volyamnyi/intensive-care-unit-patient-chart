@@ -8,7 +8,7 @@ export default function DoctorDashboard(props: DashboardProps) {
   const {
     episode, clinicalDays, selectedDay, onSelectDay,
     records, orders, balanceItems,
-    isLocked, isNurse, user, onRefresh, onFeedback,
+    isLocked, isNurse, user, onRefresh, onFeedback, dayLoading,
   } = props;
 
   const dayBadgeVariant = (status: string): 'default' | 'secondary' | 'outline' | null => {
@@ -95,6 +95,7 @@ export default function DoctorDashboard(props: DashboardProps) {
         user={user ?? null}
         onRefresh={onRefresh}
         onFeedback={onFeedback}
+        loading={dayLoading}
       />
     </div>
   );

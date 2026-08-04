@@ -20,4 +20,5 @@ export interface DashboardProps {
   isNurse: boolean;
   onRefresh?: () => void;
   onFeedback?: (message: string, severity: 'success' | 'error') => void;
+  dayLoading?: boolean;
 }
