@@ -460,7 +460,7 @@ export default function HourlyGrid({
     <Root className={cn('min-w-0', isMobile ? 'w-full' : 'flex-1', sticky && 'h-full min-h-0')}>
       <div className={cn('overflow-hidden rounded-xl border border-border bg-card', sticky && 'flex h-full flex-col')}>
         {toolbar}
-        <div className={sticky ? 'flex-1 min-h-0 overflow-auto' : 'overflow-x-auto'}>
+        <div className={sticky ? 'flex-1 min-h-0 overflow-auto scroll-pt-12' : 'overflow-x-auto'}>
           <GridTable sticky={sticky}>
             <TableHeader>
               <TableRow className={cn('bg-muted', stickyRowClass)}>

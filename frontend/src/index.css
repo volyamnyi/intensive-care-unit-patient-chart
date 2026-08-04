@@ -167,6 +167,15 @@ body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialo
   background-color: rgb(0 0 0 / 0.2);
 }
 
+/* #137: focus-rings повної непрозорості в повноекранній карті — стандартний
+   ring-ring/50 не дає 3:1 AA на групових шапках bg-muted/60; offset = card */
+[data-slot="dialog-content"][data-fullscreen]
+  :is(button, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  --tw-ring-color: var(--color-ring);
+  --tw-ring-offset-shadow: 0 0 0 2px var(--color-card);
+  --tw-ring-offset-color: var(--color-card);
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
