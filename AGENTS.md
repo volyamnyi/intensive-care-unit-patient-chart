@@ -16,6 +16,21 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
+**2026-08-04: Fullscreen Grid Modal Phase 5 — edge-case hardening (Issue #138, master #133)**
+
+All 5 CI jobs green: Code Quality, Backend Tests, Backend Integration Tests, Frontend Tests (393 across 46 files), E2E (183 tests). Commits: `6598efd`, `272d654`, `aab6700`.
+
+- **409 conflict**: `IntensiveCareCard.saveCell` detects HTTP 409 → `setConflict({hour, key, raw})`; modal banner «Запис змінено іншим користувачем (ключ година:00)» with «Оновити дані» (`resolveConflict(false)` → refresh) / «Залишити мій варіант» (`resolveConflict(true)` → `retryRef`, re-saves on next `records` change via effect with fresh `version`). Cell draft is preserved (no silent overwrite). Inline grid notifies parent snackbar instead.
+- **Day lock**: `HourlyGridDialog` lock banner (Lock icon, «Доба підписана — перегляд»); footer label switches to «Перегляд підписаної доби». aria-labels disambiguated: header refresh «Оновити показники» vs banner «Оновити дані».
+- **Print**: `index.css` `@media print` hides `[data-slot="dialog-overlay"]` (`display:none !important`) so modal content prints without the full-page backdrop.
+- **Rapid toggle**: `handleOpenChange` early-returns when `next === open`; expand trigger `disabled={!selectedDay || gridExpanded}`.
+- **Loading**: `dayLoading` threaded `PatientDayPage` → `Doctor/NurseDashboard` → `IntensiveCareCard` `loading` prop → dialog spinner (Loader2 in `<span role="img" aria-label="Завантаження">`).
+- **Mobile**: `HourlyGrid` rows `min-h-[44px]` touch targets via `isMobile` prop (from card's matchMedia ≤1200px); dialog uses `sticky={!isMobile}`; `PatientSidebar` wrapped in `div.hidden` on mobile.
+- **Safe area**: dialog header `pt-[env(safe-area-inset-top)]`, footer `pb-[env(safe-area-inset-bottom)]`.
+- E2E fix: 404 status capture in `validation-edge-cases.spec.ts` scoped to episode GET (excludes `/clinical-days`, which returns 200 empty for unknown episodes).
+
+### Previous sessions (condensed):
+
 **2026-07-31: ТЗ v1.2 — SOFA input parameters formalized (docs only)**
 
 Updated `docs/Технічне завдання карта Інтенсивної терапії.md` to v1.2 (2839 → 3026 lines). The ТЗ was brought in line with the existing implementation — verified `SofaCalculator` (all 13 inputs incl. epinephrine), `SofaForm` (4 vasopressors, GCS, creatinine, 24h urine output), `HourlyRecord.meanArterialPressure`; no code changes needed:
@@ -24,7 +39,6 @@ Updated `docs/Технічне завдання карта Інтенсивно�
 - §36: одиниці вимірювання (тромбоцити ×10⁹/л; креатинін/білірубін мкмоль/л або мг/дл); `pO₂` → `PaO₂` (визначення); автозапис PaO₂/FiO₂
 - §53.2: серцево-судинна оцінка SOFA доповнена адреналіном (≤0.1 → 3, >0.1 → 4), дози у мкг/кг/хв
 
-### Previous sessions (condensed):
 - 2026-07-30: Clinical scales — episode-level binding, calculator algorithms, E2E tests (Issues #1-#6). `ScaleResult` episodeId/rawData(jsonb); pure-static calculators (ApacheIi, Sofa, CamIcu, Braden); `ScaleAuthorizationService` per-scale roles (APACHE II/SOFA → DOCTOR); episode-level endpoints `GET/POST /episodes/{id}/scales` + `POST .../calculate`; `ScaleFormFactory` + forms (ApacheIiForm, SofaForm, CamIcuForm, BradenForm, RassSelector); PDF episode scales via `findByEpisodeId()`; 13 E2E tests (`scales-episode.spec.ts`, `scales-access.spec.ts`)
 - 2026-07-29: 177/177 Playwright tests passing. Pattern A-D (20 fixes), Pattern E-H (additional fixes). DB reset script.
 - 2026-07-29 (earlier): Issue #87 prescription list dropdown. Issue #84 GlobalLayout nav. Issue #83 nurse patient list. Cyrillic encoding fix (Issue #82). Global theme. PrescriptionGrid.
@@ -164,8 +178,8 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 ## Testing
 
 - **Backend**: 557 total tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: ~350 Vitest tests across 44 files (pages, components, AuthContext, endpoints). Run with `npm t`.
-- **E2E**: 45 Playwright spec files across 7 projects (setup, login, doctor, nurse, hod, admin, api).
+- **Frontend**: 393 Vitest tests across 46 files (pages, components, AuthContext, endpoints). Run with `npm t`.
+- **E2E**: 45 Playwright spec files (183 tests) across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
 
