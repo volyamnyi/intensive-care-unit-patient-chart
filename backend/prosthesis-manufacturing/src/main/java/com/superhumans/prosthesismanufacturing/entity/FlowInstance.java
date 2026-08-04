@@ -46,6 +46,16 @@ public class FlowInstance extends BaseEntity {
     @Column(name = "end_time")
     LocalDateTime endTime;
 
+    @Column(name = "paused_at")
+    LocalDateTime pausedAt;
+
+    @Column(name = "resumed_at")
+    LocalDateTime resumedAt;
+
+    @Column(name = "pause_category", length = 16)
+    @Enumerated(EnumType.STRING)
+    PauseCategory pauseCategory;
+
     @Column(name = "total_active_seconds")
     @Builder.Default
     Long totalActiveSeconds = 0L;

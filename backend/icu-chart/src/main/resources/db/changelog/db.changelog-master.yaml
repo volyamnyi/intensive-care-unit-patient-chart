@@ -29,3 +29,6 @@
   - include:
       relativeToChangelogFile: true
       file: changesets/010-prosthesis-manufacturing.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/011-prosthesis-pause-tracking.sql
