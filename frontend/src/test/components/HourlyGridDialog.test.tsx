@@ -72,9 +72,9 @@ describe('HourlyGridDialog', () => {
     expect((popup as HTMLElement).style.transformOrigin).toBe('0px 0px');
   });
 
-  it('focuses the footer close button on open (data-entry safety, deliberate deviation from APG default)', async () => {
+  it('focuses the header close button on open (data-entry safety, deliberate deviation from APG default)', async () => {
     renderDialog('OPEN');
-    const close = screen.getByRole('button', { name: 'Закрити вікно (Esc)' });
+    const close = screen.getAllByRole('button', { name: 'Закрити вікно (Esc)' })[0];
     await waitFor(() => expect(document.activeElement).toBe(close));
   });
 
@@ -104,9 +104,9 @@ describe('HourlyGridDialog', () => {
     expect(status).toHaveTextContent('Збережено 14:00');
   });
 
-  it('gives the footer close icon a distinct label (no duplicate aria-labels)', () => {
+  it('gives close buttons a unique accessible label (no ambiguous "Закрити (Esc)")', () => {
     renderDialog('OPEN');
-    expect(screen.getByRole('button', { name: 'Закрити вікно (Esc)' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Закрити вікно (Esc)' }).length).toBeGreaterThanOrEqual(2);
     expect(screen.queryAllByRole('button', { name: 'Закрити (Esc)' })).toHaveLength(0);
   });
 

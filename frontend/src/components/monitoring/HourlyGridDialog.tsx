@@ -72,9 +72,10 @@ export default function HourlyGridDialog({
   const [origin, setOrigin] = useState<string | undefined>(undefined);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  // Початковий фокус — на кнопці закриття (✕ у футері), навмисне відхилення від APG-дефолту
-  // «перше фокусоване поле»: клітинки таблиці редагуються одразу після Tab, а випадковий ввід
-  // у першу клітинку (ЧСС 0:00) до прочитання стану пацієнта — небезпечний для даних (WCAG 2.4.3).
+  // Початковий фокус — на кнопці закриття (✕ у шапці, перший у DOM), навмисне відхилення
+  // від APG-дефолту «перше фокусоване поле»: клітинки таблиці редагуються одразу після Tab,
+  // а випадковий ввід у першу клітинку (ЧСС 0:00) до прочитання стану пацієнта — небезпечний
+  // для даних (WCAG 2.4.3).
   const handleInitialFocus = () =>
     popupRef.current?.querySelector<HTMLElement>('[aria-label="Закрити вікно (Esc)"]') ?? null;
 
@@ -140,7 +141,7 @@ export default function HourlyGridDialog({
             <Button variant="ghost" size="icon-sm" aria-label="Оновити дані" onClick={onRefresh}>
               <RefreshCw className="size-4" />
             </Button>
-            <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити (Esc)" />}>
+            <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити вікно (Esc)" />}>
               <X className="size-4" />
             </DialogClose>
           </div>
