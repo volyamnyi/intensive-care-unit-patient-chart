@@ -26,3 +26,6 @@
   - include:
       relativeToChangelogFile: true
       file: changesets/009-order-execution-planning.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/010-prosthesis-manufacturing.sql
