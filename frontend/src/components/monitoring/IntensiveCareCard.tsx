@@ -51,6 +51,12 @@ export default function IntensiveCareCard({
   const notifyParentRef = useRef(onFeedback ?? (() => {}));
   notifyParentRef.current = onFeedback ?? (() => {});
 
+  const [gridFeedback, setGridFeedback] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
+  const [gridExpanded, setGridExpanded] = useState(false);
+  useEffect(() => {
+    if (gridExpanded) setGridFeedback(null);
+  }, [gridExpanded]);
+
   useEffect(() => { setNoteText(''); noteTextRef.current = ''; }, [selectedDay?.id]);
 
   const saveCurrentNote = useCallback(async () => {
@@ -150,7 +156,7 @@ export default function IntensiveCareCard({
   };
 
   const [orderFormOpen, setOrderFormOpen] = useState(false);
-  const [gridExpanded, setGridExpanded] = useState(false);
+  const expandTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!selectedDay) return;
@@ -197,8 +203,11 @@ export default function IntensiveCareCard({
         localRecordMap.current.set(hour, { id: res.data.id, version: res.data.version });
       }
       onRefresh?.();
+      setGridFeedback({ message: `Збережено ${String(hour).padStart(2, '0')}:00`, severity: 'success' });
     } catch (err) {
-      notifyParentRef.current(getErrorMessage(err, 'Не вдалося зберегти показник'), 'error');
+      const message = getErrorMessage(err, 'Не вдалося зберегти показник');
+      setGridFeedback({ message, severity: 'error' });
+      notifyParentRef.current(message, 'error');
     }
   }, [selectedDay, isLocked, recByHour, onRefresh]);
 
@@ -310,6 +319,7 @@ export default function IntensiveCareCard({
                 <Button
                   variant="outline"
                   size="sm"
+                  ref={expandTriggerRef}
                   onClick={() => setGridExpanded(true)}
                   disabled={!selectedDay}
                   aria-label="Розгорнути на весь екран"
@@ -395,6 +405,8 @@ export default function IntensiveCareCard({
       isLocked={isLocked}
       saveStatus={autoSaveStatus}
       onRefresh={onRefresh}
+      feedback={gridFeedback}
+      finalFocusRef={expandTriggerRef}
     >
       {selectedDay && (
         <HourlyGrid {...gridProps} isMobile={false} sticky bare />

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Clock, RefreshCw, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -58,16 +58,32 @@ interface HourlyGridDialogProps {
   isLocked: boolean;
   saveStatus: string;
   onRefresh?: () => void;
+  feedback?: { message: string; severity: 'success' | 'error' } | null;
+  finalFocusRef?: React.RefObject<HTMLElement | null>;
   children: ReactNode;
 }
 
 export default function HourlyGridDialog({
-  open, onOpenChange, episode, selectedDay, isLocked, saveStatus, onRefresh, children,
+  open, onOpenChange, episode, selectedDay, isLocked, saveStatus, onRefresh, feedback, finalFocusRef, children,
 }: HourlyGridDialogProps) {
   const time = useClock();
   const patientName = episode?.patientName || 'Пацієнт';
   const status = selectedDay?.status ?? '';
   const [origin, setOrigin] = useState<string | undefined>(undefined);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  // Початковий фокус — на кнопці закриття (✕ у футері), навмисне відхилення від APG-дефолту
+  // «перше фокусоване поле»: клітинки таблиці редагуються одразу після Tab, а випадковий ввід
+  // у першу клітинку (ЧСС 0:00) до прочитання стану пацієнта — небезпечний для даних (WCAG 2.4.3).
+  const handleInitialFocus = () =>
+    popupRef.current?.querySelector<HTMLElement>('[aria-label="Закрити вікно (Esc)"]') ?? null;
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onOpenChange(next);
+  };
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -89,10 +105,14 @@ export default function HourlyGridDialog({
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal>
+    <Dialog open={open} onOpenChange={handleOpenChange} disablePointerDismissal>
       <DialogContent
+        ref={popupRef}
         showCloseButton={false}
         data-fullscreen="true"
+        aria-modal="true"
+        initialFocus={handleInitialFocus}
+        finalFocus={finalFocusRef ?? undefined}
         style={{ inset: 0, translate: 'none', transformOrigin: origin }}
         className="grid w-full max-w-none grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 rounded-none bg-card p-0 ring-0 sm:max-w-none print:hidden"
       >
@@ -128,6 +148,7 @@ export default function HourlyGridDialog({
 
         <div className="flex h-9 min-w-0 items-center justify-between gap-2 border-b border-border bg-card px-2">
           <span className="text-sm font-semibold text-card-foreground">{'Погодинна карта'}</span>
+          <span role="status" aria-live="polite" className="sr-only">{feedback?.message}</span>
           <span className="text-xs text-muted-foreground">
             {formatDayRange(selectedDay?.startDateTime, selectedDay?.endDateTime)}
           </span>
@@ -141,7 +162,7 @@ export default function HourlyGridDialog({
           <span className="truncate text-xs text-muted-foreground">{saveStatusLabel(saveStatus, isLocked)}</span>
           <div className="flex shrink-0 items-center gap-1.5">
             <DialogClose render={<Button aria-label="Закрити карту">{'Назад до карти'}</Button>} />
-            <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити (Esc)" />}>
+            <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити вікно (Esc)" />}>
               <X className="size-4" />
             </DialogClose>
           </div>

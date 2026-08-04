@@ -93,4 +93,21 @@ describe('HourlyGrid', () => {
     fireEvent.keyDown(input2, { key: 'Escape' });
     expect(onSaveCell).toHaveBeenCalledTimes(1);
   });
+
+  it('Cell: Enter during IME composition does not blur or save (isComposing guard)', () => {
+    const onSaveCell = vi.fn();
+    render(<HourlyGrid {...makeProps({ onSaveCell })} />);
+
+    const input = screen.getByLabelText('ЧСС 8:00');
+    input.focus();
+    fireEvent.change(input, { target: { value: '90' } });
+    const composingEnter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+    Object.defineProperty(composingEnter, 'isComposing', { value: true });
+    fireEvent(input, composingEnter);
+    expect(document.activeElement).toBe(input);
+    expect(onSaveCell).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSaveCell).toHaveBeenCalledTimes(1);
+  });
 });

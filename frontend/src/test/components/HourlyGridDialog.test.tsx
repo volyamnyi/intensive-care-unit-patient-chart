@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import HourlyGridDialog from '../../components/monitoring/HourlyGridDialog';
 import type { ClinicalDay, Episode } from '../../types';
 
@@ -69,5 +70,74 @@ describe('HourlyGridDialog', () => {
     const popup = document.querySelector('[data-slot="dialog-content"]');
     expect(popup).not.toBeNull();
     expect((popup as HTMLElement).style.transformOrigin).toBe('0px 0px');
+  });
+
+  it('focuses the footer close button on open (data-entry safety, deliberate deviation from APG default)', async () => {
+    renderDialog('OPEN');
+    const close = screen.getByRole('button', { name: 'Закрити вікно (Esc)' });
+    await waitFor(() => expect(document.activeElement).toBe(close));
+  });
+
+  it('marks the popup as role=dialog with aria-modal=true', () => {
+    renderDialog('OPEN');
+    const popup = document.querySelector('[data-slot="dialog-content"]');
+    expect(popup?.getAttribute('role')).toBe('dialog');
+    expect(popup?.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('announces save feedback via a polite live region (SC 3.2.5)', () => {
+    render(
+      <HourlyGridDialog
+        open
+        onOpenChange={vi.fn()}
+        episode={episode}
+        selectedDay={selectedDay}
+        isLocked={false}
+        saveStatus="saved"
+        feedback={{ message: 'Збережено 14:00', severity: 'success' }}
+      >
+        <div>{'вміст карти'}</div>
+      </HourlyGridDialog>
+    );
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveTextContent('Збережено 14:00');
+  });
+
+  it('gives the footer close icon a distinct label (no duplicate aria-labels)', () => {
+    renderDialog('OPEN');
+    expect(screen.getByRole('button', { name: 'Закрити вікно (Esc)' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: 'Закрити (Esc)' })).toHaveLength(0);
+  });
+
+  it('returns focus to the trigger and blurs the active element when the dialog closes (WCAG 2.4.3)', async () => {
+    const trigger = document.createElement('button');
+    trigger.setAttribute('aria-label', 'Розгорнути на весь екран');
+    document.body.appendChild(trigger);
+    const triggerRef = { current: trigger };
+
+    function Controlled() {
+      const [open, setOpen] = useState(true);
+      return (
+        <HourlyGridDialog
+          open={open}
+          onOpenChange={setOpen}
+          episode={episode}
+          selectedDay={selectedDay}
+          isLocked={false}
+          saveStatus="saved"
+          finalFocusRef={triggerRef}
+        >
+          <div><input data-testid="cell-input" /></div>
+        </HourlyGridDialog>
+      );
+    }
+
+    render(<Controlled />);
+    const input = screen.getByTestId('cell-input');
+    input.focus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(document.activeElement).not.toBe(input);
   });
 });

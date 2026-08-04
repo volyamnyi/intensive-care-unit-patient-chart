@@ -128,7 +128,11 @@ const Cell = memo(function Cell({
           const saved = valueRef.current;
           if (draft !== saved) onSave(hour, rowKey, draft);
         }}
-        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
         className={cn(
           'h-full w-full rounded-none p-0 text-center text-xs',
           critical && 'font-bold border border-destructive',
