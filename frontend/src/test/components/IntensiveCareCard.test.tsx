@@ -301,7 +301,7 @@ describe('IntensiveCareCard', () => {
       await fireEvent.change(input, { target: { value: '99' } });
       await fireEvent.blur(input);
       await waitFor(() => expect(onFeedback).toHaveBeenCalledWith('Запис змінено іншим користувачем', 'error'));
-      expect(screen.getByLabelText('ЧСС 8:00')).toHaveValue('99');
+      expect(screen.getByLabelText('ЧСС 8:00')).toHaveValue(99);
       expect(mockHourlyRecordUpdate).toHaveBeenCalledTimes(1);
     });
 
