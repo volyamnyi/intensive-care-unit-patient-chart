@@ -66,7 +66,8 @@ test.describe('Validation edge cases', () => {
     // Перехоплюємо статус GET /api/episodes для неіснуючого UUID
     let status = 0;
     page.on('response', (r) => {
-      if (r.url().includes('/api/episodes/00000000-0000-0000-0000-000000000000')) {
+      if (r.url().includes('/api/episodes/00000000-0000-0000-0000-000000000000')
+          && !r.url().includes('/clinical-days')) {
         status = r.status();
       }
     });
