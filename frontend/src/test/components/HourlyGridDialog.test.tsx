@@ -269,3 +269,62 @@ describe('HourlyGridDialog glance layer (issue #139)', () => {
     expect(screen.getByText('Зберігається…').className).toContain('text-muted-foreground');
   });
 });
+
+describe('HourlyGridDialog Phase 8 (issue #141)', () => {
+  it('renders no portal content while closed', () => {
+    render(
+      <HourlyGridDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        episode={episode}
+        selectedDay={selectedDay}
+        isLocked={false}
+        saveStatus="saved"
+      >
+        <div>{'вміст карти'}</div>
+      </HourlyGridDialog>
+    );
+    expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('mounts children inside the dialog on open and unmounts them on close', async () => {
+    function Controlled() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>{'відкрити'}</button>
+          <HourlyGridDialog
+            open={open}
+            onOpenChange={setOpen}
+            episode={episode}
+            selectedDay={selectedDay}
+            isLocked={false}
+            saveStatus="saved"
+          >
+            <div>{'вміст карти'}</div>
+          </HourlyGridDialog>
+        </>
+      );
+    }
+    render(<Controlled />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'відкрити' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toContainElement(screen.getByText('вміст карти'));
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByText('вміст карти')).toBeNull();
+  });
+
+  it('disables the modal undo button while the day is locked and enables it when changes exist', () => {
+    renderDialog('NURSE_SIGNED', { isLocked: true });
+    expect(screen.getByRole('button', { name: 'Скасувати останню зміну' })).toBeDisabled();
+    renderDialog('OPEN', { undoCount: 2 });
+    expect(screen.getByRole('button', { name: 'Скасувати останню зміну' })).toBeEnabled();
+    renderDialog('OPEN');
+    expect(screen.getByRole('button', { name: 'Скасувати останню зміну' })).toBeDisabled();
+  });
+});

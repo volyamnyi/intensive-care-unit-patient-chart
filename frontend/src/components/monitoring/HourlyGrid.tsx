@@ -253,6 +253,7 @@ const TherapyCell = memo(function TherapyCell({
             <button
               type="button"
               aria-label={`Скасувати ${order.drugName} ${hour}:00`}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => { setMode(null); onCancel(order.id, hour); }}
               className="px-0.5 text-[10px] text-destructive"
             >
@@ -331,9 +332,12 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 function getNextHourISO(): string {
   const now = new Date();
-  now.setMinutes(0, 0, 0);
-  now.setHours(now.getHours() + 1);
-  return now.toISOString().slice(0, 16);
+  const h = now.getHours() + 1;
+  const y = now.getFullYear();
+  const mo = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const hh = String(h % 24).padStart(2, '0');
+  return `${y}-${mo}-${d}T${hh}:00`;
 }
 
 function OrderInlineForm({ selectedDay, isLocked, onCreated, onCancel, onError }: {

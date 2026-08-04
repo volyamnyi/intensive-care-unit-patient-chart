@@ -547,4 +547,26 @@ describe('IntensiveCareCard', () => {
       await waitFor(() => expect(mockOrderExecutionPlan).toHaveBeenCalledWith('o1', { hour: 0, dose: '1' }));
     });
   });
+
+  describe('Fullscreen modal trigger and locked modal grid (issue #141)', () => {
+    it('renders the expand trigger with aria-label and keyboard shortcut', () => {
+      renderCard();
+      const trigger = screen.getByRole('button', { name: 'Розгорнути на весь екран' });
+      expect(trigger).toHaveAttribute('aria-keyshortcuts', 'Alt+Enter');
+      expect(trigger).toBeEnabled();
+    });
+
+    it('disables the expand trigger without a selected day', () => {
+      renderCard({ selectedDay: null });
+      expect(screen.getByRole('button', { name: 'Розгорнути на весь екран' })).toBeDisabled();
+    });
+
+    it('disables modal grid cells when the day is locked', async () => {
+      renderCard({ selectedDay: mockLockedDay, isLocked: true });
+      fireEvent.click(screen.getByRole('button', { name: 'Розгорнути на весь екран' }));
+      const cells = await screen.findAllByDisplayValue('72');
+      expect(cells).toHaveLength(2);
+      expect(cells[1]).toBeDisabled();
+    });
+  });
 });
