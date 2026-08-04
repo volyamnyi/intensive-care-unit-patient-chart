@@ -35,6 +35,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -66,12 +67,28 @@ class QualityGateServiceTest {
     UUID stepId = UUID.randomUUID();
     UUID targetStepId = UUID.randomUUID();
 
+    SnapshotStage snapshotStage;
+
     @BeforeEach
     void setUp() {
         service = new QualityGateService(instanceRepository, gateRepository, reworkLoopRepository,
                 decisionRepository, executionRepository, instanceService, failureSnapshotService,
                 new FlowInstanceMapperImpl(), new TemplateSnapshotParser(new ObjectMapper()),
                 auditService, new ObjectMapper());
+        snapshotStage = SnapshotStage.builder()
+                .id(stageId)
+                .name("Контроль якості")
+                .gate(SnapshotGate.builder()
+                        .id(gateId)
+                        .name("Приймальний контроль")
+                        .requiredApproverRole("PROSTHETICS_ADMINISTRATOR")
+                        .build())
+                .steps(List.of(SnapshotStep.builder()
+                        .id(stepId)
+                        .name("Фінальна перевірка")
+                        .elements(List.of())
+                        .build()))
+                .build();
     }
 
     @Test
@@ -89,6 +106,7 @@ class QualityGateServiceTest {
     void decideRejectsNonApproverForAdminGate() {
         FlowInstance instance = newInstance(FlowInstanceStatus.WAITING_REVIEW);
         when(instanceService.requireOwner(instance.getId(), 1L)).thenReturn(instance);
+        when(instanceService.findStage(any(), eq(stageId))).thenReturn(snapshotStage);
 
         assertThatThrownBy(() -> service.decide(instance.getId(), gateId, passRequest(), 1L, false))
                 .isInstanceOf(BadRequestException.class)
@@ -103,6 +121,7 @@ class QualityGateServiceTest {
                 .requiredApproverRole("PROSTHETICS_ADMINISTRATOR").build();
         gate.setId(gateId);
         when(instanceService.requireOwner(instance.getId(), 1L)).thenReturn(instance);
+        when(instanceService.findStage(any(), eq(stageId))).thenReturn(snapshotStage);
         when(gateRepository.findById(gateId)).thenReturn(Optional.of(gate));
         when(reworkLoopRepository.findByGateId(gateId)).thenReturn(List.of(
                 ReworkLoop.builder()
@@ -133,6 +152,7 @@ class QualityGateServiceTest {
                 .requiredApproverRole("PROSTHETICS_ADMINISTRATOR").build();
         gate.setId(gateId);
         when(instanceService.requireOwner(instance.getId(), 1L)).thenReturn(instance);
+        when(instanceService.findStage(any(), eq(stageId))).thenReturn(snapshotStage);
         when(gateRepository.findById(gateId)).thenReturn(Optional.of(gate));
         when(reworkLoopRepository.findByGateId(gateId)).thenReturn(List.of(
                 ReworkLoop.builder()
@@ -159,6 +179,7 @@ class QualityGateServiceTest {
                 .requiredApproverRole("PROSTHETICS_ADMINISTRATOR").build();
         gate.setId(gateId);
         when(instanceService.requireOwner(instance.getId(), 1L)).thenReturn(instance);
+        when(instanceService.findStage(any(), eq(stageId))).thenReturn(snapshotStage);
         when(gateRepository.findById(gateId)).thenReturn(Optional.of(gate));
         when(decisionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -206,20 +227,7 @@ class QualityGateServiceTest {
         return new TemplateSnapshotParser(new ObjectMapper()).toJson(SnapshotTemplate.builder()
                 .name("TP-UL-01")
                 .version(1)
-                .stages(List.of(SnapshotStage.builder()
-                        .id(stageId)
-                        .name("Контроль якості")
-                        .gate(SnapshotGate.builder()
-                                .id(gateId)
-                                .name("Приймальний контроль")
-                                .requiredApproverRole("PROSTHETICS_ADMINISTRATOR")
-                                .build())
-                        .steps(List.of(SnapshotStep.builder()
-                                .id(stepId)
-                                .name("Фінальна перевірка")
-                                .elements(List.of())
-                                .build()))
-                        .build()))
+                .stages(List.of(snapshotStage))
                 .build());
     }
 }
