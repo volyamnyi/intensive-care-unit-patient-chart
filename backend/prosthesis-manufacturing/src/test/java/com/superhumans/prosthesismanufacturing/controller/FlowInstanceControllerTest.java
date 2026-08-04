@@ -191,6 +191,52 @@ class FlowInstanceControllerTest {
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"report_" + instanceId + ".pdf\""));
     }
 
+    @Test
+    void create_rejectsMissingRequiredFields() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/prosthesis-manufacturing/instances")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void completeStep_rejectsMissingValues() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                        "/api/prosthesis-manufacturing/instances/{id}/steps/{executionId}/complete",
+                        instanceId, executionId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void pause_rejectsMissingCategory() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                        "/api/prosthesis-manufacturing/instances/{id}/pause", instanceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void fail_rejectsMissingCategory() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                        "/api/prosthesis-manufacturing/instances/{id}/fail", instanceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void gateDecision_rejectsMissingDecision() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                        "/api/prosthesis-manufacturing/instances/{id}/gates/{gateId}/decision",
+                        instanceId, gateId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
     private FlowInstanceResponse response() {
         return FlowInstanceResponse.builder().id(instanceId).status(FlowInstanceStatus.NEW.name()).build();
     }

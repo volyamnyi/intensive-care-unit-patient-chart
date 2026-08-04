@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
+import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
 import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
@@ -252,6 +253,53 @@ class FlowInstanceServiceTest {
         assertThat(instance.getFailReason()).isEqualTo("Зламано обладнання");
         assertThat(instance.getEndTime()).isNotNull();
         verify(failureSnapshotService).create(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void completeStepOnTerminalStatusRejected() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.COMPLETED, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.completeStep(instance.getId(), execution.getId(),
+                validValues(), 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("in progress");
+    }
+
+    @Test
+    void completeStepOnFailedStatusRejected() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.FAILED, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.completeStep(instance.getId(), execution.getId(),
+                validValues(), 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("in progress");
+    }
+
+    @Test
+    void completeStepRejectsNegativeResourceQuantity() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.findById(execution.getId())).thenReturn(Optional.of(execution));
+
+        assertThatThrownBy(() -> service.completeStep(instance.getId(), execution.getId(),
+                new StepCompleteRequest("{\"" + numericElementId + "\":10,\"" + textElementId
+                        + "\":\"ok\"}", List.of(
+                        ResourceUsageRequest.builder()
+                                .material("")
+                                .quantity(new BigDecimal("-1"))
+                                .unit("кг")
+                                .minutes(10)
+                                .build())), 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("required");
     }
 
     private FlowInstance newInstance(FlowInstanceStatus status, String snapshot) {
