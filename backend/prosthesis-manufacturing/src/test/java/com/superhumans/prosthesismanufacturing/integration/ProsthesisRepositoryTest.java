@@ -390,7 +390,7 @@ class ProsthesisRepositoryTest {
                 .stepId(stepId)
                 .attemptNumber(1)
                 .build();
-        em.persistAndFlush(duplicate);
+        em.persist(duplicate);
 
         assertThatThrownBy(() -> em.flush())
                 .isInstanceOf(ConstraintViolationException.class);
