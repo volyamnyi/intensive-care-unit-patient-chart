@@ -228,24 +228,31 @@ describe('HourlyGridDialog glance layer (issue #139)', () => {
     expect(screen.getByText('1 критичне значення')).toBeInTheDocument();
     renderDialog('OPEN', { recByHour: recByHour([[8, { heartRate: 131 }], [9, { spo2: 89 }]]) });
     expect(screen.getByText('2 критичні значення')).toBeInTheDocument();
-    renderDialog('OPEN', { recByHour: recByHour([[1, { heartRate: 131 }], [2, { spo2: 89 }], [3, { heartRate: 150 }], [4, { spo2: 88 }], [5, { heartRate: 125 }]]) });
+    renderDialog('OPEN', { recByHour: recByHour([[1, { heartRate: 131 }], [2, { spo2: 89 }], [3, { heartRate: 150 }], [4, { spo2: 88 }], [5, { heartRate: 131 }]]) });
     expect(screen.getByText('5 критичних значень')).toBeInTheDocument();
   });
 
   it('alarm chip click scrolls to and focuses the first critical cell in DOM order', () => {
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
-    renderDialog('OPEN', {
-      recByHour: recByHour([[8, { heartRate: 131 }], [9, { spo2: 89 }]]),
-      children: (
+    render(
+      <HourlyGridDialog
+        open
+        onOpenChange={vi.fn()}
+        episode={episode}
+        selectedDay={selectedDay}
+        isLocked={false}
+        saveStatus="saved"
+        recByHour={recByHour([[8, { heartRate: 131 }], [9, { spo2: 89 }]])}
+      >
         <table>
           <tbody>
             <tr><td data-critical="true"><input aria-label="ЧСС 8:00" /></td></tr>
             <tr><td data-critical="true"><input aria-label="SpO₂ 9:00" /></td></tr>
           </tbody>
         </table>
-      ),
-    });
+      </HourlyGridDialog>
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Показати перше критичне значення' }));
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', inline: 'center' });
     expect(screen.getByLabelText('ЧСС 8:00')).toHaveFocus();

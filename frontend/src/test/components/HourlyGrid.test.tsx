@@ -161,21 +161,20 @@ describe('HourlyGrid glance layer (issue #139)', () => {
 
   it('colors rail cells by violation count (neutral/1/2+) and hatches incomplete hours', () => {
     const recByHour = new Map<number, HourlyRecord>([
-      [8, rec(8, { heartRate: 131 })],
       [9, rec(9, { heartRate: 131, spo2: 89 })],
-      [10, rec(10, { heartRate: 80 })],
+      [10, rec(10, { heartRate: 131 })],
     ]);
     const { container } = render(<HourlyGrid {...makeProps({ sticky: true, recByHour })} />);
     const rail = container.querySelector('[aria-label="Рейл відхилень"]');
     const cell = (h: number) => rail?.querySelector(`button[data-hour="${h}"]`);
-    expect(cell(8)?.getAttribute('data-count')).toBe('1');
-    expect(cell(8)?.className).toContain('bg-warning');
     expect(cell(9)?.getAttribute('data-count')).toBe('2');
     expect(cell(9)?.className).toContain('bg-destructive');
-    expect(cell(10)?.className).toContain('bg-muted');
+    expect(cell(10)?.getAttribute('data-count')).toBe('1');
+    expect(cell(10)?.className).toContain('bg-warning');
     expect(cell(10)?.getAttribute('data-incomplete')).toBeNull();
-    expect(cell(11)?.getAttribute('data-incomplete')).toBe('true');
-    expect(cell(11)?.className).toContain('repeating-linear-gradient');
+    expect(cell(11)?.getAttribute('data-incomplete')).toBeNull();
+    expect(cell(8)?.getAttribute('data-incomplete')).toBe('true');
+    expect(cell(8)?.className).toContain('repeating-linear-gradient');
   });
 
   it('rail click scrolls the table to the matching hour column', () => {

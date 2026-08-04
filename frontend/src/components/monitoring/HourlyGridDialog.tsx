@@ -227,7 +227,7 @@ export default function HourlyGridDialog({
         <footer className="flex min-h-11 min-w-0 items-center justify-between gap-2 border-t border-border bg-card px-3 pb-[env(safe-area-inset-bottom)]">
           <div className="flex min-w-0 items-center gap-3">
             <span className="shrink-0 text-xs text-muted-foreground">{`Заповнено ${filledHours}/24 год`}</span>
-            <span role="status" aria-live="polite" className={cn('truncate text-xs', saveStatusColor(saveStatus, isLocked))}>
+            <span className={cn('truncate text-xs', saveStatusColor(saveStatus, isLocked))}>
               {isLocked ? 'Перегляд підписаної доби' : saveStatusLabel(saveStatus, isLocked)}
             </span>
           </div>
