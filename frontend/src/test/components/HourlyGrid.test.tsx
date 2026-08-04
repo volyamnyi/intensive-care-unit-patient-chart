@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import HourlyGrid, { type HourlyGridProps } from '../../components/monitoring/HourlyGrid';
 import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types';
 
@@ -109,5 +109,122 @@ describe('HourlyGrid', () => {
 
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onSaveCell).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('HourlyGrid glance layer (issue #139)', () => {
+  const rec = (hour: number, overrides: Partial<HourlyRecord> = {}): HourlyRecord => ({
+    id: `r${hour}`,
+    clinicalDayId: 'day-1',
+    recordTime: `2025-06-01T${String(hour).padStart(2, '0')}:00:00Z`,
+    consciousness: null,
+    gcs: null,
+    temperature: null,
+    heartRate: null,
+    respiratoryRate: null,
+    systolicBP: null,
+    diastolicBP: null,
+    meanArterialPressure: null,
+    spo2: null,
+    etco2: null,
+    fio2: null,
+    cvp: null,
+    dopamine: null,
+    dobutamine: null,
+    norepinephrine: null,
+    epinephrine: null,
+    urineOutput: null,
+    drainOutput: null,
+    gastricOutput: null,
+    stool: null,
+    vomit: null,
+    bedPosition: null,
+    headEnd: null,
+    painScore: null,
+    notes: null,
+    createdBy: 1,
+    createdAt: '',
+    updatedBy: 1,
+    updatedAt: '',
+    version: 1,
+    ...overrides,
+  });
+
+  it('renders the rail only in sticky mode, with 24 hour buttons', () => {
+    const { container } = render(<HourlyGrid {...makeProps()} />);
+    expect(container.querySelector('[aria-label="Рейл відхилень"]')).toBeNull();
+    const { container: stickyContainer } = render(<HourlyGrid {...makeProps({ sticky: true })} />);
+    const rail = stickyContainer.querySelector('[aria-label="Рейл відхилень"]');
+    expect(rail).not.toBeNull();
+    expect(rail?.querySelectorAll('button[data-hour]')).toHaveLength(24);
+  });
+
+  it('colors rail cells by violation count (neutral/1/2+) and hatches incomplete hours', () => {
+    const recByHour = new Map<number, HourlyRecord>([
+      [8, rec(8, { heartRate: 131 })],
+      [9, rec(9, { heartRate: 131, spo2: 89 })],
+      [10, rec(10, { heartRate: 80 })],
+    ]);
+    const { container } = render(<HourlyGrid {...makeProps({ sticky: true, recByHour })} />);
+    const rail = container.querySelector('[aria-label="Рейл відхилень"]');
+    const cell = (h: number) => rail?.querySelector(`button[data-hour="${h}"]`);
+    expect(cell(8)?.getAttribute('data-count')).toBe('1');
+    expect(cell(8)?.className).toContain('bg-warning');
+    expect(cell(9)?.getAttribute('data-count')).toBe('2');
+    expect(cell(9)?.className).toContain('bg-destructive');
+    expect(cell(10)?.className).toContain('bg-muted');
+    expect(cell(10)?.getAttribute('data-incomplete')).toBeNull();
+    expect(cell(11)?.getAttribute('data-incomplete')).toBe('true');
+    expect(cell(11)?.className).toContain('repeating-linear-gradient');
+  });
+
+  it('rail click scrolls the table to the matching hour column', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { container } = render(<HourlyGrid {...makeProps({ sticky: true })} />);
+    const rail = container.querySelector('[aria-label="Рейл відхилень"]');
+    fireEvent.click(rail?.querySelector('button[data-hour="14"]') as Element);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'center' });
+    const header = container.querySelector('[data-hour-col="14"]');
+    expect(header).not.toBeNull();
+  });
+
+  it('marks the current-hour column header with the 2px accent', () => {
+    const { container } = render(<HourlyGrid {...makeProps({ realClockHour: 10 })} />);
+    const header = container.querySelector('[data-hour-col="10"]');
+    expect(header?.className).toContain('shadow-[inset_0_-2px_0_0_var(--color-primary)]');
+    expect(container.querySelector('[data-hour-col="9"]')?.className).not.toContain('inset_0_-2px');
+  });
+
+  it('marks critical cells with data-critical and tabIndex -1, leaving others focusable', () => {
+    const recByHour = new Map<number, HourlyRecord>([
+      [8, rec(8, { heartRate: 131 })],
+      [9, rec(9, { heartRate: 80 })],
+    ]);
+    render(<HourlyGrid {...makeProps({ recByHour })} />);
+    const criticalInput = screen.getByLabelText('ЧСС 8:00');
+    const criticalCell = criticalInput.closest('td[data-critical="true"]');
+    expect(criticalCell).not.toBeNull();
+    expect((criticalCell as HTMLElement).tabIndex).toBe(-1);
+    const normalInput = screen.getByLabelText('ЧСС 9:00');
+    expect(normalInput.closest('td[data-critical="true"]')).toBeNull();
+  });
+
+  it('flashes the cell green for 300ms on a valid save, and not on a critical save', () => {
+    vi.useFakeTimers();
+    render(<HourlyGrid {...makeProps()} />);
+    const input = screen.getByLabelText('ЧСС 8:00');
+    const cell = input.closest('td') as HTMLElement;
+
+    fireEvent.change(input, { target: { value: '90' } });
+    fireEvent.blur(input);
+    expect(cell.className).toContain('bg-success/30');
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(cell.className).not.toContain('bg-success/30');
+
+    fireEvent.change(input, { target: { value: '131' } });
+    fireEvent.blur(input);
+    expect(cell.className).not.toContain('bg-success/30');
+    vi.useRealTimers();
   });
 });

@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
 import HourlyGridDialog from '../../components/monitoring/HourlyGridDialog';
-import type { ClinicalDay, Episode } from '../../types';
+import type { ClinicalDay, Episode, HourlyRecord } from '../../types';
 
 afterEach(() => {
   document.querySelector('[aria-label="Розгорнути на весь екран"]')?.remove();
@@ -167,5 +167,97 @@ describe('HourlyGridDialog', () => {
     expect(onResolveConflict).toHaveBeenCalledWith(false);
     fireEvent.click(screen.getByRole('button', { name: 'Залишити мій варіант' }));
     expect(onResolveConflict).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('HourlyGridDialog glance layer (issue #139)', () => {
+  const rec = (hour: number, overrides: Partial<HourlyRecord> = {}): HourlyRecord => ({
+    id: `r${hour}`,
+    clinicalDayId: 'day-1',
+    recordTime: `2025-06-01T${String(hour).padStart(2, '0')}:00:00Z`,
+    consciousness: null,
+    gcs: null,
+    temperature: null,
+    heartRate: null,
+    respiratoryRate: null,
+    systolicBP: null,
+    diastolicBP: null,
+    meanArterialPressure: null,
+    spo2: null,
+    etco2: null,
+    fio2: null,
+    cvp: null,
+    dopamine: null,
+    dobutamine: null,
+    norepinephrine: null,
+    epinephrine: null,
+    urineOutput: null,
+    drainOutput: null,
+    gastricOutput: null,
+    stool: null,
+    vomit: null,
+    bedPosition: null,
+    headEnd: null,
+    painScore: null,
+    notes: null,
+    createdBy: 1,
+    createdAt: '',
+    updatedBy: 1,
+    updatedAt: '',
+    version: 1,
+    ...overrides,
+  });
+
+  const recByHour = (entries: Array<[number, Partial<HourlyRecord>]>): Map<number, HourlyRecord> =>
+    new Map(entries.map(([h, o]) => [h, rec(h, o)]));
+
+  it('shows the fill counter in the footer (0/24 without data)', () => {
+    renderDialog('OPEN');
+    expect(screen.getByText('Заповнено 0/24 год')).toBeInTheDocument();
+  });
+
+  it('counts filled hours from recByHour', () => {
+    renderDialog('OPEN', { recByHour: recByHour([[8, { heartRate: 80 }], [9, { spo2: 97 }]]) });
+    expect(screen.getByText('Заповнено 2/24 год')).toBeInTheDocument();
+  });
+
+  it('hides the alarm chip without critical values and shows a pluralized count with them', () => {
+    renderDialog('OPEN');
+    expect(screen.queryByRole('button', { name: 'Показати перше критичне значення' })).toBeNull();
+    renderDialog('OPEN', { recByHour: recByHour([[8, { heartRate: 131 }]]) });
+    expect(screen.getByText('1 критичне значення')).toBeInTheDocument();
+    renderDialog('OPEN', { recByHour: recByHour([[8, { heartRate: 131 }], [9, { spo2: 89 }]]) });
+    expect(screen.getByText('2 критичні значення')).toBeInTheDocument();
+    renderDialog('OPEN', { recByHour: recByHour([[1, { heartRate: 131 }], [2, { spo2: 89 }], [3, { heartRate: 150 }], [4, { spo2: 88 }], [5, { heartRate: 125 }]]) });
+    expect(screen.getByText('5 критичних значень')).toBeInTheDocument();
+  });
+
+  it('alarm chip click scrolls to and focuses the first critical cell in DOM order', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    renderDialog('OPEN', {
+      recByHour: recByHour([[8, { heartRate: 131 }], [9, { spo2: 89 }]]),
+      children: (
+        <table>
+          <tbody>
+            <tr><td data-critical="true"><input aria-label="ЧСС 8:00" /></td></tr>
+            <tr><td data-critical="true"><input aria-label="SpO₂ 9:00" /></td></tr>
+          </tbody>
+        </table>
+      ),
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Показати перше критичне значення' }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', inline: 'center' });
+    expect(screen.getByLabelText('ЧСС 8:00')).toHaveFocus();
+  });
+
+  it('colors the save status with AA-green when saved and destructive on error', () => {
+    renderDialog('OPEN', { saveStatus: 'saved' });
+    expect(screen.getByText('Збережено').className).toContain('text-[#2E7D32]');
+    expect(screen.getByText('Збережено').className).toContain('dark:text-[#81C784]');
+    renderDialog('OPEN', { saveStatus: 'error' });
+    expect(screen.getByText('Помилка збереження').className).toContain('text-destructive');
+    renderDialog('OPEN', { saveStatus: 'saving' });
+    expect(screen.getByText('Зберігається…').className).toContain('text-muted-foreground');
   });
 });

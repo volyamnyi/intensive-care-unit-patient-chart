@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Clock, Loader2, Lock, RefreshCw, TriangleAlert, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { ClinicalDay, Episode } from '../../types';
+import { countCriticalTotal, pluralCritical } from './criticalRanges';
+import type { ClinicalDay, Episode, HourlyRecord } from '../../types';
 
 const STATUS_STYLES: Record<string, string> = {
   OPEN: 'bg-warning/10 text-warning border-warning',
@@ -41,6 +42,15 @@ function saveStatusLabel(status: string, isLocked: boolean): string {
   }
 }
 
+function saveStatusColor(status: string, isLocked: boolean): string {
+  if (isLocked) return 'text-muted-foreground';
+  switch (status) {
+    case 'saved': return 'text-[#2E7D32] dark:text-[#81C784]';
+    case 'error': return 'text-destructive';
+    default: return 'text-muted-foreground';
+  }
+}
+
 function useClock(): string {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -63,18 +73,29 @@ interface HourlyGridDialogProps {
   conflict?: { hour: number; key: string; raw: string } | null;
   onResolveConflict?: (keep: boolean) => void;
   loading?: boolean;
+  recByHour?: Map<number, HourlyRecord>;
   children: ReactNode;
 }
 
 export default function HourlyGridDialog({
   open, onOpenChange, episode, selectedDay, isLocked, saveStatus, onRefresh, feedback, finalFocusRef,
-  conflict, onResolveConflict, loading, children,
+  conflict, onResolveConflict, loading, recByHour, children,
 }: HourlyGridDialogProps) {
   const time = useClock();
   const patientName = episode?.patientName || 'Пацієнт';
   const status = selectedDay?.status ?? '';
   const [origin, setOrigin] = useState<string | undefined>(undefined);
   const popupRef = useRef<HTMLDivElement>(null);
+  const filledHours = recByHour?.size ?? 0;
+  const criticalCount = recByHour ? countCriticalTotal(recByHour) : 0;
+  const focusFirstCritical = useCallback(() => {
+    const cell = popupRef.current?.querySelector<HTMLElement>('[data-critical="true"]');
+    if (!cell) return;
+    cell.scrollIntoView({ block: 'center', inline: 'center' });
+    const input = cell.querySelector<HTMLInputElement>('input');
+    if (input && !input.disabled) input.focus();
+    else cell.focus();
+  }, []);
 
   // Початковий фокус — на кнопці закриття (✕ у шапці, перший у DOM), навмисне відхилення
   // від APG-дефолту «перше фокусоване поле»: клітинки таблиці редагуються одразу після Tab,
@@ -139,6 +160,18 @@ export default function HourlyGridDialog({
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            {criticalCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Показати перше критичне значення"
+                onClick={focusFirstCritical}
+                className="h-7 shrink-0 gap-1.5 border-warning/60 px-2 text-xs text-warning"
+              >
+                <TriangleAlert className="size-3.5" />
+                {`${criticalCount} ${pluralCritical(criticalCount)}`}
+              </Button>
+            )}
             <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
               <Clock className="size-3.5" />
               {time}
@@ -192,7 +225,12 @@ export default function HourlyGridDialog({
         </div>
 
         <footer className="flex min-h-11 min-w-0 items-center justify-between gap-2 border-t border-border bg-card px-3 pb-[env(safe-area-inset-bottom)]">
-          <span className="truncate text-xs text-muted-foreground">{isLocked ? 'Перегляд підписаної доби' : saveStatusLabel(saveStatus, isLocked)}</span>
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="shrink-0 text-xs text-muted-foreground">{`Заповнено ${filledHours}/24 год`}</span>
+            <span role="status" aria-live="polite" className={cn('truncate text-xs', saveStatusColor(saveStatus, isLocked))}>
+              {isLocked ? 'Перегляд підписаної доби' : saveStatusLabel(saveStatus, isLocked)}
+            </span>
+          </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <DialogClose render={<Button aria-label="Закрити карту">{'Назад до карти'}</Button>} />
             <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="Закрити вікно (Esc)" />}>

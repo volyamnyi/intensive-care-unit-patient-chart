@@ -440,6 +440,7 @@ export default function IntensiveCareCard({
       conflict={conflict}
       onResolveConflict={resolveConflict}
       loading={loading}
+      recByHour={recByHour}
     >
       {selectedDay && (
         <HourlyGrid {...gridProps} sticky={!isMobile} bare />

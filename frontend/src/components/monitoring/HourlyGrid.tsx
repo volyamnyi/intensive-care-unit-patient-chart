@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { medicalOrderApi } from '../../api/endpoints';
+import { countCriticalByHour, isCritical } from './criticalRanges';
 import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types';
 
 function GridTable({ sticky, children }: { sticky: boolean; children: ReactNode }) {
@@ -64,25 +65,6 @@ const VASOPRESSOR_ROWS: { key: keyof HourlyRecord; label: string }[] = [
   { key: 'epinephrine', label: 'Адреналін (мкг/кг/хв)' },
 ];
 
-const CRITICAL_RANGES: Partial<Record<string, { min: number; max: number }>> = {
-  systolicBP: { min: 90, max: 180 },
-  diastolicBP: { min: 60, max: 120 },
-  heartRate: { min: 50, max: 130 },
-  temperature: { min: 35.5, max: 39.5 },
-  spo2: { min: 90, max: 100 },
-  respiratoryRate: { min: 10, max: 30 },
-  cvp: { min: 2, max: 14 },
-  gcs: { min: 8, max: 15 },
-};
-
-function isCritical(key: string, val: string): boolean {
-  const range = CRITICAL_RANGES[key];
-  if (!range) return false;
-  const num = Number(val);
-  if (Number.isNaN(num)) return false;
-  return num < range.min || num > range.max;
-}
-
 interface CellProps {
   hour: number;
   rowKey: keyof HourlyRecord;
@@ -102,8 +84,10 @@ const Cell = memo(function Cell({
   hour, rowKey, numeric, label, value, isLocked, isNurse, isLossRow, isDark: _isDark, isPast, isMobile, onSave,
 }: CellProps) {
   const [draft, setDraft] = useState(value);
+  const [flash, setFlash] = useState(false);
   const focusedRef = useRef(false);
   const valueRef = useRef(value);
+  const flashTimerRef = useRef<number | null>(null);
   valueRef.current = value;
 
   useEffect(() => {
@@ -112,11 +96,25 @@ const Cell = memo(function Cell({
     }
   }, [value]);
 
+  useEffect(() => () => {
+    if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
+  }, []);
+
   const readOnly = isLocked || (isNurse && !isLossRow);
   const critical = isCritical(String(rowKey), value);
 
   return (
-    <TableCell className={cn('p-0', critical && 'bg-destructive/10', !critical && isPast && 'bg-success/10 dark:bg-success/20')} style={{ minWidth: 44 }}>
+    <TableCell
+      data-critical={critical ? 'true' : undefined}
+      tabIndex={critical ? -1 : undefined}
+      className={cn(
+        'p-0',
+        critical && 'bg-destructive/10',
+        !critical && isPast && 'bg-success/10 dark:bg-success/20',
+        flash && 'bg-success/30 dark:bg-success/40',
+      )}
+      style={{ minWidth: 44 }}
+    >
       <Input
         type={numeric ? 'number' : 'text'}
         disabled={readOnly}
@@ -127,7 +125,14 @@ const Cell = memo(function Cell({
         onBlur={() => {
           focusedRef.current = false;
           const saved = valueRef.current;
-          if (draft !== saved) onSave(hour, rowKey, draft);
+          if (draft !== saved) {
+            onSave(hour, rowKey, draft);
+            if (!isCritical(String(rowKey), draft)) {
+              setFlash(true);
+              if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current);
+              flashTimerRef.current = window.setTimeout(() => setFlash(false), 300);
+            }
+          }
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
@@ -408,6 +413,44 @@ function GroupHeader({ label, nurseEditable }: { label: string; nurseEditable?: 
   );
 }
 
+function OutlierRail({ recByHour, realClockHour, onHourClick }: {
+  recByHour: Map<number, HourlyRecord>;
+  realClockHour: number;
+  onHourClick: (hour: number) => void;
+}) {
+  const criticalByHour = countCriticalByHour(recByHour);
+  return (
+    <div
+      aria-label="Рейл відхилень"
+      className="flex w-4 shrink-0 max-h-full flex-col items-center gap-px overflow-hidden border-l border-border bg-card py-1"
+    >
+      {HOURS.map((h) => {
+        const n = criticalByHour.get(h) ?? 0;
+        const incomplete = !recByHour.has(h) && isPastMedDay(h, realClockHour);
+        return (
+          <button
+            key={h}
+            type="button"
+            aria-label={n > 0 ? `${h}:00 — ${n} порушень` : `${h}:00`}
+            data-hour={h}
+            data-count={n}
+            data-incomplete={incomplete ? 'true' : undefined}
+            title={incomplete ? `${h}:00 — година неповна` : `${h}:00`}
+            onClick={() => onHourClick(h)}
+            className={cn(
+              'h-3 w-3 shrink-0 rounded-sm border border-border/70',
+              n === 0 && 'bg-muted',
+              n === 1 && 'bg-warning border-warning',
+              n >= 2 && 'bg-destructive border-destructive',
+              incomplete && n === 0 && 'bg-[repeating-linear-gradient(135deg,rgba(0,0,0,0.25)_0_2px,transparent_2px_4px)]',
+            )}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export interface HourlyGridProps {
   isMobile: boolean;
   isNurse: boolean;
@@ -451,6 +494,11 @@ export default function HourlyGrid({
     return String(v);
   };
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollToHour = useCallback((hour: number) => {
+    scrollRef.current?.querySelector<HTMLElement>(`[data-hour-col="${hour}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, []);
+
   // Fallback (Chromium CI): якщо sticky-панелі у <table> виявляться нестабільними,
   // перекомпонувати сітку на CSS-grid: grid-template-columns: 132px repeat(24, minmax(44px, 1fr)).
   // Cell/TherapyCell вже проп-декомпозовані — aria-label та E2E-селектори збережуться.
@@ -463,7 +511,8 @@ export default function HourlyGrid({
     <Root className={cn('min-w-0', isMobile ? 'w-full' : 'flex-1', sticky && 'h-full min-h-0')}>
       <div className={cn('overflow-hidden rounded-xl border border-border bg-card', sticky && 'flex h-full flex-col')}>
         {toolbar}
-        <div className={sticky ? 'flex-1 min-h-0 overflow-auto scroll-pt-12' : 'overflow-x-auto'}>
+        <div className={sticky ? 'flex h-full min-h-0' : ''}>
+          <div ref={scrollRef} className={sticky ? 'flex-1 min-h-0 overflow-auto scroll-pt-12' : 'overflow-x-auto'}>
           <GridTable sticky={sticky}>
             <TableHeader>
               <TableRow className={cn('bg-muted', stickyRowClass)}>
@@ -490,7 +539,16 @@ export default function HourlyGrid({
                   )}
                 </TableHead>
               {HOURS.map((h) => (
-                <TableHead key={h} className="text-center font-bold text-xs p-1 border-r border-border last:border-r-0">{h}:00</TableHead>
+                <TableHead
+                  key={h}
+                  data-hour-col={h}
+                  className={cn(
+                    'text-center font-bold text-xs p-1 border-r border-border last:border-r-0',
+                    h === realClockHour && 'shadow-[inset_0_-2px_0_0_var(--color-primary)]',
+                  )}
+                >
+                  {`${h}:00`}
+                </TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -651,6 +709,8 @@ export default function HourlyGrid({
             ))}
           </TableBody>
           </GridTable>
+          </div>
+          {sticky && <OutlierRail recByHour={recByHour} realClockHour={realClockHour} onHourClick={scrollToHour} />}
         </div>
       </div>
     </Root>
