@@ -33,7 +33,7 @@ class FlowInstanceValidationTest {
 
         assertThatThrownBy(instance::validate)
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("rework");
+                .hasMessageContaining("Rework count");
     }
 
     @Test

@@ -2,12 +2,12 @@ package com.superhumans.prosthesismanufacturing.integration;
 
 import com.superhumans.prosthesismanufacturing.entity.*;
 import com.superhumans.prosthesismanufacturing.repository.*;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
@@ -393,6 +393,6 @@ class ProsthesisRepositoryTest {
         em.persistAndFlush(duplicate);
 
         assertThatThrownBy(() -> em.flush())
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(ConstraintViolationException.class);
     }
 }

@@ -25,7 +25,7 @@ class StepExecutionValidationTest {
 
         assertThatThrownBy(execution::validate)
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("attempt");
+                .hasMessageContaining("Attempt number");
     }
 
     @Test
