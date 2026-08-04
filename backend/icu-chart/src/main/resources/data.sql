@@ -16385,3 +16385,83 @@ INSERT INTO prescription_lists (id, patient_id, department_id, document_name, st
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('cccc2039-2039-2039-2039-203904000000', 2039, 1, 'Листок лікарських призначень №5', 'Finished', NULL, NULL, NOW() - INTERVAL '2 days', 11, NOW() - INTERVAL '2 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('bbbb2039-2039-2039-2039-203905000000', 2039, 1, 'Листок лікарських призначень №6', 'Finished', NULL, NULL, NOW() - INTERVAL '1 days', 11, NOW() - INTERVAL '1 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('dddd2040-2040-2040-2040-204001000000', 2040, 1, 'Листок лікарських призначень №2', 'Finished', NULL, NULL, NOW() - INTERVAL '1 days', 11, NOW() - INTERVAL '1 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+-- ===== Prosthesis Manufacturing module seed (Phase 1, Issue #145) =====
+-- Users: prosthetist1 / prosthetist2 / prosthetics_admin1 (password: doctor123, same BCrypt hash as doctor1)
+INSERT INTO users (id, login, password_hash, full_name, role, email, speciality_code, speciality_name, phone, created_at, created_by, updated_at, updated_by, version)
+VALUES
+(21, 'prosthetist1', '$2a$10$LQeytYedrrlf3Dzg5jaUiuALhgGwku50pJL64hUrc/PkMHm7ulPpO', 'Олег Романюк', 'PROSTHETIST', 'romanyuk@hospital.ua', '401', 'Протезування та ортезування', '380507777777', NOW(), 21, NOW(), 21, 0),
+(22, 'prosthetist2', '$2a$10$LQeytYedrrlf3Dzg5jaUiuALhgGwku50pJL64hUrc/PkMHm7ulPpO', 'Ірина Шевчук', 'PROSTHETIST', 'shevchuk@hospital.ua', '401', 'Протезування та ортезування', '380508888888', NOW(), 22, NOW(), 22, 0),
+(23, 'prosthetics_admin1', '$2a$10$LQeytYedrrlf3Dzg5jaUiuALhgGwku50pJL64hUrc/PkMHm7ulPpO', 'Тарас Мельник', 'PROSTHETICS_ADMINISTRATOR', 'ptadmin@hospital.ua', '402', 'Адміністрування протезного виробництва', '380509999999', NOW(), 23, NOW(), 23, 0)
+ON CONFLICT (login) DO UPDATE SET
+  role = EXCLUDED.role,
+  full_name = EXCLUDED.full_name;
+
+-- Patients (mock Doctor Eleks)
+INSERT INTO prosthetics_patients (id, pib, birth_date, gender, height_cm, weight_kg, social_status, cause, amputation_date, affected_limb, amputation_level, stump)
+VALUES
+('10000000-0000-4000-8000-000000000001', 'Сніжко Іван Петрович', DATE '1991-03-14', 'Чоловіча', 182, 84, 'Військовослужбовець', 'Мінно-вибухова травма', DATE '2024-11-08', 'RIGHT', 'Вичленення в променезап''ястковому суглобі / в/3 передпліччя', '[{"label":"Форма кукси","value":"Циліндрична"},{"label":"Довжина кукси, см","value":"18"},{"label":"Обхват, см","value":"24"}]'),
+('10000000-0000-4000-8000-000000000002', 'Гаврилюк Олена Миколаївна', DATE '1986-11-02', 'Жіноча', 168, 71, 'Цивільна особа', 'ДТП', DATE '2025-02-19', 'LEFT', 'Гомілка, с/3', '[{"label":"Форма кукси","value":"Конічна"},{"label":"Довжина кукси, см","value":"12"},{"label":"Обхват, см","value":"28"}]')
+ON CONFLICT (id) DO NOTHING;
+
+-- Orders (mock Doctor Eleks)
+INSERT INTO prosthetics_orders (id, order_number, patient_id, prosthesis_type, product_type, amputation_level, limb_side, doctor_name, prescription_date, materials, status)
+VALUES
+('20000000-0000-4000-8000-000000000001', 'PR-2026-0001', '10000000-0000-4000-8000-000000000001', 'Протез передпліччя', 'UPPER_LIMB', 'Вичленення в променезап''ястковому суглобі / в/3 передпліччя', 'RIGHT', 'Олександр Мельник', DATE '2026-07-20', '["Поліпропілен","Силіконовий чохол","Кріплення"]', 'NEW'),
+('20000000-0000-4000-8000-000000000002', 'PR-2026-0002', '10000000-0000-4000-8000-000000000002', 'Протез гомілки', 'LOWER_LIMB', 'Гомілка, с/3', 'LEFT', 'Олександр Мельник', DATE '2026-07-22', '["Термопласт","Пінополіуретан","Кріплення"]', 'NEW')
+ON CONFLICT (id) DO NOTHING;
+
+-- Flow templates: TP-UL-01 (ACTIVE), TP-LL-01 (DRAFT)
+INSERT INTO prosthetics_flow_templates (id, name, description, template_version, product_type, amputation_level, limb_side, status, estimated_duration_min)
+VALUES
+('30000000-0000-4000-8000-000000000001', 'TP-UL-01', 'Виготовлення протеза передпліччя', 1, 'UPPER_LIMB', 'Вичленення в променезап''ястковому суглобі / в/3 передпліччя', 'RIGHT', 'ACTIVE', 240),
+('30000000-0000-4000-8000-000000000002', 'TP-LL-01', 'Виготовлення протеза гомілки (чернетка)', 1, 'LOWER_LIMB', 'Гомілка, с/3', 'LEFT', 'DRAFT', 300)
+ON CONFLICT (id) DO NOTHING;
+
+-- TP-UL-01 stages
+INSERT INTO prosthetics_template_stages (id, template_id, order_index, name, type, can_skip, requires_approval)
+VALUES
+('40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 0, 'Клінічне обстеження', 'CLINICAL', FALSE, FALSE),
+('40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001', 1, 'Виготовлення протеза', 'TECHNICAL', FALSE, FALSE),
+('40000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000001', 2, 'Контроль якості', 'ADMINISTRATIVE', FALSE, TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+-- TP-UL-01 steps
+INSERT INTO prosthetics_template_steps (id, stage_id, order_index, name, description, step_type, mandatory, allow_backward, auto_start_timer, norm_duration_min)
+VALUES
+('50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 0, 'Вимірювання кукси', 'Зняття основних розмірів кукси', 'MEASUREMENT', TRUE, TRUE, TRUE, 20),
+('50000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', 1, 'Анамнез та скарги', 'Опитування пацієнта', 'INFORMATION', TRUE, TRUE, FALSE, 15),
+('50000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000002', 0, 'Зняття зліпка', 'Зняття гіпсового зліпка кукси', 'COMPOSITE', TRUE, TRUE, TRUE, 45),
+('50000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000002', 1, 'Збірка протеза', 'Збірка протеза з підготовлених компонентів', 'COMPOSITE', TRUE, TRUE, TRUE, 90),
+('50000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000002', 2, 'Примірювання', 'Примірювання та підгонка протеза', 'MEASUREMENT', TRUE, TRUE, TRUE, 40),
+('50000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000003', 0, 'Фінальна перевірка', 'Підсумкова перевірка готового протеза', 'CHECKLIST', TRUE, TRUE, FALSE, 30)
+ON CONFLICT (id) DO NOTHING;
+
+-- TP-UL-01 elements
+INSERT INTO prosthetics_template_elements (id, step_id, order_index, element_type, label, placeholder, required, unit, min_value, max_value, min_count, max_count, mime_types, max_size_mb, regex_pattern, options)
+VALUES
+('60000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001', 0, 'NUMERIC_INPUT', 'Довжина кукси, см', NULL, TRUE, 'см', 1, 60, NULL, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000001', 1, 'NUMERIC_INPUT', 'Обхват кукси, см', NULL, TRUE, 'см', 5, 100, NULL, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000001', 2, 'IMAGE_UPLOAD', 'Фото кукси', 'Додати фото', FALSE, NULL, NULL, NULL, NULL, 5, '["image/jpeg","image/png"]', 10, NULL, NULL),
+('60000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000002', 0, 'TEXTAREA', 'Скарги пацієнта', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000005', '50000000-0000-4000-8000-000000000002', 1, 'DROPDOWN', 'Вид протеза', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '["Механічний","Біонічний","Гібридний"]'),
+('60000000-0000-4000-8000-000000000006', '50000000-0000-4000-8000-000000000003', 0, 'TEXT_INPUT', 'Матеріал зліпка', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '^[А-Яа-яІіЇїЄєҐґA-Za-z -]+$', NULL),
+('60000000-0000-4000-8000-000000000007', '50000000-0000-4000-8000-000000000003', 1, 'NUMERIC_INPUT', 'Температура води, °C', NULL, TRUE, '°C', 20, 60, NULL, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000008', '50000000-0000-4000-8000-000000000004', 0, 'CHECKBOX', 'Компоненти зібрано', NULL, TRUE, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000009', '50000000-0000-4000-8000-000000000004', 1, 'NUMERIC_INPUT', 'Час збірки, хв', NULL, FALSE, 'хв', 1, 600, NULL, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000010', '50000000-0000-4000-8000-000000000005', 0, 'NUMERIC_INPUT', 'Зручність посадки, бал', NULL, TRUE, 'бал', 1, 10, NULL, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000011', '50000000-0000-4000-8000-000000000005', 1, 'RADIO', 'Прилягання', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '["Щільне","Помірне","Слабке"]'),
+('60000000-0000-4000-8000-000000000012', '50000000-0000-4000-8000-000000000006', 0, 'CHECKBOX', 'Перевірено функціональність', NULL, TRUE, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL),
+('60000000-0000-4000-8000-000000000013', '50000000-0000-4000-8000-000000000006', 1, 'SIGNATURE_CAPTURE', 'Підпис виконавця', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- TP-UL-01 quality gate + rework loop
+INSERT INTO prosthetics_quality_gates (id, stage_id, name, description, required_approver_role, checklist, attachments_required)
+VALUES
+('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000003', 'Приймальний контроль', 'Приймання готового протеза адміністратором виробництва', 'PROSTHETICS_ADMINISTRATOR', '["Відповідність технічному завданню","Функціональність","Естетичний вигляд"]', FALSE)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO prosthetics_rework_loops (id, gate_id, target_stage_id, target_step_id, rework_type, max_attempts)
+VALUES
+('80000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000005', 'PARTIAL', 2)
+ON CONFLICT (id) DO NOTHING;
