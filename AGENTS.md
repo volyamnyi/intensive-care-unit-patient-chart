@@ -214,8 +214,8 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `nurse1` / `nurse2` | `nurse123` | NURSE |
 | `head1` | `head123` | HEAD_OF_DEPARTMENT |
 | `admin` | `admin123` | ADMINISTRATOR |
-| `prosthetist1` / `prosthetist2` | `prosthetist123` | PROSTHETIST |
-| `prosthetics_admin1` | `prosthetist123` | PROSTHETICS_ADMINISTRATOR |
+| `prosthetist1` / `prosthetist2` | `doctor123` | PROSTHETIST |
+| `prosthetics_admin1` | `doctor123` | PROSTHETICS_ADMINISTRATOR |
 | *(backend-only)* | — | AUDITOR |
 
 Mock MIS provides 5 test patients: Петренко, Коваленко, Сидоренко, Бондаренко, Ткачук.

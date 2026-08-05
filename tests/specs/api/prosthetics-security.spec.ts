@@ -36,7 +36,7 @@ test.describe('Prosthetics API Security Rules', () => {
   });
 
   test('PROSTHETIST role can access prosthetics endpoints (200)', async ({ request }) => {
-    const token = await getToken(request, 'prosthetist1', 'prosthetist123');
+    const token = await getToken(request, 'prosthetist1', 'doctor123');
 
     const res = await request.get(`${API}/prosthesis-manufacturing/instances`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -45,7 +45,7 @@ test.describe('Prosthetics API Security Rules', () => {
   });
 
   test('PROSTHETICS_ADMINISTRATOR role can access prosthetics endpoints (200)', async ({ request }) => {
-    const token = await getToken(request, 'prosthetics_admin1', 'prosthetist123');
+    const token = await getToken(request, 'prosthetics_admin1', 'doctor123');
 
     const res = await request.get(`${API}/prosthesis-manufacturing/instances`, {
       headers: { Authorization: `Bearer ${token}` },
