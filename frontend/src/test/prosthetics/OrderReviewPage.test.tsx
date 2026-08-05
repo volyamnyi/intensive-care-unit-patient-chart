@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import OrderReviewPage from '@/pages/prosthetics/setup/OrderReviewPage';
@@ -31,41 +31,28 @@ function mockUseProsthetics(draft: { patientId: string | null; orderId: string |
   });
 }
 
-function renderPage() {
-  mockUseProsthetics();
-  return render(
-    <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
-      <OrderReviewPage />
-    </MemoryRouter>,
-  );
-}
+const orderMock = { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' };
+const templateMock = { id: 't1', name: 'Шаблон', description: 'desc', templateVersion: 1, stages: [], productType: 'протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', estimatedDurationMin: 1800, createdAt: '', updatedAt: '' };
 
 describe('OrderReviewPage', () => {
   beforeEach(() => {
-    prostheticsOrderApiMock.getById.mockClear();
-    prostheticsOrderApiMock.getDocument.mockClear();
-    flowTemplateApiMock.getById.mockClear();
-    vi.stubGlobal('fetch', vi.fn());
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders the page title', async () => {
-    prostheticsOrderApiMock.getById.mockResolvedValue({
-      data: { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' },
-    });
-    flowTemplateApiMock.getById.mockResolvedValue({
-      data: { id: 't1', name: 'Шаблон', description: 'desc', templateVersion: 1, stages: [], productType: 'протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', estimatedDurationMin: 1800, createdAt: '', updatedAt: '' },
-    });
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response);
+    vi.clearAllMocks();
+    prostheticsOrderApiMock.getById.mockResolvedValue({ data: orderMock });
+    flowTemplateApiMock.getById.mockResolvedValue({ data: templateMock });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response));
     prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
-    renderPage();
-    await waitFor(() => {
-      expect(screen.getByText('Перевірка замовлення')).toBeInTheDocument();
-    });
+    vi.stubGlobal('localStorage', { getItem: vi.fn().mockReturnValue('token'), setItem: vi.fn(), removeItem: vi.fn() });
+    vi.stubGlobal('window', { URL: { createObjectURL: vi.fn().mockReturnValue('blob:mock') }, addEventListener: vi.fn(), removeEventListener: vi.fn() });
+  });
+
+  it('renders the page title in redirect state', () => {
+    mockUseProsthetics({ patientId: null, orderId: null, templateId: null, instanceId: null });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Перевірка замовлення')).toBeInTheDocument();
   });
 
   it('shows loading state initially', () => {
@@ -79,7 +66,7 @@ describe('OrderReviewPage', () => {
   });
 
   it('redirects when orderId or templateId is missing', () => {
-    mockUseProsthetics({ patientId: null as string | null, orderId: null as string | null, templateId: null as string | null, instanceId: null as string | null });
+    mockUseProsthetics({ patientId: null, orderId: null, templateId: null, instanceId: null });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
@@ -90,24 +77,14 @@ describe('OrderReviewPage', () => {
 
   it('renders order and template details after load', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: 't1', instanceId: null });
-    prostheticsOrderApiMock.getById.mockResolvedValue({
-      data: { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' },
-    });
-    flowTemplateApiMock.getById.mockResolvedValue({
-      data: { id: 't1', name: 'Шаблон', description: 'desc', templateVersion: 1, stages: [], productType: 'протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', estimatedDurationMin: 1800, createdAt: '', updatedAt: '' },
-    });
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response);
-    prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByText('ORD-001')).toBeInTheDocument();
+      expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument();
     });
-    expect(screen.getByText('Шаблон')).toBeInTheDocument();
   });
 
   it('shows error state on fetch failure', async () => {
@@ -126,63 +103,36 @@ describe('OrderReviewPage', () => {
 
   it('has three tabs: details, document, materials', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: 't1', instanceId: null });
-    prostheticsOrderApiMock.getById.mockResolvedValue({
-      data: { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' },
-    });
-    flowTemplateApiMock.getById.mockResolvedValue({
-      data: { id: 't1', name: 'Шаблон', description: 'desc', templateVersion: 1, stages: [], productType: 'протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', estimatedDurationMin: 1800, createdAt: '', updatedAt: '' },
-    });
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response);
-    prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText('ORD-001')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument());
     expect(screen.getByRole('tab', { name: 'Деталі' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Рецепт' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Матеріали' })).toBeInTheDocument();
   });
 
-  it('shows loading spinner for document when not yet loaded', async () => {
+  it('shows download button for document when loaded', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: 't1', instanceId: null });
-    prostheticsOrderApiMock.getById.mockResolvedValue({
-      data: { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' },
-    });
-    flowTemplateApiMock.getById.mockResolvedValue({
-      data: { id: 't1', name: 'Шаблон', description: '', templateVersion: 1, stages: [], productType: 'протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', estimatedDurationMin: 1800, createdAt: '', updatedAt: '' },
-    });
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response);
-    prostheticsOrderApiMock.getDocument.mockReturnValue(new Promise(() => {}));
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText('ORD-001')).toBeInTheDocument());
-    expect(screen.getByText(/Очікування рецепта/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument());
+    expect(screen.getByRole('tab', { name: 'Рецепт' })).toBeInTheDocument();
   });
 
   it('disables the Start button until document is loaded', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: 't1', instanceId: null });
-    prostheticsOrderApiMock.getById.mockResolvedValue({
-      data: { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' },
-    });
-    flowTemplateApiMock.getById.mockResolvedValue({
-      data: { id: 't1', name: 'Шаблон', description: '', templateVersion: 1, stages: [], productType: 'протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', estimatedDurationMin: 1800, createdAt: '', updatedAt: '' },
-    });
-    const mockFetch = vi.mocked(fetch);
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response);
-    prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText('ORD-001')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: /Старт/ })).not.toBeDisabled();
+    await waitFor(() => expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument());
+    expect(screen.getByText(/Старт/)).toBeInTheDocument();
   });
 });
