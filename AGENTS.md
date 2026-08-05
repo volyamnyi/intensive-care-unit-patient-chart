@@ -202,7 +202,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | nurse-chromium | setup | `.auth/nurse.json` | Dashboard, vitals, fluid balance, order execution |
 | hod-chromium | setup | `.auth/hod.json` | Dashboard, clinical day reopen |
 | admin-chromium | setup | `.auth/admin.json` | User tables |
-| api-chromium | — | none | Patient search API, error handling, scales access control, prosthetics security |
+| api-chromium | — | none | Patient search API, error handling, scales access control |
 
 ## Seed Data
 
