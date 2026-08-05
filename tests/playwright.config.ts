@@ -67,6 +67,24 @@ export default defineConfig({
       testMatch: '**/admin/*.spec.ts',
     },
     {
+      name: 'prosthetist-chromium',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/prosthetist.json',
+      },
+      testMatch: '**/prosthetics/*.spec.ts',
+    },
+    {
+      name: 'prosthetadmin-chromium',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/prosthetadmin.json',
+      },
+      testMatch: '**/prosthetics/*.spec.ts',
+    },
+    {
       name: 'api-chromium',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/api/*.spec.ts',

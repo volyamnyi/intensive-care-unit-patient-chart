@@ -11,6 +11,8 @@
 
 > A full-stack electronic medical record system for Intensive Care Units (ICU). Implements the Ukrainian standard form **003-15/о «Карта інтенсивної терапії»**. Enables doctors and nurses to digitally manage patient ICU charts — including hourly vital sign tracking, fluid balance monitoring, prescription management, clinical scale assessments, PDF generation (A4 landscape, Times New Roman), and digital signing workflows.
 
+**Also includes: Prosthetics Manufacturing Module** — A workflow management system for prosthetics production (from order selection → template selection → step-by-step wizard → quality gate decisions → PDF reports), with role-based access (PROSTHETIST / PROSTHETICS_ADMINISTRATOR).
+
 ---
 
 ## Features
@@ -47,10 +49,21 @@
 - **Nurse Sign-Off** — First stage of the two-stage signing workflow
 - **Prescription Execution** — Execute medication doses inline with 2-factor authorization popover
 
+### For Prosthetists / Prosthetics Administrators
+- **Prosthetics Dashboard** — View own flow instances with status filters (Active, Paused, Completed, Failed)
+- **Setup Wizard** — Patient search (from local mock DB) → Order selection → Order review (recipe PDF) → Template selection → Instance creation
+- **Execution Wizard** — Step-by-step guided workflow with validation (measurements, anamnesis, manufacturing, file uploads)
+- **Pause/Resume** — Timer-aware pausing with categorized reasons (Materials, Approval, Technical, Other)
+- **Quality Gate** — PASS / REWORK / FAIL decisions (PROSTHETICS_ADMINISTRATOR only)
+- **Rework Loop** — Automatic rollback to target step/stage with max attempt limits
+- **Failure Handling** — Failure snapshot capture (reason, description, attachments) + replacement instance creation
+- **PDF Reports** — Recipe PDF (order review), Instance PDF (Done screen), Failure PDF (Failed screen)
+- **Evidence Upload** — Image/PDF uploads (10 MB limit) per step
+
 ### Global UI
 - **GlobalLayout** — Unified AppBar header with dynamic route-based titles for all pages
 - **Dark/Light Theme** — Default light mode with global toggle in header
-- **App Selector** — Choose between ICU Chart and Prescription modules
+- **App Selector** — Choose between ICU Chart, Prescription Sheet, and Prosthetics Manufacturing modules
 
 ### Automated
 - **Audit Logging** — All entity operations are logged with user, timestamp, and diff
@@ -117,6 +130,7 @@
 - Frontend communicates via RESTful JSON APIs with JWT Bearer auth
 - Backend integrates with MIS via a pluggable `MisService` interface (mock implementation by default)
 - Scheduled tasks handle day transitions and escalation checks
+- **Prosthetics Manufacturing** is a separate backend module (`prosthesis-manufacturing`) with its own entities, services, and REST endpoints under `/api/prosthesis-manufacturing`, using local mock tables (not MIS)
 
 ---
 
@@ -337,6 +351,33 @@ java -jar backend/target/patient-chart-backend-*.jar
 | `GET` | `/api/prescriptions/allergies?patientId=` | Yes | Patient allergies (from MIS) |
 | `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
 
+### Prosthetics Manufacturing (Виробництво протезів)
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/prosthesis-manufacturing/patients` | PROSTHETIST, PROSTHETICS_ADMIN | Search patients |
+| `GET` | `/api/prosthesis-manufacturing/patients/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get patient by ID |
+| `POST` | `/api/prosthesis-manufacturing/patients` | PROSTHETICS_ADMIN | Create patient |
+| `GET` | `/api/prosthesis-manufacturing/orders` | PROSTHETIST, PROSTHETICS_ADMIN | List orders |
+| `GET` | `/api/prosthesis-manufacturing/orders/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get order by ID |
+| `POST` | `/api/prosthesis-manufacturing/orders` | PROSTHETICS_ADMIN | Create order |
+| `GET` | `/api/prosthesis-manufacturing/templates` | PROSTHETIST, PROSTHETICS_ADMIN | List flow templates |
+| `GET` | `/api/prosthesis-manufacturing/templates/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get template by ID |
+| `POST` | `/api/prosthesis-manufacturing/templates` | PROSTHETICS_ADMIN | Create template |
+| `PATCH` | `/api/prosthesis-manufacturing/templates/{id}` | PROSTHETICS_ADMIN | Update template |
+| `GET` | `/api/prosthesis-manufacturing/instances` | PROSTHETIST, PROSTHETICS_ADMIN | List flow instances |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get instance by ID |
+| `POST` | `/api/prosthesis-manufacturing/instances` | PROSTHETIST | Create instance from order + template |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/step-executions` | PROSTHETIST, PROSTHETICS_ADMIN | Get step executions for instance |
+| `POST` | `/api/prosthesis-manufacturing/step-executions/{id}/complete` | PROSTHETIST | Complete step execution |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/quality-gates` | PROSTHETIST, PROSTHETICS_ADMIN | Get quality gates for instance |
+| `POST` | `/api/prosthesis-manufacturing/gate-decisions` | PROSTHETICS_ADMIN | Make gate decision (PASS/REWORK/FAIL) |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/pause` | PROSTHETIST | Pause instance |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/resume` | PROSTHETIST | Resume instance |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/replacement` | PROSTHETIST | Create replacement after FAIL |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | PROSTHETIST, PROSTHETICS_ADMIN | Get failure snapshot |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/pdf` | PROSTHETIST, PROSTHETICS_ADMIN | Generate PDF report for instance |
+| `POST` | `/api/prosthesis-manufacturing/evidence-files` | PROSTHETIST | Upload evidence file |
+
 ### Vital Signs
 | Method | URL | Auth | Description |
 |---|---|---|---|
@@ -362,6 +403,8 @@ java -jar backend/target/patient-chart-backend-*.jar
 | `nurse1` / `nurse2` | `nurse123` | NURSE |
 | `head1` | `head123` | HEAD_OF_DEPARTMENT |
 | `admin` | `admin123` | ADMINISTRATOR |
+| `prosthetist1` / `prosthetist2` | `prosthetist123` | PROSTHETIST |
+| `prosthetics_admin1` | `prosthetist123` | PROSTHETICS_ADMINISTRATOR |
 | *(backend-only)* | — | AUDITOR |
 
 5 mock patients (from MIS mock):
@@ -374,7 +417,16 @@ java -jar backend/target/patient-chart-backend-*.jar
 | Бондаренко Наталія Петрівна | МК-003456 | 1990 |
 | Ткачук Андрій Миколайович | МК-007890 | 1975 |
 
+Prosthetics seed patients (local mock tables, not MIS):
+
+| Patient | ID | Order | Template |
+|---|---|---|---|
+| Сніжко Оксана Володимирівна | `a0000001...` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
+| Гаврилюк Тарас Олексійович | `a0000002...` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
+
 3 seed episodes with 4 seed clinical days (3 OPEN, 1 NURSE_SIGNED) with fixed UUIDs (used in integration tests).
+
+Prosthetics E2E isolation uses fixed seed IDs per spec (no `.first()` race).
 
 ---
 
@@ -383,43 +435,54 @@ java -jar backend/target/patient-chart-backend-*.jar
 ```
 icu-patient-chart/
 ├── backend/
-│   ├── pom.xml               ← parent POM (3 modules: common, medication-sheet, icu-chart)
+│   ├── pom.xml               ← parent POM (4 modules: common, medication-sheet, icu-chart, prosthesis-manufacturing)
 │   ├── common/               ← shared entities, JWT/security, base classes
 │   ├── medication-sheet/     ← prescriptions module (entities, services, controllers)
-│   └── icu-chart/
+│   ├── icu-chart/
+│   │   ├── pom.xml
+│   │   ├── src/main/resources/
+│   │   │   └── db/changelog/   # Liquibase migrations (6 changesets)
+│   │   └── src/main/java/com/superhumans/
+│   │       ├── SuperhumansApplication.java
+│   │       ├── auth/             # JWT authentication (filter + token provider)
+│   │       ├── config/           # Security, CORS
+│   │       ├── controller/       # REST controllers (19)
+│   │       ├── dto/              # Request/response DTOs (48 total)
+│   │       ├── entity/           # JPA entities (25 including enums)
+│   │       ├── exception/        # Domain exceptions + global handler
+│   │       ├── mapper/           # Entity ↔ DTO mappers
+│   │       ├── mis/              # MIS integration (mock + interface)
+│   │       ├── repository/       # Spring Data repositories (18)
+│   │       └── service/          # Business logic services (17 implementation + 2 interfaces)
+│   └── prosthesis-manufacturing/
 │       ├── pom.xml
 │       ├── src/main/resources/
-│       │   └── db/changelog/   # Liquibase migrations (6 changesets)
-│       └── src/main/java/com/superhumans/
-│           ├── SuperhumansApplication.java
-│           ├── auth/             # JWT authentication (filter + token provider)
-│           ├── config/           # Security, CORS
-│           ├── controller/       # REST controllers (19)
-│           ├── dto/              # Request/response DTOs (48 total)
-│           ├── entity/           # JPA entities (25 including enums)
-│           ├── exception/        # Domain exceptions + global handler
-│           ├── mapper/           # Entity ↔ DTO mappers
-│           ├── mis/              # MIS integration (mock + interface)
-│           ├── repository/       # Spring Data repositories (18)
-│           └── service/          # Business logic services (17 implementation + 2 interfaces)
+│       │   └── db/changelog/   # Liquibase migrations (1 changeset)
+│       └── src/main/java/com/superhumans/prosthesismanufacturing/
+│           ├── controller/       # REST controllers (5)
+│           ├── dto/              # Request/response DTOs (24)
+│           ├── entity/           # JPA entities (26 including enums)
+│           ├── mapper/           # Entity ↔ DTO mappers (5)
+│           ├── repository/       # Spring Data repositories (12)
+│           └── service/          # Business logic services (7)
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tsconfig*.json
 │   └── src/
 │       ├── App.tsx           # Root component + routing
-│       ├── api/              # Axios client + endpoint definitions
-│       ├── components/       # Shared UI components (12)
-│       ├── layouts/          # Doctor & Nurse layouts
-│       ├── pages/            # LoginPage, doctor/, nurse/, admin/
+│       ├── api/              # Axios client + endpoint definitions (prosthetics.ts added)
+│       ├── components/       # Shared UI components (12) + prosthetics/ (3)
+│       ├── layouts/          # Doctor, Nurse, Prosthetics layouts
+│       ├── pages/            # LoginPage, doctor/, nurse/, admin/, prosthetics/
 │       ├── services/         # AuthContext
 │       ├── styles/           # MUI theme + animations
-│       └── types/            # TypeScript interfaces
+│       └── types/            # TypeScript interfaces (prosthetics types added)
 ├── tests/                    # Playwright E2E tests
 │   ├── playwright.config.ts
 │   ├── pages/                # Page objects (7)
 │   ├── fixtures/             # Role-based test fixtures
-│   └── specs/                # Test specs (45 files, 190 tests)
+│   └── specs/                # Test specs (48 files, 186 tests)
 └── README.md
 ```
 
@@ -472,11 +535,11 @@ icu-patient-chart/
 Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend unit tests**: 526 tests — medication-sheet (88) + icu-chart (416) + common (22 skippable) — `mvn test`
+- **Backend unit tests**: 557 tests — common (22 skippable) + medication-sheet (88) + icu-chart (416) + prosthesis-manufacturing (31) — `mvn test`
 - **Backend integration tests**: 163 tests — medication-sheet (22) + icu-chart (141) — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: ~350 tests (44 files, 0 failures)
-- **E2E Playwright tests**: 45 spec files, 7 projects
-- **Total**: ~1,040 tests
+- **Frontend Vitest tests**: 419 tests (47 files, 0 failures) — includes prosthetics tests
+- **E2E Playwright tests**: 48 spec files, 9 projects (setup, login, doctor, nurse, hod, admin, prosthetist, prosthetadmin, api)
+- **Total**: ~1,187 tests
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
@@ -502,21 +565,28 @@ chore: maintenance tasks
 
 ### Role Permissions
 
-| Operation | DOCTOR | NURSE | HOD | ADMIN |
-|---|---|---|---|---|
-| Create episode | ✓ | ✗ | ✓ | ✗ |
-| Create clinical day | ✓ | ✗ | ✓ | ✗ |
-| Sign off (nurse stage) | ✗ | ✓ | ✗ | ✗ |
-| Sign off (doctor stage) | ✓ | ✗ | ✓ | ✗ |
-| Reopen signed day | ✗ | ✗ | ✓ | ✗ |
-| Create prescriptions | ✓ | ✗ | ✓ | ✗ |
-| Execute prescriptions | ✗ | ✓ | ✗ | ✗ |
-| Enter vitals | ✗ | ✓ | ✗ | ✗ |
-| View patient data | ✓ | ✓ | ✓ | ✓ |
-| Create clinical scale (APACHE II/SOFA) | ✓ | ✗ | ✓ | ✗ |
-| Create clinical scale (CAM-ICU/Braden/RASS) | ✓ | ✓ | ✓ | ✗ |
-| Audit log access | ✗ | ✗ | ✗ | ✓ |
-| AUDITOR read-only view | ✗ | ✗ | ✗ | ✗ |
+| Operation | DOCTOR | NURSE | HOD | ADMIN | PROSTHETIST | PROSTHETICS_ADMIN |
+|---|---|---|---|---|---|---|
+| Create episode | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Create clinical day | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Sign off (nurse stage) | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Sign off (doctor stage) | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Reopen signed day | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Create prescriptions | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Execute prescriptions | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Enter vitals | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| View patient data | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+| Create clinical scale (APACHE II/SOFA) | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
+| Create clinical scale (CAM-ICU/Braden/RASS) | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Audit log access | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| AUDITOR read-only view | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Prosthetics Dashboard (own instances) | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Create prosthetics instance (Wizard) | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Complete wizard steps / upload files | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Pause/Resume instance | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Quality Gate decision (PASS/REWORK/FAIL) | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Create prosthetics templates | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Create prosthetics patients/orders | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
 
 ---
 

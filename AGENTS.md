@@ -81,18 +81,21 @@ Updated `docs/Технічне завдання карта Інтенсивно�
 frontend/  (React 19 + TS 6 + Vite 8 + MUI 9, single app)
   src/icu-chart/            ← ICU chart feature module
   src/medication-sheet/     ← Medication sheet (prescriptions) feature module
+  src/prosthetics/          ← Prosthetics manufacturing feature module
   src/shared/               ← shared types, API client, components, auth
 backend/   (Spring Boot 4.1.0 + Java 25 + Maven, multi-module)
-  pom.xml                   ← parent POM (pom packaging, 3 modules)
+  pom.xml                   ← parent POM (pom packaging, 4 modules)
   common/                   ← shared entities, JWT/security, base classes
   icu-chart/                ← existing app (@SpringBootApplication, single-deployment JAR)
-  medication-sheet/         ← new module (auto-scanned under com.superhumans)
+  medication-sheet/         ← medication sheet module (auto-scanned under com.superhumans)
+  prosthesis-manufacturing/ ← prosthetics manufacturing module (auto-scanned under com.superhumans)
 tests/     (Playwright 1.61)
 ```
 
 After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Routes are prefixed per sub-app:
 - `/doctor/*`, `/nurse/*` → ICU chart
 - `/prescriptions/doctor/*`, `/prescriptions/nurse/*` → Medication sheet
+- `/prosthetics/*` → Prosthetics manufacturing
 - `/admin/*` → Admin
 
 - JWT auth stored in `localStorage`.
@@ -185,21 +188,23 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 ## Testing
 
-- **Backend**: 557 total tests (from multi-module reactor: common + medication-sheet + icu-chart). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 393 Vitest tests across 46 files (pages, components, AuthContext, endpoints). Run with `npm t`.
-- **E2E**: 45 Playwright spec files (183 tests) across 7 projects (setup, login, doctor, nurse, hod, admin, api).
+- **Backend**: 557 total tests (from multi-module reactor: common + medication-sheet + icu-chart + prosthesis-manufacturing). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 419 Vitest tests across 47 files (pages, components, AuthContext, endpoints, prosthetics). Run with `npm t`.
+- **E2E**: 48 Playwright spec files (186 tests) across 9 projects (setup, login, doctor, nurse, hod, admin, prosthetist, prosthetadmin, api).
 
 ## Playwright Projects
 
 | Project | Depends On | storageState | Tests |
 |---|---|---|---|
-| setup | — | — | Auth setup (4 roles) |
+| setup | — | — | Auth setup (6 roles) |
 | login-chromium | — | none | Login flow |
 | doctor-chromium | setup | `.auth/doctor.json` | Dashboard, create card, prescriptions, notes, sign-off |
 | nurse-chromium | setup | `.auth/nurse.json` | Dashboard, vitals, fluid balance, order execution |
 | hod-chromium | setup | `.auth/hod.json` | Dashboard, clinical day reopen |
 | admin-chromium | setup | `.auth/admin.json` | User tables |
-| api-chromium | — | none | Patient search API, error handling, scales access control |
+| prosthetist-chromium | setup | `.auth/prosthetist.json` | Wizard flow, rework/fail, dashboard |
+| prosthetadmin-chromium | setup | `.auth/prosthetadmin.json` | Quality gate decisions, template admin |
+| api-chromium | — | none | Patient search API, error handling, scales access control, prosthetics security |
 
 ## Seed Data
 
@@ -209,9 +214,17 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `nurse1` / `nurse2` | `nurse123` | NURSE |
 | `head1` | `head123` | HEAD_OF_DEPARTMENT |
 | `admin` | `admin123` | ADMINISTRATOR |
+| `prosthetist1` / `prosthetist2` | `prosthetist123` | PROSTHETIST |
+| `prosthetics_admin1` | `prosthetist123` | PROSTHETICS_ADMINISTRATOR |
 | *(backend-only)* | — | AUDITOR |
 
 Mock MIS provides 5 test patients: Петренко, Коваленко, Сидоренко, Бондаренко, Ткачук.
+
+Prosthetics seed patients (local mock tables, not MIS):
+| Patient | ID | Order | Template |
+|---|---|---|---|
+| Сніжко Оксана Володимирівна | `a0000001...` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
+| Гаврилюк Тарас Олексійович | `a0000002...` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
 
 3 seed episodes with 4 clinical days:
 
@@ -225,6 +238,12 @@ Mock MIS provides 5 test patients: Петренко, Коваленко, Сид�
 - `a1111111`: `signoff-full-chain` (signs `b1111111` + `b1111112`), `signoff`
 - `a2222222`: `clinical-day-reopen` (reopens `b4444444`), `pdf-generation` (signs `b2222222`)
 - `a3333333`: `notes`, `notes-full`, `prescriptions`, `prescription-cancel`, `scales-episode`
+
+**Prosthetics E2E isolation** (separate mock tables, no cross-module interference):
+- `prosthetist1` → owns `Сніжко` / `ПВ-26-0413` / instance from `TP-UL-01`
+- `prosthetist2` → owns `Гаврилюк` / `ПВ-26-0414` / instance from `TP-LL-01`
+- `prosthetics_admin1` → quality gate decisions, template admin
+- Each spec uses fixed seed IDs (no `.first()`)
 
 ## Data Model
 
@@ -381,6 +400,33 @@ All endpoints prefixed with `/api`.
 |---|---|---|---|
 | POST | `/api/mis/error-mode?mode=timeout\|not_found\|unavailable\|none` | Yes | Set mock MIS error simulation |
 
+### Prosthetics Manufacturing
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/prosthesis-manufacturing/patients` | Yes (PROSTHETIST, PROSTHETICS_ADMINISTRATOR) | Search patients |
+| GET | `/api/prosthesis-manufacturing/patients/{id}` | Yes | Get patient by ID |
+| POST | `/api/prosthesis-manufacturing/patients` | Yes (PROSTHETICS_ADMINISTRATOR) | Create patient |
+| GET | `/api/prosthesis-manufacturing/orders` | Yes | List orders |
+| GET | `/api/prosthesis-manufacturing/orders/{id}` | Yes | Get order by ID |
+| POST | `/api/prosthesis-manufacturing/orders` | Yes (PROSTHETICS_ADMINISTRATOR) | Create order |
+| GET | `/api/prosthesis-manufacturing/templates` | Yes | List flow templates |
+| GET | `/api/prosthesis-manufacturing/templates/{id}` | Yes | Get template by ID |
+| POST | `/api/prosthesis-manufacturing/templates` | Yes (PROSTHETICS_ADMINISTRATOR) | Create template |
+| PATCH | `/api/prosthesis-manufacturing/templates/{id}` | Yes (PROSTHETICS_ADMINISTRATOR) | Update template |
+| GET | `/api/prosthesis-manufacturing/instances` | Yes | List flow instances |
+| GET | `/api/prosthesis-manufacturing/instances/{id}` | Yes | Get instance by ID |
+| POST | `/api/prosthesis-manufacturing/instances` | Yes (PROSTHETIST) | Create instance from order + template |
+| GET | `/api/prosthesis-manufacturing/instances/{id}/step-executions` | Yes | Get step executions for instance |
+| POST | `/api/prosthesis-manufacturing/step-executions/{id}/complete` | Yes (PROSTHETIST) | Complete step execution |
+| GET | `/api/prosthesis-manufacturing/instances/{id}/quality-gates` | Yes | Get quality gates for instance |
+| POST | `/api/prosthesis-manufacturing/gate-decisions` | Yes (PROSTHETICS_ADMINISTRATOR) | Make gate decision (PASS/REWORK/FAIL) |
+| POST | `/api/prosthesis-manufacturing/instances/{id}/pause` | Yes (PROSTHETIST) | Pause instance |
+| POST | `/api/prosthesis-manufacturing/instances/{id}/resume` | Yes (PROSTHETIST) | Resume instance |
+| POST | `/api/prosthesis-manufacturing/instances/{id}/replacement` | Yes (PROSTHETIST) | Create replacement after FAIL |
+| GET | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | Yes | Get failure snapshot |
+| GET | `/api/prosthesis-manufacturing/instances/{id}/pdf` | Yes | Generate PDF report for instance |
+| POST | `/api/prosthesis-manufacturing/evidence-files` | Yes (PROSTHETIST) | Upload evidence file |
+
 ## Frontend Routes
 
 | Path | Component | Guard (roles) |
@@ -392,11 +438,19 @@ All endpoints prefixed with `/api`.
 | `/doctor/episode/:episodeId` | `DoctorLayout` > `PatientDayPage` | DOCTOR, HEAD_OF_DEPARTMENT |
 | `/nurse` | `NurseLayout` > `NurseDashboardPage` | NURSE |
 | `/nurse/episode/:episodeId` | `NurseLayout` > `PatientDayPage` | NURSE |
+| `/prosthetics` | `ProstheticsLayout` > `DashboardPage` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
+| `/prosthetics/orders` | `ProstheticsLayout` > `OrderSelectPage` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
+| `/prosthetics/review` | `ProstheticsLayout` > `OrderReviewPage` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
+| `/prosthetics/template` | `ProstheticsLayout` > `TemplateSelectPage` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
+| `/prosthetics/wizard` | `ProstheticsLayout` > `WizardScreen` | PROSTHETIST |
+| `/prosthetics/process/:instanceId` | `ProstheticsLayout` > `ProcessDetail` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
+| `/prosthetics/failed/:instanceId` | `ProstheticsLayout` > `FailedScreen` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
+| `/prosthetics/done/:instanceId` | `ProstheticsLayout` > `DoneScreen` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
 | `/admin` | `AdminPage` | ADMINISTRATOR |
 
 ## Frontend Components
 
-### Pages (7)
+### Pages (16)
 | File | Description |
 |---|---|
 | `LoginPage.tsx` | Login form with error handling |
@@ -406,6 +460,15 @@ All endpoints prefixed with `/api`.
 | `doctor/PatientDayPage.tsx` | Doctor view of clinical day (orders, notes, scales, sign-off) |
 | `nurse/NurseDashboardPage.tsx` | Nurse episode list with active patients |
 | `admin/AdminPage.tsx` | User management tables + audit log viewer |
+| `prosthetics/DashboardPage.tsx` | Prosthetist dashboard with instances, filters |
+| `prosthetics/setup/OrderSelectPage.tsx` | Patient search + order selection |
+| `prosthetics/setup/OrderReviewPage.tsx` | Order review with recipe PDF |
+| `prosthetics/setup/TemplateSelectPage.tsx` | Template selection for new instance |
+| `prosthetics/process/WizardScreen.tsx` | Step-by-step wizard with validation |
+| `prosthetics/process/ProcessDetail.tsx` | Process overview with stages/steps |
+| `prosthetics/process/ProcessOverview.tsx` | Compact process status view |
+| `prosthetics/process/FailedScreen.tsx` | Failure snapshot + replacement |
+| `prosthetics/process/DoneScreen.tsx` | Completed instance with PDF export |
 
 ### Common Components
 | File | Description |
@@ -437,6 +500,9 @@ All endpoints prefixed with `/api`.
 | `SignDialog.tsx` | Sign dialog with hash confirmation |
 | `VentilationPanel.tsx` | Ventilation settings panel |
 | `VitalSignsForm.tsx` | Vital signs entry form |
+| `prosthetics/StatusBadge.tsx` | Status badge with color coding |
+| `prosthetics/SetupSteps.tsx` | Step indicator for setup wizard |
+| `prosthetics/QualityGatePanel.tsx` | Quality gate checklist and decision UI |
 
 ### API Client (`frontend/src/api/`)
 - **`client.ts`**: Axios instance → `http://localhost:8085/api`, JWT interceptor
@@ -472,6 +538,15 @@ All endpoints prefixed with `/api`.
 | `SignatureService` | Create/revoke signatures, check existing signatures |
 | `PdfGeneratorService` | Generate PDF (iText) with all clinical day sections |
 | `AuditService` | Create/query audit log entries with pagination |
+
+Prosthetics module adds 7 additional services in `prosthesis-manufacturing` module:
+- `ProstheticsPatientService` — patient CRUD
+- `ProstheticsOrderService` — order CRUD + PDF generation
+- `FlowTemplateService` — template CRUD + stages/steps/elements
+- `FlowInstanceService` — instance lifecycle (create, pause, resume, complete steps)
+- `QualityGateService` — gate decisions (PASS/REWORK/FAIL), rework loops
+- `FailureSnapshotService` — failure capture + PDF report
+- `EvidenceFileService` — file upload (images/PDFs, 10MB limit)
 
 ## Compliance Fixes Applied
 
@@ -554,7 +629,7 @@ frontend/
   public/              ← Static assets
   src/                 ← 90 TS/TSX source + 47 test files
 tests/
-  playwright.config.ts ← Playwright config with 7 projects
+  playwright.config.ts ← Playwright config with 9 projects
   package.json         ← Test dependencies
   specs/               ← 47 spec files
   pages/               ← Page Object Model (7 files)
