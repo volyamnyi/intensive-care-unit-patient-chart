@@ -16395,7 +16395,8 @@ VALUES
 (23, 'prosthetics_admin1', '$2a$10$LQeytYedrrlf3Dzg5jaUiuALhgGwku50pJL64hUrc/PkMHm7ulPpO', 'Тарас Мельник', 'PROSTHETICS_ADMINISTRATOR', 'ptadmin@hospital.ua', '402', 'Адміністрування протезного виробництва', '380509999999', NOW(), 23, NOW(), 23, 0)
 ON CONFLICT (login) DO UPDATE SET
   role = EXCLUDED.role,
-  full_name = EXCLUDED.full_name;
+  full_name = EXCLUDED.full_name,
+  password_hash = EXCLUDED.password_hash;
 
 -- Patients (mock Doctor Eleks)
 INSERT INTO prosthetics_patients (id, pib, birth_date, gender, height_cm, weight_kg, social_status, cause, amputation_date, affected_limb, amputation_level, stump)
