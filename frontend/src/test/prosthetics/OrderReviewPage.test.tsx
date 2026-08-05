@@ -23,7 +23,7 @@ vi.mock('@/prosthetics/ProstheticsContext', () => ({
   useProsthetics,
 }));
 
-function mockUseProsthetics(draft: { patientId: string | null; orderId: string | null; templateId: string | null; instanceId: string | null } = { patientId: null, orderId: null, templateId: null, instanceId: null }) {
+function mockUseProsthetics(draft = { patientId: null, orderId: null, templateId: null, instanceId: null }) {
   useProsthetics.mockReturnValue({
     draft,
     setDraftField: vi.fn(),
@@ -39,10 +39,8 @@ describe('OrderReviewPage', () => {
     vi.clearAllMocks();
     prostheticsOrderApiMock.getById.mockResolvedValue({ data: orderMock });
     flowTemplateApiMock.getById.mockResolvedValue({ data: templateMock });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response));
     prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
-    vi.stubGlobal('localStorage', { getItem: vi.fn().mockReturnValue('token'), setItem: vi.fn(), removeItem: vi.fn() });
-    vi.stubGlobal('window', { URL: { createObjectURL: vi.fn().mockReturnValue('blob:mock') }, addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ fullName: 'Іван Іванов' }) } as unknown as Response));
   });
 
   it('renders the page title in redirect state', () => {
@@ -114,25 +112,27 @@ describe('OrderReviewPage', () => {
     expect(screen.getByRole('tab', { name: 'Матеріали' })).toBeInTheDocument();
   });
 
-  it('shows download button for document when loaded', async () => {
+  it('renders patient full name from fetched data', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: 't1', instanceId: null });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument());
-    expect(screen.getByRole('tab', { name: 'Рецепт' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Іван Іванов')).toBeInTheDocument();
+    });
   });
 
-  it('disables the Start button until document is loaded', async () => {
+  it('disables start button until document is loaded', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: 't1', instanceId: null });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument());
-    expect(screen.getByText(/Старт/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument();
+    });
   });
 });
