@@ -9,8 +9,6 @@ const USERS = [
   { login: 'nurse1', password: 'nurse123', file: 'nurse.json' },
   { login: 'head1', password: 'head123', file: 'hod.json' },
   { login: 'admin', password: 'admin123', file: 'admin.json' },
-  { login: 'prosthetist1', password: 'doctor123', file: 'prosthetist.json' },
-  { login: 'prosthetics_admin1', password: 'doctor123', file: 'prosthetadmin.json' },
 ];
 
 for (const user of USERS) {

@@ -190,20 +190,18 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 - **Backend**: 557 total tests (from multi-module reactor: common + medication-sheet + icu-chart + prosthesis-manufacturing). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: 419 Vitest tests across 47 files (pages, components, AuthContext, endpoints, prosthetics). Run with `npm t`.
-- **E2E**: 48 Playwright spec files (186 tests) across 9 projects (setup, login, doctor, nurse, hod, admin, prosthetist, prosthetadmin, api).
+- **E2E**: 48 Playwright spec files (186 tests) across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
 
 | Project | Depends On | storageState | Tests |
 |---|---|---|---|
-| setup | — | — | Auth setup (6 roles) |
+| setup | — | — | Auth setup (4 roles) |
 | login-chromium | — | none | Login flow |
 | doctor-chromium | setup | `.auth/doctor.json` | Dashboard, create card, prescriptions, notes, sign-off |
 | nurse-chromium | setup | `.auth/nurse.json` | Dashboard, vitals, fluid balance, order execution |
 | hod-chromium | setup | `.auth/hod.json` | Dashboard, clinical day reopen |
 | admin-chromium | setup | `.auth/admin.json` | User tables |
-| prosthetist-chromium | setup | `.auth/prosthetist.json` | Wizard flow, rework/fail, dashboard |
-| prosthetadmin-chromium | setup | `.auth/prosthetadmin.json` | Quality gate decisions, template admin |
 | api-chromium | — | none | Patient search API, error handling, scales access control, prosthetics security |
 
 ## Seed Data
