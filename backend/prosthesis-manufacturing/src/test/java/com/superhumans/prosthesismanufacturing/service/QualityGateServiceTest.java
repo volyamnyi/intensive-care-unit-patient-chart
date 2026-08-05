@@ -11,7 +11,6 @@ import com.superhumans.prosthesismanufacturing.entity.ReworkLoop;
 import com.superhumans.prosthesismanufacturing.entity.ReworkType;
 import com.superhumans.prosthesismanufacturing.entity.StepExecution;
 import com.superhumans.prosthesismanufacturing.entity.StepExecutionStatus;
-import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapperImpl;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.GateDecisionRepository;
 import com.superhumans.prosthesismanufacturing.repository.QualityGateRepository;
@@ -74,8 +73,7 @@ class QualityGateServiceTest {
     void setUp() {
         service = new QualityGateService(instanceRepository, gateRepository, reworkLoopRepository,
                 decisionRepository, executionRepository, instanceService, failureSnapshotService,
-                new FlowInstanceMapperImpl(), new TemplateSnapshotParser(new ObjectMapper()),
-                auditService, new ObjectMapper());
+                new TemplateSnapshotParser(new ObjectMapper()), auditService, new ObjectMapper());
         snapshotStage = SnapshotStage.builder()
                 .id(stageId)
                 .name("Контроль якості")
