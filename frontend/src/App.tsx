@@ -17,13 +17,16 @@ import PrescriptionPage from './pages/prescription/PrescriptionPage';
 import PrescriptionDetailPage from './pages/prescription/PrescriptionDetailPage';
 import NursePrescriptionPage from './pages/prescription/NursePrescriptionPage';
 import AppSelectorPage from './pages/AppSelectorPage';
-import ProstheticsDashboard from './pages/prosthetics/ProstheticsDashboard';
-import PatientStep from './pages/prosthetics/setup/PatientStep';
-import OrderStep from './pages/prosthetics/setup/OrderStep';
-import TemplateStep from './pages/prosthetics/setup/TemplateStep';
-import ReviewStep from './pages/prosthetics/setup/ReviewStep';
+import ProstheticsDashboard from './pages/prosthetics/DashboardPage';
+import PatientSearchPage from './pages/prosthetics/setup/PatientSearchPage';
+import OrderSelectPage from './pages/prosthetics/setup/OrderSelectPage';
+import OrderReviewPage from './pages/prosthetics/setup/OrderReviewPage';
+import TemplateSelectPage from './pages/prosthetics/setup/TemplateSelectPage';
 import ProcessLayout from './pages/prosthetics/process/ProcessLayout';
 import ProcessDetail from './pages/prosthetics/process/ProcessDetail';
+import WizardScreen from './pages/prosthetics/process/WizardScreen';
+import DoneScreen from './pages/prosthetics/process/DoneScreen';
+import FailedScreen from './pages/prosthetics/process/FailedScreen';
 import { ProstheticsProvider } from './prosthetics/ProstheticsContext';
 
 function Guard({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -161,31 +164,31 @@ function AppRoutes() {
         } />
 
         <Route path="/prosthetics/new">
-          <Route path="patient" element={
+          <Route path="select-patient" element={
             <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
               <ProstheticsProvider>
-                <PatientStep />
+                <PatientSearchPage />
               </ProstheticsProvider>
             </Guard>
           } />
-          <Route path="order" element={
+          <Route path="select-order" element={
             <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
               <ProstheticsProvider>
-                <OrderStep />
+                <OrderSelectPage />
               </ProstheticsProvider>
             </Guard>
           } />
-          <Route path="template" element={
+          <Route path="review-order" element={
             <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
               <ProstheticsProvider>
-                <TemplateStep />
+                <OrderReviewPage />
               </ProstheticsProvider>
             </Guard>
           } />
-          <Route path="review" element={
+          <Route path="select-template" element={
             <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
               <ProstheticsProvider>
-                <ReviewStep />
+                <TemplateSelectPage />
               </ProstheticsProvider>
             </Guard>
           } />
@@ -199,6 +202,9 @@ function AppRoutes() {
           </Guard>
         }>
           <Route index element={<ProcessDetail />} />
+          <Route path="wizard" element={<WizardScreen />} />
+          <Route path="done" element={<DoneScreen />} />
+          <Route path="failed" element={<FailedScreen />} />
         </Route>
 
         <Route path="/admin" element={

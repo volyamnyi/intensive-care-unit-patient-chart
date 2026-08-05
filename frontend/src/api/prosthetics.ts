@@ -14,6 +14,7 @@ import type {
   TemplateStatus,
   TemplateCreateRequest,
   TemplatePatchRequest,
+  SnapshotTemplate,
 } from '../prosthetics/types';
 
 const BASE = '/prosthesis-manufacturing';
@@ -26,11 +27,13 @@ export const prostheticsPatientApi = {
 
 export const prostheticsOrderApi = {
   list: () => client.get<ProstheticsOrder[]>(`${BASE}/orders`),
+  listByPatient: (patientId: string) => client.get<ProstheticsOrder[]>(`${BASE}/orders`, { params: { patientId } }),
   getById: (id: string) => client.get<ProstheticsOrder>(`${BASE}/orders/${id}`),
+  getDocument: (id: string) => client.get<Blob>(`${BASE}/orders/${id}/document`, { responseType: 'blob' }),
 };
 
 export const flowTemplateApi = {
-  list: (params?: { status?: TemplateStatus }) =>
+  list: (params?: { status?: TemplateStatus; productType?: string; amputationLevel?: string; limbSide?: string }) =>
     client.get<FlowTemplate[]>(`${BASE}/templates`, { params }),
   getById: (id: string) => client.get<FlowTemplate>(`${BASE}/templates/${id}`),
   create: (data: TemplateCreateRequest) =>
@@ -44,6 +47,8 @@ export const flowInstanceApi = {
   list: (params?: { assignee?: number; status?: FlowInstanceStatus }) =>
     client.get<FlowInstance[]>(`${BASE}/instances`, { params }),
   getById: (id: string) => client.get<FlowInstance>(`${BASE}/instances/${id}`),
+  getSnapshot: (id: string) =>
+    client.get<SnapshotTemplate>(`${BASE}/instances/${id}/snapshot`),
   create: (data: InstanceCreateRequest) =>
     client.post<FlowInstance>(`${BASE}/instances`, data),
   start: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/start`),

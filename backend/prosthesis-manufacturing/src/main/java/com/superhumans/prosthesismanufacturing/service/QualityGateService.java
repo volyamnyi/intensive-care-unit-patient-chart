@@ -13,7 +13,6 @@ import com.superhumans.prosthesismanufacturing.entity.GateDecisionType;
 import com.superhumans.prosthesismanufacturing.entity.QualityGate;
 import com.superhumans.prosthesismanufacturing.entity.ReworkLoop;
 import com.superhumans.prosthesismanufacturing.entity.StepExecutionStatus;
-import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.GateDecisionRepository;
 import com.superhumans.prosthesismanufacturing.repository.QualityGateRepository;
@@ -45,7 +44,6 @@ public class QualityGateService {
     StepExecutionRepository executionRepository;
     FlowInstanceService instanceService;
     FailureSnapshotService failureSnapshotService;
-    FlowInstanceMapper instanceMapper;
     TemplateSnapshotParser snapshotParser;
     AuditService auditService;
     ObjectMapper objectMapper;
@@ -86,7 +84,7 @@ public class QualityGateService {
             case REWORK -> rework(instance, snapshot, stage, snapshotGate, gate, now, userId);
             case FAIL -> fail(instance, gate, request.getComment(), userId);
         };
-        return instanceMapper.toResponse(result);
+        return instanceService.toResponse(result);
     }
 
     private FlowInstance pass(FlowInstance instance, SnapshotTemplate snapshot, SnapshotStage stage,

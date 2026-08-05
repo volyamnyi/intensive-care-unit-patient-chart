@@ -61,8 +61,8 @@ export interface TemplateElement {
   minCount: number | null;
   maxCount: number | null;
   regexPattern: string | null;
-  options: string[] | null;
-  mimeTypes: string[] | null;
+  options: string | null;
+  mimeTypes: string | null;
   maxSizeMb: number | null;
 }
 
@@ -80,7 +80,7 @@ export interface TemplateStep {
 export interface TemplateStage {
   id: string;
   name: string;
-  stageType: string;
+  type: string;
   canSkip: boolean;
   requiresApproval: boolean;
   gate: QualityGate | null;
@@ -111,6 +111,7 @@ export interface FlowInstance {
   status: FlowInstanceStatus;
   currentStageId: string | null;
   currentStepId: string | null;
+  currentExecutionId: string | null;
   startTime: string | null;
   endTime: string | null;
   totalActiveSeconds: number | null;
@@ -149,18 +150,20 @@ export interface StepCompleteRequest {
 }
 
 export interface ResourceUsageRequest {
-  resourceId: string;
-  quantity: number;
+  material: string;
+  quantity: number | null;
+  unit: string | null;
+  minutes: number | null;
 }
 
 export interface GateDecisionRequest {
   decision: GateDecision;
+  criteriaConfirmed?: string[];
   comment?: string;
 }
 
 export interface PauseRequest {
-  pauseCategory: PauseCategory;
-  note?: string;
+  category: PauseCategory;
 }
 
 export interface FailRequest {
@@ -200,7 +203,7 @@ export interface TemplateCreateRequest {
 
 export interface TemplateStageCreateRequest {
   name: string;
-  stageType: string;
+  type: string;
   canSkip: boolean;
   requiresApproval: boolean;
   gate: GateCreateRequest | null;
@@ -211,19 +214,20 @@ export interface GateCreateRequest {
   name: string;
   description: string;
   requiredApproverRole: string;
-  checklist: string;
+  checklist: string[];
   attachmentsRequired: boolean;
   reworkLoops: ReworkLoopCreateRequest[];
 }
 
 export interface ReworkLoopCreateRequest {
-  targetStepId: string;
+  targetStepIndex: number;
   reworkType: string;
   maxAttempts: number;
 }
 
 export interface TemplateStepCreateRequest {
   name: string;
+  description?: string;
   stepType: string;
   mandatory: boolean;
   allowBackward: boolean;
@@ -235,6 +239,7 @@ export interface TemplateStepCreateRequest {
 export interface TemplateElementCreateRequest {
   elementType: string;
   label: string;
+  placeholder?: string;
   required: boolean;
   unit?: string;
   minValue?: number;
@@ -257,10 +262,93 @@ export interface TemplatePatchRequest {
   version?: number;
 }
 
-export type WizardStep = 'patient' | 'order' | 'template' | 'review';
+export type WizardStep = 'select-patient' | 'select-order' | 'review-order' | 'select-template';
 
 export interface ProstheticsDraft {
   patientId: string | null;
   orderId: string | null;
   templateId: string | null;
+  instanceId: string | null;
+}
+
+// Phase 5 types
+export type ProcessStatus = FlowInstanceStatus;
+
+export interface TemplateElementField {
+  id: string;
+  elementType: string;
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  minCount?: number | null;
+  maxCount?: number | null;
+  regexPattern?: string | null;
+  options?: string[] | null;
+  hint?: string;
+}
+
+// Immutable template snapshot attached to a flow instance (GET /snapshot).
+export interface SnapshotTemplate {
+  name: string;
+  version: number;
+  productType: string;
+  amputationLevel: string | null;
+  limbSide: string | null;
+  estimatedDurationMin: number | null;
+  stages: SnapshotStage[];
+}
+
+export interface SnapshotStage {
+  id: string;
+  name: string;
+  stageType: string;
+  canSkip: boolean;
+  requiresApproval: boolean;
+  gate: SnapshotGate | null;
+  steps: SnapshotStep[];
+}
+
+export interface SnapshotGate {
+  id: string;
+  name: string;
+  requiredApproverRole: string | null;
+  checklist: string[];
+  attachmentsRequired: boolean;
+  reworkLoops: SnapshotReworkLoop[];
+}
+
+export interface SnapshotReworkLoop {
+  targetStepId: string;
+  reworkType: string;
+  maxAttempts: number;
+}
+
+export interface SnapshotStep {
+  id: string;
+  name: string;
+  stepType: string;
+  mandatory: boolean;
+  allowBackward: boolean;
+  autoStartTimer: boolean;
+  normDurationMin: number | null;
+  elements: SnapshotElement[];
+}
+
+export interface SnapshotElement {
+  id: string;
+  elementType: string;
+  label: string;
+  required: boolean;
+  unit: string | null;
+  minValue: number | null;
+  maxValue: number | null;
+  minCount: number | null;
+  maxCount: number | null;
+  regexPattern: string | null;
+  options: string[] | null;
+  mimeTypes: string[] | null;
+  maxSizeMb: number | null;
 }

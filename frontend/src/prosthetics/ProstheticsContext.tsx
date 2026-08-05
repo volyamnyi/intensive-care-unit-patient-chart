@@ -39,6 +39,7 @@ const initialDraft: ProstheticsDraft = {
   patientId: null,
   orderId: null,
   templateId: null,
+  instanceId: null,
 };
 
 export function ProstheticsProvider({ children }: { children: ReactNode }) {

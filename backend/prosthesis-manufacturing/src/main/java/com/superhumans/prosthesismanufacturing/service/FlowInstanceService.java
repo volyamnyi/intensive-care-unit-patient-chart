@@ -96,7 +96,19 @@ public class FlowInstanceService {
                 .build();
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "CREATE", userId);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
+    }
+
+    public FlowInstanceResponse toResponse(FlowInstance instance) {
+        FlowInstanceResponse response = instanceMapper.toResponse(instance);
+        UUID stepId = instance.getCurrentStepId();
+        if (stepId != null) {
+            executionRepository.findByInstanceIdAndStepId(instance.getId(), stepId).stream()
+                    .filter(e -> e.getStatus() == StepExecutionStatus.IN_PROGRESS)
+                    .findFirst()
+                    .ifPresent(e -> response.setCurrentExecutionId(e.getId()));
+        }
+        return response;
     }
 
     @Transactional
@@ -123,7 +135,7 @@ public class FlowInstanceService {
 
         createExecution(instance, firstStage.getId(), firstStep.getId(), 1, now);
         auditService.logAction("FlowInstance", instance.getId(), "START", userId);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
     }
 
     @Transactional
@@ -167,7 +179,7 @@ public class FlowInstanceService {
 
         advance(instance, snapshot, stage, step, now, userId);
         auditService.logAction("StepExecution", execution.getId(), "COMPLETE", userId);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
     }
 
     @Transactional
@@ -181,7 +193,7 @@ public class FlowInstanceService {
         instance.setPauseCategory(request.getCategory());
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "PAUSE", userId);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
     }
 
     @Transactional
@@ -200,7 +212,7 @@ public class FlowInstanceService {
         instance.setResumedAt(now);
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "RESUME", userId);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
     }
 
     @Transactional(readOnly = true)
@@ -218,14 +230,14 @@ public class FlowInstanceService {
         }
         return instances.stream()
                 .sorted(Comparator.comparing(FlowInstance::getCreatedAt).reversed())
-                .map(instanceMapper::toResponse)
+                .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public FlowInstanceResponse get(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = requireOwner(instanceId, userId, allowAll);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
     }
 
     @Transactional(readOnly = true)
@@ -282,7 +294,7 @@ public class FlowInstanceService {
                 .build();
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "REPLACEMENT", userId);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
     }
 
     @Transactional
@@ -299,7 +311,7 @@ public class FlowInstanceService {
         instanceRepository.save(instance);
         failureSnapshotService.create(instance, category, description, snapshotJson, userId);
         auditService.logAction("FlowInstance", instance.getId(), "FAIL", userId);
-        return instanceMapper.toResponse(instance);
+        return toResponse(instance);
     }
 
     public void markQcFailed(FlowInstance instance, String reason, Long userId) {

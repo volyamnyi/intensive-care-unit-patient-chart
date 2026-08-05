@@ -16,6 +16,7 @@ public class FlowInstanceResponse {
     String status;
     UUID currentStageId;
     UUID currentStepId;
+    UUID currentExecutionId;
     LocalDateTime startTime;
     LocalDateTime endTime;
     Long totalActiveSeconds;

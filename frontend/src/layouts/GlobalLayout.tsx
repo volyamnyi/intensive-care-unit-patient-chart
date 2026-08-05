@@ -54,6 +54,9 @@ function useAppInfo(): AppInfo {
     if (pathname.startsWith('/admin')) {
       return { title: 'Адмін', subtitle: 'Адміністративна панель', homePath: '/admin' };
     }
+    if (pathname.startsWith('/prosthetics')) {
+      return { title: 'Виробництво', subtitle: 'Виробництво протезів', homePath: '/prosthetics' };
+    }
     return { title: 'Superhumans Lviv', subtitle: 'Вибір додатку', homePath: '/select' };
   }, [pathname]);
 }
