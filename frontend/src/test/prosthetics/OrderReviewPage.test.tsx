@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import OrderReviewPage from '@/pages/prosthetics/setup/OrderReviewPage';
+import type { ProstheticsDraft } from '@/prosthetics/types';
 
 const prostheticsOrderApiMock = vi.hoisted(() => ({
   getById: vi.fn(),
@@ -23,7 +24,7 @@ vi.mock('@/prosthetics/ProstheticsContext', () => ({
   useProsthetics,
 }));
 
-function mockUseProsthetics(draft = { patientId: null, orderId: null, templateId: null, instanceId: null }) {
+function mockUseProsthetics(draft: ProstheticsDraft = { patientId: null, orderId: null, templateId: null, instanceId: null }) {
   useProsthetics.mockReturnValue({
     draft,
     setDraftField: vi.fn(),
