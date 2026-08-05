@@ -66,7 +66,7 @@ describe('OrderSelectPage', () => {
     });
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('ORD-001')).toBeInTheDocument();
+      expect(screen.getByText('#ORD-001')).toBeInTheDocument();
     });
   });
 
@@ -106,7 +106,7 @@ describe('OrderSelectPage', () => {
         <OrderSelectPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText('ORD-001')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('#ORD-001')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /Обрати/i }));
     expect(setDraftField).toHaveBeenCalledWith('orderId', 'o1');
   });

@@ -86,7 +86,7 @@ describe('DashboardPage', () => {
     flowInstanceApiMock.list.mockResolvedValue({ data: instances });
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('i1')).toBeInTheDocument();
+      expect(screen.getByText('o1')).toBeInTheDocument();
     });
   });
 

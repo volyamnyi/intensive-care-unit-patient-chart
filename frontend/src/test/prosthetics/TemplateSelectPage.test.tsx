@@ -31,7 +31,7 @@ function mockUseProsthetics(draft: { patientId: string | null; orderId: string |
 }
 
 function renderPage() {
-  mockUseProsthetics();
+  mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
   return render(
     <MemoryRouter initialEntries={['/prosthetics/new/select-template']}>
       <TemplateSelectPage />
