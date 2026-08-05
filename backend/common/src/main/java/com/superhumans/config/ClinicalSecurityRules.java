@@ -8,7 +8,7 @@ import org.springframework.security.config.annotation.web.configurers.AuthorizeH
 @Configuration
 public class ClinicalSecurityRules implements SecurityRuleContributor {
 
-    static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR", "ADJACENT_SPECIALIST"};
+    static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR", "ADJACENT_SPECIALIST", "PROSTHETIST", "PROSTHETICS_ADMINISTRATOR"};
     static final String[] PRESCRIBER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
     static final String[] SIGNER_ROLES = {"DOCTOR", "HEAD_OF_DEPARTMENT"};
     static final String[] EXECUTOR_ROLES = {"NURSE", "HEAD_OF_DEPARTMENT"};
