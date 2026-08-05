@@ -17,11 +17,11 @@ vi.mock('@/api/prosthetics', () => ({
   flowTemplateApi: flowTemplateApiMock,
 }));
 
-vi.mock('@/prosthetics/ProstheticsContext', () => ({
-  useProsthetics: vi.fn(),
-}));
+const useProsthetics = vi.hoisted(() => vi.fn());
 
-const { useProsthetics } = vi.mocked(require('@/prosthetics/ProstheticsContext'));
+vi.mock('@/prosthetics/ProstheticsContext', () => ({
+  useProsthetics,
+}));
 
 function mockUseProsthetics(draft: { patientId: string | null; orderId: string | null; templateId: string | null; instanceId: string | null } = { patientId: null, orderId: null, templateId: null, instanceId: null }) {
   useProsthetics.mockReturnValue({
