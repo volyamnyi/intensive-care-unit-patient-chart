@@ -42,7 +42,9 @@ function renderPage() {
 
 describe('OrderReviewPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    prostheticsOrderApiMock.getById.mockClear();
+    prostheticsOrderApiMock.getDocument.mockClear();
+    flowTemplateApiMock.getById.mockClear();
     vi.stubGlobal('fetch', vi.fn());
   });
 
