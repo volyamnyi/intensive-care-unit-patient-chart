@@ -37,6 +37,7 @@ import { getErrorMessage } from '@/utils/errorMessage';
 import { useAuth } from '@/services/AuthContext';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import { QualityGatePanel } from '@/components/prosthetics/QualityGatePanel';
+import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
 import type {
   FlowInstance,
   GateDecision,
@@ -55,13 +56,6 @@ const PAUSE_OPTIONS: { value: PauseCategory; label: string }[] = [
 ];
 
 const RESOURCE_UNITS = ['шт', 'кг', 'л', 'м²'];
-
-function fmt(sec: number) {
-  const h = String(Math.floor(sec / 3600)).padStart(2, '0');
-  const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
-  const s = String(sec % 60).padStart(2, '0');
-  return `${h}:${m}:${s}`;
-}
 
 const STEP_TYPE_LABEL: Record<string, string> = {
   INFORMATION: 'інформація',
@@ -167,7 +161,7 @@ export default function WizardScreen() {
     [stage, instance?.currentStepId],
   );
 
-  const progress = totalSteps > 0 ? Math.round((stepsDone / totalSteps) * 100) : 0;
+  const progress = computeProgress(stepsDone, totalSteps);
 
   useEffect(() => {
     setValues({});
@@ -185,32 +179,10 @@ export default function WizardScreen() {
     return () => clearInterval(t);
   }, [timerRunning]);
 
-  const invalid = useMemo(() => {
-    const map: Record<string, string> = {};
-    step?.elements.forEach((e) => {
-      const v = values[e.id];
-      if (e.required) {
-        if (e.elementType === 'CHECKBOX' && v !== true) map[e.id] = "Обов'язкове підтвердження";
-        else if (v === undefined || v === '' || v === null) map[e.id] = "Поле обов'язкове";
-      }
-      if (e.elementType === 'NUMERIC_INPUT' && v !== undefined && v !== '') {
-        const n = Number(v);
-        if (Number.isNaN(n)) map[e.id] = 'Введіть число';
-        else if (e.minValue !== null && e.minValue !== undefined && n < e.minValue)
-          map[e.id] = `Мінімум ${e.minValue} ${e.unit ?? ''}`;
-        else if (e.maxValue !== null && e.maxValue !== undefined && n > e.maxValue)
-          map[e.id] = `Максимум ${e.maxValue} ${e.unit ?? ''}`;
-      }
-      if (e.regexPattern && typeof v === 'string' && v !== '') {
-        try {
-          if (!new RegExp(e.regexPattern).test(v)) map[e.id] = 'Формат не відповідає вимогам';
-        } catch {
-          // invalid pattern — skip
-        }
-      }
-    });
-    return map;
-  }, [step, values]);
+  const invalid = useMemo(
+    () => validateElementValues(step?.elements ?? [], values),
+    [step, values],
+  );
 
   const blocked = Object.keys(invalid).length > 0;
 
