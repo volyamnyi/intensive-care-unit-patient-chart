@@ -21,10 +21,13 @@ export default function TemplateSelectPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
+  // Use broad filters to show all active templates regardless of specific type
+  // The backend expects specific enum values (UPPER_LIMB, LOWER_LIMB, etc.)
+  // so we omit specific filters to avoid mismatch
   const filters = useMemo(() => ({
-    productType: 'протез',
-    amputationLevel: 'both',
-    limbSide: 'both',
+    productType: '',
+    amputationLevel: '',
+    limbSide: '',
   }), []);
 
   useEffect(() => {

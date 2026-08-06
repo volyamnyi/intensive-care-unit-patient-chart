@@ -63,7 +63,7 @@ public class FlowTemplateService {
         List<FlowTemplate> templates = templateRepository.findAll();
         return templates.stream()
                 .filter(t -> status == null || t.getStatus() == status)
-                .filter(t -> productType == null
+                .filter(t -> !StringUtils.hasText(productType)
                         || ProductType.valueOf(productType).equals(t.getProductType()))
                 .filter(t -> !StringUtils.hasText(amputationLevel)
                         || amputationLevel.equalsIgnoreCase(t.getAmputationLevel()))
