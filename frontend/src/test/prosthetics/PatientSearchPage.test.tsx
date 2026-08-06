@@ -51,7 +51,7 @@ describe('PatientSearchPage', () => {
   });
 
   it('clears patients when query drops below 2 chars', async () => {
-    prostheticsPatientApiMock.search.mockResolvedValue({ data: [{ id: 'p1', fullName: 'Іван' }] });
+    prostheticsPatientApiMock.search.mockResolvedValue({ data: [{ id: 'p1', pib: 'Іван' }] });
     renderPage();
     const input = screen.getByPlaceholderText(/пошук пацієнта/i);
     fireEvent.change(input, { target: { value: 'iv' } });
@@ -63,7 +63,7 @@ describe('PatientSearchPage', () => {
   });
 
   it('searches patients after debounce', async () => {
-    prostheticsPatientApiMock.search.mockResolvedValue({ data: [{ id: 'p1', fullName: 'Іван Іванов' }] });
+    prostheticsPatientApiMock.search.mockResolvedValue({ data: [{ id: 'p1', pib: 'Іван Іванов' }] });
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/пошук пацієнта/i), { target: { value: 'Іван' } });
     await waitFor(() => {
@@ -82,7 +82,7 @@ describe('PatientSearchPage', () => {
 
   it('renders patient table with results', async () => {
     prostheticsPatientApiMock.search.mockResolvedValue({
-      data: [{ id: 'p1', fullName: 'Іван Іванов', birthDate: '1990-01-01' }],
+      data: [{ id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01' }],
     });
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/пошук пацієнта/i), { target: { value: 'Іван' } });
@@ -99,7 +99,7 @@ describe('PatientSearchPage', () => {
       resetDraft: vi.fn(),
     });
     prostheticsPatientApiMock.search.mockResolvedValue({
-      data: [{ id: 'p1', fullName: 'Іван Іванов', birthDate: '1990-01-01' }],
+      data: [{ id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01' }],
     });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/select-patient']}>

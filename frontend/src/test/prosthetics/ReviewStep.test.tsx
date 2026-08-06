@@ -19,7 +19,7 @@ vi.mock('@/prosthetics/ProstheticsContext', () => ({
     draft: { patientId: 'pat-1', orderId: 'order-1', templateId: 'tmpl-1' },
     setDraftField: vi.fn(),
     resetDraft: vi.fn(),
-    patient: { id: 'pat-1', fullName: 'John Doe', birthDate: '1990-01-01', sexCode: 'M' },
+    patient: { id: 'pat-1', pib: 'John Doe', birthDate: '1990-01-01', gender: 'M' },
   }),
 }));
 
