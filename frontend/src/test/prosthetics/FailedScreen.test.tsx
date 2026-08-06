@@ -17,6 +17,9 @@ vi.mock('@/services/AuthContext', () => ({
 const flowInstanceApiMock = vi.hoisted(() => ({
   getById: vi.fn(),
   getSnapshot: vi.fn(),
+  listExecutions: vi.fn(),
+  listResources: vi.fn(),
+  getFailureSnapshot: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
@@ -66,6 +69,11 @@ describe('FailedScreen', () => {
     vi.clearAllMocks();
     flowInstanceApiMock.getById.mockResolvedValue({ data: failedInstance });
     flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: snapshot });
+    flowInstanceApiMock.listExecutions.mockResolvedValue({ data: [] });
+    flowInstanceApiMock.listResources.mockResolvedValue({ data: [] });
+    flowInstanceApiMock.getFailureSnapshot.mockResolvedValue({
+      data: { id: 'f1', instanceId: 'inst-1', category: 'defect', description: 'Дефект гільзи', createdAt: '2026-01-01T09:00:00Z' },
+    });
   });
 
   it('renders failure report with reason', async () => {
@@ -80,8 +88,9 @@ describe('FailedScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Процес зупинено (брак)')).toBeInTheDocument();
     });
+    expect(screen.getByText(/Причина провалу/)).toBeInTheDocument();
     expect(screen.getByText('Деформація гільзи при полімеризації')).toBeInTheDocument();
-    expect(screen.getByText('Причина')).toBeInTheDocument();
+    expect(screen.getByText('Виробничий дефект')).toBeInTheDocument();
   });
 
   it('shows rework count before failure', async () => {
@@ -94,8 +103,24 @@ describe('FailedScreen', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Доопрацювань до зупинки')).toBeInTheDocument();
+      expect(screen.getByText('Доопрацювань')).toBeInTheDocument();
     });
     expect(screen.getByText('2')).toBeInTheDocument();
+  });
+
+  it('shows lock banner and export button', async () => {
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/process/inst-1/failed']}>
+        <Routes>
+          <Route path="/prosthetics/process/:id/failed" element={<FailedScreen />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Незмінний запис — лише для читання/)).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /Експортувати PDF/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Створити замінювальний процес/ })).toBeInTheDocument();
   });
 });

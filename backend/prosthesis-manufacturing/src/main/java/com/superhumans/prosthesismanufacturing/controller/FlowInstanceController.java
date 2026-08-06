@@ -1,10 +1,13 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
+import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.dto.GateDecisionRequest;
+import com.superhumans.prosthesismanufacturing.dto.GateDecisionResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
+import com.superhumans.prosthesismanufacturing.dto.ResourceUsageResponse;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailRequest;
@@ -120,6 +123,27 @@ public class FlowInstanceController {
     @Operation(summary = "List step executions of the instance")
     public List<StepExecutionResponse> listExecutions(@PathVariable UUID id) {
         return instanceService.listExecutions(id, currentUser.userId(), currentUser.canViewAllInstances());
+    }
+
+    @GetMapping("/{id}/gate-decisions")
+    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @Operation(summary = "List quality gate decisions of the instance")
+    public List<GateDecisionResponse> listGateDecisions(@PathVariable UUID id) {
+        return instanceService.listGateDecisions(id, currentUser.userId(), currentUser.canViewAllInstances());
+    }
+
+    @GetMapping("/{id}/resources")
+    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @Operation(summary = "List resource usage records of the instance")
+    public List<ResourceUsageResponse> listResources(@PathVariable UUID id) {
+        return instanceService.listResources(id, currentUser.userId(), currentUser.canViewAllInstances());
+    }
+
+    @GetMapping("/{id}/failure-snapshot")
+    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @Operation(summary = "Get the immutable failure snapshot of a failed instance")
+    public FailureSnapshotResponse getFailureSnapshot(@PathVariable UUID id) {
+        return instanceService.getFailureSnapshot(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @PostMapping("/{id}/pause")

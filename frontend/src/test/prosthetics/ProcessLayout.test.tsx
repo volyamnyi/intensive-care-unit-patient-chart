@@ -44,8 +44,8 @@ describe('ProcessLayout', () => {
 
     expect(screen.getByText('Огляд')).toBeInTheDocument();
     expect(screen.getByText('Історія')).toBeInTheDocument();
-    expect(screen.getByText('Документи')).toBeInTheDocument();
-    expect(screen.getByText('Статистика')).toBeInTheDocument();
+    expect(screen.queryByText('Документи')).not.toBeInTheDocument();
+    expect(screen.queryByText('Статистика')).not.toBeInTheDocument();
     expect(screen.getByText('Процес #proc-123')).toBeInTheDocument();
     expect(screen.getByText('Detail Content')).toBeInTheDocument();
   });

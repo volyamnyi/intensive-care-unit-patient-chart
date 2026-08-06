@@ -17,6 +17,9 @@ vi.mock('@/services/AuthContext', () => ({
 const flowInstanceApiMock = vi.hoisted(() => ({
   getById: vi.fn(),
   getSnapshot: vi.fn(),
+  listExecutions: vi.fn(),
+  listGateDecisions: vi.fn(),
+  listResources: vi.fn(),
   generateReport: vi.fn(),
 }));
 
@@ -77,6 +80,25 @@ describe('DoneScreen', () => {
     vi.clearAllMocks();
     flowInstanceApiMock.getById.mockResolvedValue({ data: completedInstance });
     flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: snapshot });
+    flowInstanceApiMock.listExecutions.mockResolvedValue({
+      data: [
+        {
+          id: 'ex-1',
+          instanceId: 'inst-1',
+          stepId: 's1',
+          stepName: 'Мірки',
+          attemptNumber: 1,
+          status: 'COMPLETED',
+          startedAt: '2026-01-01T08:00:00Z',
+          completedAt: '2026-01-01T08:30:00Z',
+          activeSeconds: 1800,
+          values: null,
+          completedBy: 5,
+        },
+      ],
+    });
+    flowInstanceApiMock.listGateDecisions.mockResolvedValue({ data: [] });
+    flowInstanceApiMock.listResources.mockResolvedValue({ data: [] });
   });
 
   it('renders success summary with stats', async () => {
@@ -96,6 +118,9 @@ describe('DoneScreen', () => {
     expect(screen.getByText('Доопрацювань')).toBeInTheDocument();
     const reworkCard = screen.getByText('Доопрацювань').parentElement;
     expect(reworkCard?.firstElementChild?.textContent).toBe('1');
+    expect(screen.getByText(/Етапи виготовлення/)).toBeInTheDocument();
+    expect(screen.getByText('Виготовлення')).toBeInTheDocument();
+    expect(screen.getByText('1/1 кроків')).toBeInTheDocument();
   });
 
   it('shows error state when instance cannot be loaded', async () => {

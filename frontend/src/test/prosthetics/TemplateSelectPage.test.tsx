@@ -11,9 +11,14 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   create: vi.fn(),
 }));
 
+const prostheticsOrderApiMock = vi.hoisted(() => ({
+  getById: vi.fn(),
+}));
+
 vi.mock('@/api/prosthetics', () => ({
   flowTemplateApi: flowTemplateApiMock,
   flowInstanceApi: flowInstanceApiMock,
+  prostheticsOrderApi: prostheticsOrderApiMock,
 }));
 
 const useProsthetics = vi.hoisted(() => vi.fn());
@@ -42,6 +47,9 @@ function renderPage() {
 describe('TemplateSelectPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prostheticsOrderApiMock.getById.mockResolvedValue({
+      data: { id: 'o1', productType: 'upper', amputationLevel: 'above' },
+    });
   });
 
   it('renders the page title', async () => {
@@ -55,11 +63,13 @@ describe('TemplateSelectPage', () => {
     flowTemplateApiMock.list.mockResolvedValue({ data: [] });
     renderPage();
     await waitFor(() => {
+      expect(prostheticsOrderApiMock.getById).toHaveBeenCalledWith('o1');
+    });
+    await waitFor(() => {
       expect(flowTemplateApiMock.list).toHaveBeenCalledWith({
         status: 'ACTIVE',
-        productType: '',
-        amputationLevel: '',
-        limbSide: '',
+        productType: 'upper',
+        amputationLevel: 'above',
       });
     });
   });
@@ -125,6 +135,14 @@ describe('TemplateSelectPage', () => {
 
   it('shows error on other failures', async () => {
     flowTemplateApiMock.list.mockRejectedValue(new Error('network'));
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Не вдалося завантажити шаблони/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when the order cannot be loaded', async () => {
+    prostheticsOrderApiMock.getById.mockRejectedValue(new Error('network'));
     renderPage();
     await waitFor(() => {
       expect(screen.getByText(/Не вдалося завантажити шаблони/)).toBeInTheDocument();

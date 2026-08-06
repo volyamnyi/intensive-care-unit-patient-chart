@@ -16,6 +16,9 @@ import type {
   TemplateCreateRequest,
   TemplatePatchRequest,
   SnapshotTemplate,
+  GateDecisionResponse,
+  ResourceUsageResponse,
+  FailureSnapshot,
 } from '../prosthetics/types';
 
 const BASE = '/prosthesis-manufacturing';
@@ -60,6 +63,12 @@ export const flowInstanceApi = {
   backward: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/backward`),
   listExecutions: (id: string) =>
     client.get<StepExecution[]>(`${BASE}/instances/${id}/step-executions`),
+  listGateDecisions: (id: string) =>
+    client.get<GateDecisionResponse[]>(`${BASE}/instances/${id}/gate-decisions`),
+  listResources: (id: string) =>
+    client.get<ResourceUsageResponse[]>(`${BASE}/instances/${id}/resources`),
+  getFailureSnapshot: (id: string) =>
+    client.get<FailureSnapshot>(`${BASE}/instances/${id}/failure-snapshot`),
   pause: (id: string, data: PauseRequest) =>
     client.post<FlowInstance>(`${BASE}/instances/${id}/pause`, data),
   resume: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/resume`),

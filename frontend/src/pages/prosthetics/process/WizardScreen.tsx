@@ -168,12 +168,20 @@ export default function WizardScreen() {
       .listExecutions(instance.id)
       .then((res) => {
         const current = res.data.find((e) => e.id === instance.currentExecutionId);
-        if (current?.values) {
+        if (!current) return;
+        if (current.values) {
           try {
             setValues(JSON.parse(current.values) as Record<string, unknown>);
           } catch {
             // ignore corrupted draft
           }
+        }
+        if (current.startedAt) {
+          const elapsed = Math.max(
+            0,
+            Math.floor((Date.now() - new Date(current.startedAt).getTime()) / 1000),
+          );
+          if (elapsed > 0) setSeconds(elapsed);
         }
       })
       .catch(() => {

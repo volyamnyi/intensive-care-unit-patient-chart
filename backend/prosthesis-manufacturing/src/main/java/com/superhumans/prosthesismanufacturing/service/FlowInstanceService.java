@@ -6,9 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
+import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
+import com.superhumans.prosthesismanufacturing.dto.GateDecisionResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
+import com.superhumans.prosthesismanufacturing.dto.ResourceUsageResponse;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
@@ -138,8 +141,13 @@ public class FlowInstanceService {
 
     @Transactional
     public FlowInstanceResponse start(UUID instanceId, Long userId) {
-        FlowInstance instance = requireOwner(instanceId, userId);
+        FlowInstance instance = instanceRepository.findByIdForUpdate(instanceId)
+                .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
         if (instance.getStatus() != FlowInstanceStatus.NEW) {
+            if (instance.getStatus() == FlowInstanceStatus.IN_PROGRESS) {
+                // Idempotent start: a concurrent request already started the instance
+                return toResponse(instance);
+            }
             throw new BadRequestException("Instance can be started only from NEW status");
         }
         SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
@@ -366,6 +374,37 @@ public class FlowInstanceService {
     }
 
     @Transactional(readOnly = true)
+    public FailureSnapshotResponse getFailureSnapshot(UUID instanceId, Long userId, boolean allowAll) {
+        requireOwner(instanceId, userId, allowAll);
+        return failureSnapshotService.getByInstance(instanceId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GateDecisionResponse> listGateDecisions(UUID instanceId, Long userId, boolean allowAll) {
+        requireOwner(instanceId, userId, allowAll);
+        SnapshotTemplate snapshot = snapshotParser.parse(instanceRepository.findById(instanceId)
+                .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId))
+                .getTemplateSnapshot());
+        return decisionRepository.findByInstanceId(instanceId).stream()
+                .sorted(Comparator.comparing(GateDecision::getDecidedAt))
+                .map(d -> toDecisionResponse(d, snapshot))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ResourceUsageResponse> listResources(UUID instanceId, Long userId, boolean allowAll) {
+        requireOwner(instanceId, userId, allowAll);
+        SnapshotTemplate snapshot = snapshotParser.parse(instanceRepository.findById(instanceId)
+                .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId))
+                .getTemplateSnapshot());
+        return resourceUsageRepository.findByInstanceId(instanceId).stream()
+                .sorted(Comparator.comparing(ResourceUsage::getCreatedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(u -> toResourceResponse(u, snapshot))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public byte[] generateReport(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = requireOwner(instanceId, userId, allowAll);
         ProstheticsOrder order = orderRepository.findById(instance.getOrderId())
@@ -443,12 +482,28 @@ public class FlowInstanceService {
             createExecution(instance, stage.getId(), next.getId(), 1, now);
             return;
         }
-        if (stage.getGate() != null) {
+        int stageIdx = stageIndex(snapshot).applyAsInt(stage);
+        SnapshotStage nextStage = stageIdx + 1 < snapshot.getStages().size()
+                ? snapshot.getStages().get(stageIdx + 1) : null;
+        if (nextStage != null && nextStage.getGate() != null) {
             instance.setStatus(FlowInstanceStatus.WAITING_REVIEW);
+            instance.setCurrentStageId(nextStage.getId());
             instanceRepository.save(instance);
             return;
         }
         moveToNextStage(instance, snapshot, stage, now, userId);
+    }
+
+    void enterStage(FlowInstance instance, SnapshotStage stage, LocalDateTime now, Long userId) {
+        SnapshotStep firstStep = stage.getSteps().stream()
+                .min(Comparator.comparingInt(stepIndex(stage)))
+                .orElseThrow(() -> new BadRequestException(
+                        "Stage " + stage.getName() + " has no steps"));
+        instance.setStatus(FlowInstanceStatus.IN_PROGRESS);
+        instance.setCurrentStageId(stage.getId());
+        instance.setCurrentStepId(firstStep.getId());
+        instanceRepository.save(instance);
+        createExecution(instance, stage.getId(), firstStep.getId(), 1, now);
     }
 
     void moveToNextStage(FlowInstance instance, SnapshotTemplate snapshot, SnapshotStage currentStage,
@@ -618,6 +673,70 @@ public class FlowInstanceService {
         return Math.max(0L, Duration.between(since, now).getSeconds());
     }
 
+    private GateDecisionResponse toDecisionResponse(GateDecision decision, SnapshotTemplate snapshot) {
+        String gateName = findGateName(snapshot, decision.getGate().getId());
+        return GateDecisionResponse.builder()
+                .id(decision.getId())
+                .instanceId(decision.getInstance().getId())
+                .gateId(decision.getGate().getId())
+                .gateName(gateName != null ? gateName : decision.getGate().getName())
+                .decision(decision.getDecision().name())
+                .criteriaConfirmed(parseCriteria(decision.getCriteriaConfirmed()))
+                .comment(decision.getComment())
+                .decidedBy(decision.getDecidedBy())
+                .decidedAt(decision.getDecidedAt())
+                .build();
+    }
+
+    private ResourceUsageResponse toResourceResponse(ResourceUsage usage, SnapshotTemplate snapshot) {
+        StepExecution execution = usage.getStepExecution();
+        UUID stepId = execution == null ? null : execution.getStepId();
+        return ResourceUsageResponse.builder()
+                .id(usage.getId())
+                .stepExecutionId(execution == null ? null : execution.getId())
+                .stepId(stepId)
+                .stepName(stepId != null ? findStepName(snapshot, stepId) : null)
+                .material(usage.getMaterial())
+                .qty(usage.getQty())
+                .unit(usage.getUnit())
+                .minutes(usage.getMinutes())
+                .recordedBy(usage.getRecordedBy())
+                .createdAt(usage.getCreatedAt())
+                .build();
+    }
+
+    private String findStepName(SnapshotTemplate snapshot, UUID stepId) {
+        for (SnapshotStage stage : snapshot.getStages()) {
+            for (SnapshotStep step : stage.getSteps()) {
+                if (step.getId().equals(stepId)) {
+                    return step.getName();
+                }
+            }
+        }
+        return null;
+    }
+
+    private String findGateName(SnapshotTemplate snapshot, UUID gateId) {
+        for (SnapshotStage stage : snapshot.getStages()) {
+            if (stage.getGate() != null && stage.getGate().getId().equals(gateId)) {
+                return stage.getGate().getName();
+            }
+        }
+        return null;
+    }
+
+    private List<String> parseCriteria(String json) {
+        if (!StringUtils.hasText(json)) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {
+            });
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
+    }
+
     FlowInstance requireOwner(UUID instanceId, Long userId) {
         return requireOwner(instanceId, userId, false);
     }
@@ -625,10 +744,6 @@ public class FlowInstanceService {
     FlowInstance requireOwner(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = instanceRepository.findById(instanceId)
                 .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
-        if (!allowAll && instance.getAssignedUserId() != null
-                && !instance.getAssignedUserId().equals(userId)) {
-            throw new BadRequestException("Instance belongs to another prosthetist");
-        }
         return instance;
     }
 

@@ -1,13 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { flowInstanceApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
-import type { FlowInstance, SnapshotTemplate } from '@/prosthetics/types';
+import type {
+  FlowInstance,
+  GateDecisionResponse,
+  ResourceUsageResponse,
+  SnapshotTemplate,
+  StepExecution,
+} from '@/prosthetics/types';
+
+const GATE_DECISION_LABELS: Record<string, string> = {
+  PASS: 'Пройдено',
+  REWORK: 'Доопрацювання',
+  FAIL: 'Провалено',
+};
 
 function formatHours(seconds: number | null | undefined) {
   const totalMin = Math.round((seconds ?? 0) / 60);
@@ -30,6 +43,9 @@ export default function DoneScreen() {
   const navigate = useNavigate();
   const [instance, setInstance] = useState<FlowInstance | null>(null);
   const [snapshot, setSnapshot] = useState<SnapshotTemplate | null>(null);
+  const [executions, setExecutions] = useState<StepExecution[]>([]);
+  const [decisions, setDecisions] = useState<GateDecisionResponse[]>([]);
+  const [resources, setResources] = useState<ResourceUsageResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -62,12 +78,18 @@ export default function DoneScreen() {
       setLoading(true);
       setError(null);
       try {
-        const [instRes, snapRes] = await Promise.all([
+        const [instRes, snapRes, execRes, gateRes, resRes] = await Promise.all([
           flowInstanceApi.getById(id),
           flowInstanceApi.getSnapshot(id),
+          flowInstanceApi.listExecutions(id),
+          flowInstanceApi.listGateDecisions(id),
+          flowInstanceApi.listResources(id),
         ]);
         setInstance(instRes.data);
         setSnapshot(snapRes.data);
+        setExecutions(execRes.data);
+        setDecisions(gateRes.data);
+        setResources(resRes.data);
       } catch (err) {
         setError(getErrorMessage(err, 'Не вдалося завантажити підсумок'));
       } finally {
@@ -76,6 +98,19 @@ export default function DoneScreen() {
     };
     load();
   }, [id]);
+
+  const stageTimeline = useMemo(() => {
+    if (!snapshot) return [];
+    const doneStepIds = new Set(
+      executions.filter((e) => e.status === 'COMPLETED').map((e) => e.stepId),
+    );
+    return snapshot.stages.map((stage) => {
+      const done = stage.steps.filter((s) => doneStepIds.has(s.id)).length;
+      return { stage, done, total: stage.steps.length };
+    });
+  }, [snapshot, executions]);
+
+  const totalSteps = snapshot?.stages.reduce((a, s) => a + s.steps.length, 0) ?? 0;
 
   if (loading) {
     return (
@@ -103,8 +138,6 @@ export default function DoneScreen() {
     );
   }
 
-  const totalSteps = snapshot.stages.reduce((a, s) => a + s.steps.length, 0);
-
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex flex-col items-center text-center">
@@ -120,6 +153,117 @@ export default function DoneScreen() {
         <Stat label="Кроків виконано" value={String(totalSteps)} />
         <Stat label="Доопрацювань" value={String(instance.reworkCount ?? 0)} />
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Етапи виготовлення</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {stageTimeline.map(({ stage, done, total }, idx) => (
+            <div key={stage.id} className="rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">
+                  {idx + 1}. {stage.name}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {done}/{total} кроків
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-success"
+                  style={{ width: total === 0 ? '0%' : `${(done / total) * 100}%` }}
+                />
+              </div>
+              {done > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {stage.steps
+                    .filter((s) =>
+                      new Set(
+                        executions
+                          .filter((e) => e.status === 'COMPLETED')
+                          .map((e) => e.stepId),
+                      ).has(s.id),
+                    )
+                    .map((s) => (
+                      <span key={s.id} className="rounded bg-muted px-2 py-0.5 text-xs">
+                        {s.name}
+                      </span>
+                    ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {decisions.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">Контрольні точки</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Точка контролю</TableHead>
+                  <TableHead>Рішення</TableHead>
+                  <TableHead>Коментар</TableHead>
+                  <TableHead className="text-right">Дата</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {decisions.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell>{d.gateName ?? '—'}</TableCell>
+                    <TableCell>
+                      <span className="rounded bg-muted px-2 py-0.5 text-xs">
+                        {GATE_DECISION_LABELS[d.decision] ?? d.decision}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{d.comment ?? '—'}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {new Date(d.decidedAt).toLocaleString('uk-UA')}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {resources.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">Витрачені ресурси</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Матеріал</TableHead>
+                  <TableHead className="text-right">Кількість</TableHead>
+                  <TableHead className="text-right">Час</TableHead>
+                  <TableHead>Крок</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {resources.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell>{r.material}</TableCell>
+                    <TableCell className="text-right">
+                      {r.qty != null ? `${r.qty} ${r.unit ?? ''}` : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">{r.minutes ?? 0} хв</TableCell>
+                    <TableCell className="text-muted-foreground">{r.stepName ?? '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mt-6">
         <CardHeader>

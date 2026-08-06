@@ -68,7 +68,7 @@ test.describe('Prosthetics Workflow Verification', () => {
     log(`  Minor: ${bugs.filter(b => b.severity === 'Minor').length}`);
   });
 
-  test('Full prosthetics workflow: Dashboard → Patient → Order → Template → Wizard → Quality Gate → Done', async ({ page }) => {
+  test('Full prosthetics workflow: Dashboard → Patient → Order → Template → Wizard → Quality Gate → Done', async ({ page, request }) => {
     
     // ===== QUICK LOGIN =====
     logStep('Quick login');
@@ -188,7 +188,7 @@ test.describe('Prosthetics Workflow Verification', () => {
       
       for (let i = 0; i < CONFIG.maxWizardSteps; i++) {
         // Check for quality gate
-        const qgBtn = page.getByRole('button', { name: /Схвалити|Пройдено/i }).first();
+        const qgBtn = page.getByRole('button', { name: /Прийнято \(Pass\)|Схвалити|Пройдено/i }).first();
         if (await qgBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
           log('Quality Gate detected');
           qualityGate = true;
@@ -206,7 +206,7 @@ test.describe('Prosthetics Workflow Verification', () => {
         await fillFields(page);
         
         // Try to complete step
-        const completeBtn = page.getByRole('button', { name: /Готово|Завершити крок/i }).first();
+        const completeBtn = page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first();
         if (await completeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
           const enabled = await completeBtn.isEnabled({ timeout: 1000 }).catch(() => false);
           if (enabled) {
@@ -242,13 +242,51 @@ test.describe('Prosthetics Workflow Verification', () => {
       }
       log(`  Checked ${cbCount} criteria`);
       
-      // Pass gate
-      const passBtn = page.getByRole('button', { name: /Схвалити|Пройдено/i }).first();
-      if (await passBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await passBtn.click();
-        log('✓ Quality gate passed');
+      // The gate requires a PROSTHETICS_ADMINISTRATOR decision; the wizard runs as prosthetist1,
+      // so pass the gate via API with an admin token, then continue the wizard.
+      const instanceId = page.url().match(/\/process\/([0-9a-f-]+)\//)?.[1];
+      if (!instanceId) {
+        reportBug('Critical', 'Cannot resolve instance id from wizard URL', 'Wizard URL should contain instance id', page.url());
       } else {
-        log('⚠ No quality gate found');
+        const adminLogin = await request.post('/api/auth/login', {
+          data: { login: 'prosthetics_admin1', password: 'doctor123' },
+        });
+        if (!adminLogin.ok()) {
+          reportBug('Critical', 'Admin API login failed', 'Admin login should succeed', `HTTP ${adminLogin.status()}`);
+        } else {
+          const adminToken = (await adminLogin.json()).token;
+          const headers = { Authorization: `Bearer ${adminToken}` };
+          const snapRes = await request.get(`/api/prosthesis-manufacturing/instances/${instanceId}/snapshot`, { headers });
+          const snapshot = await snapRes.json();
+          const gate = (snapshot.stages ?? []).find((s: any) => s.gate)?.gate;
+          if (!gate) {
+            reportBug('Critical', 'No quality gate in template snapshot', 'Gated stage should exist', 'Gate not found');
+          } else {
+            const criteriaIds = (gate.criteria ?? []).map((c: any) => c.id);
+            const passRes = await request.post(
+              `/api/prosthesis-manufacturing/instances/${instanceId}/gates/${gate.id}/decision`,
+              { headers, data: { decision: 'PASS', criteriaConfirmed: criteriaIds, comment: '' } },
+            );
+            if (!passRes.ok()) {
+              reportBug('Major', 'Gate PASS via API failed', 'Admin PASS should advance the instance', `HTTP ${passRes.status()}: ${await passRes.text()}`);
+            } else {
+              log('✓ Quality gate passed by administrator (API)');
+              await page.reload();
+              await page.waitForTimeout(1500);
+              for (let i = 0; i < 6; i++) {
+                if (page.url().includes('/done')) break;
+                await fillFields(page);
+                const continueBtn = page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first();
+                if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+                  await continueBtn.click({ force: true });
+                  log(`  Post-gate step ${i + 1} completed`);
+                }
+                await delay();
+              }
+              await screenshot(page, '05-post-gate-continue');
+            }
+          }
+        }
       }
       await delay();
     });
@@ -282,6 +320,12 @@ test.describe('Prosthetics Workflow Verification', () => {
 });
 
 async function fillFields(page: Page) {
+  // Toggle signature capture (SIGNATURE_CAPTURE element)
+  const sig = page.locator('button:has-text("електронного підпису")').first();
+  if (await sig.isVisible().catch(() => false)) {
+    await sig.click();
+  }
+
   // Fill text inputs
   const texts = page.locator('input[type="text"]:visible, input:not([type]):visible');
   for (let i = 0; i < await texts.count(); i++) {

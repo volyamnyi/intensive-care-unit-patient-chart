@@ -41,6 +41,13 @@ public class GlobalExceptionHandler {
                 new ErrorResponse(ErrorCode.FORBIDDEN, ex.getMessage(), UUID.randomUUID().toString()));
     }
 
+    @ExceptionHandler(org.springframework.security.authorization.AuthorizationDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthorizationDenied(
+            org.springframework.security.authorization.AuthorizationDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                new ErrorResponse(ErrorCode.FORBIDDEN, "Access denied", UUID.randomUUID().toString()));
+    }
+
     @ExceptionHandler(VersionConflictException.class)
     public ResponseEntity<ErrorResponse> handleVersionConflict(VersionConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(

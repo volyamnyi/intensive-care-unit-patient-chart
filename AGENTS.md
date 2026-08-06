@@ -1,10 +1,11 @@
 # ICU Patient Chart — AI Agent Guide
 
-## CI-ONLY RULE (may be violated if the user explicitly states so)
+## CI RULE (ALWAYS ASK USER RUN CI VIA GITHUB OR EXECUTE TESTS LOCALLY)
 
-**TESTS MUST NEVER BE RUN LOCALLY.** The only valid testing workflow is:
+**TESTS RUNNING.** The only valid testing workflow is:
 
 ```
+ASK USER RUN LOCALLY OR 
 GitHub Issue → implement → commit → push to main → CI workflow runs → poll for results
 ```
 
@@ -16,20 +17,19 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
-**2026-08-04: Fullscreen Grid Modal Phase 8–9 — E2E tests + docs (Issues #141, #142, master #133)**
+**2026-08-06: Prosthetics E2E verification — quality-gate flow fixed (gate guards stage entry)**
 
-All 6 CI jobs green (run `30911073343`: Code Quality 46s, Backend 2m8s, Integration 2m22s, Frontend 2m28s, E2E 6m55s, Build 1m17s). Commit: `35dac79`.
+Full headed-browser E2E of the prosthetics flow verified end-to-end (prosthetist1 → patient Сніжко → order PR-2026-0001 → template TP-UL-01 → steps 1–4 → admin gate PASS → steps 5–6 → done → PDF → history), instance COMPLETED, 0 errors.
 
-- **modal-therapy E2E** (`tests/specs/doctor/modal-therapy.spec.ts`): locked modal (day 1 NURSE_SIGNED — banner, undo disabled, cells disabled, close via «Закрити карту») + open-day plan/cancel/restore on a3333333/b3333333 (always-OPEN, seeded Glucose 5% order; plan at `planHour()`, advance if occupied, cancel → «Виконання скасовано» toast → «Скасувати» restore).
-- **modal-grid E2E** (`tests/specs/nurse/modal-grid.spec.ts`): nurse edits Сеча 4:00 in modal, value persists after reopen; a11y (dialog name, live region, focus trap, reduced motion) + sticky panels (cornerDy ≤ 4, labelDx ≤ 4 tolerance).
-- **`getNextHourISO` timezone fix** (`HourlyGrid.tsx:333–338`): changed from `toISOString()` (UTC) to manual local `YYYY-MM-DDTHH:mm` — `toISOString()` caused `PAST_HOUR_ORDER` 422 in non-UTC zones (CI = UTC, always green; local UTC+2/3 would fail most of the day). The quick form, doctor-day-flow, and any order creation are now immune.
-- **Plan-mode ✕ race fix**: `onMouseDown={(e) => e.preventDefault()}` on the ✕ button prevents the input's `onBlur` → `handleConfirm` from re-planning the dose after cancel.
-- **Vitest**: 419/419 across 47 files (including `HourlyGridDialog.test.tsx`, `criticalRanges.test.ts`, `IntensiveCareCard.test.tsx`); lint 0 errors; tsc clean.
-- **E2E isolation**: Both modal specs use always-OPEN episode `a3333333` to avoid in-run sign conflict (pdf-generation signs b2222222 in the same doctor project; the nurse project inherits the signed state). Locked-day test uses `a2222222` day 1 (NURSE_SIGNED, intact during doctor project).
+- **Quality gate semantics (backend bug)**: `FlowInstanceService.advance()` previously checked the CURRENT stage's gate (guards EXIT) — with the seed gate on the last stage (d0000004 «Контроль якості») the gate never fired before stage 4 and its steps auto-started; the wizard CTA («Контроль якості →», `WizardScreen.tsx:228–234`) and `QualityGateService.decide()` (gate must be on `currentStageId`) both expect the gate to guard ENTRY to its stage. Fixed `advance()`: completing the last step of a stage now looks at the NEXT stage — if it has a gate → `WAITING_REVIEW` + `currentStageId` = gated stage (no step auto-created); added `enterStage()`; `QualityGateService.pass()` now **enters** the gated stage's steps (was `moveToNextStage`, which skipped them); `rework()` also sets `currentStageId` to the rework stage. Gate flow now: stage 3 → WAITING_REVIEW → admin PASS → stage 4 steps → COMPLETED.
+- **Order access for admins**: `ProstheticsOrderController` `GET /orders`, `/{id}`, `/{id}/document` were `hasAnyRole('PROSTHETIST')` — the admin wizard 403'd fetching the order. Widened to `hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR')`.
+- **403 vs 500**: `GlobalExceptionHandler` had no `AuthorizationDeniedException` handler → `@PreAuthorize` denials surfaced as 500; added a handler → 403 (`ErrorCode.FORBIDDEN`).
+- **E2E spec aligned** (`tests/specs/prosthetics/prosthetics-workflow.spec.ts`): gate buttons are «Прийнято (Pass)»/«На доопрацювання»/«Брак (Fail)» (not «Схвалити|Пройдено»); wizard CTAs «Готово →»/«Завершити процес» (not «Завершити крок»); signature element is a toggle button «Область для електронного підпису»/«Підпис отримано» (clicked in `fillFields`). Since the gate requires an admin and the spec runs as prosthetist1, PASS is issued via API: `request` login as prosthetics_admin1 → GET snapshot → find gated stage → `POST /instances/{id}/gates/{gateId}/decision` with `{decision:'PASS', criteriaConfirmed:[...], comment:''}` → reload → continue steps 5–6 → `/done`.
+- **UI labels (verified)**: wizard CTAs «Готово →» / «Контроль якості →» / «Завершити процес»; gate «Прийнято (Pass)» (disabled until all criteria checked), «На доопрацювання» (needs comment), «Брак (Fail)»; signature button «Область для електронного підпису» (signed: «Підпис отримано»); DoneScreen «Процес успішно завершено»; PDF `report_{id}.pdf`.
 
 ### Previous sessions (condensed):
 
-**2026-08-04: Fullscreen Grid Modal Phase 6 — outlier rail, alarm chip, status strip (Issue #139, master #133)** — All 6 CI jobs green (run `30884720811`). Commits: `9d453ea`, `06f2368`, `aad1568`, `688398d`.
+**2026-08-04: Fullscreen Grid Modal Phase 8–9 — E2E tests + docs (Issues #141, #142, master #133)** — All 6 CI jobs green (run `30911073343`). Commit `35dac79`: modal-therapy E2E (locked day + open-day plan/cancel/restore), modal-grid E2E (nurse edit persistence, a11y, sticky panels), `getNextHourISO` timezone fix (`HourlyGrid.tsx:333–338`), plan-mode ✕ race fix (`onMouseDown preventDefault`). Vitest 419/419, lint 0, tsc clean.
 
 - **Critical ranges extraction**: `CRITICAL_RANGES` + `isCritical()` moved from `HourlyGrid.tsx` into `frontend/src/components/monitoring/criticalRanges.ts` — single source of truth (8 inclusive ranges) shared by rail, chip and cell flash; `''`/NaN/unknown values non-critical; `countCriticalByHour`/`countCriticalTotal` + `pluralCritical` (1 → «критичне значення», 2–4 → «критичні значення», else «критичних значень»; 21/12 plural edges); unit tests in `criticalRanges.test.ts`.
 - **Rail & chip**: OutlierRail (pin rail on mobile, highlight in main grid) shows violation cells from the same ranges as cell highlighting and updates after save; alarm chip counter matches critical cells, click focuses the first visible one; no animated/blinking elements in rail/chip (criteria 3); status span must NOT have `role="status"`/`aria-live`; dialog tests use fixture `realClockHour:10`.

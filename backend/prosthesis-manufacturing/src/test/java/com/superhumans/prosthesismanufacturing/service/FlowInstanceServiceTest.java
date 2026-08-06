@@ -229,14 +229,17 @@ class FlowInstanceServiceTest {
     }
 
     @Test
-    void operationsByAnotherProsthetistAreRejected() {
+    void startByAnotherProsthetistIsAllowed() {
         FlowInstance instance = newInstance(FlowInstanceStatus.NEW, snapshotJson());
         instance.setAssignedUserId(99L);
         when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> service.start(instance.getId(), 1L))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("another prosthetist");
+        service.start(instance.getId(), 1L);
+
+        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.IN_PROGRESS);
+        assertThat(instance.getCurrentStepId()).isEqualTo(stepOneId);
+        verify(executionRepository).save(any());
     }
 
     @Test

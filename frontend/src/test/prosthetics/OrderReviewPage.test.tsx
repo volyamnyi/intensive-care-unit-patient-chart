@@ -9,8 +9,13 @@ const prostheticsOrderApiMock = vi.hoisted(() => ({
   getDocument: vi.fn(),
 }));
 
+const flowInstanceApiMock = vi.hoisted(() => ({
+  list: vi.fn(),
+}));
+
 vi.mock('@/api/prosthetics', () => ({
   prostheticsOrderApi: prostheticsOrderApiMock,
+  flowInstanceApi: flowInstanceApiMock,
 }));
 
 const useProsthetics = vi.hoisted(() => vi.fn());
@@ -43,6 +48,7 @@ describe('OrderReviewPage', () => {
     vi.clearAllMocks();
     prostheticsOrderApiMock.getById.mockResolvedValue({ data: orderMock });
     prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
+    flowInstanceApiMock.list.mockResolvedValue({ data: [] });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ pib: 'Іван Іванов' }) } as unknown as Response));
     vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
   });
@@ -171,6 +177,32 @@ describe('OrderReviewPage', () => {
     const startButton = screen.getByRole('button', { name: /Старт/i });
     expect(startButton).not.toBeDisabled();
     startButton.click();
-    expect(navigateMock).toHaveBeenCalledWith('/prosthetics/new/select-template');
+    await waitFor(() => {
+      expect(flowInstanceApiMock.list).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/prosthetics/new/select-template');
+    });
+  });
+
+  it('blocks start when an active process already exists', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({
+      data: [{ id: 'i1', orderId: 'o1', status: 'IN_PROGRESS' }],
+    });
+    mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Деталі' })).toBeInTheDocument());
+    const startButton = screen.getByRole('button', { name: /Старт/i });
+    startButton.click();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Для цього замовлення вже існує процес у роботі/),
+      ).toBeInTheDocument();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });

@@ -80,16 +80,16 @@ public class QualityGateService {
         decisionRepository.save(decision);
 
         FlowInstance result = switch (request.getDecision()) {
-            case PASS -> pass(instance, snapshot, stage, now, userId);
+            case PASS -> pass(instance, stage, now, userId);
             case REWORK -> rework(instance, snapshot, stage, snapshotGate, gate, now, userId);
             case FAIL -> fail(instance, gate, request.getComment(), userId);
         };
         return instanceService.toResponse(result);
     }
 
-    private FlowInstance pass(FlowInstance instance, SnapshotTemplate snapshot, SnapshotStage stage,
+    private FlowInstance pass(FlowInstance instance, SnapshotStage stage,
                               LocalDateTime now, Long userId) {
-        instanceService.moveToNextStage(instance, snapshot, stage, now, userId);
+        instanceService.enterStage(instance, stage, now, userId);
         auditService.logAction("QualityGate", instance.getId(), "GATE_PASS", userId);
         return instance;
     }
@@ -126,6 +126,7 @@ public class QualityGateService {
                 .findFirst()
                 .orElse(stage);
         instance.setReworkCount(instance.getReworkCount() + 1);
+        instance.setCurrentStageId(reworkStage.getId());
         instance.setCurrentStepId(targetStepId);
         instance.setStatus(FlowInstanceStatus.IN_PROGRESS);
         instanceRepository.save(instance);

@@ -97,7 +97,9 @@ export default function OrderSelectPage() {
               <TableRow key={order.id}>
                 <TableCell className="font-medium">#{order.orderNumber}</TableCell>
                 <TableCell>{order.productType}</TableCell>
-                <Badge variant="outline">{order.status}</Badge>
+                <TableCell>
+                  <Badge variant="outline">{order.status}</Badge>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     size="sm"

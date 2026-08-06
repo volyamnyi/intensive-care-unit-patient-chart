@@ -24,6 +24,7 @@ import OrderReviewPage from './pages/prosthetics/setup/OrderReviewPage';
 import TemplateSelectPage from './pages/prosthetics/setup/TemplateSelectPage';
 import ProcessLayout from './pages/prosthetics/process/ProcessLayout';
 import ProcessDetail from './pages/prosthetics/process/ProcessDetail';
+import ProcessHistoryPage from './pages/prosthetics/process/ProcessHistoryPage';
 import WizardScreen from './pages/prosthetics/process/WizardScreen';
 import DoneScreen from './pages/prosthetics/process/DoneScreen';
 import FailedScreen from './pages/prosthetics/process/FailedScreen';
@@ -202,6 +203,7 @@ function AppRoutes() {
           </Guard>
         }>
           <Route index element={<ProcessDetail />} />
+          <Route path="history" element={<ProcessHistoryPage />} />
           <Route path="wizard" element={<WizardScreen />} />
           <Route path="done" element={<DoneScreen />} />
           <Route path="failed" element={<FailedScreen />} />

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Package, Check, Clock, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,48 +7,59 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProsthetics } from '@/prosthetics/ProstheticsContext';
-import { flowTemplateApi } from '@/api/prosthetics';
-import { flowInstanceApi } from '@/api/prosthetics';
-import type { FlowTemplate } from '@/prosthetics/types';
+import { flowTemplateApi, flowInstanceApi, prostheticsOrderApi } from '@/api/prosthetics';
+import { getErrorMessage } from '@/utils/errorMessage';
+import type { FlowTemplate, ProstheticsOrder } from '@/prosthetics/types';
 import { SetupSteps } from '@/components/prosthetics/SetupSteps';
 
 export default function TemplateSelectPage() {
   const navigate = useNavigate();
   const { draft, setDraftField, resetDraft } = useProsthetics();
   const [templates, setTemplates] = useState<FlowTemplate[]>([]);
+  const [order, setOrder] = useState<ProstheticsOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  // Use broad filters to show all active templates regardless of specific type
-  // The backend expects specific enum values (UPPER_LIMB, LOWER_LIMB, etc.)
-  // so we omit specific filters to avoid mismatch
+  // Templates are matched by product type and amputation level from the order.
+  // The limb side is intentionally NOT filtered: a template defines the type and
+  // level of the prosthesis, and the same route is used for either side.
   const filters = useMemo(() => ({
-    productType: '',
-    amputationLevel: '',
-    limbSide: '',
-  }), []);
+    productType: order?.productType ?? '',
+    amputationLevel: order?.amputationLevel ?? '',
+  }), [order?.productType, order?.amputationLevel]);
 
   useEffect(() => {
     document.title = 'Вибір шаблону — Виробництво протезів';
   }, []);
 
   useEffect(() => {
+    if (creating) return;
     if (!draft.orderId) {
       navigate('/prosthetics/new/select-order');
       return;
     }
     const fetchTemplates = async () => {
       setLoading(true);
+      setError(null);
       try {
+        const orderRes = await prostheticsOrderApi.getById(draft.orderId!);
+        setOrder(orderRes.data);
         const res = await flowTemplateApi.list({
           status: 'ACTIVE',
-          productType: filters.productType,
-          amputationLevel: filters.amputationLevel,
-          limbSide: filters.limbSide,
+          productType: orderRes.data.productType,
+          amputationLevel: orderRes.data.amputationLevel,
         });
-        setTemplates(res.data);
+        let result = res.data;
+        if (result.length === 0 && orderRes.data.amputationLevel) {
+          const fallback = await flowTemplateApi.list({
+            status: 'ACTIVE',
+            productType: orderRes.data.productType,
+          });
+          result = fallback.data;
+        }
+        setTemplates(result);
       } catch {
         setError('Не вдалося завантажити шаблони');
       } finally {
@@ -56,7 +67,7 @@ export default function TemplateSelectPage() {
       }
     };
     fetchTemplates();
-  }, [draft.orderId, navigate, filters]);
+  }, [creating, draft.orderId, navigate]);
 
   const handleSelect = async () => {
     if (!selectedTemplateId || !draft.orderId) return;
@@ -70,13 +81,13 @@ export default function TemplateSelectPage() {
       });
       resetDraft();
       navigate(`/prosthetics/process/${res.data.id}`);
-    } catch (err: any) {
-      if (err.response?.status === 409) {
-        setError('Процес для цього замовлення вже існує');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 400 || status === 409) {
+        setError(getErrorMessage(err, 'Процес для цього замовлення вже існує'));
       } else {
-        setError(err.response?.data?.message || 'Не вдалося створити процес');
+        setError(getErrorMessage(err, 'Не вдалося створити процес'));
       }
-    } finally {
       setCreating(false);
     }
   };
@@ -120,8 +131,23 @@ export default function TemplateSelectPage() {
             <div className="text-xs text-mint-foreground/60">Замовлення</div>
             <div className="font-medium">{draft.orderId || '—'}</div>
           </div>
+          <div>
+            <div className="text-xs text-mint-foreground/60">Тип виробу</div>
+            <div className="font-medium">{order?.productType || '—'}</div>
+          </div>
+          <div>
+            <div className="text-xs text-mint-foreground/60">Рівень ампутації</div>
+            <div className="font-medium">{order?.amputationLevel || '—'}</div>
+          </div>
         </CardContent>
       </Card>
+
+      {filters.productType && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          Шаблони відфільтровано за типом виробу: {filters.productType}. Рівень ампутації замовлення
+          використовується як уточнення; якщо точного збігу немає, показано всі шаблони потрібного типу
+        </p>
+      )}
 
       {error && (
         <Alert variant="destructive" className="mb-4">

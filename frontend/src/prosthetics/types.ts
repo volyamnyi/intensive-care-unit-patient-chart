@@ -31,6 +31,7 @@ export interface ProstheticsOrder {
   amputationLevel: string;
   limbSide: string;
   status: string;
+  materials: string | null;
   createdAt: string;
 }
 
@@ -142,6 +143,41 @@ export interface StepExecution {
   activeSeconds: number | null;
   values: string | null;
   completedBy: number | null;
+}
+
+export interface GateDecisionResponse {
+  id: string;
+  instanceId: string;
+  gateId: string;
+  gateName: string | null;
+  decision: GateDecision;
+  criteriaConfirmed: string[] | null;
+  comment: string | null;
+  decidedBy: number | null;
+  decidedAt: string;
+}
+
+export interface ResourceUsageResponse {
+  id: string;
+  stepExecutionId: string | null;
+  stepId: string | null;
+  stepName: string | null;
+  material: string;
+  qty: number | null;
+  unit: string | null;
+  minutes: number | null;
+  recordedBy: number | null;
+  createdAt: string | null;
+}
+
+export interface FailureSnapshot {
+  id: string;
+  instanceId: string;
+  category: string;
+  description: string | null;
+  snapshot: string | null;
+  createdBy: number | null;
+  createdAt: string | null;
 }
 
 export interface InstanceCreateRequest {

@@ -63,11 +63,6 @@ public class EvidenceFileService {
     public EvidenceFile download(UUID fileId, Long userId, boolean allowAll) {
         EvidenceFile evidence = evidenceFileRepository.findById(fileId)
                 .orElseThrow(() -> new NotFoundException("Evidence file not found: " + fileId));
-        FlowInstance instance = evidence.getStepExecution().getInstance();
-        if (!allowAll && instance.getAssignedUserId() != null
-                && !instance.getAssignedUserId().equals(userId)) {
-            throw new BadRequestException("Instance belongs to another prosthetist");
-        }
         return evidence;
     }
 

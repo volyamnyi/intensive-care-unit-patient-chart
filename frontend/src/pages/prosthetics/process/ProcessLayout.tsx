@@ -1,11 +1,9 @@
 import { NavLink, Outlet, useParams } from 'react-router-dom';
-import { LayoutDashboard, History, FileCheck, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, History } from 'lucide-react';
 
 const items = [
   { title: 'Огляд', url: '', icon: LayoutDashboard },
   { title: 'Історія', url: 'history', icon: History },
-  { title: 'Документи', url: 'documents', icon: FileCheck },
-  { title: 'Статистика', url: 'stats', icon: BarChart3 },
 ];
 
 export default function ProcessLayout() {

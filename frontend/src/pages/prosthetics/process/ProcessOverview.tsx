@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useProsthetics } from '@/prosthetics/ProstheticsContext';
 import { flowInstanceApi, flowTemplateApi } from '@/api/prosthetics';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import type { FlowInstance, FlowTemplate } from '@/prosthetics/types';
@@ -13,9 +12,9 @@ import type { FlowInstance, FlowTemplate } from '@/prosthetics/types';
 export default function ProcessOverview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { patient, orders } = useProsthetics();
   const [instance, setInstance] = useState<FlowInstance | null>(null);
   const [template, setTemplate] = useState<FlowTemplate | null>(null);
+  const [completedSteps, setCompletedSteps] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,8 +27,14 @@ export default function ProcessOverview() {
         const instRes = await flowInstanceApi.getById(id!);
         const inst = instRes.data;
         setInstance(inst);
-        const tplRes = await flowTemplateApi.getById(inst.templateId);
+        const [tplRes, execRes] = await Promise.all([
+          flowTemplateApi.getById(inst.templateId),
+          flowInstanceApi.listExecutions(id!),
+        ]);
         setTemplate(tplRes.data);
+        setCompletedSteps(
+          new Set(execRes.data.filter((e) => e.status === 'COMPLETED').map((e) => e.stepId)).size,
+        );
       } catch {
         setError('Не вдалося завантажити дані процесу');
       } finally {
@@ -40,9 +45,6 @@ export default function ProcessOverview() {
   }, [id]);
 
   const totalSteps = template?.stages.reduce((a, s) => a + s.steps.length, 0) ?? 0;
-  const completedSteps = instance?.reworkCount !== null && instance?.reworkCount !== undefined 
-    ? 0 // We don't have completedSteps in the backend type, need to check
-    : 0;
   const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
   const formatHours = (minutes: number) => {
@@ -78,9 +80,7 @@ export default function ProcessOverview() {
     );
   }
 
-  // Get patient info
-  const order = orders.find(o => o.id === instance.orderId);
-  const patientName = order ? patient?.pib || order.patientId : instance.patientId;
+  const patientName = instance.patientPib ?? instance.patientId;
 
   return (
     <div className="container mx-auto max-w-[1400px] px-6 py-8">
@@ -169,7 +169,7 @@ export default function ProcessOverview() {
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Замовлення</div>
-              <div className="font-medium">{order?.orderNumber || instance.orderId}</div>
+              <div className="font-medium">{instance.orderNumber ?? instance.orderId}</div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Виконавець</div>

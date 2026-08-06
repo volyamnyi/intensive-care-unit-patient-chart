@@ -107,7 +107,7 @@ class EvidenceFileServiceTest {
     }
 
     @Test
-    void downloadByAnotherProsthetistIsRejected() {
+    void downloadByAnotherProsthetistIsAllowed() {
         UUID fileId = UUID.randomUUID();
         EvidenceFile evidence = EvidenceFile.builder()
                 .fileName("photo.png")
@@ -121,9 +121,9 @@ class EvidenceFileServiceTest {
         evidence.setStepExecution(executionFor(instance, UUID.randomUUID()));
         when(evidenceFileRepository.findById(fileId)).thenReturn(Optional.of(evidence));
 
-        assertThatThrownBy(() -> service.download(fileId, 1L, false))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("another prosthetist");
+        EvidenceFile result = service.download(fileId, 1L, false);
+
+        assertThat(result.getId()).isEqualTo(fileId);
     }
 
     @Test
