@@ -253,6 +253,28 @@ describe('flowInstanceApi', () => {
     });
   });
 
+  it('saves a step draft without hard-block validation', async () => {
+    clientMock.post.mockReturnValue(ok({ id: 'i1' }));
+    const body = { values: '{"a":1}' };
+    await flowInstanceApi.saveDraft('i1', 'exec-1', body);
+    expect(clientMock.post).toHaveBeenCalledWith(
+      '/prosthesis-manufacturing/instances/i1/steps/exec-1/draft',
+      body,
+    );
+  });
+
+  it('moves back to the previous step of the stage', async () => {
+    clientMock.post.mockReturnValue(ok({ id: 'i1' }));
+    await flowInstanceApi.backward('i1');
+    expect(clientMock.post).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/backward');
+  });
+
+  it('lists step executions of an instance', async () => {
+    clientMock.get.mockReturnValue(ok([]));
+    await flowInstanceApi.listExecutions('i1');
+    expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/step-executions');
+  });
+
   it('propagates errors from the client', async () => {
     const err = new Error('network');
     clientMock.get.mockRejectedValue(err);

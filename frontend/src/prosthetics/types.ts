@@ -112,6 +112,11 @@ export interface FlowInstance {
   currentStageId: string | null;
   currentStepId: string | null;
   currentExecutionId: string | null;
+  templateName: string | null;
+  patientPib: string | null;
+  orderNumber: string | null;
+  currentStageName: string | null;
+  currentStepName: string | null;
   startTime: string | null;
   endTime: string | null;
   totalActiveSeconds: number | null;

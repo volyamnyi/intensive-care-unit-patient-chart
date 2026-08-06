@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  ArrowLeft,
   Camera,
   Check,
+  ClipboardCheck,
   ClipboardList,
   Home,
   PauseCircle,
   PenLine,
   Plus,
+  Save,
   Timer,
   Upload,
 } from 'lucide-react';
@@ -32,7 +35,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { flowInstanceApi } from '@/api/prosthetics';
+import { flowInstanceApi, prostheticsOrderApi, prostheticsPatientApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { useAuth } from '@/services/AuthContext';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
@@ -85,6 +88,8 @@ export default function WizardScreen() {
   const [resources, setResources] = useState<ResourceUsageRequest[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [orderInfo, setOrderInfo] = useState<{ orderNumber: string; patientPib: string } | null>(null);
+  const restoredKey = useRef<string | null>(null);
 
   useEffect(() => {
     document.title = 'Виконання кроку — Wizard техпроцесу';
@@ -129,6 +134,52 @@ export default function WizardScreen() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    if (!instance) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const order = await prostheticsOrderApi.getById(instance.orderId);
+        if (cancelled) return;
+        if (instance.patientPib) {
+          setOrderInfo({ orderNumber: order.data.orderNumber, patientPib: instance.patientPib });
+          return;
+        }
+        const patient = await prostheticsPatientApi.getById(order.data.patientId);
+        if (!cancelled) {
+          setOrderInfo({ orderNumber: order.data.orderNumber, patientPib: patient.data.pib });
+        }
+      } catch {
+        // header info is non-critical
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [instance]);
+
+  useEffect(() => {
+    if (!instance || instance.status !== 'IN_PROGRESS' || !instance.currentExecutionId) return;
+    const key = `${instance.id}:${instance.currentExecutionId}`;
+    if (restoredKey.current === key) return;
+    restoredKey.current = key;
+    flowInstanceApi
+      .listExecutions(instance.id)
+      .then((res) => {
+        const current = res.data.find((e) => e.id === instance.currentExecutionId);
+        if (current?.values) {
+          try {
+            setValues(JSON.parse(current.values) as Record<string, unknown>);
+          } catch {
+            // ignore corrupted draft
+          }
+        }
+      })
+      .catch(() => {
+        // draft restore is best-effort
+      });
+  }, [instance]);
+
   const stage = useMemo<SnapshotStage | null>(() => {
     if (!snapshot || !instance?.currentStageId) return null;
     return snapshot.stages.find((s) => s.id === instance.currentStageId) ?? null;
@@ -162,6 +213,16 @@ export default function WizardScreen() {
   );
 
   const progress = computeProgress(stepsDone, totalSteps);
+
+  const isLastStepOfStage = stepIndexInStage === (stage?.steps.length ?? 0) - 1 && stage != null;
+  const isLastStage = stageIndex === (snapshot?.stages.length ?? 1) - 1;
+  const nextStageHasGate = !isLastStage && !!snapshot?.stages[stageIndex + 1]?.gate;
+  const canGoBack = stepIndexInStage > 0 && !!stage?.steps[stepIndexInStage - 1]?.allowBackward;
+  const ctaLabel = isLastStepOfStage && isLastStage
+    ? 'Завершити процес'
+    : isLastStepOfStage && nextStageHasGate
+      ? 'Контроль якості →'
+      : 'Готово →';
 
   useEffect(() => {
     setValues({});
@@ -206,6 +267,39 @@ export default function WizardScreen() {
       applyInstance(res.data);
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося завершити крок'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!instance?.currentExecutionId) {
+      toast.error('Активне виконання кроку не знайдено.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await flowInstanceApi.saveDraft(instance.id, instance.currentExecutionId, {
+        values: JSON.stringify(values),
+        resources: resources.length > 0 ? resources : undefined,
+      });
+      toast.success('Чернетку збережено');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося зберегти чернетку'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const goBack = async () => {
+    if (!instance) return;
+    setSubmitting(true);
+    try {
+      const res = await flowInstanceApi.backward(instance.id);
+      setInstance(res.data);
+      toast.info('Повернуто до попереднього кроку');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося повернутися до попереднього кроку'));
     } finally {
       setSubmitting(false);
     }
@@ -413,6 +507,7 @@ export default function WizardScreen() {
           <div>
             <div className="font-display text-sm font-semibold">{snapshot.name}</div>
             <div className="text-xs text-muted-foreground">
+              {orderInfo ? `${orderInfo.patientPib} · ${orderInfo.orderNumber} · ` : ''}
               {snapshot.productType} · {snapshot.amputationLevel ?? ''} {snapshot.limbSide ?? ''} · #{instance.id.slice(0, 8)}
             </div>
           </div>
@@ -427,10 +522,23 @@ export default function WizardScreen() {
               Етап {stageIndex + 1} з {snapshot.stages.length}: {stage.name}
             </span>
             <span>
-              Крок {stepIndexInStage} з {stage.steps.length} · загалом {stepsDone}/{totalSteps}
+              Крок {stepIndexInStage + 1} з {stage.steps.length} · загалом {stepsDone}/{totalSteps}
             </span>
           </div>
           <Progress value={progress} className="mt-2" />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {snapshot.stages.map((s, i) => (
+            <span
+              key={s.id}
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs ${
+                i === stageIndex ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {s.gate != null && <ClipboardCheck className="size-3" />}
+              {i + 1}. {s.name}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -557,6 +665,12 @@ export default function WizardScreen() {
       </div>
 
       <div className="sticky bottom-0 z-20 -mx-6 flex flex-wrap items-center gap-3 border-t bg-card px-6 py-3">
+        <Button variant="outline" disabled={!canGoBack || submitting} onClick={() => void goBack()}>
+          <ArrowLeft className="size-4" /> Попередній
+        </Button>
+        <Button variant="outline" disabled={submitting} onClick={() => void saveDraft()}>
+          <Save className="size-4" /> Зберегти чернетку
+        </Button>
         <Button variant="ghost" onClick={() => setPauseOpen(true)}>
           <PauseCircle className="size-4" /> Пауза
         </Button>
@@ -568,7 +682,7 @@ export default function WizardScreen() {
           disabled={(touched && blocked) || submitting}
           onClick={() => void completeStep()}
         >
-          <Check className="size-4" /> Завершити крок
+          <Check className="size-4" /> {ctaLabel}
         </Button>
       </div>
 

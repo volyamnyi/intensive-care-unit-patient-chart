@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import DashboardPage from '@/pages/prosthetics/DashboardPage';
 import type { FlowInstance } from '@/prosthetics/types';
 
@@ -26,11 +26,45 @@ function mockUseProsthetics(draft = { patientId: null, orderId: null, templateId
   });
 }
 
+const baseInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance => ({
+  id: 'i1',
+  templateId: 't1',
+  patientId: 'p1',
+  orderId: 'o1',
+  assignedUserId: null,
+  status: 'IN_PROGRESS',
+  currentStageId: 'stage-1',
+  currentStepId: 'step-1',
+  currentExecutionId: 'exec-1',
+  templateName: 'TP-UL-01',
+  patientPib: 'Сніжко Оксана Володимирівна',
+  orderNumber: 'ПВ-26-0413',
+  currentStageName: 'Виготовлення гільзи',
+  currentStepName: 'Гіпсовий негатив',
+  startTime: null,
+  endTime: null,
+  totalActiveSeconds: null,
+  totalIdleSeconds: null,
+  reworkCount: null,
+  failReason: null,
+  pausedAt: null,
+  resumedAt: null,
+  pauseCategory: null,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  ...overrides,
+});
+
 function renderPage() {
   mockUseProsthetics();
   return render(
     <MemoryRouter initialEntries={['/prosthetics']}>
-      <DashboardPage />
+      <Routes>
+        <Route path="/prosthetics" element={<DashboardPage />} />
+        <Route path="/prosthetics/process/:id/wizard" element={<div>Wizard Page</div>} />
+        <Route path="/prosthetics/process/:id/done" element={<div>Done Page</div>} />
+        <Route path="/prosthetics/process/:id/failed" element={<div>Failed Page</div>} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -47,46 +81,103 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('button', { name: /Новий процес/ })).toBeInTheDocument();
   });
 
-  it('fetches instances on mount', async () => {
+  it('fetches all instances on mount', async () => {
     renderPage();
     await waitFor(() => {
       expect(flowInstanceApiMock.list).toHaveBeenCalledWith({});
     });
   });
 
-  it('passes active status filter to the API', async () => {
+  it('renders stat cards with counts', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({
+      data: [
+        baseInstance({ id: 'i1', status: 'IN_PROGRESS' }),
+        baseInstance({ id: 'i2', status: 'PAUSED' }),
+        baseInstance({ id: 'i3', status: 'COMPLETED' }),
+        baseInstance({ id: 'i4', status: 'FAILED' }),
+        baseInstance({ id: 'i5', status: 'NEW' }),
+      ],
+    });
     renderPage();
-    await waitFor(() => expect(flowInstanceApiMock.list).toHaveBeenCalled());
-    const tabs = screen.getAllByRole('tab');
-    fireEvent.click(tabs[1]);
     await waitFor(() => {
-      expect(flowInstanceApiMock.list).toHaveBeenCalledWith({ status: 'IN_PROGRESS' });
+      expect(screen.getByText('Активні')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Призупинені')).toBeInTheDocument();
+    expect(screen.getByText('Завершені')).toBeInTheDocument();
+    expect(screen.getByText('Провалені')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+  });
+
+  it('renders instances with display columns', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({ data: [baseInstance()] });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('ПВ-26-0413')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Сніжко Оксана Володимирівна')).toBeInTheDocument();
+    expect(screen.getByText('TP-UL-01')).toBeInTheDocument();
+    expect(screen.getByText('Виготовлення гільзи')).toBeInTheDocument();
+    expect(screen.getByText('Гіпсовий негатив')).toBeInTheDocument();
+  });
+
+  it('filters instances client-side when a tab is selected', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({
+      data: [
+        baseInstance({ id: 'i1', status: 'IN_PROGRESS' }),
+        baseInstance({ id: 'i2', status: 'PAUSED' }),
+      ],
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('ПВ-26-0413')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('tab', { name: 'Призупинені' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Гіпсовий негатив')).not.toBeInTheDocument();
     });
   });
 
-  it('passes search query to the API', async () => {
+  it('filters instances client-side by search query', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({
+      data: [
+        baseInstance({ id: 'i1', orderNumber: 'ПВ-26-0413' }),
+        baseInstance({ id: 'i2', orderNumber: 'ПВ-26-0414' }),
+      ],
+    });
     renderPage();
-    await waitFor(() => expect(flowInstanceApiMock.list).toHaveBeenCalled());
-    fireEvent.change(screen.getByPlaceholderText(/пошук/i), { target: { value: 'ord-1' } });
+    await waitFor(() => expect(screen.getByText('ПВ-26-0413')).toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText(/пошук/i), { target: { value: '0414' } });
     await waitFor(() => {
-      expect(flowInstanceApiMock.list).toHaveBeenCalledWith({ query: 'ord-1' });
+      expect(screen.queryByText('ПВ-26-0413')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('ПВ-26-0414')).toBeInTheDocument();
+  });
+
+  it('navigates to the wizard on row click for an in-progress instance', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({ data: [baseInstance()] });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('ПВ-26-0413')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('row', { name: /Сніжко/ }));
+    await waitFor(() => {
+      expect(screen.getByText('Wizard Page')).toBeInTheDocument();
     });
   });
 
-  it('renders instances in a table', async () => {
-    const instances: FlowInstance[] = [
-      {
-        id: 'i1', templateId: 't1', patientId: 'p1', orderId: 'o1', assignedUserId: null,
-        status: 'IN_PROGRESS', currentStageId: null, currentStepId: null, currentExecutionId: null,
-        startTime: null, endTime: null, totalActiveSeconds: null, totalIdleSeconds: null,
-        reworkCount: null, failReason: null, pausedAt: null, resumedAt: null, pauseCategory: null,
-        createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-      },
-    ];
-    flowInstanceApiMock.list.mockResolvedValue({ data: instances });
+  it('navigates to the done screen for a completed instance', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({ data: [baseInstance({ status: 'COMPLETED' })] });
     renderPage();
+    await waitFor(() => expect(screen.getByText('ПВ-26-0413')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('row', { name: /Сніжко/ }));
     await waitFor(() => {
-      expect(screen.getByText('o1')).toBeInTheDocument();
+      expect(screen.getByText('Done Page')).toBeInTheDocument();
+    });
+  });
+
+  it('navigates to the failed screen for a failed instance', async () => {
+    flowInstanceApiMock.list.mockResolvedValue({ data: [baseInstance({ status: 'FAILED' })] });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('ПВ-26-0413')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('row', { name: /Сніжко/ }));
+    await waitFor(() => {
+      expect(screen.getByText('Failed Page')).toBeInTheDocument();
     });
   });
 

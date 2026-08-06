@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import DoneScreen from '@/pages/prosthetics/process/DoneScreen';
 import type { FlowInstance, SnapshotTemplate } from '@/prosthetics/types';
@@ -17,6 +17,7 @@ vi.mock('@/services/AuthContext', () => ({
 const flowInstanceApiMock = vi.hoisted(() => ({
   getById: vi.fn(),
   getSnapshot: vi.fn(),
+  generateReport: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
@@ -33,6 +34,11 @@ const completedInstance: FlowInstance = {
   currentStageId: null,
   currentStepId: null,
   currentExecutionId: null,
+  templateName: 'TP-LL-01',
+  patientPib: 'Гаврилюк Тарас Олексійович',
+  orderNumber: 'ПВ-26-0414',
+  currentStageName: null,
+  currentStepName: null,
   startTime: '2026-01-01T08:00:00Z',
   endTime: '2026-01-01T11:30:00Z',
   totalActiveSeconds: 12600,
@@ -105,5 +111,30 @@ describe('DoneScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Підсумок недоступний')).toBeInTheDocument();
     });
+  });
+
+  it('exports the PDF report on button click', async () => {
+    const createObjectURL = vi.fn(() => 'blob:mock');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    flowInstanceApiMock.generateReport.mockResolvedValue({ data: new Blob() });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/process/inst-1/done']}>
+        <Routes>
+          <Route path="/prosthetics/process/:id/done" element={<DoneScreen />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Процес успішно завершено')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Експортувати PDF/ }));
+    await waitFor(() => {
+      expect(flowInstanceApiMock.generateReport).toHaveBeenCalledWith('inst-1');
+    });
+    expect(createObjectURL).toHaveBeenCalled();
+    clickSpy.mockRestore();
   });
 });

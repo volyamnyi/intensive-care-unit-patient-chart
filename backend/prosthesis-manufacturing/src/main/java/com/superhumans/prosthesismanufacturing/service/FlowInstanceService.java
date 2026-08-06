@@ -10,6 +10,7 @@ import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
+import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.GateDecision;
@@ -45,6 +46,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -107,6 +109,26 @@ public class FlowInstanceService {
                     .filter(e -> e.getStatus() == StepExecutionStatus.IN_PROGRESS)
                     .findFirst()
                     .ifPresent(e -> response.setCurrentExecutionId(e.getId()));
+        }
+        templateRepository.findById(instance.getTemplateId())
+                .ifPresent(t -> response.setTemplateName(t.getName()));
+        orderRepository.findById(instance.getOrderId())
+                .ifPresent(o -> {
+                    response.setOrderNumber(o.getOrderNumber());
+                    if (o.getPatient() != null) {
+                        response.setPatientPib(o.getPatient().getPib());
+                    }
+                });
+        if (stepId != null && StringUtils.hasText(instance.getTemplateSnapshot())) {
+            try {
+                SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
+                SnapshotStage currentStage = findStage(snapshot, instance.getCurrentStageId());
+                response.setCurrentStageName(currentStage.getName());
+                SnapshotStep currentStep = findStep(currentStage, stepId);
+                response.setCurrentStepName(currentStep.getName());
+            } catch (BadRequestException ignored) {
+                // stage/step may be absent for NEW / terminal statuses
+            }
         }
         return response;
     }
@@ -213,6 +235,92 @@ public class FlowInstanceService {
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "RESUME", userId);
         return toResponse(instance);
+    }
+
+    @Transactional
+    public FlowInstanceResponse backward(UUID instanceId, Long userId) {
+        FlowInstance instance = requireOwner(instanceId, userId);
+        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS) {
+            throw new BadRequestException("Повернення можливе лише під час виконання процесу");
+        }
+        if (instance.getCurrentStageId() == null || instance.getCurrentStepId() == null) {
+            throw new BadRequestException("Поточний крок не знайдено");
+        }
+        SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
+        SnapshotStage stage = findStage(snapshot, instance.getCurrentStageId());
+        SnapshotStep step = findStep(stage, instance.getCurrentStepId());
+        int stepIdx = stepIndex(stage).applyAsInt(step);
+        if (stepIdx == 0) {
+            throw new BadRequestException("Повернення можливе лише в межах поточного етапу");
+        }
+        SnapshotStep target = stage.getSteps().get(stepIdx - 1);
+        if (!target.isAllowBackward()) {
+            throw new BadRequestException(
+                    "Повернення до кроку «" + target.getName() + "» заборонено правилами шаблону");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        executionRepository.findByInstanceIdAndStepId(instance.getId(), instance.getCurrentStepId()).stream()
+                .filter(e -> e.getStatus() == StepExecutionStatus.IN_PROGRESS)
+                .findFirst()
+                .ifPresent(e -> {
+                    e.setStatus(StepExecutionStatus.CANCELLED);
+                    e.setCompletedAt(now);
+                    executionRepository.save(e);
+                });
+
+        int nextAttempt = executionRepository.findByInstanceIdAndStepId(instance.getId(), target.getId()).stream()
+                .map(StepExecution::getAttemptNumber)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+        instance.setCurrentStepId(target.getId());
+        instanceRepository.save(instance);
+        createExecution(instance, stage.getId(), target.getId(), nextAttempt, now);
+        auditService.logAction("FlowInstance", instance.getId(), "BACKWARD", userId);
+        return toResponse(instance);
+    }
+
+    @Transactional
+    public FlowInstanceResponse saveDraft(UUID instanceId, UUID executionId, StepCompleteRequest request,
+                                          Long userId) {
+        FlowInstance instance = requireOwner(instanceId, userId);
+        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS) {
+            throw new BadRequestException("Чернетку можна зберегти лише під час виконання процесу");
+        }
+        StepExecution execution = executionRepository.findById(executionId)
+                .orElseThrow(() -> new NotFoundException("Execution not found: " + executionId));
+        if (!instanceId.equals(execution.getInstance().getId())) {
+            throw new BadRequestException("Execution does not belong to this instance");
+        }
+        if (!instance.getCurrentStepId().equals(execution.getStepId())) {
+            throw new BadRequestException("Only the current step can be saved as a draft");
+        }
+        if (execution.getStatus() != StepExecutionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Execution is not in progress");
+        }
+        if (request.getValues() != null) {
+            parseValues(request.getValues());
+            execution.setValues(request.getValues());
+            executionRepository.save(execution);
+        }
+        if (request.getResources() != null) {
+            List<ResourceUsage> existing = resourceUsageRepository.findByStepExecutionId(execution.getId());
+            resourceUsageRepository.deleteAll(existing);
+            saveResources(instance, execution, request.getResources(), userId);
+        }
+        auditService.logAction("StepExecution", execution.getId(), "DRAFT_SAVE", userId);
+        return toResponse(instance);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StepExecutionResponse> listExecutions(UUID instanceId, Long userId, boolean allowAll) {
+        requireOwner(instanceId, userId, allowAll);
+        return executionRepository.findByInstanceId(instanceId).stream()
+                .sorted(Comparator.comparing(StepExecution::getStartedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(instanceMapper::toExecutionResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)

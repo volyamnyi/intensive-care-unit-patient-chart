@@ -17,6 +17,11 @@ public class FlowInstanceResponse {
     UUID currentStageId;
     UUID currentStepId;
     UUID currentExecutionId;
+    String templateName;
+    String patientPib;
+    String orderNumber;
+    String currentStageName;
+    String currentStepName;
     LocalDateTime startTime;
     LocalDateTime endTime;
     Long totalActiveSeconds;

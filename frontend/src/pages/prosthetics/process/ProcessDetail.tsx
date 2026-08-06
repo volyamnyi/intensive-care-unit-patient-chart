@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Syringe, Calendar, User, FileText } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Syringe, Calendar, User, FileText, ClipboardList, Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import type { FlowInstance } from '@/prosthetics/types';
 import { flowInstanceApi } from '@/api/prosthetics';
 
+const RESUMABLE_STATUSES = ['IN_PROGRESS', 'PAUSED', 'WAITING_REVIEW', 'CORRECTION', 'NEW'];
+
 export default function ProcessDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [instance, setInstance] = useState<FlowInstance | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,28 +45,24 @@ export default function ProcessDetail() {
     return <p className="text-muted-foreground">Процес не знайдено.</p>;
   }
 
-  const getBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'default' as const;
-      case 'PAUSED':
-        return 'secondary' as const;
-      case 'FAILED':
-        return 'destructive' as const;
-      default:
-        return 'outline' as const;
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold">
           Процес створення протезу
         </h1>
-        <Badge variant={getBadgeVariant(instance.status)}>
-          {instance.status}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <StatusBadge status={instance.status} />
+          {RESUMABLE_STATUSES.includes(instance.status) && (
+            <Button
+              size="sm"
+              onClick={() => navigate(`/prosthetics/process/${instance.id}/wizard`)}
+            >
+              <Play className="size-4" />
+              {instance.status === 'NEW' ? 'Розпочати процес' : 'Продовжити виконання'}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -73,7 +73,19 @@ export default function ProcessDetail() {
               Пацієнт
             </CardTitle>
             <CardDescription>
-              {instance.patientId}
+              {instance.patientPib ?? instance.patientId}
+            </CardDescription>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <CardTitle className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <ClipboardList className="size-4 text-muted-foreground" />
+              Замовлення
+            </CardTitle>
+            <CardDescription>
+              {instance.orderNumber ?? instance.orderId}
             </CardDescription>
           </CardContent>
         </Card>
@@ -97,7 +109,7 @@ export default function ProcessDetail() {
               Шаблон
             </CardTitle>
             <CardDescription>
-              {instance.templateId}
+              {instance.templateName ?? instance.templateId}
             </CardDescription>
           </CardContent>
         </Card>
@@ -106,10 +118,22 @@ export default function ProcessDetail() {
           <CardContent className="pt-6">
             <CardTitle className="mb-2 flex items-center gap-2 text-sm font-medium">
               <Syringe className="size-4 text-muted-foreground" />
-              Статус
+              Поточний етап
             </CardTitle>
             <CardDescription>
-              {instance.status}
+              {instance.currentStageName ?? '—'}
+            </CardDescription>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <CardTitle className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <Syringe className="size-4 text-muted-foreground" />
+              Поточний крок
+            </CardTitle>
+            <CardDescription>
+              {instance.currentStepName ?? '—'}
             </CardDescription>
           </CardContent>
         </Card>

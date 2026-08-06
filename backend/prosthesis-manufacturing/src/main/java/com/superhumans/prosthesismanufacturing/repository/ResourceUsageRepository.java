@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface ResourceUsageRepository extends JpaRepository<ResourceUsage, UUID> {
     List<ResourceUsage> findByInstanceId(UUID instanceId);
+    List<ResourceUsage> findByStepExecutionId(UUID stepExecutionId);
 }

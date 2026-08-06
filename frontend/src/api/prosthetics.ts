@@ -11,6 +11,7 @@ import type {
   FailRequest,
   EvidenceFile,
   FlowInstanceStatus,
+  StepExecution,
   TemplateStatus,
   TemplateCreateRequest,
   TemplatePatchRequest,
@@ -54,6 +55,11 @@ export const flowInstanceApi = {
   start: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/start`),
   completeStep: (id: string, executionId: string, data: StepCompleteRequest) =>
     client.post<FlowInstance>(`${BASE}/instances/${id}/steps/${executionId}/complete`, data),
+  saveDraft: (id: string, executionId: string, data: StepCompleteRequest) =>
+    client.post<FlowInstance>(`${BASE}/instances/${id}/steps/${executionId}/draft`, data),
+  backward: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/backward`),
+  listExecutions: (id: string) =>
+    client.get<StepExecution[]>(`${BASE}/instances/${id}/step-executions`),
   pause: (id: string, data: PauseRequest) =>
     client.post<FlowInstance>(`${BASE}/instances/${id}/pause`, data),
   resume: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/resume`),

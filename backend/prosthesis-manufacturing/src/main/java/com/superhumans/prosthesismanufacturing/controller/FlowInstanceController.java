@@ -6,6 +6,7 @@ import com.superhumans.prosthesismanufacturing.dto.GateDecisionRequest;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
+import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailRequest;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
@@ -97,6 +98,28 @@ public class FlowInstanceController {
     public FlowInstanceResponse completeStep(@PathVariable UUID id, @PathVariable UUID executionId,
                                              @Valid @RequestBody StepCompleteRequest request) {
         return instanceService.completeStep(id, executionId, request, currentUser.userId());
+    }
+
+    @PostMapping("/{id}/steps/{executionId}/draft")
+    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @Operation(summary = "Save a step draft (values and resources, no hard-block validation)")
+    public FlowInstanceResponse saveDraft(@PathVariable UUID id, @PathVariable UUID executionId,
+                                          @Valid @RequestBody StepCompleteRequest request) {
+        return instanceService.saveDraft(id, executionId, request, currentUser.userId());
+    }
+
+    @PostMapping("/{id}/backward")
+    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @Operation(summary = "Move back to the previous step of the current stage")
+    public FlowInstanceResponse backward(@PathVariable UUID id) {
+        return instanceService.backward(id, currentUser.userId());
+    }
+
+    @GetMapping("/{id}/step-executions")
+    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @Operation(summary = "List step executions of the instance")
+    public List<StepExecutionResponse> listExecutions(@PathVariable UUID id) {
+        return instanceService.listExecutions(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @PostMapping("/{id}/pause")

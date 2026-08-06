@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Syringe, Plus, Search, RefreshCw } from 'lucide-react';
+import { Syringe, Plus, Search, RefreshCw, ClipboardCheck, PauseCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { useProsthetics } from '@/prosthetics/ProstheticsContext';
 import { flowInstanceApi } from '@/api/prosthetics';
 import type { FlowInstance, FlowInstanceStatus } from '@/prosthetics/types';
@@ -15,7 +16,7 @@ import type { FlowInstance, FlowInstanceStatus } from '@/prosthetics/types';
 const STATUS_LABELS: Record<FlowInstanceStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'link' }> = {
   NEW: { label: 'Новий', variant: 'default' },
   IN_PROGRESS: { label: 'В процесі', variant: 'default' },
-  PAUSED: { label: 'Припущено', variant: 'outline' },
+  PAUSED: { label: 'Призупинено', variant: 'outline' },
   BLOCKED_PATIENT: { label: 'Заблоковано (пацієнт)', variant: 'destructive' },
   BLOCKED_MATERIAL: { label: 'Заблоковано (матеріали)', variant: 'destructive' },
   WAITING_REVIEW: { label: 'Очікує перевірки', variant: 'outline' },
@@ -27,10 +28,22 @@ const STATUS_LABELS: Record<FlowInstanceStatus, { label: string; variant: 'defau
 
 const STATUS_FILTERS: { value: FlowInstanceStatus; label: string }[] = [
   { value: 'IN_PROGRESS', label: 'Активні' },
-  { value: 'PAUSED', label: 'Припущені' },
+  { value: 'PAUSED', label: 'Призупинені' },
   { value: 'COMPLETED', label: 'Завершені' },
   { value: 'FAILED', label: 'Провалені' },
 ];
+
+const ACTIVE_STATUSES: FlowInstanceStatus[] = ['NEW', 'IN_PROGRESS', 'WAITING_REVIEW', 'CORRECTION'];
+const PAUSED_STATUSES: FlowInstanceStatus[] = ['PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL'];
+const FAILED_STATUSES: FlowInstanceStatus[] = ['FAILED', 'FAILED_QC'];
+
+function matchesFilter(instance: FlowInstance, filter: FlowInstanceStatus | 'all'): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'IN_PROGRESS') return ACTIVE_STATUSES.includes(instance.status);
+  if (filter === 'PAUSED') return PAUSED_STATUSES.includes(instance.status);
+  if (filter === 'FAILED') return FAILED_STATUSES.includes(instance.status);
+  return instance.status === filter;
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -43,36 +56,74 @@ export default function DashboardPage() {
 
   useEffect(() => {
     document.title = 'Виробництво протезів — Superhumans Lviv';
-    const fetchInstances = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params: Record<string, string> = {};
-        if (activeFilter !== 'all') {
-          params.status = activeFilter;
-        }
-        if (searchQuery) {
-          params.query = searchQuery;
-        }
-        const res = await flowInstanceApi.list(params);
-        setInstances(res.data);
-      } catch {
-        setError('Не вдалося завантажити процеси');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchInstances();
-  }, [activeFilter, searchQuery]);
+  }, []);
+
+  const fetchInstances = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await flowInstanceApi.list();
+      setInstances(res.data);
+    } catch {
+      setError('Не вдалося завантажити процеси');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchInstances();
+  }, [fetchInstances]);
 
   useEffect(() => {
     resetDraft();
   }, [resetDraft]);
 
+  const counts = useMemo(
+    () => ({
+      active: instances.filter((i) => ACTIVE_STATUSES.includes(i.status)).length,
+      paused: instances.filter((i) => PAUSED_STATUSES.includes(i.status)).length,
+      completed: instances.filter((i) => i.status === 'COMPLETED').length,
+      failed: instances.filter((i) => FAILED_STATUSES.includes(i.status)).length,
+    }),
+    [instances],
+  );
+
+  const filtered = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return instances.filter((i) => {
+      if (!matchesFilter(i, activeFilter)) return false;
+      if (!query) return true;
+      return (
+        (i.orderNumber ?? '').toLowerCase().includes(query) ||
+        (i.patientPib ?? '').toLowerCase().includes(query) ||
+        (i.templateName ?? '').toLowerCase().includes(query) ||
+        i.id.toLowerCase().includes(query)
+      );
+    });
+  }, [instances, activeFilter, searchQuery]);
+
   const handleCreate = () => {
     resetDraft();
     navigate('/prosthetics/new/select-patient');
   };
+
+  const openInstance = (instance: FlowInstance) => {
+    if (instance.status === 'COMPLETED') {
+      navigate(`/prosthetics/process/${instance.id}/done`);
+    } else if (instance.status === 'FAILED' || instance.status === 'FAILED_QC') {
+      navigate(`/prosthetics/process/${instance.id}/failed`);
+    } else {
+      navigate(`/prosthetics/process/${instance.id}/wizard`);
+    }
+  };
+
+  const statCards = [
+    { key: 'active', label: 'Активні', value: counts.active, icon: ClipboardCheck },
+    { key: 'paused', label: 'Призупинені', value: counts.paused, icon: PauseCircle },
+    { key: 'completed', label: 'Завершені', value: counts.completed, icon: CheckCircle2 },
+    { key: 'failed', label: 'Провалені', value: counts.failed, icon: XCircle },
+  ];
 
   return (
     <div className="container mx-auto py-6">
@@ -94,6 +145,20 @@ export default function DashboardPage() {
         </Alert>
       )}
 
+      <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {statCards.map((card) => (
+          <Card key={card.key}>
+            <CardContent className="flex items-center gap-3 py-4">
+              <card.icon className="size-8 text-mint" />
+              <div>
+                <div className="font-display text-2xl font-bold leading-none">{card.value}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{card.label}</div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <div className="mb-4 flex gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -104,7 +169,7 @@ export default function DashboardPage() {
             className="pl-10"
           />
         </div>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" onClick={() => void fetchInstances()}>
           <RefreshCw className="size-4" />
         </Button>
       </div>
@@ -123,7 +188,7 @@ export default function DashboardPage() {
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-        ) : instances.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-muted-foreground">Немає процесів за поточним фільтром</p>
           </div>
@@ -131,34 +196,49 @@ export default function DashboardPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Номер замовлення</TableHead>
+                <TableHead>Процес</TableHead>
                 <TableHead>Пацієнт</TableHead>
+                <TableHead>Замовлення</TableHead>
+                <TableHead>Шаблон</TableHead>
+                <TableHead>Поточний етап</TableHead>
+                <TableHead>Поточний крок</TableHead>
                 <TableHead>Статус</TableHead>
-                <TableHead>Створено</TableHead>
+                <TableHead>Оновлено</TableHead>
                 <TableHead className="text-right">Дії</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {instances.map((instance) => {
+              {filtered.map((instance) => {
                 const statusInfo = STATUS_LABELS[instance.status];
                 return (
-              <TableRow key={instance.id}>
-                <TableCell>{instance.orderId}</TableCell>
-                <TableCell>{instance.patientId}</TableCell>
-                <TableCell>
-                  <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
-                </TableCell>
-                <TableCell>{new Date(instance.createdAt).toLocaleDateString('uk-UA')}</TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/prosthetics/process/${instance.id}`)}
+                  <TableRow
+                    key={instance.id}
+                    className="cursor-pointer"
+                    onClick={() => openInstance(instance)}
                   >
-                    Відкрити
-                  </Button>
-                </TableCell>
-              </TableRow>
+                    <TableCell className="font-mono text-xs">#{instance.id.slice(0, 8)}</TableCell>
+                    <TableCell>{instance.patientPib ?? '—'}</TableCell>
+                    <TableCell>{instance.orderNumber ?? '—'}</TableCell>
+                    <TableCell>{instance.templateName ?? '—'}</TableCell>
+                    <TableCell>{instance.currentStageName ?? '—'}</TableCell>
+                    <TableCell>{instance.currentStepName ?? '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                    </TableCell>
+                    <TableCell>{new Date(instance.updatedAt).toLocaleDateString('uk-UA')}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openInstance(instance);
+                        }}
+                      >
+                        Відкрити
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
             </TableBody>

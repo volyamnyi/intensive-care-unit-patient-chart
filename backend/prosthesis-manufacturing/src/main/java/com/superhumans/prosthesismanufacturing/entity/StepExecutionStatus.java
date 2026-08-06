@@ -5,5 +5,6 @@ public enum StepExecutionStatus {
     IN_PROGRESS,
     COMPLETED,
     FAILED,
-    REWORK
+    REWORK,
+    CANCELLED
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +32,28 @@ export default function DoneScreen() {
   const [snapshot, setSnapshot] = useState<SnapshotTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const exportPdf = async () => {
+    if (!instance) return;
+    setExporting(true);
+    try {
+      const res = await flowInstanceApi.generateReport(instance.id);
+      const url = window.URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `report_${instance.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('PDF-звіт сформовано');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося сформувати PDF-звіт'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     document.title = 'Процес завершено — підсумок виготовлення';
@@ -126,9 +149,12 @@ export default function DoneScreen() {
         </CardContent>
       </Card>
 
-      <div className="mt-8 flex justify-center gap-3">
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Button variant="outline" onClick={() => navigate(`/prosthetics/process/${instance.id}`)}>
           Технологічна карта
+        </Button>
+        <Button variant="outline" disabled={exporting} onClick={() => void exportPdf()}>
+          <Download className="size-4" /> Експортувати PDF
         </Button>
         <Button onClick={() => navigate('/prosthetics')}>До панелі управління</Button>
       </div>

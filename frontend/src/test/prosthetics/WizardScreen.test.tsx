@@ -19,6 +19,9 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   getSnapshot: vi.fn(),
   start: vi.fn(),
   completeStep: vi.fn(),
+  saveDraft: vi.fn(),
+  backward: vi.fn(),
+  listExecutions: vi.fn(),
   pause: vi.fn(),
   resume: vi.fn(),
   decideGate: vi.fn(),
@@ -35,7 +38,7 @@ vi.mock('@/api/prosthetics', () => ({
   flowInstanceApi: flowInstanceApiMock,
 }));
 
-const inProgressInstance: FlowInstance = {
+const inProgressInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance => ({
   id: 'inst-1',
   templateId: 'tpl-1',
   patientId: 'pat-1',
@@ -45,6 +48,11 @@ const inProgressInstance: FlowInstance = {
   currentStageId: 'stage-1',
   currentStepId: 'step-1',
   currentExecutionId: 'exec-1',
+  templateName: 'TP-LL-01',
+  patientPib: 'Гаврилюк Тарас Олексійович',
+  orderNumber: 'ПВ-26-0414',
+  currentStageName: 'Виготовлення',
+  currentStepName: 'Зняття мірок',
   startTime: '2026-01-01T08:00:00Z',
   endTime: null,
   totalActiveSeconds: 120,
@@ -56,9 +64,10 @@ const inProgressInstance: FlowInstance = {
   pauseCategory: null,
   createdAt: '2026-01-01T08:00:00Z',
   updatedAt: '2026-01-01T08:00:00Z',
-};
+  ...overrides,
+});
 
-const snapshot: SnapshotTemplate = {
+const baseSnapshot = (): SnapshotTemplate => ({
   name: 'Протез гомілки',
   version: 3,
   productType: 'Протез',
@@ -79,7 +88,7 @@ const snapshot: SnapshotTemplate = {
           name: 'Зняття мірок',
           stepType: 'MEASUREMENT',
           mandatory: true,
-          allowBackward: false,
+          allowBackward: true,
           autoStartTimer: true,
           normDurationMin: 30,
           elements: [
@@ -102,7 +111,7 @@ const snapshot: SnapshotTemplate = {
       ],
     },
   ],
-};
+});
 
 function renderWizard(route = '/prosthetics/process/inst-1/wizard') {
   return render(
@@ -120,19 +129,21 @@ function renderWizard(route = '/prosthetics/process/inst-1/wizard') {
 describe('WizardScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    flowInstanceApiMock.getById.mockResolvedValue({ data: inProgressInstance });
-    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: snapshot });
-    flowInstanceApiMock.start.mockResolvedValue({ data: inProgressInstance });
+    flowInstanceApiMock.getById.mockResolvedValue({ data: inProgressInstance() });
+    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: baseSnapshot() });
+    flowInstanceApiMock.start.mockResolvedValue({ data: inProgressInstance() });
+    flowInstanceApiMock.listExecutions.mockResolvedValue({ data: [] });
   });
 
-  it('renders step header, title and elements', async () => {
+  it('renders step header, title, patient info and elements', async () => {
     renderWizard();
     await waitFor(() => {
       expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
     });
     expect(screen.getByText('Протез гомілки')).toBeInTheDocument();
+    expect(screen.getByText(/Гаврилюк Тарас Олексійович · ПВ-26-0414/)).toBeInTheDocument();
     expect(screen.getByText(/Обхват, см/)).toBeInTheDocument();
-    expect(screen.getByText('Завершити крок')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Готово →/ })).toBeInTheDocument();
   });
 
   it('does not call completeStep while required fields are empty', async () => {
@@ -141,7 +152,7 @@ describe('WizardScreen', () => {
       expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Завершити крок/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Готово/ }));
     await waitFor(() => {
       expect(flowInstanceApiMock.completeStep).not.toHaveBeenCalled();
     });
@@ -149,7 +160,7 @@ describe('WizardScreen', () => {
 
   it('calls completeStep with values and resources after valid fill', async () => {
     flowInstanceApiMock.completeStep.mockResolvedValue({
-      data: { ...inProgressInstance, currentStepId: 'step-2' },
+      data: { ...inProgressInstance(), currentStepId: 'step-2' },
     });
     renderWizard();
     await waitFor(() => {
@@ -161,7 +172,7 @@ describe('WizardScreen', () => {
     fireEvent.change(screen.getByPlaceholderText('Кількість'), { target: { value: '2' } });
     fireEvent.click(screen.getByRole('button', { name: /Додати/ }));
 
-    fireEvent.click(screen.getByRole('button', { name: /Завершити крок/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Готово/ }));
     await waitFor(() => {
       expect(flowInstanceApiMock.completeStep).toHaveBeenCalledWith(
         'inst-1',
@@ -173,9 +184,117 @@ describe('WizardScreen', () => {
     });
   });
 
+  it('restores the saved draft values of the current execution', async () => {
+    flowInstanceApiMock.listExecutions.mockResolvedValue({
+      data: [
+        { id: 'exec-1', instanceId: 'inst-1', stageId: 'stage-1', stepId: 'step-1', attemptNumber: 1, status: 'IN_PROGRESS', startedAt: null, completedAt: null, activeSeconds: 0, values: '{"el-1":"42"}', completedBy: null },
+      ],
+    });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('42')).toBeInTheDocument();
+    });
+  });
+
+  it('saves a draft without validation when the button is clicked', async () => {
+    flowInstanceApiMock.saveDraft.mockResolvedValue({ data: inProgressInstance() });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Обхват, см/), { target: { value: '42' } });
+    fireEvent.click(screen.getByRole('button', { name: /Зберегти чернетку/ }));
+    await waitFor(() => {
+      expect(flowInstanceApiMock.saveDraft).toHaveBeenCalledWith(
+        'inst-1',
+        'exec-1',
+        expect.objectContaining({ values: expect.stringContaining('42') })
+      );
+    });
+    expect(flowInstanceApiMock.completeStep).not.toHaveBeenCalled();
+  });
+
+  it('disables the backward button on the first step of a stage', async () => {
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /Попередній/ })).toBeDisabled();
+  });
+
+  it('calls backward API when navigating to the previous step', async () => {
+    flowInstanceApiMock.backward.mockResolvedValue({ data: inProgressInstance() });
+    flowInstanceApiMock.getById.mockResolvedValue({
+      data: inProgressInstance({
+        currentStepId: 'step-2',
+        currentExecutionId: 'exec-2',
+        currentStepName: 'Збірка',
+      }),
+    });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText('Збірка')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Попередній/ }));
+    await waitFor(() => {
+      expect(flowInstanceApiMock.backward).toHaveBeenCalledWith('inst-1');
+    });
+  });
+
+  it('shows "Завершити процес" CTA on the last step of the last stage', async () => {
+    const singleStageSnapshot: SnapshotTemplate = {
+      ...baseSnapshot(),
+      stages: [
+        {
+          ...baseSnapshot().stages[0],
+          steps: [baseSnapshot().stages[0].steps[0]],
+        },
+      ],
+    };
+    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: singleStageSnapshot });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Завершити процес/ })).toBeInTheDocument();
+    });
+  });
+
+  it('shows "Контроль якості →" CTA before a gated stage', async () => {
+    const gatedSnapshot: SnapshotTemplate = {
+      ...baseSnapshot(),
+      stages: [
+        {
+          ...baseSnapshot().stages[0],
+          steps: [baseSnapshot().stages[0].steps[0]],
+        },
+        {
+          id: 'stage-2',
+          name: 'Контроль якості',
+          stageType: 'ADMINISTRATIVE',
+          canSkip: false,
+          requiresApproval: true,
+          gate: {
+            id: 'gate-1',
+            name: 'Контрольна точка якості',
+            requiredApproverRole: 'PROSTHETICS_ADMINISTRATOR',
+            checklist: ['Розмір', 'Функціональність'],
+            attachmentsRequired: false,
+            reworkLoops: [],
+          },
+          steps: [],
+        },
+      ],
+    };
+    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: gatedSnapshot });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Контроль якості →/ })).toBeInTheDocument();
+    });
+  });
+
   it('opens pause dialog and calls pause API', async () => {
     flowInstanceApiMock.pause.mockResolvedValue({
-      data: { ...inProgressInstance, status: 'PAUSED', pauseCategory: 'MATERIAL' },
+      data: { ...inProgressInstance(), status: 'PAUSED', pauseCategory: 'MATERIAL' },
     });
     renderWizard();
     await waitFor(() => {
