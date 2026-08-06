@@ -57,9 +57,9 @@ describe('TemplateSelectPage', () => {
     await waitFor(() => {
       expect(flowTemplateApiMock.list).toHaveBeenCalledWith({
         status: 'ACTIVE',
-        productType: 'протез',
-        amputationLevel: 'both',
-        limbSide: 'both',
+        productType: '',
+        amputationLevel: '',
+        limbSide: '',
       });
     });
   });
