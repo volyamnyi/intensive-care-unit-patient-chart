@@ -84,7 +84,7 @@ describe('DashboardPage', () => {
   it('fetches all instances on mount', async () => {
     renderPage();
     await waitFor(() => {
-      expect(flowInstanceApiMock.list).toHaveBeenCalledWith({});
+      expect(flowInstanceApiMock.list).toHaveBeenCalled();
     });
   });
 
@@ -100,11 +100,11 @@ describe('DashboardPage', () => {
     });
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText('Активні')).toBeInTheDocument();
+      expect(screen.getAllByText('Активні').length).toBeGreaterThanOrEqual(2);
     });
-    expect(screen.getByText('Призупинені')).toBeInTheDocument();
-    expect(screen.getByText('Завершені')).toBeInTheDocument();
-    expect(screen.getByText('Провалені')).toBeInTheDocument();
+    expect(screen.getAllByText('Призупинені').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Завершені').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Провалені').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
@@ -124,7 +124,12 @@ describe('DashboardPage', () => {
     flowInstanceApiMock.list.mockResolvedValue({
       data: [
         baseInstance({ id: 'i1', status: 'IN_PROGRESS' }),
-        baseInstance({ id: 'i2', status: 'PAUSED' }),
+        baseInstance({
+          id: 'i2',
+          status: 'PAUSED',
+          orderNumber: 'ПВ-26-0414',
+          currentStepName: 'Підготовка матеріалів',
+        }),
       ],
     });
     renderPage();

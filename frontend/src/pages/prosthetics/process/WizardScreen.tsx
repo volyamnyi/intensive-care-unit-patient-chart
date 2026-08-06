@@ -90,6 +90,7 @@ export default function WizardScreen() {
   const [starting, setStarting] = useState(false);
   const [orderInfo, setOrderInfo] = useState<{ orderNumber: string; patientPib: string } | null>(null);
   const restoredKey = useRef<string | null>(null);
+  const prevStepId = useRef<string | null>(null);
 
   useEffect(() => {
     document.title = 'Виконання кроку — Wizard техпроцесу';
@@ -225,11 +226,15 @@ export default function WizardScreen() {
       : 'Готово →';
 
   useEffect(() => {
-    setValues({});
-    setTouched(false);
-    setSeconds(0);
-    setResources([]);
-    setMaterial({ material: '', qty: '', unit: 'шт', minutes: '' });
+    const current = step?.id ?? null;
+    if (prevStepId.current !== null && current !== prevStepId.current) {
+      setValues({});
+      setTouched(false);
+      setSeconds(0);
+      setResources([]);
+      setMaterial({ material: '', qty: '', unit: 'шт', minutes: '' });
+    }
+    prevStepId.current = current;
   }, [step?.id]);
 
   const timerRunning = instance?.status === 'IN_PROGRESS' && !!step;

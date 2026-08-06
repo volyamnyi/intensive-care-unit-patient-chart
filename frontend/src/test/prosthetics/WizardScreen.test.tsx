@@ -36,6 +36,16 @@ const flowInstanceApiMock = vi.hoisted(() => ({
 
 vi.mock('@/api/prosthetics', () => ({
   flowInstanceApi: flowInstanceApiMock,
+  prostheticsOrderApi: prostheticsOrderApiMock,
+  prostheticsPatientApi: prostheticsPatientApiMock,
+}));
+
+const prostheticsOrderApiMock = vi.hoisted(() => ({
+  getById: vi.fn(),
+}));
+
+const prostheticsPatientApiMock = vi.hoisted(() => ({
+  getById: vi.fn(),
 }));
 
 const inProgressInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance => ({
@@ -133,6 +143,12 @@ describe('WizardScreen', () => {
     flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: baseSnapshot() });
     flowInstanceApiMock.start.mockResolvedValue({ data: inProgressInstance() });
     flowInstanceApiMock.listExecutions.mockResolvedValue({ data: [] });
+    prostheticsOrderApiMock.getById.mockResolvedValue({
+      data: { id: 'ord-1', orderNumber: 'ПВ-26-0414', patientId: 'pat-1' },
+    });
+    prostheticsPatientApiMock.getById.mockResolvedValue({
+      data: { id: 'pat-1', pib: 'Гаврилюк Тарас Олексійович' },
+    });
   });
 
   it('renders step header, title, patient info and elements', async () => {
@@ -140,8 +156,10 @@ describe('WizardScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
     });
+    await waitFor(() => {
+      expect(screen.getByText(/Гаврилюк Тарас Олексійович · ПВ-26-0414/)).toBeInTheDocument();
+    });
     expect(screen.getByText('Протез гомілки')).toBeInTheDocument();
-    expect(screen.getByText(/Гаврилюк Тарас Олексійович · ПВ-26-0414/)).toBeInTheDocument();
     expect(screen.getByText(/Обхват, см/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Готово →/ })).toBeInTheDocument();
   });
@@ -170,6 +188,9 @@ describe('WizardScreen', () => {
     fireEvent.change(screen.getByLabelText(/Обхват, см/), { target: { value: '42' } });
     fireEvent.change(screen.getByPlaceholderText('Матеріал'), { target: { value: 'ПВХ' } });
     fireEvent.change(screen.getByPlaceholderText('Кількість'), { target: { value: '2' } });
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Кількість')).toHaveValue('2');
+    });
     fireEvent.click(screen.getByRole('button', { name: /Додати/ }));
 
     fireEvent.click(screen.getByRole('button', { name: /Готово/ }));
@@ -204,6 +225,9 @@ describe('WizardScreen', () => {
     });
 
     fireEvent.change(screen.getByLabelText(/Обхват, см/), { target: { value: '42' } });
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Обхват, см/)).toHaveValue(42);
+    });
     fireEvent.click(screen.getByRole('button', { name: /Зберегти чернетку/ }));
     await waitFor(() => {
       expect(flowInstanceApiMock.saveDraft).toHaveBeenCalledWith(

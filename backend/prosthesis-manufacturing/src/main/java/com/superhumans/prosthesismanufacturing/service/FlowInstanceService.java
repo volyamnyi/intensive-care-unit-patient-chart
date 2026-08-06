@@ -103,6 +103,9 @@ public class FlowInstanceService {
 
     public FlowInstanceResponse toResponse(FlowInstance instance) {
         FlowInstanceResponse response = instanceMapper.toResponse(instance);
+        if (response == null) {
+            return null;
+        }
         UUID stepId = instance.getCurrentStepId();
         if (stepId != null) {
             executionRepository.findByInstanceIdAndStepId(instance.getId(), stepId).stream()
