@@ -125,7 +125,7 @@ class FlowInstanceServiceTest {
     @Test
     void startMovesToFirstStepAndCreatesExecution() {
         FlowInstance instance = newInstance(FlowInstanceStatus.NEW, snapshotJson());
-        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(instanceRepository.findByIdForUpdate(instance.getId())).thenReturn(Optional.of(instance));
         when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.start(instance.getId(), 1L);
@@ -139,7 +139,7 @@ class FlowInstanceServiceTest {
     @Test
     void startFromNonNewStatusIsRejected() {
         FlowInstance instance = newInstance(FlowInstanceStatus.PAUSED, snapshotJson());
-        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(instanceRepository.findByIdForUpdate(instance.getId())).thenReturn(Optional.of(instance));
 
         assertThatThrownBy(() -> service.start(instance.getId(), 1L))
                 .isInstanceOf(BadRequestException.class)
@@ -232,7 +232,7 @@ class FlowInstanceServiceTest {
     void startByAnotherProsthetistIsAllowed() {
         FlowInstance instance = newInstance(FlowInstanceStatus.NEW, snapshotJson());
         instance.setAssignedUserId(99L);
-        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(instanceRepository.findByIdForUpdate(instance.getId())).thenReturn(Optional.of(instance));
         when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.start(instance.getId(), 1L);

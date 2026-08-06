@@ -183,7 +183,8 @@ class QualityGateServiceTest {
 
         var response = service.decide(instance.getId(), gateId, passRequest(), 1L, true);
 
-        verify(instanceService).moveToNextStage(any(), any(), any(), any(), any());
+        verify(instanceService).enterStage(any(), any(), any(), any());
+        verify(instanceService, never()).moveToNextStage(any(), any(), any(), any(), any());
         verify(auditService).logAction(any(), any(), org.mockito.ArgumentMatchers.eq("GATE_PASS"), any());
     }
 

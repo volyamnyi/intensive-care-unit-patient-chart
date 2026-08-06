@@ -119,7 +119,7 @@ describe('DoneScreen', () => {
     const reworkCard = screen.getByText('Доопрацювань').parentElement;
     expect(reworkCard?.firstElementChild?.textContent).toBe('1');
     expect(screen.getByText(/Етапи виготовлення/)).toBeInTheDocument();
-    expect(screen.getByText('Виготовлення')).toBeInTheDocument();
+    expect(screen.getByText('1. Виготовлення')).toBeInTheDocument();
     expect(screen.getByText('1/1 кроків')).toBeInTheDocument();
   });
 

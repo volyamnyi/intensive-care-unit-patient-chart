@@ -9,12 +9,17 @@ const prostheticsOrderApiMock = vi.hoisted(() => ({
   getDocument: vi.fn(),
 }));
 
+const prostheticsPatientApiMock = vi.hoisted(() => ({
+  getById: vi.fn(),
+}));
+
 const flowInstanceApiMock = vi.hoisted(() => ({
   list: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
   prostheticsOrderApi: prostheticsOrderApiMock,
+  prostheticsPatientApi: prostheticsPatientApiMock,
   flowInstanceApi: flowInstanceApiMock,
 }));
 
@@ -48,6 +53,9 @@ describe('OrderReviewPage', () => {
     vi.clearAllMocks();
     prostheticsOrderApiMock.getById.mockResolvedValue({ data: orderMock });
     prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
+    prostheticsPatientApiMock.getById.mockResolvedValue({
+      data: { id: 'p1', pib: 'Іван Іванов', birthDate: '1980-01-01' },
+    });
     flowInstanceApiMock.list.mockResolvedValue({ data: [] });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ pib: 'Іван Іванов' }) } as unknown as Response));
     vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
