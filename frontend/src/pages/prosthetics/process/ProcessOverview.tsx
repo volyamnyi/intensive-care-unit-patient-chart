@@ -80,7 +80,7 @@ export default function ProcessOverview() {
 
   // Get patient info
   const order = orders.find(o => o.id === instance.orderId);
-  const patientName = order ? patient?.fullName || order.patientId : instance.patientId;
+  const patientName = order ? patient?.pib || order.patientId : instance.patientId;
 
   return (
     <div className="container mx-auto max-w-[1400px] px-6 py-8">
