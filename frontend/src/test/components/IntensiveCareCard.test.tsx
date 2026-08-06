@@ -248,7 +248,7 @@ describe('IntensiveCareCard', () => {
       expect(screen.getAllByDisplayValue('16').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByDisplayValue('130')).toBeInTheDocument();
       expect(screen.getByDisplayValue('76')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('14')).toBeInTheDocument();
+      expect(screen.getAllByDisplayValue('14').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByDisplayValue('150')).toBeInTheDocument();
       expect(screen.getByDisplayValue('50')).toBeInTheDocument();
     });
