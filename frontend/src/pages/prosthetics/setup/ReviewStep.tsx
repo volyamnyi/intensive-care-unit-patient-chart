@@ -68,7 +68,7 @@ export default function ReviewStep() {
               Пацієнт
             </CardTitle>
             <CardDescription className="text-base">
-              {patient?.fullName || draft.patientId}
+              {patient?.pib || draft.patientId}
             </CardDescription>
           </CardContent>
         </Card>

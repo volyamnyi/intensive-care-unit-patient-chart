@@ -95,7 +95,7 @@ export default function PatientSearchPage() {
             <TableBody>
               {patients.map((patient) => (
                 <TableRow key={patient.id}>
-                  <TableCell className="font-medium">{patient.fullName}</TableCell>
+                  <TableCell className="font-medium">{patient.pib}</TableCell>
                   <TableCell>{new Date(patient.birthDate).toLocaleDateString('uk-UA')}</TableCell>
                   <TableCell>
                     <Badge variant="outline">Активний</Badge>

@@ -18,9 +18,9 @@ export type PauseCategory = 'PATIENT' | 'MATERIAL' | 'TECH_IDLE';
 
 export interface ProstheticsPatient {
   id: string;
-  fullName: string;
+  pib: string;
   birthDate: string;
-  sexCode: string;
+  gender: string;
 }
 
 export interface ProstheticsOrder {

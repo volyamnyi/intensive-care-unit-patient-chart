@@ -16412,57 +16412,55 @@ VALUES
 ('20000000-0000-4000-8000-000000000002', 'PR-2026-0002', '10000000-0000-4000-8000-000000000002', 'Протез гомілки', 'LOWER_LIMB', 'Гомілка, с/3', 'LEFT', 'Олександр Мельник', DATE '2026-07-22', '["Термопласт","Пінополіуретан","Кріплення"]', 'NEW')
 ON CONFLICT (id) DO NOTHING;
 
--- Flow templates: TP-UL-01 (ACTIVE), TP-LL-01 (DRAFT)
-INSERT INTO prosthetics_flow_templates (id, name, description, template_version, product_type, amputation_level, limb_side, status, estimated_duration_min)
+INSERT INTO prosthetics_flow_templates (id, created_at, created_by, updated_at, updated_by, version, name, description, template_version, product_type, amputation_level, limb_side, status, estimated_duration_min)
 VALUES
-('30000000-0000-4000-8000-000000000001', 'TP-UL-01', 'Виготовлення протеза передпліччя', 1, 'UPPER_LIMB', 'Вичленення в променезап''ястковому суглобі / в/3 передпліччя', 'RIGHT', 'ACTIVE', 240),
-('30000000-0000-4000-8000-000000000002', 'TP-LL-01', 'Виготовлення протеза гомілки (чернетка)', 1, 'LOWER_LIMB', 'Гомілка, с/3', 'LEFT', 'DRAFT', 300)
+    ('c0000001-0000-0000-0000-000000000001', NOW(), 17, NOW(), 17, 0, 'TP-UL-01', 'Протез передпліччя (довга кукса)', 1, 'UPPER_LIMB', 'upper_third_forearm', 'LEFT', 'ACTIVE', 480),
+    ('c0000002-0000-0000-0000-000000000002', NOW(), 18, NOW(), 18, 0, 'TP-LL-01', 'Протез гомілки', 1, 'LOWER_LIMB', 'below_knee', 'RIGHT', 'DRAFT', 600)
 ON CONFLICT (id) DO NOTHING;
 
--- TP-UL-01 stages
+-- Template stages
 INSERT INTO prosthetics_template_stages (id, template_id, order_index, name, type, can_skip, requires_approval)
 VALUES
-('40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 0, 'Клінічне обстеження', 'CLINICAL', FALSE, FALSE),
-('40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001', 1, 'Виготовлення протеза', 'TECHNICAL', FALSE, FALSE),
-('40000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000001', 2, 'Контроль якості', 'ADMINISTRATIVE', FALSE, TRUE)
+    ('d0000001-0000-0000-0000-000000000001', 'c0000001-0000-0000-0000-000000000001', 1, 'Клінічне обстеження', 'CLINICAL', false, false),
+    ('d0000002-0000-0000-0000-000000000002', 'c0000001-0000-0000-0000-000000000001', 2, 'Виготовлення гільзи', 'TECHNICAL', false, false),
+    ('d0000003-0000-0000-0000-000000000003', 'c0000001-0000-0000-0000-000000000001', 3, 'Збірка протезу', 'TECHNICAL', false, false),
+    ('d0000004-0000-0000-0000-000000000004', 'c0000001-0000-0000-0000-000000000001', 4, 'Контроль якості', 'ADMINISTRATIVE', false, true)
 ON CONFLICT (id) DO NOTHING;
 
--- TP-UL-01 steps
+-- Template steps
 INSERT INTO prosthetics_template_steps (id, stage_id, order_index, name, description, step_type, mandatory, allow_backward, auto_start_timer, norm_duration_min)
 VALUES
-('50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 0, 'Вимірювання кукси', 'Зняття основних розмірів кукси', 'MEASUREMENT', TRUE, TRUE, TRUE, 20),
-('50000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', 1, 'Анамнез та скарги', 'Опитування пацієнта', 'INFORMATION', TRUE, TRUE, FALSE, 15),
-('50000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000002', 0, 'Зняття зліпка', 'Зняття гіпсового зліпка кукси', 'COMPOSITE', TRUE, TRUE, TRUE, 45),
-('50000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000002', 1, 'Збірка протеза', 'Збірка протеза з підготовлених компонентів', 'COMPOSITE', TRUE, TRUE, TRUE, 90),
-('50000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000002', 2, 'Примірювання', 'Примірювання та підгонка протеза', 'MEASUREMENT', TRUE, TRUE, TRUE, 40),
-('50000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000003', 0, 'Фінальна перевірка', 'Підсумкова перевірка готового протеза', 'CHECKLIST', TRUE, TRUE, FALSE, 30)
+    ('e0000001-0000-0000-0000-000000000001', 'd0000001-0000-0000-0000-000000000001', 1, 'Перегляд документації', 'Ознайомтеся з рецептом', 'INFORMATION', true, true, false, 10),
+    ('e0000002-0000-0000-0000-000000000002', 'd0000001-0000-0000-0000-000000000001', 2, 'Вимірювання кукси', 'Виміряйте параметри', 'MEASUREMENT', true, true, true, 15),
+    ('e0000011-0000-0000-0000-000000000001', 'd0000002-0000-0000-0000-000000000002', 1, 'Гіпсовий негатив', 'Зніміть гіпсовий негатив', 'CHECKLIST', true, true, true, 30),
+    ('e0000021-0000-0000-0000-000000000001', 'd0000003-0000-0000-0000-000000000003', 1, 'Збірка компонентів', 'Зберіть протез', 'CHECKLIST', true, true, true, 60),
+    ('e0000031-0000-0000-0000-000000000001', 'd0000004-0000-0000-0000-000000000004', 1, 'Перевірка якості', 'Перевірте параметри', 'CHECKLIST', true, true, false, 20),
+    ('e0000032-0000-0000-0000-000000000002', 'd0000004-0000-0000-0000-000000000004', 2, 'Підпис приймання', 'Підтвердіть підписом', 'CHECKLIST', true, true, false, 5)
 ON CONFLICT (id) DO NOTHING;
 
--- TP-UL-01 elements
-INSERT INTO prosthetics_template_elements (id, step_id, order_index, element_type, label, placeholder, required, unit, min_value, max_value, min_count, max_count, mime_types, max_size_mb, regex_pattern, options)
+-- Template elements
+INSERT INTO prosthetics_template_elements (id, step_id, order_index, element_type, label, placeholder, required, unit, min_value, max_value, options, validation_rules)
 VALUES
-('60000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000001', 0, 'NUMERIC_INPUT', 'Довжина кукси, см', NULL, TRUE, 'см', 1, 60, NULL, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000001', 1, 'NUMERIC_INPUT', 'Обхват кукси, см', NULL, TRUE, 'см', 5, 100, NULL, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000001', 2, 'IMAGE_UPLOAD', 'Фото кукси', 'Додати фото', FALSE, NULL, NULL, NULL, NULL, 5, '["image/jpeg","image/png"]', 10, NULL, NULL),
-('60000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000002', 0, 'TEXTAREA', 'Скарги пацієнта', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000005', '50000000-0000-4000-8000-000000000002', 1, 'DROPDOWN', 'Вид протеза', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '["Механічний","Біонічний","Гібридний"]'),
-('60000000-0000-4000-8000-000000000006', '50000000-0000-4000-8000-000000000003', 0, 'TEXT_INPUT', 'Матеріал зліпка', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '^[А-Яа-яІіЇїЄєҐґA-Za-z -]+$', NULL),
-('60000000-0000-4000-8000-000000000007', '50000000-0000-4000-8000-000000000003', 1, 'NUMERIC_INPUT', 'Температура води, °C', NULL, TRUE, '°C', 20, 60, NULL, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000008', '50000000-0000-4000-8000-000000000004', 0, 'CHECKBOX', 'Компоненти зібрано', NULL, TRUE, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000009', '50000000-0000-4000-8000-000000000004', 1, 'NUMERIC_INPUT', 'Час збірки, хв', NULL, FALSE, 'хв', 1, 600, NULL, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000010', '50000000-0000-4000-8000-000000000005', 0, 'NUMERIC_INPUT', 'Зручність посадки, бал', NULL, TRUE, 'бал', 1, 10, NULL, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000011', '50000000-0000-4000-8000-000000000005', 1, 'RADIO', 'Прилягання', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '["Щільне","Помірне","Слабке"]'),
-('60000000-0000-4000-8000-000000000012', '50000000-0000-4000-8000-000000000006', 0, 'CHECKBOX', 'Перевірено функціональність', NULL, TRUE, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, NULL),
-('60000000-0000-4000-8000-000000000013', '50000000-0000-4000-8000-000000000006', 1, 'SIGNATURE_CAPTURE', 'Підпис виконавця', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+    ('f0000001-0000-0000-0000-000000000001', 'e0000001-0000-0000-0000-000000000001', 1, 'CHECKBOX', 'Ознайомлений з рецептом', NULL, true, NULL, NULL, NULL, NULL, NULL),
+    ('f0000002-0000-0000-0000-000000000001', 'e0000002-0000-0000-0000-000000000002', 1, 'NUMERIC_INPUT', 'Обхват кукси', '180', true, 'мм', 100, 400, NULL, NULL),
+    ('f0000003-0000-0000-0000-000000000002', 'e0000002-0000-0000-0000-000000000002', 2, 'NUMERIC_INPUT', 'Довжина кукси', '200', true, 'мм', 100, 350, NULL, NULL),
+    ('f0000011-0000-0000-0000-000000000001', 'e0000011-0000-0000-0000-000000000001', 1, 'CHECKBOX', 'Гіпс змішаний', NULL, true, NULL, NULL, NULL, NULL, NULL),
+    ('f0000012-0000-0000-0000-000000000002', 'e0000011-0000-0000-0000-000000000001', 2, 'CHECKBOX', 'Негатив без дефектів', NULL, true, NULL, NULL, NULL, NULL, NULL),
+    ('f0000021-0000-0000-0000-000000000001', 'e0000021-0000-0000-0000-000000000001', 1, 'CHECKBOX', 'Гільза приєднана', NULL, true, NULL, NULL, NULL, NULL, NULL),
+    ('f0000022-0000-0000-0000-000000000002', 'e0000021-0000-0000-0000-000000000001', 2, 'CHECKBOX', 'Зап''ясток встановлено', NULL, true, NULL, NULL, NULL, NULL, NULL),
+    ('f0000031-0000-0000-0000-000000000001', 'e0000031-0000-0000-0000-000000000001', 1, 'CHECKBOX', 'Розмір відповідає', NULL, true, NULL, NULL, NULL, NULL, NULL),
+    ('f0000032-0000-0000-0000-000000000002', 'e0000031-0000-0000-0000-000000000001', 2, 'CHECKBOX', 'Вага в межах норми', NULL, true, NULL, NULL, NULL, NULL, NULL),
+    ('f0000041-0000-0000-0000-000000000001', 'e0000032-0000-0000-0000-000000000002', 1, 'SIGNATURE_CAPTURE', 'Підпис', 'Підтвердіть', true, NULL, NULL, NULL, NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
--- TP-UL-01 quality gate + rework loop
+-- Quality gates
 INSERT INTO prosthetics_quality_gates (id, stage_id, name, description, required_approver_role, checklist, attachments_required)
 VALUES
-('70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000003', 'Приймальний контроль', 'Приймання готового протеза адміністратором виробництва', 'PROSTHETICS_ADMINISTRATOR', '["Відповідність технічному завданню","Функціональність","Естетичний вигляд"]', FALSE)
+    ('a0000001-0000-0000-0000-000000000001', 'd0000004-0000-0000-0000-000000000004', 'Контроль якості протезу', 'Фінальна перевірка', 'PROSTHETICS_ADMINISTRATOR', '["Розмір","Функціональність","Естетика","Безпека"]', true)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO prosthetics_rework_loops (id, gate_id, target_stage_id, target_step_id, rework_type, max_attempts)
+-- Rework loops
+INSERT INTO prosthetics_rework_loops (id, gate_id, target_stage_id, target_step_id, rework_type, max_attempts, created_at, created_by, updated_at, updated_by, version)
 VALUES
-('80000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000002', '50000000-0000-4000-8000-000000000005', 'PARTIAL', 2)
+    ('a0000002-0000-0000-0000-000000000001', 'a0000001-0000-0000-0000-000000000001', 'd0000002-0000-0000-0000-000000000002', 'e0000011-0000-0000-0000-000000000001', 'PARTIAL', 3, NOW(), 17, NOW(), 17, 0)
 ON CONFLICT (id) DO NOTHING;

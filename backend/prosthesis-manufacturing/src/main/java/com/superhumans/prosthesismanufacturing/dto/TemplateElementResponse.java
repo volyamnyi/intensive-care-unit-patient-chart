@@ -3,6 +3,7 @@ package com.superhumans.prosthesismanufacturing.dto;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
@@ -22,6 +23,6 @@ public class TemplateElementResponse {
     String mimeTypes;
     Integer maxSizeMb;
     String regexPattern;
-    String options;
+    List<String> options;
     String validationRules;
 }

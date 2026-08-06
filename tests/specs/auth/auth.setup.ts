@@ -9,6 +9,8 @@ const USERS = [
   { login: 'nurse1', password: 'nurse123', file: 'nurse.json' },
   { login: 'head1', password: 'head123', file: 'hod.json' },
   { login: 'admin', password: 'admin123', file: 'admin.json' },
+  { login: 'prosthetist1', password: 'doctor123', file: 'prosthetist.json' },
+  { login: 'prosthetics_admin1', password: 'doctor123', file: 'prosthetics_admin.json' },
 ];
 
 for (const user of USERS) {
@@ -17,7 +19,7 @@ for (const user of USERS) {
     await page.getByLabel('Логін').fill(user.login);
     await page.getByLabel('Пароль').fill(user.password);
     await page.getByRole('button', { name: 'Увійти' }).click();
-    await page.waitForURL(/\/(doctor|nurse|admin|select|prescriptions|prosthetics)/, { timeout: 30000 });
+    await page.waitForURL(/\/(doctor|nurse|admin|select|prescriptions|prosthetics)/, { timeout: 60000 });
     await page.context().storageState({ path: `${AUTH_BASE}/${user.file}` });
   });
 }

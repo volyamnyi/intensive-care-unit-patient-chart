@@ -12,7 +12,7 @@ public class QualityGateResponse {
     String name;
     String description;
     String requiredApproverRole;
-    String checklist;
+    List<String> checklist;
     Boolean attachmentsRequired;
     List<ReworkLoopResponse> reworkLoops;
 }

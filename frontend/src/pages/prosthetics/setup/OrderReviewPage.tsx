@@ -5,10 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { useProsthetics } from '@/prosthetics/ProstheticsContext';
-import { prostheticsOrderApi, flowTemplateApi } from '@/api/prosthetics';
-import type { ProstheticsOrder, FlowTemplate, ProstheticsPatient } from '@/prosthetics/types';
+import { prostheticsOrderApi } from '@/api/prosthetics';
+import type { ProstheticsOrder, ProstheticsPatient } from '@/prosthetics/types';
 import { SetupSteps } from '@/components/prosthetics/SetupSteps';
 
 interface OrderWithPatient extends ProstheticsOrder {
@@ -17,9 +16,8 @@ interface OrderWithPatient extends ProstheticsOrder {
 
 export default function OrderReviewPage() {
   const navigate = useNavigate();
-  const { draft, resetDraft } = useProsthetics();
+  const { draft } = useProsthetics();
   const [order, setOrder] = useState<OrderWithPatient | null>(null);
-  const [template, setTemplate] = useState<FlowTemplate | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [docLoaded, setDocLoaded] = useState(false);
   const [docError, setDocError] = useState<string | null>(null);
@@ -31,7 +29,7 @@ export default function OrderReviewPage() {
   }, []);
 
   useEffect(() => {
-    if (!draft.orderId || !draft.templateId) {
+    if (!draft.orderId) {
       navigate('/prosthetics/new/select-order');
       return;
     }
@@ -42,10 +40,7 @@ export default function OrderReviewPage() {
       setDocError(null);
       setDocumentUrl(null);
       try {
-        const [orderRes, templateRes] = await Promise.all([
-          prostheticsOrderApi.getById(draft.orderId!),
-          flowTemplateApi.getById(draft.templateId!),
-        ]);
+        const orderRes = await prostheticsOrderApi.getById(draft.orderId!);
         
         let patient: ProstheticsPatient | null = null;
         if (orderRes.data.patientId) {
@@ -62,7 +57,6 @@ export default function OrderReviewPage() {
         }
         
         setOrder({ ...orderRes.data, patient });
-        setTemplate(templateRes.data);
         
         // Auto-load document
         try {
@@ -82,38 +76,14 @@ export default function OrderReviewPage() {
       }
     };
     fetchData();
-  }, [draft.orderId, draft.templateId, navigate]);
+  }, [draft.orderId, navigate]);
 
-  const handleStart = async () => {
-    if (!draft.orderId || !draft.templateId) return;
-    
-    try {
-      const res = await fetch('/api/prosthesis-manufacturing/instances', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          orderId: draft.orderId,
-          templateId: draft.templateId,
-        }),
-      });
-      
-      if (res.ok) {
-        const instance = await res.json();
-        resetDraft();
-        navigate(`/prosthetics/process/${instance.id}`);
-      } else {
-        setError('Не вдалося створити процес');
-      }
-    } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || 'Помилка мережі');
-    }
+  const handleStart = () => {
+    if (!draft.orderId) return;
+    navigate('/prosthetics/new/select-template');
   };
 
-  if (!draft.orderId || !draft.templateId) {
+  if (!draft.orderId) {
     return (
       <div className="container mx-auto max-w-2xl py-8">
         <div className="mb-6 flex items-center gap-3">
@@ -123,7 +93,7 @@ export default function OrderReviewPage() {
           </Button>
           <h1 className="font-display text-2xl font-bold">Перевірка замовлення</h1>
         </div>
-        <p className="text-muted-foreground">Необхідно обрати замовлення та шаблон.</p>
+        <p className="text-muted-foreground">Необхідно обрати замовлення.</p>
       </div>
     );
   }
@@ -143,7 +113,7 @@ export default function OrderReviewPage() {
     );
   }
 
-  if (error || !order || !template) {
+  if (error || !order) {
     return (
       <div className="container mx-auto max-w-2xl py-8">
         <div className="mb-6 flex items-center gap-3">
@@ -171,7 +141,7 @@ export default function OrderReviewPage() {
         <SetupSteps current={3} />
       </div>
 
-      <Tabs defaultValue="details">
+      <Tabs defaultValue="document">
         <TabsList className="mb-4">
           <TabsTrigger value="details">Деталі</TabsTrigger>
           <TabsTrigger value="document">Рецепт</TabsTrigger>
@@ -185,7 +155,7 @@ export default function OrderReviewPage() {
                 <CardTitle>Пацієнт</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-base">{order.patient?.fullName || '—'}</p>
+                <p className="text-base">{order.patient?.pib || '—'}</p>
                 <p className="text-sm text-muted-foreground">ID: {order.patientId}</p>
               </CardContent>
             </Card>
@@ -203,17 +173,6 @@ export default function OrderReviewPage() {
                 <p className="text-sm text-muted-foreground">Бік: {order.limbSide === 'left' ? 'Лівий' : 'Правий'}</p>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Шаблон</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-base">{template.name}</p>
-                <p className="text-sm text-muted-foreground">{template.description || '—'}</p>
-                <Badge variant="outline">Версія {template.templateVersion}</Badge>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
 
@@ -225,12 +184,19 @@ export default function OrderReviewPage() {
             </CardHeader>
             <CardContent>
               {docLoaded && documentUrl ? (
-                <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="block">
-                  <Button variant="outline" className="w-full">
-                    <FileText className="mr-2 size-4" />
-                    Завантажити рецепт
-                  </Button>
-                </a>
+                <div className="space-y-3">
+                  <iframe
+                    src={documentUrl}
+                    title="Рецепт протезу (PDF)"
+                    className="w-full min-h-[520px] rounded-md border bg-white"
+                  />
+                  <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="block">
+                    <Button variant="outline" className="w-full">
+                      <FileText className="mr-2 size-4" />
+                      Завантажити рецепт
+                    </Button>
+                  </a>
+                </div>
               ) : docError ? (
                 <Alert variant="destructive" className="w-full">
                   <AlertTitle>Помилка завантаження</AlertTitle>
@@ -254,20 +220,7 @@ export default function OrderReviewPage() {
               <CardDescription>Список матеріалів для виготовлення</CardDescription>
             </CardHeader>
             <CardContent>
-              {template.stages && template.stages.length > 0 ? (
-                <div className="space-y-6">
-                  {template.stages.map((stage) => (
-                    <div key={stage.id}>
-                      <h4 className="font-medium">{stage.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {stage.steps.length} кроків • {stage.type}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">Специфікація матеріалів відсутня. Дані будуть додані на етапі виконання.</p>
-              )}
+              <p className="text-muted-foreground">Специфікація матеріалів відсутня. Дані будуть додані на етапі виконання.</p>
             </CardContent>
           </Card>
         </TabsContent>

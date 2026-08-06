@@ -165,12 +165,8 @@ export default function TemplateSelectPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">{template.productType}</Badge>
-                  <Badge variant="outline">
-                    {template.amputationLevel === 'above' ? 'Вище коліна' : 'Нижче коліна'}
-                  </Badge>
-                  <Badge variant="outline">
-                    {template.limbSide === 'left' ? 'Лівий' : 'Правий'}
-                  </Badge>
+                  <Badge variant="outline">{template.amputationLevel}</Badge>
+                  <Badge variant="outline">{template.limbSide}</Badge>
                 </div>
                 <Button
                   className="mt-auto bg-accent text-accent-foreground hover:bg-accent/90"

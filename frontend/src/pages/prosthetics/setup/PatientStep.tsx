@@ -11,7 +11,7 @@ export default function PatientStep() {
   const { draft, setDraftField, patient } = useProsthetics();
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<
-    { id: string; fullName: string; birthDate: string }[]
+    { id: string; pib: string; birthDate: string }[]
   >([]);
   const [loading, setLoading] = useState(false);
 
@@ -75,7 +75,7 @@ export default function PatientStep() {
         <Card className="mb-4 border-mint/30 bg-mint/5">
           <CardContent className="pt-4">
             <CardTitle className="text-base">
-              Обраний пацієнт: {patient.fullName}
+              Обраний пацієнт: {patient.pib}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Дата народження: {patient.birthDate}
@@ -92,7 +92,7 @@ export default function PatientStep() {
               onClick={() => handleSelect(p.id)}
             >
             <CardContent className="pt-4">
-              <CardTitle className="text-base">{p.fullName}</CardTitle>
+              <CardTitle className="text-base">{p.pib}</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Дата народження: {p.birthDate}
               </p>

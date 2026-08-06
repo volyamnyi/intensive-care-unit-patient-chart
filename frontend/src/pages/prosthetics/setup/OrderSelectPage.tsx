@@ -88,8 +88,6 @@ export default function OrderSelectPage() {
             <TableRow>
               <TableHead>Замовлення</TableHead>
               <TableHead>Тип протеза</TableHead>
-              <TableHead>Рівень ампутації</TableHead>
-              <TableHead>Бік</TableHead>
               <TableHead>Статус</TableHead>
               <TableHead className="text-right">Дія</TableHead>
             </TableRow>
@@ -99,13 +97,7 @@ export default function OrderSelectPage() {
               <TableRow key={order.id}>
                 <TableCell className="font-medium">#{order.orderNumber}</TableCell>
                 <TableCell>{order.productType}</TableCell>
-                <TableCell>
-                  {order.amputationLevel === 'above' ? 'Вище коліна' : 'Нижче коліна'}
-                </TableCell>
-                <TableCell>{order.limbSide === 'left' ? 'Лівий' : 'Правий'}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{order.status}</Badge>
-                </TableCell>
+                <Badge variant="outline">{order.status}</Badge>
                 <TableCell className="text-right">
                   <Button
                     size="sm"
