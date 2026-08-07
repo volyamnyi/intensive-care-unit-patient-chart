@@ -8,13 +8,13 @@ VALUES
 
 INSERT INTO prosthetics_patients (id, pib, birth_date, gender, height_cm, weight_kg, social_status, cause, amputation_date, affected_limb, amputation_level, stump)
 VALUES
-('a0000001-0000-4000-8000-000000000001', 'Сніжко Оксана Володимирівна', '1978-05-12', 'female', 168, 72, 'social', 'trauma', '2025-03-15', 'left', 'upper', '[{"label":"19 см","value":"19"}]'),
-('a0000002-0000-4000-8000-000000000002', 'Гаврилюк Тарас Олексійович', '1985-11-20', 'male', 175, 80, 'social', 'trauma', '2025-06-01', 'right', 'lower', '[{"label":"22 см","value":"22"}]');
+('900001', 'Сніжко Оксана Володимирівна', '1978-05-12', 'female', 168, 72, 'social', 'trauma', '2025-03-15', 'left', 'upper', '[{"label":"19 см","value":"19"}]'),
+('900002', 'Гаврилюк Тарас Олексійович', '1985-11-20', 'male', 175, 80, 'social', 'trauma', '2025-06-01', 'right', 'lower', '[{"label":"22 см","value":"22"}]');
 
 INSERT INTO prosthetics_orders (id, order_number, patient_id, prosthesis_type, product_type, amputation_level, limb_side, doctor_name, prescription_date, materials, status)
 VALUES
-('b0000001-0000-4000-8000-000000000001', 'ПВ-26-0413', 'a0000001-0000-4000-8000-000000000001', 'протез передпліччя', 'upper_limb', 'upper', 'left', 'Бондаренко І.П.', '2026-07-10', '[{"name":"термопласт","qty":2}]', 'NEW'),
-('b0000002-0000-4000-8000-000000000002', 'ПВ-26-0414', 'a0000002-0000-4000-8000-000000000002', 'протез нижньої кінцівки', 'lower_limb', 'lower', 'right', 'Петренко М.С.', '2026-07-12', '[{"name":"карбон","qty":1}]', 'NEW');
+('b0000001-0000-4000-8000-000000000001', 'ПВ-26-0413', '900001', 'протез передпліччя', 'upper_limb', 'upper', 'left', 'Бондаренко І.П.', '2026-07-10', '[{"name":"термопласт","qty":2}]', 'NEW'),
+('b0000002-0000-4000-8000-000000000002', 'ПВ-26-0414', '900002', 'протез нижньої кінцівки', 'lower_limb', 'lower', 'right', 'Петренко М.С.', '2026-07-12', '[{"name":"карбон","qty":1}]', 'NEW');
 
 INSERT INTO prosthetics_flow_templates (id, name, description, template_version, product_type, amputation_level, limb_side, status, estimated_duration_min)
 VALUES

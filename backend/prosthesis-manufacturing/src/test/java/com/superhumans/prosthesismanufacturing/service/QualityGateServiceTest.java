@@ -196,7 +196,7 @@ class QualityGateServiceTest {
     private FlowInstance newInstance(FlowInstanceStatus status) {
         FlowInstance instance = FlowInstance.builder()
                 .templateId(UUID.randomUUID())
-                .patientId(UUID.randomUUID())
+                .patientId("90001")
                 .orderId(UUID.randomUUID())
                 .assignedUserId(1L)
                 .status(status)

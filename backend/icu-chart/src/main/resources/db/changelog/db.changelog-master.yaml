@@ -35,3 +35,6 @@
   - include:
       relativeToChangelogFile: true
       file: changesets/012-role-permissions.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/013-patient-id-digits.sql

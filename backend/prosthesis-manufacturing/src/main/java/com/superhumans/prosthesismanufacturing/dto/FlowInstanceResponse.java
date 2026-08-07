@@ -10,7 +10,7 @@ import java.util.UUID;
 public class FlowInstanceResponse {
     UUID id;
     UUID templateId;
-    UUID patientId;
+    String patientId;
     UUID orderId;
     Long assignedUserId;
     String status;

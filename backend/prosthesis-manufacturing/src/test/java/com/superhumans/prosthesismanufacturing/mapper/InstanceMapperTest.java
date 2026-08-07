@@ -24,7 +24,7 @@ class InstanceMapperTest {
         UUID instanceId = UUID.randomUUID();
         FlowInstance instance = FlowInstance.builder()
                 .templateId(UUID.randomUUID())
-                .patientId(UUID.randomUUID())
+                .patientId("90001")
                 .orderId(UUID.randomUUID())
                 .assignedUserId(21L)
                 .status(FlowInstanceStatus.IN_PROGRESS)
@@ -91,7 +91,7 @@ class InstanceMapperTest {
                 .amputationLevel("передпліччя")
                 .stump("[{\"label\":\"19 см\",\"value\":\"19\"}]")
                 .build();
-        patient.setId(UUID.randomUUID());
+        patient.setId("90001");
 
         ProstheticsPatientResponse response = patientMapper.toResponse(patient);
 
@@ -106,7 +106,7 @@ class InstanceMapperTest {
         ProstheticsPatient patient = ProstheticsPatient.builder()
                 .pib("Сніжко Оксана Володимирівна")
                 .build();
-        patient.setId(UUID.randomUUID());
+        patient.setId("90001");
 
         ProstheticsOrder order = ProstheticsOrder.builder()
                 .orderNumber("ПВ-26-0413")
@@ -136,7 +136,7 @@ class InstanceMapperTest {
         ProstheticsPatient patient = ProstheticsPatient.builder()
                 .pib("Гаврилюк Тарас Олексійович")
                 .build();
-        patient.setId(UUID.randomUUID());
+        patient.setId("90001");
 
         ProstheticsOrder order = ProstheticsOrder.builder()
                 .orderNumber("ПВ-26-0414")

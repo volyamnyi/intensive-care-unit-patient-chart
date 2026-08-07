@@ -308,7 +308,7 @@ class FlowInstanceServiceTest {
     private FlowInstance newInstance(FlowInstanceStatus status, String snapshot) {
         FlowInstance instance = FlowInstance.builder()
                 .templateId(UUID.randomUUID())
-                .patientId(UUID.randomUUID())
+                .patientId("90001")
                 .orderId(UUID.randomUUID())
                 .assignedUserId(1L)
                 .status(status)
@@ -390,7 +390,7 @@ class FlowInstanceServiceTest {
         ProstheticsPatient patient = ProstheticsPatient.builder()
                 .pib("Сніжко Іван Петрович")
                 .build();
-        patient.setId(UUID.randomUUID());
+        patient.setId("90001");
         ProstheticsOrder order = ProstheticsOrder.builder()
                 .orderNumber("PR-2026-0001")
                 .patient(patient)

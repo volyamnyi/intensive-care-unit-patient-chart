@@ -11,7 +11,7 @@ import java.util.UUID;
 public class ProstheticsOrderResponse {
     UUID id;
     String orderNumber;
-    UUID patientId;
+    String patientId;
     String prosthesisType;
     String productType;
     String amputationLevel;

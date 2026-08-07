@@ -30,7 +30,7 @@ public class ProstheticsOrderService {
     AuditService auditService;
 
     @Transactional(readOnly = true)
-    public List<ProstheticsOrderResponse> list(UUID patientId, String status) {
+    public List<ProstheticsOrderResponse> list(String patientId, String status) {
         List<ProstheticsOrder> orders;
         if (patientId != null && status != null) {
             orders = orderRepository.findByPatientIdAndStatus(patientId, OrderStatus.valueOf(status));

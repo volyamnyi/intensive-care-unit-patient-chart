@@ -11,8 +11,8 @@ import java.util.UUID;
 
 @Repository
 public interface ProstheticsOrderRepository extends JpaRepository<ProstheticsOrder, UUID> {
-    List<ProstheticsOrder> findByPatientId(UUID patientId);
-    List<ProstheticsOrder> findByPatientIdAndStatus(UUID patientId, OrderStatus status);
+    List<ProstheticsOrder> findByPatientId(String patientId);
+    List<ProstheticsOrder> findByPatientIdAndStatus(String patientId, OrderStatus status);
     List<ProstheticsOrder> findByStatus(OrderStatus status);
     Optional<ProstheticsOrder> findByOrderNumber(String orderNumber);
 }

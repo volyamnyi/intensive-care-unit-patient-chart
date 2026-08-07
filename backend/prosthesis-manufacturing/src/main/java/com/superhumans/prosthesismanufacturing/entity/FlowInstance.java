@@ -20,8 +20,8 @@ public class FlowInstance extends BaseEntity {
     @Column(name = "template_id", nullable = false)
     UUID templateId;
 
-    @Column(name = "patient_id")
-    UUID patientId;
+    @Column(name = "patient_id", length = 32)
+    String patientId;
 
     @Column(name = "order_id", nullable = false)
     UUID orderId;

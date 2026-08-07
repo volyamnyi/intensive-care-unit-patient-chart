@@ -4,6 +4,7 @@ import com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse;
 import com.superhumans.prosthesismanufacturing.service.ProstheticsOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Pattern;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @RequestMapping("/api/prosthesis-manufacturing/orders")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Validated
 @Tag(name = "Prosthetics orders", description = "Read-only order registry (Doctor Eleks)")
 public class ProstheticsOrderController {
 
@@ -35,7 +38,8 @@ public class ProstheticsOrderController {
     @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "List orders")
     public List<ProstheticsOrderResponse> list(
-            @RequestParam(required = false) UUID patientId,
+            @RequestParam(required = false) @Pattern(regexp = "\\d+",
+                    message = "ID пацієнта має містити лише цифри") String patientId,
             @RequestParam(required = false) String status) {
         return orderService.list(patientId, status);
     }

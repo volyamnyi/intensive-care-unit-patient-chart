@@ -294,7 +294,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       logStep('Select patient — clicking "Обрати" auto-navigates to order selection');
       
       // In the actual implementation, clicking "Обрати" navigates directly to order selection
-      await setupWizardPage.selectPatient('a0000001-0000-0000-0000-000000000001');
+      await setupWizardPage.selectPatient('900001');
       log('✓ Patient selected');
       
       // Verify auto-navigation to order selection
@@ -708,7 +708,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       await page.waitForURL('**/prosthetics/new/select-patient', { timeout: 10000 });
       
       await setupWizardPage.searchPatientAndWaitForResults('Сніжко');
-      await setupWizardPage.selectPatient('a0000001-0000-0000-0000-000000000001');
+      await setupWizardPage.selectPatient('900001');
       
       // After selecting patient, auto-navigates to order selection
       await page.waitForURL('**/prosthetics/new/select-order', { timeout: 10000 });
@@ -732,7 +732,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       
       // Verify the draft context (patientId) is preserved by selecting again
       if (count > 0) {
-        await setupWizardPage.selectPatient('a0000001-0000-0000-0000-000000000001');
+        await setupWizardPage.selectPatient('900001');
         await page.waitForURL('**/prosthetics/new/select-order', { timeout: 10000 });
         log('✅ Patient selection preserved after back navigation (session context works)');
       }
@@ -760,7 +760,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       await page.waitForURL('**/prosthetics/new/select-patient', { timeout: 10000 });
       
       await setupWizardPage.searchPatientAndWaitForResults('Сніжко');
-      await setupWizardPage.selectPatient('a0000001-0000-0000-0000-000000000001');
+      await setupWizardPage.selectPatient('900001');
       await page.waitForURL('**/prosthetics/new/select-order', { timeout: 10000 });
       
       await setupWizardPage.selectOrder('b0000001-0000-0000-0000-000000000001');

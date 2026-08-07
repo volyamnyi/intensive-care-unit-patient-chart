@@ -234,8 +234,8 @@ Mock MIS provides 5 test patients: Петренко, Коваленко, Сид�
 Prosthetics seed patients (local mock tables, not MIS):
 | Patient | ID | Order | Template |
 |---|---|---|---|
-| Сніжко Оксана Володимирівна | `a0000001...` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
-| Гаврилюк Тарас Олексійович | `a0000002...` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
+| Сніжко Оксана Володимирівна | `900001` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
+| Гаврилюк Тарас Олексійович | `900002` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
 
 3 seed episodes with 4 clinical days:
 

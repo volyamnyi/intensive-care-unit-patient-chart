@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +34,7 @@ public class ProstheticsPatientService {
     }
 
     @Transactional(readOnly = true)
-    public ProstheticsPatientResponse get(UUID id) {
+    public ProstheticsPatientResponse get(String id) {
         return patientRepository.findById(id)
                 .map(patientMapper::toResponse)
                 .orElseThrow(() -> new NotFoundException("Patient not found: " + id));
