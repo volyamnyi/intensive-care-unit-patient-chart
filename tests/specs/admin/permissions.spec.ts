@@ -41,12 +41,12 @@ test.describe('Role & permission management', () => {
     await expect(page.getByText('Керування шаблонами')).toBeVisible();
 
     // Default matrix: DOCTOR may create episodes, NURSE may not
-    await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Лікар' })).toBeChecked();
-    await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Медсестра' })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Лікар', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Медсестра', exact: true })).not.toBeChecked();
 
     // Admin cannot create episodes (matrix) and has audit access
-    await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Адміністратор' })).not.toBeChecked();
-    await expect(page.getByRole('checkbox', { name: 'Журнал аудиту — Адміністратор' })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Адміністратор', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Журнал аудиту — Адміністратор', exact: true })).toBeChecked();
 
     // Save button disabled while nothing is dirty
     await expect(page.getByRole('button', { name: 'Зберегти зміни' })).toBeDisabled();
