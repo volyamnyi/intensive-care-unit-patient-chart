@@ -11,6 +11,7 @@ const mockToggleTheme = vi.fn();
 
 let mockUser = { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR' };
 let mockHasRole = (...roles: string[]) => roles.includes('DOCTOR');
+let mockHasPermission = () => true;
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -24,6 +25,7 @@ vi.mock('../../services/AuthContext', () => ({
     isAuthenticated: true,
     logout: mockLogout,
     hasRole: mockHasRole,
+    hasPermission: mockHasPermission,
   }),
 }));
 
