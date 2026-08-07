@@ -222,4 +222,50 @@ describe('App', () => {
     });
     expect(screen.queryByText('Prosthetics Dashboard')).not.toBeInTheDocument();
   });
+
+  it('renders the ICU module for ADMINISTRATOR granted MODULE_ICU_ACCESS', async () => {
+    mockUser = { id: 3, login: 'admin', fullName: 'Адмін', role: 'ADMINISTRATOR' };
+    mockHasRole = () => false;
+    mockHasPermission = (...perms: string[]) => perms.includes('MODULE_ICU_ACCESS');
+    window.history.pushState({}, '', '/icu/doctor');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('Global Layout')).toBeInTheDocument();
+    });
+  });
+
+  it('renders the medication module for ADMINISTRATOR granted MODULE_MEDICATION_ACCESS', async () => {
+    mockUser = { id: 3, login: 'admin', fullName: 'Адмін', role: 'ADMINISTRATOR' };
+    mockHasRole = () => false;
+    mockHasPermission = (...perms: string[]) => perms.includes('MODULE_MEDICATION_ACCESS');
+    window.history.pushState({}, '', '/prescriptions/doctor');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('Prescription Page')).toBeInTheDocument();
+    });
+  });
+
+  it('keeps the nurse sub-route exclusive from DOCTOR even when holding MODULE_ICU_ACCESS', async () => {
+    mockUser = { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR' };
+    mockHasRole = (...roles: string[]) => roles.includes('DOCTOR') || roles.includes('HEAD_OF_DEPARTMENT');
+    mockHasPermission = () => true; // DOCTOR holds MODULE_ICU_ACCESS in the default matrix
+    window.history.pushState({}, '', '/icu/nurse');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('App Selector')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Nurse Dashboard')).not.toBeInTheDocument();
+  });
+
+  it('keeps the doctor sub-route exclusive from NURSE even when holding MODULE_ICU_ACCESS', async () => {
+    mockUser = { id: 2, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE' };
+    mockHasRole = (...roles: string[]) => roles.includes('NURSE');
+    mockHasPermission = () => true; // NURSE holds MODULE_ICU_ACCESS in the default matrix
+    window.history.pushState({}, '', '/icu/doctor');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('App Selector')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Doctor Dashboard')).not.toBeInTheDocument();
+  });
 });

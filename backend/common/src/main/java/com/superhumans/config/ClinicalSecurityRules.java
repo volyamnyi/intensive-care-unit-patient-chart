@@ -1,20 +1,91 @@
 package com.superhumans.config;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
+import org.springframework.security.web.access.expression.DefaultHttpSecurityExpressionHandler;
+import org.springframework.security.web.access.expression.WebExpressionAuthorizationManager;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 
 @Configuration
-public class ClinicalSecurityRules implements SecurityRuleContributor {
+public class ClinicalSecurityRules implements SecurityRuleContributor, ApplicationContextAware {
 
     static final String[] CLINICAL_ROLES = {"DOCTOR", "NURSE", "HEAD_OF_DEPARTMENT", "ADMINISTRATOR", "ADJACENT_SPECIALIST", "PROSTHETIST", "PROSTHETICS_ADMINISTRATOR"};
+
+    /**
+     * Roles that read the clinical modules by role (no module permission needed).
+     * ADMINISTRATOR/PROSTHETIST/PROSTHETICS_ADMINISTRATOR are deliberately NOT
+     * here: for them the admin matrix checkbox (MODULE_*_ACCESS) is the gate.
+     */
+    static final String CLINICAL_CORE_SPEL =
+            "hasAnyRole('DOCTOR','NURSE','HEAD_OF_DEPARTMENT','ADJACENT_SPECIALIST')";
+
+    /** Read access to the ICU chart module: clinical core roles OR the matrix checkbox. */
+    static final String ICU_READ_SPEL =
+            CLINICAL_CORE_SPEL + " or @permissionService.has('MODULE_ICU_ACCESS')";
+
+    /** Read access to the medication sheet module: clinical core roles OR the matrix checkbox. */
+    static final String MEDICATION_READ_SPEL =
+            CLINICAL_CORE_SPEL + " or @permissionService.has('MODULE_MEDICATION_ACCESS')";
+
+    /** Patient search is shared by the ICU and medication modules. */
+    static final String ICU_OR_MEDICATION_READ_SPEL = CLINICAL_CORE_SPEL
+            + " or @permissionService.hasAny('MODULE_ICU_ACCESS','MODULE_MEDICATION_ACCESS')";
+
+    /** User directory reads: clinical core roles or the admin module permission. */
+    static final String USERS_READ_SPEL =
+            CLINICAL_CORE_SPEL + " or @permissionService.has('MODULE_ADMIN_ACCESS')";
+
+    private ApplicationContext applicationContext;
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+
+    /**
+     * Builds an {@link AuthorizationManager} from a SpEL expression. Spring
+     * Security 7 removed {@code access(String)}, so the expression must be
+     * wrapped: the {@link DefaultHttpSecurityExpressionHandler} gets the
+     * application context (enabling {@code @permissionService} bean references)
+     * and evaluates {@code hasAnyRole(...)} against the current authentication.
+     */
+    private AuthorizationManager<RequestAuthorizationContext> spEl(String expression) {
+        DefaultHttpSecurityExpressionHandler handler = new DefaultHttpSecurityExpressionHandler();
+        handler.setApplicationContext(this.applicationContext);
+        WebExpressionAuthorizationManager manager = new WebExpressionAuthorizationManager(expression);
+        manager.setExpressionHandler(handler);
+        return manager;
+    }
 
     @Override
     public void contribute(
             AuthorizeHttpRequestsConfigurer<HttpSecurity>
                     .AuthorizationManagerRequestMatcherRegistry registry) {
         registry
+                // ---- Module-visit read rules (dynamic RBAC) ----
+                // The admin matrix checkbox (MODULE_*_ACCESS) grants a role the
+                // ability to VISIT the module: the frontend gates the routes by
+                // the same permissions, and the module's read paths accept them
+                // here. Clinical core roles keep their read access by role;
+                // write endpoints remain gated by the ceiling + @PreAuthorize.
+                .requestMatchers(HttpMethod.GET, "/api/episodes/**").access(spEl(ICU_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/clinical-days/**").access(spEl(ICU_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/notes/**").access(spEl(ICU_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/scales/**").access(spEl(ICU_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/hourly-records/**").access(spEl(ICU_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/orders/**").access(spEl(ICU_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/patients/**").access(spEl(ICU_OR_MEDICATION_READ_SPEL))
+                // /api/users/me + /api/users/me/permissions must load for every
+                // authenticated user (AuthContext), regardless of role or matrix.
+                .requestMatchers(HttpMethod.GET, "/api/users/me/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/users/**").access(spEl(USERS_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/prescriptions/**").access(spEl(MEDICATION_READ_SPEL))
+                .requestMatchers(HttpMethod.GET, "/api/vital-signs/**").access(spEl(ICU_READ_SPEL))
                 // Episode management. URL rules act as a ceiling only; the precise
                 // matrix (which roles may actually create) is enforced dynamically
                 // by @PreAuthorize("@permissionService.has('...')") so that admin

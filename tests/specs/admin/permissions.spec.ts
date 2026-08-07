@@ -32,6 +32,14 @@ async function setDoctorModuleAccess(request: APIRequestContext, headers: Record
   expect(res.ok()).toBeTruthy();
 }
 
+async function setAdminModuleAccess(request: APIRequestContext, headers: Record<string, string>, code: string, granted: boolean) {
+  const res = await request.put('/api/admin/permissions', {
+    headers,
+    data: { role: 'ADMINISTRATOR', permissionCode: code, granted },
+  });
+  expect(res.ok()).toBeTruthy();
+}
+
 test.describe('Role & permission management', () => {
   test('admin can view the access matrix and the defaults match the specification', async ({ page }) => {
     await page.goto('/admin');
@@ -53,6 +61,11 @@ test.describe('Role & permission management', () => {
     await expect(page.getByRole('checkbox', { name: 'Модуль: Виробництво протезів — Протезист', exact: true })).toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'Модуль: Виробництво протезів — Лікар', exact: true })).not.toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'Модуль: Адміністрування — Адміністратор', exact: true })).toBeChecked();
+
+    // Default matrix: clinical modules are NOT granted to ADMINISTRATOR — the
+    // checkbox in the matrix is exactly what opens them (module-visit permission).
+    await expect(page.getByRole('checkbox', { name: 'Модуль: Карта інтенсивної терапії — Адміністратор', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Модуль: Листок лікарських призначень — Адміністратор', exact: true })).not.toBeChecked();
 
     // Default matrix: DOCTOR may create episodes, NURSE may not
     await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Лікар', exact: true })).toBeChecked();
@@ -115,9 +128,51 @@ test.describe('Role & permission management', () => {
     }
   });
 
+  test('granting the ICU module permission to ADMINISTRATOR reveals the module and allows navigation', async ({ request, browser }) => {
+    const adminHeaders = await login(request, ADMIN);
+    await setAdminModuleAccess(request, adminHeaders, 'MODULE_ICU_ACCESS', true);
+
+    // Fresh admin context: permissions are re-fetched on page load, so the grant applies.
+    const ctx = await browser.newContext({ storageState: '.auth/admin.json' });
+    const page = await ctx.newPage();
+    try {
+      await page.goto('/select');
+      const sidebarLink = page.getByRole('link', { name: 'Карта інтенсивної терапії' });
+      await expect(sidebarLink).toBeVisible({ timeout: 10000 });
+
+      // The admin lands on the doctor view of the module (route guard + read APIs).
+      await sidebarLink.click();
+      await expect(page.getByRole('heading', { name: 'Активні пацієнти' })).toBeVisible({ timeout: 10000 });
+    } finally {
+      await ctx.close();
+      await setAdminModuleAccess(request, adminHeaders, 'MODULE_ICU_ACCESS', false);
+    }
+  });
+
+  test('granting the medication module permission to ADMINISTRATOR allows navigation into it', async ({ request, browser }) => {
+    const adminHeaders = await login(request, ADMIN);
+    await setAdminModuleAccess(request, adminHeaders, 'MODULE_MEDICATION_ACCESS', true);
+
+    const ctx = await browser.newContext({ storageState: '.auth/admin.json' });
+    const page = await ctx.newPage();
+    try {
+      await page.goto('/select');
+      const sidebarLink = page.getByRole('link', { name: 'Листок лікарських призначень' });
+      await expect(sidebarLink).toBeVisible({ timeout: 10000 });
+
+      await sidebarLink.click();
+      await expect(page.getByRole('heading', { name: 'Листок лікарських призначень' })).toBeVisible({ timeout: 10000 });
+    } finally {
+      await ctx.close();
+      await setAdminModuleAccess(request, adminHeaders, 'MODULE_MEDICATION_ACCESS', false);
+    }
+  });
+
   test.afterEach(async ({ request }) => {
     // Restore the default matrix even if the test failed mid-way
     const adminHeaders = await login(request, ADMIN);
     await setNurseEpisodeCreate(request, adminHeaders, false);
+    await setAdminModuleAccess(request, adminHeaders, 'MODULE_ICU_ACCESS', false);
+    await setAdminModuleAccess(request, adminHeaders, 'MODULE_MEDICATION_ACCESS', false);
   });
 });

@@ -32,16 +32,22 @@ import { ProstheticsProvider } from './prosthetics/ProstheticsContext';
 
 // Module-navigation permissions from the dynamic RBAC matrix (PermissionCatalog).
 // MODULE_PROSTHETICS_ACCESS / MODULE_ADMIN_ACCESS gate navigation into those
-// modules (role OR permission); ICU/medication module permissions drive the
-// sidebar/selector visibility while their routes stay role-scoped.
+// modules (role OR permission). For the clinical modules the permission grants
+// entry to roles with no native sub-view (e.g. ADMINISTRATOR with
+// MODULE_ICU_ACCESS enters /icu/doctor); role-scoped sibling views stay
+// exclusive via excludeRoles (a DOCTOR cannot land on /icu/nurse).
+const MODULE_ICU = 'MODULE_ICU_ACCESS';
+const MODULE_MEDICATION = 'MODULE_MEDICATION_ACCESS';
 const MODULE_PROSTHETICS = 'MODULE_PROSTHETICS_ACCESS';
 const MODULE_ADMIN = 'MODULE_ADMIN_ACCESS';
 
-function Guard({ children, roles, permissions }: {
+function Guard({ children, roles, permissions, excludeRoles }: {
   children: React.ReactNode;
   roles?: string[];
   /** Module-navigation permissions (dynamic RBAC): access is granted by role OR by permission. */
   permissions?: string[];
+  /** Roles that may NOT use the permission path — role-scoped sibling views stay exclusive. */
+  excludeRoles?: string[];
 }) {
   const { isAuthenticated, hasRole, hasPermission, user, loading } = useAuth();
   const navigate = useNavigate();
@@ -50,7 +56,8 @@ function Guard({ children, roles, permissions }: {
 
   const allowed = () => {
     if (roles && roles.length > 0 && hasRole(...roles)) return true;
-    if (permissions && permissions.some((p) => hasPermission(p))) return true;
+    if (permissions && permissions.some((p) => hasPermission(p))
+        && (!excludeRoles || !excludeRoles.some((r) => hasRole(r)))) return true;
     return false;
   };
 
@@ -127,7 +134,7 @@ function AppRoutes() {
 
         <Route path="/icu">
           <Route path="doctor" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_ICU]} excludeRoles={['NURSE']}>
               <DoctorLayout />
             </Guard>
           }>
@@ -142,7 +149,7 @@ function AppRoutes() {
           </Route>
 
           <Route path="nurse" element={
-            <Guard roles={['NURSE']}>
+            <Guard roles={['NURSE']} permissions={[MODULE_ICU]} excludeRoles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
               <NurseLayout />
             </Guard>
           }>
@@ -153,22 +160,22 @@ function AppRoutes() {
 
         <Route path="/prescriptions">
           <Route path="doctor" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_MEDICATION]} excludeRoles={['NURSE']}>
               <PrescriptionPage />
             </Guard>
           } />
           <Route path="doctor/:id" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_MEDICATION]} excludeRoles={['NURSE']}>
               <PrescriptionDetailPage />
             </Guard>
           } />
           <Route path="nurse" element={
-            <Guard roles={['NURSE']}>
+            <Guard roles={['NURSE']} permissions={[MODULE_MEDICATION]} excludeRoles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
               <NursePrescriptionPage />
             </Guard>
           } />
           <Route path="nurse/:id" element={
-            <Guard roles={['NURSE']}>
+            <Guard roles={['NURSE']} permissions={[MODULE_MEDICATION]} excludeRoles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
               <PrescriptionDetailPage />
             </Guard>
           } />

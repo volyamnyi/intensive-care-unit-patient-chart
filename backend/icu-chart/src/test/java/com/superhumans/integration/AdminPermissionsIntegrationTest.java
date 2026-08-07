@@ -61,7 +61,8 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         assertThat(body.getGrants().get("HEAD_OF_DEPARTMENT")).contains("REOPEN_DAY");
         assertThat(body.getGrants().get("ADMINISTRATOR"))
                 .contains("PATIENT_VIEW", "AUDIT_ACCESS")
-                .doesNotContain(EPISODE_CREATE);
+                .doesNotContain(EPISODE_CREATE, "MODULE_ICU_ACCESS", "MODULE_MEDICATION_ACCESS",
+                        "MODULE_PROSTHETICS_ACCESS");
         assertThat(body.getGrants().get("PROSTHETICS_ADMINISTRATOR"))
                 .contains("PROSTHETICS_GATE_DECISION", "PROSTHETICS_TEMPLATE_MANAGE");
         assertThat(body.getGrants().get("PROSTHETIST"))
@@ -113,6 +114,26 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         assertThat(after.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    @Test
+    @Order(5)
+    void modulePermission_opensClinicalReadsForNonClinicalRole() {
+        // AUDITOR sits outside the clinical role ceiling (ClinicalSecurityRules):
+        // without the matrix checkbox the ICU module read paths are forbidden.
+        changeRolePermission("AUDITOR", "MODULE_ICU_ACCESS", false);
+        var before = episodesAsAuditor();
+        assertThat(before.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // Checking the module checkbox in the admin matrix opens the reads...
+        changeRolePermission("AUDITOR", "MODULE_ICU_ACCESS", true);
+        var granted = episodesAsAuditor();
+        assertThat(granted.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // ...and unchecking it closes them again.
+        changeRolePermission("AUDITOR", "MODULE_ICU_ACCESS", false);
+        var after = episodesAsAuditor();
+        assertThat(after.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
     private ResponseEntity<PermissionMatrixResponse> exchangeMatrix() {
         return restTemplate.exchange("/api/admin/permissions", HttpMethod.GET,
                 authGet(getAdminToken()), PermissionMatrixResponse.class);
@@ -146,5 +167,11 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
                 "templateId", "00000000-0000-0000-0000-000000000002");
         return restTemplate.exchange("/api/prosthesis-manufacturing/instances", HttpMethod.POST,
                 new HttpEntity<>(body, authHeaders(getDoctorToken())), String.class);
+    }
+
+    private ResponseEntity<String> episodesAsAuditor() {
+        // auditor1 reuses doctor1's bcrypt hash, so the password is 'doctor123'.
+        return restTemplate.exchange("/api/episodes", HttpMethod.GET,
+                authGet(loginAs("auditor1", "doctor123")), String.class);
     }
 }

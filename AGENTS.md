@@ -1,15 +1,14 @@
 # ICU Patient Chart — AI Agent Guide
 
-## CI RULE (ALWAYS ASK USER RUN CI VIA GITHUB OR EXECUTE TESTS LOCALLY)
+## CI RULE (EXECUTE TEST SUITE (UNIT, INTEGRATION, PLAYWRIGHT E2E TESTS) ONLY LOCALLY)
 
 **TESTS RUNNING.** The only valid testing workflow is:
 
 ```
-ASK USER RUN LOCALLY OR 
-GitHub Issue → implement → commit → push to main → CI workflow runs → poll for results
+ASK USER RUN LOCALLY OR execute workflow: EXECUTE TEST SUITE (UNIT, INTEGRATION, PLAYWRIGHT E2E TESTS) -> FIX FAILURES -> RUN TESTS AGAIN IF FAILS -> COMMIT AND PUSH IF ALL TESTS ARE GREEN
 ```
 
-CI runs ALL test suites: unit tests, integration tests, Playwright E2E.
+ALL test suites: unit tests, integration tests, Playwright E2E.
 Local `mvn test` is FORBIDDEN. Local `mvn compile` is permitted for verifying compilation only.
 This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
@@ -26,7 +25,8 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 Full role-based access control with an admin-editable matrix. `permissions` + `role_permissions` tables (Liquibase `012-role-permissions.sql`), seeded by `PermissionService` on first boot when empty (definitions also SQL-seeded with `ON CONFLICT DO UPDATE`; grants are Java-seeded — edits persist across restarts since seeding only fires when the tables are empty).
 
 - **Enforcement**: URL ceilings in `ClinicalSecurityRules` widened to `CLINICAL_ROLES` (write endpoints), precise enforcement via `@PreAuthorize("@permissionService.has('CODE')")` on controllers (icu-chart, medication-sheet, prosthesis-manufacturing). 403 (not 500) via the existing `AuthorizationDeniedException` handler.
-- **Matrix** (defaults): DOCTOR/HOD — episode, clinical day, prescriptions, sign doctor, APACHE II/SOFA + CAM-ICU/Браден/RASS, patient view; NURSE — sign nurse, execute prescriptions, vitals, CAM-ICU/Браден/RASS, patient view; HOD — reopen day (only); ADMIN — patient view + audit access; PROSTHETIST — dashboard/instance/step/pause; PROSTHETICS_ADMIN — prosthetics + gate + templates + orders. HOD removed from prosthetics guards (backend + `App.tsx` routes).
+- **Module path operations**: the `MODULE_*_ACCESS` checkboxes in the matrix grant the ability to VISIT a module end to end. Frontend: the `Guard` accepts `permissions` (role OR permission); role-scoped sibling sub-views stay exclusive via `excludeRoles` (a DOCTOR holding `MODULE_ICU_ACCESS` still cannot land on `/icu/nurse`; a NURSE cannot land on `/icu/doctor`; a non-clinical role granted `MODULE_ICU_ACCESS`/`MODULE_MEDICATION_ACCESS` enters via `/icu/doctor`/`/prescriptions/doctor`). Backend: `ClinicalSecurityRules` read rules accept the module permission for the module's GET paths (`access("hasAnyRole(CLINICAL_CORE) or @permissionService.has('MODULE_*_ACCESS')")`) — `CLINICAL_CORE` = DOCTOR/NURSE/HEAD_OF_DEPARTMENT/ADJACENT_SPECIALIST, so ADMINISTRATOR/PROSTHETIST/PROSTHETICS_ADMINISTRATOR read clinical modules only when the checkbox is checked; `GET /api/users/me/**` is `authenticated()` (AuthContext), `GET /api/users/**` needs clinical core or `MODULE_ADMIN_ACCESS`; writes stay ceiling+`@PreAuthorize` gated.
+- **Matrix** (defaults): DOCTOR/HOD — episode, clinical day, prescriptions, sign doctor, APACHE II/SOFA + CAM-ICU/Браден/RASS, patient view, modules ICU + medication; NURSE — sign nurse, execute prescriptions, vitals, CAM-ICU/Браден/RASS, patient view, modules ICU + medication; HOD — reopen day (only); ADMIN — patient view + audit access + module «Адміністрування» only (clinical modules are NOT granted by default — the checkbox opens them); PROSTHETIST — dashboard/instance/step/pause + module prosthetics; PROSTHETICS_ADMIN — prosthetics + gate + templates + orders + module prosthetics. HOD removed from prosthetics guards (backend + `App.tsx` routes).
 - **Admin UI**: `AdminPage` new tab «Доступи та ролі» — matrix editor (checkbox grid grouped by category, dirty tracking, «Зберегти зміни» diff-saves via `PUT /api/admin/permissions`). Audit tab «Переглянути» gated by `AUDIT_ACCESS` permission. Role dropdown extended with PROSTHETIST / PROSTHETICS_ADMINISTRATOR.
 - **API**: `GET /api/admin/permissions` (matrix), `PUT /api/admin/permissions` (grant/revoke, body `{role, permissionCode, granted}`), `GET /api/users/me/permissions` (effective codes for current role). `AuthContext` loads effective permissions and `hasPermission` is matrix-based.
 - **Tests**: `PermissionServiceTest` (common unit), `AdminPermissionsIntegrationTest` (grant → 403→400→403 enforcement cycle), E2E `tests/specs/admin/permissions.spec.ts` (UI matrix view + grant/revoke enforcement, serialized).
