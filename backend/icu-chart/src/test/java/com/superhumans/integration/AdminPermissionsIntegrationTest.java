@@ -6,6 +6,7 @@ import com.superhumans.dto.EpisodeCreateRequest;
 import com.superhumans.dto.PermissionMatrixResponse;
 import com.superhumans.dto.RolePermissionUpdateRequest;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -43,7 +44,9 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         assertThat(res.getBody().getPermissions())
                 .extracting(p -> p.getCode())
                 .contains(EPISODE_CREATE, "PRESCRIPTION_CREATE", "VITALS_ENTER",
-                        "PROSTHETICS_GATE_DECISION", "AUDIT_ACCESS");
+                        "PROSTHETICS_GATE_DECISION", "AUDIT_ACCESS",
+                        "MODULE_ICU_ACCESS", "MODULE_MEDICATION_ACCESS",
+                        "MODULE_PROSTHETICS_ACCESS", "MODULE_ADMIN_ACCESS");
     }
 
     @Test
@@ -87,6 +90,29 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         assertThat(after.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    @Test
+    @Order(4)
+    void moduleAccessPermission_enablesReadOnlyModuleNavigation() {
+        // Baseline: doctor is denied read access to the prosthetics module.
+        changeRolePermission("DOCTOR", "MODULE_PROSTHETICS_ACCESS", false);
+        var before = prostheticsTemplatesAsDoctor();
+        assertThat(before.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // Grant the module-navigation permission -> reads become available...
+        changeRolePermission("DOCTOR", "MODULE_PROSTHETICS_ACCESS", true);
+        var granted = prostheticsTemplatesAsDoctor();
+        assertThat(granted.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // ...but write operations still require the specific prosthetics permission.
+        var create = createInstanceAsDoctor();
+        assertThat(create.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // Revoke -> read access is denied again.
+        changeRolePermission("DOCTOR", "MODULE_PROSTHETICS_ACCESS", false);
+        var after = prostheticsTemplatesAsDoctor();
+        assertThat(after.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
     private ResponseEntity<PermissionMatrixResponse> exchangeMatrix() {
         return restTemplate.exchange("/api/admin/permissions", HttpMethod.GET,
                 authGet(getAdminToken()), PermissionMatrixResponse.class);
@@ -107,5 +133,18 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
                 1L, UUID.randomUUID(), null, LocalDateTime.now(), null, null, null, null, null);
         return restTemplate.exchange("/api/episodes", HttpMethod.POST,
                 new HttpEntity<>(request, authHeaders(getNurseToken())), String.class);
+    }
+
+    private ResponseEntity<String> prostheticsTemplatesAsDoctor() {
+        return restTemplate.exchange("/api/prosthesis-manufacturing/templates", HttpMethod.GET,
+                authGet(getDoctorToken()), String.class);
+    }
+
+    private ResponseEntity<String> createInstanceAsDoctor() {
+        var body = Map.of(
+                "orderId", "00000000-0000-0000-0000-000000000001",
+                "templateId", "00000000-0000-0000-0000-000000000002");
+        return restTemplate.exchange("/api/prosthesis-manufacturing/instances", HttpMethod.POST,
+                new HttpEntity<>(body, authHeaders(getDoctorToken())), String.class);
     }
 }

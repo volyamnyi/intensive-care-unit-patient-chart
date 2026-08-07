@@ -45,6 +45,12 @@ public final class PermissionCatalog {
     public static final String PROSTHETICS_TEMPLATE_MANAGE = "PROSTHETICS_TEMPLATE_MANAGE";
     public static final String PROSTHETICS_ORDER_MANAGE = "PROSTHETICS_ORDER_MANAGE";
 
+    // Module navigation (routing between sub-applications)
+    public static final String MODULE_ICU_ACCESS = "MODULE_ICU_ACCESS";
+    public static final String MODULE_MEDICATION_ACCESS = "MODULE_MEDICATION_ACCESS";
+    public static final String MODULE_PROSTHETICS_ACCESS = "MODULE_PROSTHETICS_ACCESS";
+    public static final String MODULE_ADMIN_ACCESS = "MODULE_ADMIN_ACCESS";
+
     /** A single permission definition shown in the admin matrix UI. */
     public record Def(String code, String label, String description, String category) {
     }
@@ -52,6 +58,7 @@ public final class PermissionCatalog {
     private static final String CLINICAL = "Клінічні операції";
     private static final String ADMINISTRATION = "Адміністрування";
     private static final String PROSTHETICS = "Протезування";
+    private static final String MODULES = "Модулі";
 
     private static final List<Def> DEFINITIONS = List.of(
             new Def(EPISODE_CREATE, "Створення епізоду",
@@ -93,7 +100,15 @@ public final class PermissionCatalog {
             new Def(PROSTHETICS_TEMPLATE_MANAGE, "Керування шаблонами",
                     "Створення та редагування шаблонів технологічних процесів", PROSTHETICS),
             new Def(PROSTHETICS_ORDER_MANAGE, "Пацієнти та замовлення",
-                    "Створення пацієнтів і замовлень протезування", PROSTHETICS));
+                    "Створення пацієнтів і замовлень протезування", PROSTHETICS),
+            new Def(MODULE_ICU_ACCESS, "Модуль: Карта інтенсивної терапії",
+                    "Навігація до модуля карти інтенсивної терапії (лікар / медсестра)", MODULES),
+            new Def(MODULE_MEDICATION_ACCESS, "Модуль: Листок лікарських призначень",
+                    "Навігація до модуля листка лікарських призначень", MODULES),
+            new Def(MODULE_PROSTHETICS_ACCESS, "Модуль: Виробництво протезів",
+                    "Навігація до модуля виробництва протезів (перегляд процесів)", MODULES),
+            new Def(MODULE_ADMIN_ACCESS, "Модуль: Адміністрування",
+                    "Навігація до адміністративної панелі", MODULES));
 
     /**
      * Default role-permission matrix, aligned with the approved access table.
@@ -104,28 +119,32 @@ public final class PermissionCatalog {
             Map.entry(UserRole.DOCTOR, Set.of(
                     EPISODE_CREATE, CLINICAL_DAY_CREATE, SIGN_DOCTOR,
                     PRESCRIPTION_CREATE, PATIENT_VIEW,
-                    SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS)),
+                    SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS,
+                    MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.NURSE, Set.of(
                     SIGN_NURSE, PRESCRIPTION_EXECUTE, VITALS_ENTER,
-                    PATIENT_VIEW, SCALE_CAMICU_BRADEN_RASS)),
+                    PATIENT_VIEW, SCALE_CAMICU_BRADEN_RASS,
+                    MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.HEAD_OF_DEPARTMENT, Set.of(
                     EPISODE_CREATE, CLINICAL_DAY_CREATE, SIGN_DOCTOR, REOPEN_DAY,
                     PRESCRIPTION_CREATE, PATIENT_VIEW,
-                    SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS)),
+                    SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS,
+                    MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.ADMINISTRATOR, Set.of(
-                    PATIENT_VIEW, AUDIT_ACCESS)),
+                    PATIENT_VIEW, AUDIT_ACCESS, MODULE_ADMIN_ACCESS)),
             Map.entry(UserRole.AUDITOR, Set.of(
-                    AUDITOR_VIEW)),
+                    AUDITOR_VIEW, MODULE_ADMIN_ACCESS)),
             Map.entry(UserRole.ADJACENT_SPECIALIST, Set.of(
                     PATIENT_VIEW)),
             Map.entry(UserRole.PROSTHETIST, Set.of(
                     PROSTHETICS_DASHBOARD, PROSTHETICS_INSTANCE_CREATE,
-                    PROSTHETICS_STEP_COMPLETE, PROSTHETICS_PAUSE_RESUME)),
+                    PROSTHETICS_STEP_COMPLETE, PROSTHETICS_PAUSE_RESUME,
+                    MODULE_PROSTHETICS_ACCESS)),
             Map.entry(UserRole.PROSTHETICS_ADMINISTRATOR, Set.of(
                     PROSTHETICS_DASHBOARD, PROSTHETICS_INSTANCE_CREATE,
                     PROSTHETICS_STEP_COMPLETE, PROSTHETICS_PAUSE_RESUME,
                     PROSTHETICS_GATE_DECISION, PROSTHETICS_TEMPLATE_MANAGE,
-                    PROSTHETICS_ORDER_MANAGE)));
+                    PROSTHETICS_ORDER_MANAGE, MODULE_PROSTHETICS_ACCESS)));
 
     public static List<Def> definitions() {
         return DEFINITIONS;

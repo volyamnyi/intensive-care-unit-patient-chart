@@ -24,6 +24,14 @@ async function setNurseEpisodeCreate(request: APIRequestContext, headers: Record
   expect(res.ok()).toBeTruthy();
 }
 
+async function setDoctorModuleAccess(request: APIRequestContext, headers: Record<string, string>, granted: boolean) {
+  const res = await request.put('/api/admin/permissions', {
+    headers,
+    data: { role: 'DOCTOR', permissionCode: 'MODULE_PROSTHETICS_ACCESS', granted },
+  });
+  expect(res.ok()).toBeTruthy();
+}
+
 test.describe('Role & permission management', () => {
   test('admin can view the access matrix and the defaults match the specification', async ({ page }) => {
     await page.goto('/admin');
@@ -39,6 +47,12 @@ test.describe('Role & permission management', () => {
     await expect(page.getByText('Підпис медсестрою')).toBeVisible();
     await expect(page.getByText('Рішення quality gate')).toBeVisible();
     await expect(page.getByText('Керування шаблонами')).toBeVisible();
+
+    // Module-navigation rows: default matrix grants prosthetics module to prosthetics roles only
+    await expect(page.getByText('Модуль: Виробництво протезів')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Модуль: Виробництво протезів — Протезист', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Модуль: Виробництво протезів — Лікар', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Модуль: Адміністрування — Адміністратор', exact: true })).toBeChecked();
 
     // Default matrix: DOCTOR may create episodes, NURSE may not
     await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Лікар', exact: true })).toBeChecked();
@@ -78,6 +92,27 @@ test.describe('Role & permission management', () => {
     await setNurseEpisodeCreate(request, adminHeaders, false);
     const after = await request.post('/api/episodes', { headers: nurseHeaders, data: createBody });
     expect(after.status()).toBe(403);
+  });
+
+  test('granting the prosthetics module permission to DOCTOR reveals the module in the sidebar', async ({ request, browser }) => {
+    const adminHeaders = await login(request, ADMIN);
+    await setDoctorModuleAccess(request, adminHeaders, true);
+
+    // Fresh doctor context: permissions are re-fetched on page load, so the grant applies.
+    const ctx = await browser.newContext({ storageState: '.auth/doctor.json' });
+    const page = await ctx.newPage();
+    try {
+      await page.goto('/select');
+      const sidebarLink = page.getByRole('link', { name: 'Виробництво протезів' });
+      await expect(sidebarLink).toBeVisible({ timeout: 10000 });
+
+      // Navigation into the module works end to end (route guard + read APIs).
+      await sidebarLink.click();
+      await expect(page.getByRole('heading', { name: 'Виробництво протезів' })).toBeVisible({ timeout: 10000 });
+    } finally {
+      await ctx.close();
+      await setDoctorModuleAccess(request, adminHeaders, false);
+    }
   });
 
   test.afterEach(async ({ request }) => {

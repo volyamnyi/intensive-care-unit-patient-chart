@@ -63,7 +63,7 @@ public class FlowInstanceController {
     }
 
     @GetMapping
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List instances (prosthetist sees only own)")
     public List<FlowInstanceResponse> list(@RequestParam(required = false) Long assignee,
                                            @RequestParam(required = false) String status) {
@@ -75,14 +75,14 @@ public class FlowInstanceController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get instance (owner or admin/HOD)")
     public FlowInstanceResponse get(@PathVariable UUID id) {
         return instanceService.get(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/snapshot")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get the immutable template snapshot of the instance")
     public Map<String, Object> getSnapshot(@PathVariable UUID id) {
         return instanceService.getSnapshot(id, currentUser.userId(), currentUser.canViewAllInstances());
@@ -119,28 +119,28 @@ public class FlowInstanceController {
     }
 
     @GetMapping("/{id}/step-executions")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List step executions of the instance")
     public List<StepExecutionResponse> listExecutions(@PathVariable UUID id) {
         return instanceService.listExecutions(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/gate-decisions")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List quality gate decisions of the instance")
     public List<GateDecisionResponse> listGateDecisions(@PathVariable UUID id) {
         return instanceService.listGateDecisions(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/resources")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List resource usage records of the instance")
     public List<ResourceUsageResponse> listResources(@PathVariable UUID id) {
         return instanceService.listResources(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/failure-snapshot")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get the immutable failure snapshot of a failed instance")
     public FailureSnapshotResponse getFailureSnapshot(@PathVariable UUID id) {
         return instanceService.getFailureSnapshot(id, currentUser.userId(), currentUser.canViewAllInstances());
@@ -196,7 +196,7 @@ public class FlowInstanceController {
     }
 
     @GetMapping("/{id}/evidence/{fileId}")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Download evidence file (owner or admin/HOD)")
     public ResponseEntity<ByteArrayResource> downloadEvidence(@PathVariable UUID id,
                                                               @PathVariable UUID fileId) {
@@ -211,7 +211,7 @@ public class FlowInstanceController {
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Generate final or failure report PDF")
     public ResponseEntity<ByteArrayResource> generateReport(@PathVariable UUID id) {
         byte[] pdf = instanceService.generateReport(id, currentUser.userId(),

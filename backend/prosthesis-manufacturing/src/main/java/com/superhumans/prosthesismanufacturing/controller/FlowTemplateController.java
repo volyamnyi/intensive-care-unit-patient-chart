@@ -37,7 +37,7 @@ public class FlowTemplateController {
     CurrentUser currentUser;
 
     @GetMapping
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List templates (latest version first)")
     public List<FlowTemplateResponse> list(
             @RequestParam(required = false) String productType,
@@ -50,7 +50,7 @@ public class FlowTemplateController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get template with full stage/step/element tree")
     public FlowTemplateResponse get(@PathVariable UUID id) {
         return templateService.get(id);

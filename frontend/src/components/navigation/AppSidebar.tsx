@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   ChevronLeft, ChevronRight,
-  Hospital, FileText, AppWindow,
+  Hospital, FileText, AppWindow, Wrench,
 } from 'lucide-react';
 
 interface NavItem {
@@ -15,7 +15,7 @@ interface NavItem {
 }
 
 export default function AppSidebar() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     const cached = localStorage.getItem('app-sidebar-collapsed');
@@ -26,11 +26,18 @@ export default function AppSidebar() {
     const prefix = user?.role === 'NURSE' ? '/icu/nurse' : '/icu/doctor';
     const rxPrefix = user?.role === 'NURSE' ? '/prescriptions/nurse' : '/prescriptions/doctor';
     return [
-      { label: 'Карта інтенсивної терапії', to: prefix, icon: <Hospital className="size-5 text-info" /> },
-      { label: 'Листок лікарських призначень', to: rxPrefix, icon: <FileText className="size-5 text-success" /> },
+      ...(hasPermission('MODULE_ICU_ACCESS')
+        ? [{ label: 'Карта інтенсивної терапії', to: prefix, icon: <Hospital className="size-5 text-info" /> }]
+        : []),
+      ...(hasPermission('MODULE_MEDICATION_ACCESS')
+        ? [{ label: 'Листок лікарських призначень', to: rxPrefix, icon: <FileText className="size-5 text-success" /> }]
+        : []),
+      ...(hasPermission('MODULE_PROSTHETICS_ACCESS')
+        ? [{ label: 'Виробництво протезів', to: '/prosthetics', icon: <Wrench className="size-5 text-mint" /> }]
+        : []),
       { label: 'Модулі', to: '/select', icon: <AppWindow className="size-4" /> },
     ];
-  }, [user?.role]);
+  }, [user?.role, hasPermission]);
 
   const toggle = () => {
     const next = !collapsed;

@@ -30,11 +30,28 @@ import DoneScreen from './pages/prosthetics/process/DoneScreen';
 import FailedScreen from './pages/prosthetics/process/FailedScreen';
 import { ProstheticsProvider } from './prosthetics/ProstheticsContext';
 
-function Guard({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
-  const { isAuthenticated, hasRole, user, loading } = useAuth();
+// Module-navigation permissions from the dynamic RBAC matrix (PermissionCatalog).
+const MODULE_ICU = 'MODULE_ICU_ACCESS';
+const MODULE_MEDICATION = 'MODULE_MEDICATION_ACCESS';
+const MODULE_PROSTHETICS = 'MODULE_PROSTHETICS_ACCESS';
+const MODULE_ADMIN = 'MODULE_ADMIN_ACCESS';
+
+function Guard({ children, roles, permissions }: {
+  children: React.ReactNode;
+  roles?: string[];
+  /** Module-navigation permissions (dynamic RBAC): access is granted by role OR by permission. */
+  permissions?: string[];
+}) {
+  const { isAuthenticated, hasRole, hasPermission, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirected = useRef(false);
+
+  const allowed = () => {
+    if (roles && roles.length > 0 && hasRole(...roles)) return true;
+    if (permissions && permissions.some((p) => hasPermission(p))) return true;
+    return false;
+  };
 
   useEffect(() => {
     if (redirected.current) return;
@@ -44,8 +61,8 @@ function Guard({ children, roles }: { children: React.ReactNode; roles?: string[
       navigate('/login', { replace: true });
       return;
     }
-    if (roles && user === null) return;
-    if (roles && !hasRole(...roles) && location.pathname !== '/' && location.pathname !== '/select') {
+    if ((roles || permissions) && user === null) return;
+    if ((roles || permissions) && !allowed() && location.pathname !== '/' && location.pathname !== '/select') {
       redirected.current = true;
       navigate('/', { replace: true });
     }
@@ -53,8 +70,8 @@ function Guard({ children, roles }: { children: React.ReactNode; roles?: string[
 
   if (loading) return null;
   if (!isAuthenticated) return null;
-  if (roles && user === null) return null;
-  if (roles && !hasRole(...roles)) return null;
+  if ((roles || permissions) && user === null) return null;
+  if ((roles || permissions) && !allowed()) return null;
   return <>{children}</>;
 }
 
@@ -109,7 +126,7 @@ function AppRoutes() {
 
         <Route path="/icu">
           <Route path="doctor" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_ICU]}>
               <DoctorLayout />
             </Guard>
           }>
@@ -124,7 +141,7 @@ function AppRoutes() {
           </Route>
 
           <Route path="nurse" element={
-            <Guard roles={['NURSE']}>
+            <Guard roles={['NURSE']} permissions={[MODULE_ICU]}>
               <NurseLayout />
             </Guard>
           }>
@@ -135,29 +152,29 @@ function AppRoutes() {
 
         <Route path="/prescriptions">
           <Route path="doctor" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_MEDICATION]}>
               <PrescriptionPage />
             </Guard>
           } />
           <Route path="doctor/:id" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_MEDICATION]}>
               <PrescriptionDetailPage />
             </Guard>
           } />
           <Route path="nurse" element={
-            <Guard roles={['NURSE']}>
+            <Guard roles={['NURSE']} permissions={[MODULE_MEDICATION]}>
               <NursePrescriptionPage />
             </Guard>
           } />
           <Route path="nurse/:id" element={
-            <Guard roles={['NURSE']}>
+            <Guard roles={['NURSE']} permissions={[MODULE_MEDICATION]}>
               <PrescriptionDetailPage />
             </Guard>
           } />
         </Route>
 
         <Route path="/prosthetics" element={
-          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
+          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
             <ProstheticsProvider>
               <ProstheticsDashboard />
             </ProstheticsProvider>
@@ -166,28 +183,28 @@ function AppRoutes() {
 
         <Route path="/prosthetics/new">
           <Route path="select-patient" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
               <ProstheticsProvider>
                 <PatientSearchPage />
               </ProstheticsProvider>
             </Guard>
           } />
           <Route path="select-order" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
               <ProstheticsProvider>
                 <OrderSelectPage />
               </ProstheticsProvider>
             </Guard>
           } />
           <Route path="review-order" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
               <ProstheticsProvider>
                 <OrderReviewPage />
               </ProstheticsProvider>
             </Guard>
           } />
           <Route path="select-template" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
               <ProstheticsProvider>
                 <TemplateSelectPage />
               </ProstheticsProvider>
@@ -196,7 +213,7 @@ function AppRoutes() {
         </Route>
 
         <Route path="/prosthetics/process/:id" element={
-          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
+          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
             <ProstheticsProvider>
               <ProcessLayout />
             </ProstheticsProvider>
@@ -210,7 +227,7 @@ function AppRoutes() {
         </Route>
 
         <Route path="/admin" element={
-          <Guard roles={['ADMINISTRATOR', 'AUDITOR']}>
+          <Guard roles={['ADMINISTRATOR', 'AUDITOR']} permissions={[MODULE_ADMIN]}>
             <AdminPage />
           </Guard>
         } />

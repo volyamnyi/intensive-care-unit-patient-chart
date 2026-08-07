@@ -29,7 +29,7 @@ public class ProstheticsPatientController {
     ProstheticsPatientService patientService;
 
     @GetMapping
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Search patients by name")
     public List<ProstheticsPatientResponse> search(
             @RequestParam(required = false) String query) {
@@ -37,7 +37,7 @@ public class ProstheticsPatientController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get patient by id")
     public ProstheticsPatientResponse get(@PathVariable @Pattern(regexp = "\\d+",
             message = "ID пацієнта має містити лише цифри") String id) {

@@ -35,7 +35,7 @@ public class ProstheticsOrderController {
     CurrentUser currentUser;
 
     @GetMapping
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List orders")
     public List<ProstheticsOrderResponse> list(
             @RequestParam(required = false) @Pattern(regexp = "\\d+",
@@ -45,14 +45,14 @@ public class ProstheticsOrderController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get order by id")
     public ProstheticsOrderResponse get(@PathVariable UUID id) {
         return orderService.get(id);
     }
 
     @GetMapping("/{id}/document")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Download order recipe PDF (generated on first request)")
     public ResponseEntity<ByteArrayResource> getDocument(@PathVariable UUID id) {
         ProstheticsOrderService.PdfDocument document = orderService.getRecipePdf(id, currentUser.userId());

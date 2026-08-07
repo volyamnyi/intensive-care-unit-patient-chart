@@ -6,6 +6,7 @@ let mockUser: any = { id: 1, login: 'doctor1', fullName: 'Доктор Іван'
 let mockIsAuthenticated = true;
 let mockLoading = false;
 let mockHasRole = (...roles: string[]) => roles.includes('DOCTOR') || roles.includes('HEAD_OF_DEPARTMENT');
+let mockHasPermission = () => false;
 
 vi.mock('../services/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -16,7 +17,7 @@ vi.mock('../services/AuthContext', () => ({
     loading: mockLoading,
     logout: vi.fn(),
     hasRole: mockHasRole,
-    hasPermission: () => false,
+    hasPermission: mockHasPermission,
     selectApp: () => {},
     clearApp: () => {},
   }),
@@ -127,6 +128,14 @@ vi.mock('../pages/AppSelectorPage', () => ({
   default: () => <div>App Selector</div>,
 }));
 
+vi.mock('../pages/prosthetics/DashboardPage', () => ({
+  default: () => <div>Prosthetics Dashboard</div>,
+}));
+
+vi.mock('../prosthetics/ProstheticsContext', () => ({
+  ProstheticsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -134,6 +143,7 @@ describe('App', () => {
     mockIsAuthenticated = true;
     mockLoading = false;
     mockHasRole = (...roles: string[]) => roles.includes('DOCTOR') || roles.includes('HEAD_OF_DEPARTMENT');
+    mockHasPermission = () => false;
   });
 
   it('renders without crashing', async () => {
@@ -188,5 +198,28 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.queryByText('Global Layout')).not.toBeInTheDocument();
     });
+  });
+
+  it('renders the prosthetics module for a role granted MODULE_PROSTHETICS_ACCESS', async () => {
+    mockUser = { id: 4, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR' };
+    mockHasRole = () => false;
+    mockHasPermission = (...perms: string[]) => perms.includes('MODULE_PROSTHETICS_ACCESS');
+    window.history.pushState({}, '', '/prosthetics');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('Prosthetics Dashboard')).toBeInTheDocument();
+    });
+  });
+
+  it('blocks a role without MODULE_PROSTHETICS_ACCESS from the prosthetics module', async () => {
+    mockUser = { id: 4, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR' };
+    mockHasRole = () => false;
+    mockHasPermission = () => false;
+    window.history.pushState({}, '', '/prosthetics');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('App Selector')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Prosthetics Dashboard')).not.toBeInTheDocument();
   });
 });

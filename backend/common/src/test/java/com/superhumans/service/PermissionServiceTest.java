@@ -207,10 +207,33 @@ class PermissionServiceTest {
 
     @Test
     void catalog_containsAllDefinedCodes() {
-        assertThat(permissionService.catalog()).hasSize(20);
+        assertThat(permissionService.catalog()).hasSize(24);
         assertThat(PermissionCatalog.allCodes())
                 .contains(PermissionCatalog.EPISODE_CREATE, PermissionCatalog.AUDIT_ACCESS,
-                        PermissionCatalog.PROSTHETICS_GATE_DECISION);
+                        PermissionCatalog.PROSTHETICS_GATE_DECISION,
+                        PermissionCatalog.MODULE_ICU_ACCESS,
+                        PermissionCatalog.MODULE_MEDICATION_ACCESS,
+                        PermissionCatalog.MODULE_PROSTHETICS_ACCESS,
+                        PermissionCatalog.MODULE_ADMIN_ACCESS);
+    }
+
+    @Test
+    void defaultMatrix_grantsModuleNavigationPerRole() {
+        Map<UserRole, Set<String>> matrix = PermissionCatalog.defaultMatrix();
+
+        assertThat(matrix.get(UserRole.DOCTOR))
+                .contains(PermissionCatalog.MODULE_ICU_ACCESS, PermissionCatalog.MODULE_MEDICATION_ACCESS)
+                .doesNotContain(PermissionCatalog.MODULE_PROSTHETICS_ACCESS, PermissionCatalog.MODULE_ADMIN_ACCESS);
+        assertThat(matrix.get(UserRole.NURSE))
+                .contains(PermissionCatalog.MODULE_ICU_ACCESS, PermissionCatalog.MODULE_MEDICATION_ACCESS);
+        assertThat(matrix.get(UserRole.ADMINISTRATOR))
+                .contains(PermissionCatalog.MODULE_ADMIN_ACCESS)
+                .doesNotContain(PermissionCatalog.MODULE_PROSTHETICS_ACCESS);
+        assertThat(matrix.get(UserRole.PROSTHETIST))
+                .contains(PermissionCatalog.MODULE_PROSTHETICS_ACCESS)
+                .doesNotContain(PermissionCatalog.MODULE_ICU_ACCESS);
+        assertThat(matrix.get(UserRole.PROSTHETICS_ADMINISTRATOR))
+                .contains(PermissionCatalog.MODULE_PROSTHETICS_ACCESS);
     }
 
     @Test

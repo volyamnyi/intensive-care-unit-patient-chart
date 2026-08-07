@@ -17,6 +17,10 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
+**2026-08-07: Module-routing permissions (RBAC matrix)**
+
+- **Module-routing RBAC**: 4 new permission codes in category «Модулі» — `MODULE_ICU_ACCESS`, `MODULE_MEDICATION_ACCESS`, `MODULE_PROSTHETICS_ACCESS`, `MODULE_ADMIN_ACCESS` (catalog 20 → 24 codes; SQL-seeded in `012-role-permissions.sql`). Defaults: DOCTOR/NURSE/HOD → ICU+MEDICATION, PROSTHETIST/PROSTHETICS_ADMIN → PROSTHETICS, ADMINISTRATOR/AUDITOR → ADMIN. `AppSidebar` + `AppSelectorPage` render a module only when the role holds its permission; `App.tsx` `Guard` accepts `permissions` (access = role **OR** permission — revoking a module permission never locks the role out). Prosthetics **read** endpoints widened to `hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')` — a doctor granted the module can navigate and view (read-only); writes still require the specific `PROSTHETICS_*` codes. E2E `permissions.spec.ts` grants DOCTOR `MODULE_PROSTHETICS_ACCESS` → sidebar link appears → navigation works.
+
 **2026-08-07: Dynamic RBAC — role-permission matrix managed from the admin UI**
 
 Full role-based access control with an admin-editable matrix. `permissions` + `role_permissions` tables (Liquibase `012-role-permissions.sql`), seeded by `PermissionService` on first boot when empty (definitions also SQL-seeded with `ON CONFLICT DO UPDATE`; grants are Java-seeded — edits persist across restarts since seeding only fires when the tables are empty).
@@ -290,7 +294,7 @@ AuditLog (standalone, no BaseEntity)
 | `ScaleResult` | BaseEntity | clinicalDay(M→1)(nullable), scale(M→1), result(text), episodeId(UUID), rawData(jsonb), calculatedAt, calculatedBy | Auto-calculates GCS/RASS from consciousness |
 | `FluidBalance` | BaseEntity | clinicalDay(M→1), hour, intake, output, balance, cumulativeBalance | Recalculated on HourlyRecord changes |
 | `Signature` | BaseEntity | clinicalDay(M→1), userId, role, signedAt, hash, status | — |
-| `Permission` | — | code(PK), label, description, category | Dictionary of the RBAC catalog (20 codes) |
+| `Permission` | — | code(PK), label, description, category | Dictionary of the RBAC catalog (24 codes) |
 | `RolePermission` | — | role(PK, UserRole), permissionCode(PK→Permission) | Default-deny grants; presence = granted |
 | `GeneratedPdf` | BaseEntity | clinicalDay(M→1), fileName, fileVersion, generatedAt, generatedBy, checksum, fileData(byte[]), transferStatus(TransferStatus), transferError, transferredAt | TransferStatus: PENDING/SENT/FAILED |
 | `SystemSettings` | BaseEntity | key(unique), value(TEXT), description(TEXT) | — |

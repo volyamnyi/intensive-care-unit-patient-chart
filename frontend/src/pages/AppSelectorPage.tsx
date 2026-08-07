@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Hospital, FileText, Shield, Syringe } from 'lucide-react';
+import { FileText, Hospital, Shield, Wrench } from 'lucide-react';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '../services/AuthContext';
 
@@ -12,6 +12,7 @@ const cards = [
     icon: <Hospital className="size-12" />,
     color: '#1976d2',
     path: '/icu/doctor',
+    permission: 'MODULE_ICU_ACCESS',
   },
   {
     app: 'prescriptions' as const,
@@ -20,19 +21,21 @@ const cards = [
     icon: <FileText className="size-12" />,
     color: '#2e7d32',
     path: '/prescriptions/doctor',
+    permission: 'MODULE_MEDICATION_ACCESS',
   },
   {
     app: 'prosthetics' as const,
     title: 'Виробництво протезів',
     subtitle: 'Технологічні процеси протезування',
-    icon: <Syringe className="size-12" />,
+    icon: <Wrench className="size-12" />,
     color: '#059669',
     path: '/prosthetics',
+    permission: 'MODULE_PROSTHETICS_ACCESS',
   },
 ];
 
 export default function AppSelectorPage() {
-  const { user, selectApp, hasRole } = useAuth();
+  const { user, selectApp, hasRole, hasPermission } = useAuth();
   const navigate = useNavigate();
   useEffect(() => { document.title = 'Вибір додатку — Superhumans Lviv'; }, []);
 
@@ -60,7 +63,7 @@ export default function AppSelectorPage() {
         Оберіть додаток для роботи
       </h2>
       <div className="flex max-w-[700px] flex-wrap justify-center gap-3">
-        {cards.map((card) => (
+        {cards.filter((card) => hasPermission(card.permission)).map((card) => (
           <Card key={card.app} className="w-[300px] cursor-pointer" onClick={() => handleSelect(card)}>
             <CardContent className="flex flex-col items-center p-4 text-center">
               <div className="mb-1" style={{ color: card.color }}>{card.icon}</div>
@@ -69,7 +72,7 @@ export default function AppSelectorPage() {
             </CardContent>
           </Card>
         ))}
-        {hasRole('ADMINISTRATOR') && (
+        {hasPermission('MODULE_ADMIN_ACCESS') && (
           <Card className="w-[300px] cursor-pointer" onClick={() => navigate('/admin', { replace: true })}>
             <CardContent className="flex flex-col items-center p-4 text-center">
               <div className="mb-1" style={{ color: '#7b1fa2' }}>
