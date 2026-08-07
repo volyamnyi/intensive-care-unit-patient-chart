@@ -12,7 +12,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   hasRole: (...roles: string[]) => boolean;
+  /** Effective permissions of the current role, loaded from the dynamic RBAC matrix. */
   hasPermission: (permission: string) => boolean;
+  permissions: string[];
   selectApp: (app: 'icu' | 'prescriptions' | 'prosthetics') => void;
   clearApp: () => void;
 }
@@ -21,6 +23,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     userApi.getMe()
-      .then((res) => setUser((prev) => ({ ...res.data, permissions: '', app: (prev?.app ?? null) })))
+      .then((res) => {
+        setUser((prev) => ({ ...res.data, permissions: '', app: (prev?.app ?? null) }));
+        return userApi.getMyPermissions().then((permRes) => setPermissions(permRes.data));
+      })
       .catch(() => {
         localStorage.removeItem(SESSION_FLAG);
         setUser(null);
@@ -43,19 +49,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     const res = await authApi.login(data);
-    const { userId, login: userName, fullName, role, email, permissions } = res.data;
+    const { userId, login: userName, fullName, role, email, permissions: legacyPermissions } = res.data;
     localStorage.setItem(SESSION_FLAG, '1');
     setUser({
       id: userId, login: userName, fullName, role: role as User['role'], email,
       specialityCode: '', specialityName: '', phone: '',
-      permissions: permissions ?? '', app: null,
+      permissions: legacyPermissions ?? '', app: null,
     });
+    try {
+      const permRes = await userApi.getMyPermissions();
+      setPermissions(permRes.data);
+    } catch {
+      setPermissions([]);
+    }
   };
 
   const logout = () => {
     authApi.logout().catch(() => {});
     localStorage.removeItem(SESSION_FLAG);
     setUser(null);
+    setPermissions([]);
   };
 
   const hasRole = (...roles: string[]) => {
@@ -63,8 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasPermission = (permission: string) => {
-    if (!user || !user.permissions) return false;
-    return user.permissions.split(',').some((p) => p.trim().toUpperCase() === permission.toUpperCase());
+    return permissions.some((p) => p.toUpperCase() === permission.toUpperCase());
   };
 
   const selectApp = (app: 'icu' | 'prescriptions' | 'prosthetics') => {
@@ -76,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading, hasRole, hasPermission, selectApp, clearApp }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, loading, hasRole, hasPermission, permissions, selectApp, clearApp }}>
       {children}
     </AuthContext.Provider>
   );

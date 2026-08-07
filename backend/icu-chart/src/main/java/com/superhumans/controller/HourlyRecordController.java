@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,7 @@ public class HourlyRecordController {
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/hourly-records")
+    @PreAuthorize("@permissionService.has('VITALS_ENTER')")
     public ResponseEntity<HourlyRecordResponse> createHourlyRecord(
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody HourlyRecordCreateRequest request,
@@ -41,6 +43,7 @@ public class HourlyRecordController {
     }
 
     @PatchMapping("/hourly-records/{id}")
+    @PreAuthorize("@permissionService.has('VITALS_ENTER')")
     public ResponseEntity<Void> updateHourlyRecord(
             @PathVariable UUID id,
             @Valid @RequestBody HourlyRecordPatchRequest request,

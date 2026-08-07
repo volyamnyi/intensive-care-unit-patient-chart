@@ -37,7 +37,7 @@ public class FlowTemplateController {
     CurrentUser currentUser;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "List templates (latest version first)")
     public List<FlowTemplateResponse> list(
             @RequestParam(required = false) String productType,
@@ -50,14 +50,14 @@ public class FlowTemplateController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Get template with full stage/step/element tree")
     public FlowTemplateResponse get(@PathVariable UUID id) {
         return templateService.get(id);
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('PROSTHETICS_ADMINISTRATOR')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_TEMPLATE_MANAGE')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a new template version (admin)")
     public FlowTemplateResponse create(@Valid @RequestBody TemplateCreateRequest request) {
@@ -65,7 +65,7 @@ public class FlowTemplateController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PROSTHETICS_ADMINISTRATOR')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_TEMPLATE_MANAGE')")
     @Operation(summary = "Update template meta fields (admin)")
     public FlowTemplateResponse update(@PathVariable UUID id,
                                        @Valid @RequestBody TemplatePatchRequest request) {
@@ -73,7 +73,7 @@ public class FlowTemplateController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PROSTHETICS_ADMINISTRATOR')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_TEMPLATE_MANAGE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Archive template (admin)")
     public void archive(@PathVariable UUID id) {

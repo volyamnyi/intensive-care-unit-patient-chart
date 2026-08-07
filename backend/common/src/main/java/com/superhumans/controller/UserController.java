@@ -5,12 +5,14 @@ import com.superhumans.entity.UserRole;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.UserMisDTO;
 import com.superhumans.repository.UserRepository;
+import com.superhumans.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -22,11 +24,20 @@ public class UserController {
 
     UserRepository userRepository;
     MisService misService;
+    PermissionService permissionService;
 
     @GetMapping("/me")
     public ResponseEntity<User> getMe(Authentication auth) {
         return userRepository.findByLogin(auth.getName())
                 .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** Effective permission codes of the current user's role (dynamic RBAC). */
+    @GetMapping("/me/permissions")
+    public ResponseEntity<Set<String>> getMyPermissions(Authentication auth) {
+        return userRepository.findByLogin(auth.getName())
+                .map(user -> ResponseEntity.ok(permissionService.permissionsFor(user.getRole())))
                 .orElse(ResponseEntity.notFound().build());
     }
 

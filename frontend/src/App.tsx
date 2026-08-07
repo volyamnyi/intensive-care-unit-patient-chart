@@ -157,7 +157,7 @@ function AppRoutes() {
         </Route>
 
         <Route path="/prosthetics" element={
-          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
             <ProstheticsProvider>
               <ProstheticsDashboard />
             </ProstheticsProvider>
@@ -166,28 +166,28 @@ function AppRoutes() {
 
         <Route path="/prosthetics/new">
           <Route path="select-patient" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
               <ProstheticsProvider>
                 <PatientSearchPage />
               </ProstheticsProvider>
             </Guard>
           } />
           <Route path="select-order" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
               <ProstheticsProvider>
                 <OrderSelectPage />
               </ProstheticsProvider>
             </Guard>
           } />
           <Route path="review-order" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
               <ProstheticsProvider>
                 <OrderReviewPage />
               </ProstheticsProvider>
             </Guard>
           } />
           <Route path="select-template" element={
-            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+            <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
               <ProstheticsProvider>
                 <TemplateSelectPage />
               </ProstheticsProvider>
@@ -196,7 +196,7 @@ function AppRoutes() {
         </Route>
 
         <Route path="/prosthetics/process/:id" element={
-          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT']}>
+          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']}>
             <ProstheticsProvider>
               <ProcessLayout />
             </ProstheticsProvider>

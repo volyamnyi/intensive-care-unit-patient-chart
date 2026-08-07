@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ public class ClinicalDayController {
     }
 
     @PostMapping
+    @PreAuthorize("@permissionService.has('CLINICAL_DAY_CREATE')")
     public ResponseEntity<ClinicalDayResponse> createClinicalDay(
             @Valid @RequestBody ClinicalDayCreateRequest request,
             Authentication auth) {
@@ -46,6 +48,7 @@ public class ClinicalDayController {
     }
 
     @PostMapping("/{id}/sign/nurse")
+    @PreAuthorize("@permissionService.has('SIGN_NURSE')")
     public ResponseEntity<Void> signNurse(
             @PathVariable UUID id,
             @Valid @RequestBody SignRequest request,
@@ -56,6 +59,7 @@ public class ClinicalDayController {
     }
 
     @PostMapping("/{id}/sign/doctor")
+    @PreAuthorize("@permissionService.has('SIGN_DOCTOR')")
     public ResponseEntity<Void> signDoctor(
             @PathVariable UUID id,
             @Valid @RequestBody SignRequest request,
@@ -66,6 +70,7 @@ public class ClinicalDayController {
     }
 
     @PostMapping("/{id}/reopen")
+    @PreAuthorize("@permissionService.has('REOPEN_DAY')")
     public ResponseEntity<Void> reopenClinicalDay(
             @PathVariable UUID id,
             @Valid @RequestBody ReopenRequest request,

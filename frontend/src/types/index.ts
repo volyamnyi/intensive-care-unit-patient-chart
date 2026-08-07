@@ -2,7 +2,7 @@
   id: number;
   login: string;
   fullName: string;
-  role: 'DOCTOR' | 'NURSE' | 'HEAD_OF_DEPARTMENT' | 'ADMINISTRATOR' | 'AUDITOR';
+  role: 'DOCTOR' | 'NURSE' | 'HEAD_OF_DEPARTMENT' | 'ADMINISTRATOR' | 'AUDITOR' | 'PROSTHETIST' | 'PROSTHETICS_ADMINISTRATOR' | 'ADJACENT_SPECIALIST';
   email: string;
   specialityCode: string;
   specialityName: string;
@@ -10,6 +10,19 @@
   permissions: string;
   app: 'icu' | 'prescriptions' | 'prosthetics' | null;
   deleted?: boolean;
+}
+
+export interface PermissionDef {
+  code: string;
+  label: string;
+  description: string;
+  category: string;
+}
+
+export interface PermissionMatrix {
+  roles: string[];
+  permissions: PermissionDef[];
+  grants: Record<string, string[]>;
 }
 
 export interface PatientDto {

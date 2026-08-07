@@ -3,15 +3,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from '../../services/AuthContext';
 
-const { mockLoginFn, mockGetMe, mockLogoutFn } = vi.hoisted(() => ({
+const { mockLoginFn, mockGetMe, mockLogoutFn, mockGetMyPermissions } = vi.hoisted(() => ({
   mockLoginFn: vi.fn(),
   mockGetMe: vi.fn(),
   mockLogoutFn: vi.fn(),
+  mockGetMyPermissions: vi.fn().mockResolvedValue({ data: [] }),
 }));
 
 vi.mock('../../api/endpoints', () => ({
   authApi: { login: mockLoginFn, logout: mockLogoutFn },
-  userApi: { getMe: mockGetMe },
+  userApi: { getMe: mockGetMe, getMyPermissions: mockGetMyPermissions },
 }));
 
 function TestComponent() {

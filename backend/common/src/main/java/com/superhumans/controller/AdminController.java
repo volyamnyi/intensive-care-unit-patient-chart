@@ -1,9 +1,16 @@
 package com.superhumans.controller;
 
+import com.superhumans.dto.PermissionMatrixResponse;
+import com.superhumans.dto.PermissionResponse;
+import com.superhumans.dto.RolePermissionUpdateRequest;
 import com.superhumans.entity.User;
+import com.superhumans.entity.UserRole;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.repository.UserRepository;
 import com.superhumans.service.AuditService;
+import com.superhumans.service.PermissionCatalog;
+import com.superhumans.service.PermissionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -24,6 +31,7 @@ public class AdminController {
 
     UserRepository userRepository;
     AuditService auditService;
+    PermissionService permissionService;
 
     @GetMapping("/users")
     public List<User> getAllUsers() {
@@ -42,7 +50,7 @@ public class AdminController {
                                             Authentication auth) {
         String newRole = body.get("role");
         return userRepository.findById(id).map(user -> {
-            user.setRole(com.superhumans.entity.UserRole.valueOf(newRole));
+            user.setRole(UserRole.valueOf(newRole));
             user.setUpdatedBy(getUserId(auth));
             userRepository.save(user);
             auditService.logAction("User", null, "ADMIN_UPDATE_ROLE:" + newRole, getUserId(auth));
@@ -84,13 +92,54 @@ public class AdminController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    /** Full role-permission matrix for the admin RBAC interface. */
+    @GetMapping("/permissions")
+    public PermissionMatrixResponse getPermissionMatrix() {
+        Map<String, List<String>> grants =
+                PermissionService.toCodesByRole(permissionService.matrix());
+        List<PermissionResponse> permissions = permissionService.catalog().stream()
+                .map(d -> PermissionResponse.builder()
+                        .code(d.code())
+                        .label(d.label())
+                        .description(d.description())
+                        .category(d.category())
+                        .build())
+                .toList();
+        List<String> roles = List.of(
+                UserRole.DOCTOR.name(),
+                UserRole.NURSE.name(),
+                UserRole.HEAD_OF_DEPARTMENT.name(),
+                UserRole.ADMINISTRATOR.name(),
+                UserRole.PROSTHETIST.name(),
+                UserRole.PROSTHETICS_ADMINISTRATOR.name());
+        return PermissionMatrixResponse.builder()
+                .roles(roles)
+                .permissions(permissions)
+                .grants(grants)
+                .build();
+    }
+
+    /** Grant or revoke a permission for a role (RBAC matrix editing). */
+    @PutMapping("/permissions")
+    public PermissionMatrixResponse updatePermissionMatrix(
+            @Valid @RequestBody RolePermissionUpdateRequest request,
+            Authentication auth) {
+        UserRole role = UserRole.valueOf(request.getRole());
+        if (!PermissionCatalog.allCodes().contains(request.getPermissionCode())) {
+            throw new BadRequestException("Невідомий код права: " + request.getPermissionCode());
+        }
+        permissionService.setRolePermission(
+                role, request.getPermissionCode(), request.getGranted());
+        return getPermissionMatrix();
+    }
+
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
         List<User> all = userRepository.findAll();
-        long doctors = all.stream().filter(u -> u.getRole() == com.superhumans.entity.UserRole.DOCTOR).count();
-        long nurses = all.stream().filter(u -> u.getRole() == com.superhumans.entity.UserRole.NURSE).count();
-        long hods = all.stream().filter(u -> u.getRole() == com.superhumans.entity.UserRole.HEAD_OF_DEPARTMENT).count();
-        long admins = all.stream().filter(u -> u.getRole() == com.superhumans.entity.UserRole.ADMINISTRATOR).count();
+        long doctors = all.stream().filter(u -> u.getRole() == UserRole.DOCTOR).count();
+        long nurses = all.stream().filter(u -> u.getRole() == UserRole.NURSE).count();
+        long hods = all.stream().filter(u -> u.getRole() == UserRole.HEAD_OF_DEPARTMENT).count();
+        long admins = all.stream().filter(u -> u.getRole() == UserRole.ADMINISTRATOR).count();
         long prescribers = all.stream().filter(u -> u.hasPermission("PRESCRIBER")).count();
         return ResponseEntity.ok(Map.of(
                 "totalUsers", all.size(),

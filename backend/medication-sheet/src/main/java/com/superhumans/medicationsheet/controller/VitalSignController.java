@@ -64,7 +64,7 @@ public class VitalSignController {
         }).toList();
     }
 
-    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT','DOCTOR')")
+    @PreAuthorize("@permissionService.has('VITALS_ENTER')")
     @PostMapping
     public VitalSignEntryResponse create(@Valid @RequestBody VitalSignEntryRequest req) {
         VitalSignEntry entry = vitalSignEntryMapper.toEntity(req);
@@ -72,7 +72,7 @@ public class VitalSignController {
         return vitalSignEntryMapper.toResponse(saved);
     }
 
-    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT','DOCTOR')")
+    @PreAuthorize("@permissionService.has('VITALS_ENTER')")
     @PutMapping("/entries/{entryId}")
     public ResponseEntity<VitalSignEntryResponse> updateEntry(
             @PathVariable UUID entryId,
@@ -82,7 +82,7 @@ public class VitalSignController {
         return ResponseEntity.ok(vitalSignEntryMapper.toResponse(saved));
     }
 
-    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT','DOCTOR')")
+    @PreAuthorize("@permissionService.has('VITALS_ENTER')")
     @PutMapping("/cells")
     public ResponseEntity<VitalSignEntryResponse> updateCell(
             @RequestParam UUID dayId,

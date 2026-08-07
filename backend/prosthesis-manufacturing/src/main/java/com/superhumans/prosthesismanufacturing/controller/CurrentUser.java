@@ -29,11 +29,7 @@ public class CurrentUser {
         return hasRole("PROSTHETICS_ADMINISTRATOR");
     }
 
-    public boolean isHeadOfDepartment() {
-        return hasRole("HEAD_OF_DEPARTMENT");
-    }
-
     public boolean canViewAllInstances() {
-        return isProstheticsAdmin() || isHeadOfDepartment();
+        return isProstheticsAdmin();
     }
 }

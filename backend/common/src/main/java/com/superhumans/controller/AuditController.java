@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ public class AuditController {
     AuditService auditService;
 
     @GetMapping
+    @PreAuthorize("@permissionService.has('AUDIT_ACCESS') or hasRole('AUDITOR')")
     public ResponseEntity<Page<AuditLogResponse>> getAuditLogs(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String entity,
@@ -36,6 +38,7 @@ public class AuditController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@permissionService.has('AUDIT_ACCESS') or hasRole('AUDITOR')")
     public ResponseEntity<AuditLogResponse> getAuditLog(@PathVariable UUID id) {
         return ResponseEntity.ok(auditService.getAuditLog(id));
     }

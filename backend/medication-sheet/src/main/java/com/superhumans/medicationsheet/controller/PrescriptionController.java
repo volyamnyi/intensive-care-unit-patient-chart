@@ -44,7 +44,7 @@ public class PrescriptionController {
     private final MedicineCatalogMapper medicineCatalogMapper;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Get prescriptions by patient ID", description = "Retrieves all prescription lists for a specific patient")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved prescription lists"),
@@ -56,7 +56,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Get prescription list by ID", description = "Retrieves a specific prescription list by its UUID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved prescription list"),
@@ -67,7 +67,7 @@ public class PrescriptionController {
         return prescriptionListMapper.toResponse(listService.getById(id));
     }
 
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create prescription list", description = "Creates a new prescription list for a patient. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
@@ -81,7 +81,7 @@ public class PrescriptionController {
         return prescriptionListMapper.toResponse(listService.create(Long.parseLong(req.getPatientId())));
     }
 
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete prescription list", description = "Soft-deletes a prescription list. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
@@ -93,7 +93,7 @@ public class PrescriptionController {
         listService.delete(id);
     }
 
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @PostMapping("/{id}/close")
     @Operation(summary = "Close prescription list", description = "Marks a prescription list as closed. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
@@ -106,7 +106,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/{listId}/items")
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Get prescription items", description = "Retrieves all medicine items for a prescription list")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved items"),
@@ -116,7 +116,7 @@ public class PrescriptionController {
         return itemService.getByList(listId).stream().map(prescriptionItemMapper::toResponse).toList();
     }
 
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @PostMapping("/{listId}/items")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add medicine item", description = "Adds a new medicine item to the prescription list. Creates 21-day grid automatically.")
@@ -130,7 +130,7 @@ public class PrescriptionController {
         return prescriptionItemMapper.toResponse(itemService.addItem(listId, req.getMedicineName(), req.getMedicineMethod(), req.getRegime()));
     }
 
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @DeleteMapping("/items/{itemId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove medicine item", description = "Removes a medicine item from the prescription list")
@@ -142,7 +142,7 @@ public class PrescriptionController {
         itemService.removeItem(itemId);
     }
 
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @PutMapping("/day-parts/{dayPartId}/plan")
     @Operation(summary = "Plan dose for day part", description = "Plans a specific dose for a day part. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
@@ -158,7 +158,7 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), currentUserUuid));
     }
 
-    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
     @PutMapping("/day-parts/{dayPartId}/complete")
     @Operation(summary = "Complete day part", description = "Marks a day part as completed. Requires NURSE or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
@@ -171,7 +171,7 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.markCompleted(dayPartId, currentUserUuid));
     }
 
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @PutMapping("/day-parts/{dayPartId}/cancel")
     @Operation(summary = "Cancel planned dose", description = "Marks a planned day part as cancelled (isPlannedFinished). Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
@@ -184,7 +184,7 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.markPlannedFinished(dayPartId, currentUserUuid));
     }
 
-    @PreAuthorize("hasAnyRole('NURSE','HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
     @PostMapping("/day-parts/{dayPartId}/execute")
     @Operation(summary = "Execute dose", description = "Executes a dose for a day part. Requires NURSE or HEAD_OF_DEPARTMENT role. Requires 2-person authentication with a different nurse's credentials.")
     @ApiResponses(value = {
@@ -203,7 +203,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/allergies")
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Get patient allergies", description = "Retrieves allergy information from MIS for a specific patient")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved allergies")
@@ -216,7 +216,7 @@ public class PrescriptionController {
     }
 
     @GetMapping("/medicine-catalog")
-    @PreAuthorize("hasAnyRole('DOCTOR','HEAD_OF_DEPARTMENT','NURSE')")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Search medicine catalog", description = "Searches the medicine catalog from MIS. Returns empty list if no keyword provided.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved medicine catalog")

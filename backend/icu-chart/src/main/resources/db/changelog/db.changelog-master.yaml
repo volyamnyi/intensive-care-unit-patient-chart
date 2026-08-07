@@ -32,3 +32,6 @@
   - include:
       relativeToChangelogFile: true
       file: changesets/011-prosthesis-pause-tracking.sql
+  - include:
+      relativeToChangelogFile: true
+      file: changesets/012-role-permissions.sql

@@ -16,6 +16,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -23,6 +26,9 @@ class ScaleAuthorizationServiceTest {
 
     @Mock
     private ClinicalScaleRepository clinicalScaleRepository;
+
+    @Mock
+    private PermissionService permissionService;
 
     @InjectMocks
     private ScaleAuthorizationService scaleAuthorizationService;
@@ -46,6 +52,20 @@ class ScaleAuthorizationServiceTest {
         bradenScale = createScale("Браден", false);
         automaticScale = createScale("GCS", true);
         unknownScale = createScale("CustomScale", false);
+
+        // Default matrix: DOCTOR/HOD hold both scale permissions, NURSE only
+        // the CAM-ICU/Браден/RASS group.
+        lenient().when(permissionService.hasForRole(eq(UserRole.DOCTOR), anyString()))
+                .thenAnswer(inv -> isScalePermission(inv.getArgument(1)));
+        lenient().when(permissionService.hasForRole(eq(UserRole.HEAD_OF_DEPARTMENT), anyString()))
+                .thenAnswer(inv -> isScalePermission(inv.getArgument(1)));
+        lenient().when(permissionService.hasForRole(eq(UserRole.NURSE), anyString()))
+                .thenAnswer(inv -> PermissionCatalog.SCALE_CAMICU_BRADEN_RASS.equals(inv.getArgument(1)));
+    }
+
+    private boolean isScalePermission(String code) {
+        return PermissionCatalog.SCALE_APACHE_SOFA.equals(code)
+                || PermissionCatalog.SCALE_CAMICU_BRADEN_RASS.equals(code);
     }
 
     private ClinicalScale createScale(String name, boolean isAutomatic) {
@@ -109,17 +129,15 @@ class ScaleAuthorizationServiceTest {
     }
 
     @Test
-    void assertCanCreate_doctorBlockedFromBraden() {
-        assertThatThrownBy(() -> scaleAuthorizationService.assertCanCreate(bradenScale, UserRole.DOCTOR))
-                .isInstanceOf(SecurityException.class)
-                .hasMessageContaining("DOCTOR is not allowed to create Браден");
+    void assertCanCreate_doctorAbleToCreateBradenPerMatrix() {
+        assertThatNoException()
+                .isThrownBy(() -> scaleAuthorizationService.assertCanCreate(bradenScale, UserRole.DOCTOR));
     }
 
     @Test
-    void assertCanCreate_hodBlockedFromApacheIi() {
-        assertThatThrownBy(() -> scaleAuthorizationService.assertCanCreate(apacheScale, UserRole.HEAD_OF_DEPARTMENT))
-                .isInstanceOf(SecurityException.class)
-                .hasMessageContaining("HEAD_OF_DEPARTMENT is not allowed to create APACHE II");
+    void assertCanCreate_hodAbleToCreateApacheIiPerMatrix() {
+        assertThatNoException()
+                .isThrownBy(() -> scaleAuthorizationService.assertCanCreate(apacheScale, UserRole.HEAD_OF_DEPARTMENT));
     }
 
     @Test

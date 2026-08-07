@@ -27,7 +27,7 @@ public class ProstheticsPatientController {
     ProstheticsPatientService patientService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Search patients by name")
     public List<ProstheticsPatientResponse> search(
             @RequestParam(required = false) String query) {
@@ -35,7 +35,7 @@ public class ProstheticsPatientController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Get patient by id")
     public ProstheticsPatientResponse get(@PathVariable UUID id) {
         return patientService.get(id);

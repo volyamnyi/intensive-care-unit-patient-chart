@@ -55,7 +55,7 @@ public class FlowInstanceController {
     CurrentUser currentUser;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_INSTANCE_CREATE')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a new flow instance for an order")
     public FlowInstanceResponse create(@Valid @RequestBody InstanceCreateRequest request) {
@@ -63,7 +63,7 @@ public class FlowInstanceController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "List instances (prosthetist sees only own)")
     public List<FlowInstanceResponse> list(@RequestParam(required = false) Long assignee,
                                            @RequestParam(required = false) String status) {
@@ -75,28 +75,28 @@ public class FlowInstanceController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Get instance (owner or admin/HOD)")
     public FlowInstanceResponse get(@PathVariable UUID id) {
         return instanceService.get(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/snapshot")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Get the immutable template snapshot of the instance")
     public Map<String, Object> getSnapshot(@PathVariable UUID id) {
         return instanceService.getSnapshot(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @PostMapping("/{id}/start")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @Operation(summary = "Start the process (moves to first step)")
     public FlowInstanceResponse start(@PathVariable UUID id) {
         return instanceService.start(id, currentUser.userId());
     }
 
     @PostMapping("/{id}/steps/{executionId}/complete")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @Operation(summary = "Complete the current step (server-side hard-block validation)")
     public FlowInstanceResponse completeStep(@PathVariable UUID id, @PathVariable UUID executionId,
                                              @Valid @RequestBody StepCompleteRequest request) {
@@ -104,7 +104,7 @@ public class FlowInstanceController {
     }
 
     @PostMapping("/{id}/steps/{executionId}/draft")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @Operation(summary = "Save a step draft (values and resources, no hard-block validation)")
     public FlowInstanceResponse saveDraft(@PathVariable UUID id, @PathVariable UUID executionId,
                                           @Valid @RequestBody StepCompleteRequest request) {
@@ -112,56 +112,56 @@ public class FlowInstanceController {
     }
 
     @PostMapping("/{id}/backward")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @Operation(summary = "Move back to the previous step of the current stage")
     public FlowInstanceResponse backward(@PathVariable UUID id) {
         return instanceService.backward(id, currentUser.userId());
     }
 
     @GetMapping("/{id}/step-executions")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "List step executions of the instance")
     public List<StepExecutionResponse> listExecutions(@PathVariable UUID id) {
         return instanceService.listExecutions(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/gate-decisions")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "List quality gate decisions of the instance")
     public List<GateDecisionResponse> listGateDecisions(@PathVariable UUID id) {
         return instanceService.listGateDecisions(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/resources")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "List resource usage records of the instance")
     public List<ResourceUsageResponse> listResources(@PathVariable UUID id) {
         return instanceService.listResources(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @GetMapping("/{id}/failure-snapshot")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Get the immutable failure snapshot of a failed instance")
     public FailureSnapshotResponse getFailureSnapshot(@PathVariable UUID id) {
         return instanceService.getFailureSnapshot(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
     @PostMapping("/{id}/pause")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_PAUSE_RESUME')")
     @Operation(summary = "Pause the instance with a pause category")
     public FlowInstanceResponse pause(@PathVariable UUID id, @Valid @RequestBody PauseRequest request) {
         return instanceService.pause(id, request, currentUser.userId());
     }
 
     @PostMapping("/{id}/resume")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_PAUSE_RESUME')")
     @Operation(summary = "Resume a paused instance")
     public FlowInstanceResponse resume(@PathVariable UUID id) {
         return instanceService.resume(id, currentUser.userId());
     }
 
     @PostMapping("/{id}/fail")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @Operation(summary = "Mark instance as failed and create a failure snapshot")
     public FlowInstanceResponse fail(@PathVariable UUID id, @Valid @RequestBody FailRequest request) {
         return instanceService.fail(id, request.getCategory(), request.getDescription(),
@@ -169,7 +169,7 @@ public class FlowInstanceController {
     }
 
     @PostMapping("/{id}/replacement")
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a replacement instance for a failed one")
     public FlowInstanceResponse replacement(@PathVariable UUID id) {
@@ -177,7 +177,7 @@ public class FlowInstanceController {
     }
 
     @PostMapping("/{id}/gates/{gateId}/decision")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_GATE_DECISION')")
     @Operation(summary = "Decide a quality gate: PASS / REWORK / FAIL")
     public FlowInstanceResponse decideGate(@PathVariable UUID id, @PathVariable UUID gateId,
                                            @Valid @RequestBody GateDecisionRequest request) {
@@ -186,7 +186,7 @@ public class FlowInstanceController {
     }
 
     @PostMapping(value = "/{id}/evidence", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('PROSTHETIST')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Upload evidence file (image or PDF, up to 10 MB)")
     public EvidenceFileResponse uploadEvidence(@PathVariable UUID id,
@@ -196,7 +196,7 @@ public class FlowInstanceController {
     }
 
     @GetMapping("/{id}/evidence/{fileId}")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Download evidence file (owner or admin/HOD)")
     public ResponseEntity<ByteArrayResource> downloadEvidence(@PathVariable UUID id,
                                                               @PathVariable UUID fileId) {
@@ -211,7 +211,7 @@ public class FlowInstanceController {
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR', 'HEAD_OF_DEPARTMENT')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Generate final or failure report PDF")
     public ResponseEntity<ByteArrayResource> generateReport(@PathVariable UUID id) {
         byte[] pdf = instanceService.generateReport(id, currentUser.userId(),

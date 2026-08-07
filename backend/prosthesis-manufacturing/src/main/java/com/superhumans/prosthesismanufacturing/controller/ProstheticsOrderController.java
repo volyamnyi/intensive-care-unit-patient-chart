@@ -32,7 +32,7 @@ public class ProstheticsOrderController {
     CurrentUser currentUser;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "List orders")
     public List<ProstheticsOrderResponse> list(
             @RequestParam(required = false) UUID patientId,
@@ -41,14 +41,14 @@ public class ProstheticsOrderController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Get order by id")
     public ProstheticsOrderResponse get(@PathVariable UUID id) {
         return orderService.get(id);
     }
 
     @GetMapping("/{id}/document")
-    @PreAuthorize("hasAnyRole('PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_DASHBOARD')")
     @Operation(summary = "Download order recipe PDF (generated on first request)")
     public ResponseEntity<ByteArrayResource> getDocument(@PathVariable UUID id) {
         ProstheticsOrderService.PdfDocument document = orderService.getRecipePdf(id, currentUser.userId());

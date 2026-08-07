@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +34,7 @@ public class OrderExecutionController {
     }
 
     @PutMapping("/orders/{orderId}/plan")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     public ResponseEntity<OrderExecutionResponse> plan(
             @PathVariable UUID orderId,
             @Valid @RequestBody OrderExecutionPlanRequest request,
@@ -42,6 +44,7 @@ public class OrderExecutionController {
     }
 
     @PutMapping("/orders/{orderId}/plan/finish")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     public ResponseEntity<OrderExecutionResponse> planFinish(
             @PathVariable UUID orderId,
             @Valid @RequestBody OrderExecutionFinishRequest request,
@@ -51,6 +54,7 @@ public class OrderExecutionController {
     }
 
     @PutMapping("/orders/{orderId}/cancel")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     public ResponseEntity<OrderExecutionResponse> cancel(
             @PathVariable UUID orderId,
             @Valid @RequestBody OrderExecutionFinishRequest request,
@@ -60,6 +64,7 @@ public class OrderExecutionController {
     }
 
     @PostMapping("/orders/{orderId}/execute")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
     public ResponseEntity<OrderExecutionResponse> execute(
             @PathVariable UUID orderId,
             @Valid @RequestBody OrderExecutionCreateRequest request,
@@ -70,6 +75,7 @@ public class OrderExecutionController {
     }
 
     @PostMapping("/orders/{orderId}/execute/finish")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
     public ResponseEntity<OrderExecutionResponse> executeFinish(
             @PathVariable UUID orderId,
             @Valid @RequestBody OrderExecutionFinishRequest request,
@@ -79,6 +85,7 @@ public class OrderExecutionController {
     }
 
     @PatchMapping("/executions/{id}")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
     public ResponseEntity<Void> updateExecution(
             @PathVariable UUID id,
             @Valid @RequestBody OrderExecutionPatchRequest request,

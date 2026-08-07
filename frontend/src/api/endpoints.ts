@@ -21,6 +21,7 @@ import type {
   PrescriptionDayPart, PrescriptionExecutionCreateRequest,
   MedicineCatalogItem, AllergyItem,
   VitalSignEntry, VitalSignDay, VitalSignEntryCreateRequest, VitalGridDay,
+  PermissionMatrix,
 } from '../types';
 
 export const authApi = {
@@ -147,6 +148,7 @@ export const pdfApi = {
 
 export const userApi = {
   getMe: () => client.get<User>('/users/me'),
+  getMyPermissions: () => client.get<string[]>('/users/me/permissions'),
   getDoctors: () => client.get<User[]>('/users/doctors'),
   getNurses: () => client.get<User[]>('/users/nurses'),
 };
@@ -205,6 +207,9 @@ export const adminApi = {
     client.put<User>(`/admin/users/${id}/permissions`, { action, permission }),
   deleteUser: (id: number) => client.delete(`/admin/users/${id}`),
   getStats: () => client.get<Record<string, number>>('/admin/stats'),
+  getPermissions: () => client.get<PermissionMatrix>('/admin/permissions'),
+  updateRolePermission: (role: string, permissionCode: string, granted: boolean) =>
+    client.put<PermissionMatrix>('/admin/permissions', { role, permissionCode, granted }),
 };
 
 export const prescriptionApi = {

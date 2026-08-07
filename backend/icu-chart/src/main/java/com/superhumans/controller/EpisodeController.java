@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,6 +49,7 @@ public class EpisodeController {
     }
 
     @PostMapping
+    @PreAuthorize("@permissionService.has('EPISODE_CREATE')")
     public ResponseEntity<EpisodeResponse> createEpisode(
             @Valid @RequestBody EpisodeCreateRequest request,
             Authentication auth) {

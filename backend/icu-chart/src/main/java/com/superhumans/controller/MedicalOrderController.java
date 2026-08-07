@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,7 @@ public class MedicalOrderController {
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/orders")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     public ResponseEntity<MedicalOrderResponse> createOrder(
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody MedicalOrderCreateRequest request,
@@ -51,6 +53,7 @@ public class MedicalOrderController {
     }
 
     @PostMapping("/orders/{id}/cancel")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     public ResponseEntity<Void> cancelOrder(
             @PathVariable UUID id,
             @Valid @RequestBody MedicalOrderPatchRequest request,

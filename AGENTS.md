@@ -17,6 +17,19 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
+**2026-08-07: Dynamic RBAC — role-permission matrix managed from the admin UI**
+
+Full role-based access control with an admin-editable matrix. `permissions` + `role_permissions` tables (Liquibase `012-role-permissions.sql`), seeded by `PermissionService` on first boot when empty (definitions also SQL-seeded with `ON CONFLICT DO UPDATE`; grants are Java-seeded — edits persist across restarts since seeding only fires when the tables are empty).
+
+- **Enforcement**: URL ceilings in `ClinicalSecurityRules` widened to `CLINICAL_ROLES` (write endpoints), precise enforcement via `@PreAuthorize("@permissionService.has('CODE')")` on controllers (icu-chart, medication-sheet, prosthesis-manufacturing). 403 (not 500) via the existing `AuthorizationDeniedException` handler.
+- **Matrix** (defaults): DOCTOR/HOD — episode, clinical day, prescriptions, sign doctor, APACHE II/SOFA + CAM-ICU/Браден/RASS, patient view; NURSE — sign nurse, execute prescriptions, vitals, CAM-ICU/Браден/RASS, patient view; HOD — reopen day (only); ADMIN — patient view + audit access; PROSTHETIST — dashboard/instance/step/pause; PROSTHETICS_ADMIN — prosthetics + gate + templates + orders. HOD removed from prosthetics guards (backend + `App.tsx` routes).
+- **Admin UI**: `AdminPage` new tab «Доступи та ролі» — matrix editor (checkbox grid grouped by category, dirty tracking, «Зберегти зміни» diff-saves via `PUT /api/admin/permissions`). Audit tab «Переглянути» gated by `AUDIT_ACCESS` permission. Role dropdown extended with PROSTHETIST / PROSTHETICS_ADMINISTRATOR.
+- **API**: `GET /api/admin/permissions` (matrix), `PUT /api/admin/permissions` (grant/revoke, body `{role, permissionCode, granted}`), `GET /api/users/me/permissions` (effective codes for current role). `AuthContext` loads effective permissions and `hasPermission` is matrix-based.
+- **Tests**: `PermissionServiceTest` (common unit), `AdminPermissionsIntegrationTest` (grant → 403→400→403 enforcement cycle), E2E `tests/specs/admin/permissions.spec.ts` (UI matrix view + grant/revoke enforcement, serialized).
+- Legacy per-user `PRESCRIBER` CSV (`user.permissions` column) remains untouched; `ScaleAuthorizationService` is now permission-driven (DOCTOR may create Браден per matrix).
+
+### Previous sessions (condensed):
+
 **2026-08-06: Prosthetics E2E verification — quality-gate flow fixed (gate guards stage entry)**
 
 Full headed-browser E2E of the prosthetics flow verified end-to-end (prosthetist1 → patient Сніжко → order PR-2026-0001 → template TP-UL-01 → steps 1–4 → admin gate PASS → steps 5–6 → done → PDF → history), instance COMPLETED, 0 errors.
@@ -190,7 +203,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 - **Backend**: 557 total tests (from multi-module reactor: common + medication-sheet + icu-chart + prosthesis-manufacturing). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: 419 Vitest tests across 47 files (pages, components, AuthContext, endpoints, prosthetics). Run with `npm t`.
-- **E2E**: 48 Playwright spec files (186 tests) across 7 projects (setup, login, doctor, nurse, hod, admin, api).
+- **E2E**: 49 Playwright spec files (188 tests) across 7 projects (setup, login, doctor, nurse, hod, admin, api).
 
 ## Playwright Projects
 
@@ -277,6 +290,8 @@ AuditLog (standalone, no BaseEntity)
 | `ScaleResult` | BaseEntity | clinicalDay(M→1)(nullable), scale(M→1), result(text), episodeId(UUID), rawData(jsonb), calculatedAt, calculatedBy | Auto-calculates GCS/RASS from consciousness |
 | `FluidBalance` | BaseEntity | clinicalDay(M→1), hour, intake, output, balance, cumulativeBalance | Recalculated on HourlyRecord changes |
 | `Signature` | BaseEntity | clinicalDay(M→1), userId, role, signedAt, hash, status | — |
+| `Permission` | — | code(PK), label, description, category | Dictionary of the RBAC catalog (20 codes) |
+| `RolePermission` | — | role(PK, UserRole), permissionCode(PK→Permission) | Default-deny grants; presence = granted |
 | `GeneratedPdf` | BaseEntity | clinicalDay(M→1), fileName, fileVersion, generatedAt, generatedBy, checksum, fileData(byte[]), transferStatus(TransferStatus), transferError, transferredAt | TransferStatus: PENDING/SENT/FAILED |
 | `SystemSettings` | BaseEntity | key(unique), value(TEXT), description(TEXT) | — |
 
@@ -390,8 +405,15 @@ All endpoints prefixed with `/api`.
 ### Audit
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/api/audit` | Yes | List (paginated, filters: userId, entity, entityId, action, dateFrom, dateTo) |
-| GET | `/api/audit/{id}` | Yes | Get single audit log entry |
+| GET | `/api/audit` | Yes | List (paginated, filters: userId, entity, entityId, action, dateFrom, dateTo). Requires `AUDIT_ACCESS` or AUDITOR |
+| GET | `/api/audit/{id}` | Yes | Get single audit log entry. Requires `AUDIT_ACCESS` or AUDITOR |
+
+### RBAC (Admin role-permission matrix)
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/admin/permissions` | ADMINISTRATOR | Full matrix: roles, permission catalog, grants |
+| PUT | `/api/admin/permissions` | ADMINISTRATOR | Grant/revoke: `{role, permissionCode, granted}` |
+| GET | `/api/users/me/permissions` | Any authenticated | Effective permission codes of the current user's role |
 
 ### Mock MIS Controls
 | Method | Path | Auth | Description |
@@ -457,7 +479,7 @@ All endpoints prefixed with `/api`.
 | `doctor/CreateCardPage.tsx` | Create new episode (select patient, set dates) |
 | `doctor/PatientDayPage.tsx` | Doctor view of clinical day (orders, notes, scales, sign-off) |
 | `nurse/NurseDashboardPage.tsx` | Nurse episode list with active patients |
-| `admin/AdminPage.tsx` | User management tables + audit log viewer |
+| `admin/AdminPage.tsx` | Admin panel: user management (roles incl. PROSTHETIST/PROSTHETICS_ADMIN, PRESCRIBER badge), RBAC matrix editor («Доступи та ролі»), audit log (gated by `AUDIT_ACCESS`), stats |
 | `prosthetics/DashboardPage.tsx` | Prosthetist dashboard with instances, filters |
 | `prosthetics/setup/OrderSelectPage.tsx` | Patient search + order selection |
 | `prosthetics/setup/OrderReviewPage.tsx` | Order review with recipe PDF |
@@ -536,6 +558,7 @@ All endpoints prefixed with `/api`.
 | `SignatureService` | Create/revoke signatures, check existing signatures |
 | `PdfGeneratorService` | Generate PDF (iText) with all clinical day sections |
 | `AuditService` | Create/query audit log entries with pagination |
+| `PermissionService` | Dynamic RBAC: `has/hasAny/hasForRole` (SpEL for `@PreAuthorize`), matrix read, grant/revoke with cache invalidation + audit, first-boot seeding of defaults |
 
 Prosthetics module adds 7 additional services in `prosthesis-manufacturing` module:
 - `ProstheticsPatientService` — patient CRUD
