@@ -35,9 +35,11 @@ test.describe('API Security Rules', () => {
   test('nurse cannot create episodes (prescriber role required)', async ({ request }) => {
     const token = await getToken(request, 'nurse1', 'nurse123');
 
+    // Valid body on purpose: argument validation runs before method security,
+    // so an invalid body would yield 400 (validation) instead of 403 (denied).
     const res = await request.post(`${API}/episodes`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: { patientId: 1001 },
+      data: { patientId: 1001, admissionDate: '2026-08-07T10:00:00' },
     });
 
     expect(res.status()).toBe(403);
@@ -48,7 +50,7 @@ test.describe('API Security Rules', () => {
 
     const res = await request.post(`${API}/episodes`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: { patientId: 1001 },
+      data: { patientId: 1001, admissionDate: '2026-08-07T10:00:00' },
     });
 
     expect(res.status()).toBe(403);
@@ -68,9 +70,10 @@ test.describe('API Security Rules', () => {
   test('nurse cannot create medical orders', async ({ request }) => {
     const token = await getToken(request, 'nurse1', 'nurse123');
 
+    // Valid body: method security must deny before any validation can pass.
     const res = await request.post(`${API}/clinical-days/${SEED_DAY_ID}/orders`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: {},
+      data: { category: 'Ліки', drugName: 'Тест', dose: '1', unit: 'мл', route: 'в/в', frequency: '1 раз', startTime: '2026-08-07T10:00:00' },
     });
 
     expect(res.status()).toBe(403);

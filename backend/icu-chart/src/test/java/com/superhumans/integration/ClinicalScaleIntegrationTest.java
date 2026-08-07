@@ -226,7 +226,7 @@ class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void calculateAndSaveScale_braden_doctorForbidden() {
+    void calculateAndSaveScale_braden_doctorAllowed() {
         Map<String, Object> rawData = Map.of(
                 "sensoryPerception", 4,
                 "moisture", 4,
@@ -243,6 +243,29 @@ class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
                 HttpMethod.POST, entity, String.class,
                 SEED_EPISODE_ID, SEED_BRADEN_SCALE_ID);
 
+        // Matrix: CAM-ICU/Браден/RASS is granted to DOCTOR, NURSE and HOD.
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void calculateAndSaveScale_braden_adminForbidden() {
+        Map<String, Object> rawData = Map.of(
+                "sensoryPerception", 4,
+                "moisture", 4,
+                "activity", 4,
+                "mobility", 4,
+                "nutrition", 4,
+                "frictionShear", 3
+        );
+
+        var entity = authEntity(rawData, getAdminToken());
+
+        var res = restTemplate.exchange(
+                "/api/episodes/{episodeId}/scales/calculate?scaleId={scaleId}",
+                HttpMethod.POST, entity, String.class,
+                SEED_EPISODE_ID, SEED_BRADEN_SCALE_ID);
+
+        // ADMIN holds no clinical scale permissions in the matrix.
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 

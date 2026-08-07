@@ -59,20 +59,24 @@ test.describe('Role & permission management', () => {
     // Ensure a clean baseline (idempotent)
     await setNurseEpisodeCreate(request, adminHeaders, false);
 
+    // Valid request body: argument validation runs before method security, so an
+    // invalid body would yield 400 (validation) instead of 403 (denied).
+    const createBody = { patientId: 1, admissionDate: '2026-08-07T10:00:00' };
+
     // Baseline: nurse is blocked by the matrix
-    const before = await request.post('/api/episodes', { headers: nurseHeaders, data: {} });
+    const before = await request.post('/api/episodes', { headers: nurseHeaders, data: createBody });
     expect(before.status()).toBe(403);
 
     // Grant EPISODE_CREATE to NURSE via the admin matrix API
     await setNurseEpisodeCreate(request, adminHeaders, true);
 
-    // The request now passes security and fails on validation (400), not 403
-    const granted = await request.post('/api/episodes', { headers: nurseHeaders, data: {} });
-    expect(granted.status()).toBe(400);
+    // The request now passes security end to end
+    const granted = await request.post('/api/episodes', { headers: nurseHeaders, data: createBody });
+    expect(granted.status()).toBe(201);
 
     // Revoke again → blocked
     await setNurseEpisodeCreate(request, adminHeaders, false);
-    const after = await request.post('/api/episodes', { headers: nurseHeaders, data: {} });
+    const after = await request.post('/api/episodes', { headers: nurseHeaders, data: createBody });
     expect(after.status()).toBe(403);
   });
 

@@ -22,6 +22,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,14 +47,18 @@ class PermissionServiceTest {
     @BeforeEach
     void setUp() {
         permissionService = new PermissionService(permissionRepository, rolePermissionRepository, auditService);
-        when(rolePermissionRepository.count()).thenReturn((long) grants.size());
-        when(rolePermissionRepository.findAll()).thenAnswer(inv -> new ArrayList<>(grants));
-        when(rolePermissionRepository.save(any(RolePermission.class))).thenAnswer(inv -> {
+        lenient().when(rolePermissionRepository.count()).thenAnswer(inv -> (long) grants.size());
+        lenient().when(rolePermissionRepository.findAll()).thenAnswer(inv -> new ArrayList<>(grants));
+        lenient().when(rolePermissionRepository.save(any(RolePermission.class))).thenAnswer(inv -> {
             RolePermission rp = inv.getArgument(0);
             grants.add(rp);
             return rp;
         });
-        when(rolePermissionRepository.findByRoleAndPermissionCode(any(), any())).thenAnswer(inv -> {
+        lenient().doAnswer(inv -> {
+            grants.remove(inv.getArgument(0));
+            return null;
+        }).when(rolePermissionRepository).delete(any(RolePermission.class));
+        lenient().when(rolePermissionRepository.findByRoleAndPermissionCode(any(), any())).thenAnswer(inv -> {
             UserRole role = inv.getArgument(0);
             String code = inv.getArgument(1);
             return grants.stream()
@@ -118,14 +123,17 @@ class PermissionServiceTest {
     }
 
     @Test
-    void matrix_containsAllRoles() {
+    void matrix_defaultDenyForRolesWithoutGrants() {
         grants.add(RolePermission.builder().role(UserRole.DOCTOR)
                 .permissionCode(PermissionCatalog.PATIENT_VIEW).build());
 
         Map<UserRole, Set<String>> matrix = permissionService.matrix();
 
-        assertThat(matrix).containsKeys(UserRole.DOCTOR, UserRole.NURSE, UserRole.ADMINISTRATOR,
+        assertThat(matrix).containsKeys(UserRole.DOCTOR);
+        // Roles without any grant rows are absent from the map (default deny).
+        assertThat(matrix).doesNotContainKeys(UserRole.NURSE, UserRole.ADMINISTRATOR,
                 UserRole.PROSTHETIST, UserRole.PROSTHETICS_ADMINISTRATOR);
+        assertThat(matrix.get(UserRole.DOCTOR)).containsExactly(PermissionCatalog.PATIENT_VIEW);
     }
 
     @Test
@@ -163,11 +171,9 @@ class PermissionServiceTest {
 
     @Test
     void setRolePermission_noStateChange_isNoop() {
-        grants.add(RolePermission.builder().role(UserRole.NURSE)
-                .permissionCode(PermissionCatalog.EPISODE_CREATE).build());
+        // NURSE does not hold EPISODE_CREATE; revoking it must be a no-op.
         authenticate(UserRole.ADMINISTRATOR);
 
-        permissionService.setRolePermission(UserRole.NURSE, PermissionCatalog.EPISODE_CREATE, true);
         permissionService.setRolePermission(UserRole.NURSE, PermissionCatalog.EPISODE_CREATE, false);
 
         verify(auditService, never()).logAction(eq("RolePermission"), eq(null), any(), eq(1L));
@@ -191,6 +197,7 @@ class PermissionServiceTest {
     @Test
     void seedIfEmpty_skippedWhenPermissionsExist() {
         when(permissionRepository.count()).thenReturn(1L);
+        lenient().when(rolePermissionRepository.count()).thenReturn(1L);
 
         permissionService.permissionsFor(UserRole.DOCTOR);
 

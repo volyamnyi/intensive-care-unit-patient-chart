@@ -71,8 +71,10 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void createPrescriptionList_asNurse_returnsForbidden() {
+        // Valid body on purpose: argument validation runs before method security,
+        // so an invalid body would yield 400 (validation) instead of 403 (denied).
         var res = restTemplate.exchange("/api/prescriptions", HttpMethod.POST,
-                authEntity("{}", getNurseToken()), String.class);
+                authEntity("{\"patientId\":\"1\"}", getNurseToken()), String.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }

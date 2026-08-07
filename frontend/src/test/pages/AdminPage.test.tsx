@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import AdminPage from '../../pages/admin/AdminPage';
 
@@ -103,6 +104,7 @@ describe('AdminPage', () => {
 
   it('renders the permission matrix with role columns and grants', async () => {
     renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Доступи та ролі' }));
     await waitFor(() => {
       expect(screen.getByText('Матриця доступів')).toBeInTheDocument();
     });

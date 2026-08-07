@@ -3,6 +3,10 @@ package com.superhumans.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.superhumans.dto.EpisodeCreateRequest;
+import com.superhumans.dto.PermissionMatrixResponse;
+import com.superhumans.dto.RolePermissionUpdateRequest;
+import java.time.LocalDateTime;
+import java.util.UUID;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -16,6 +20,10 @@ import org.springframework.http.ResponseEntity;
  * Integration coverage for the dynamic RBAC matrix exposed to the admin UI.
  * Asserts the default matrix, the enforcement of a granted permission and the
  * revocation path over the real filter chain.
+ *
+ * <p>Important: the enforcement assertions send a <em>valid</em> request body.
+ * Spring's argument validation runs before the method-security interceptor, so
+ * an invalid body would yield 400 (validation) instead of 403 (denied).
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
@@ -64,43 +72,39 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         // Revoke first to make the test idempotent against a dirty database.
         changeRolePermission("NURSE", EPISODE_CREATE, false);
 
-        // Baseline: nurse cannot create episodes.
+        // Baseline: nurse is denied with a valid request body.
         var before = createEpisodeAsNurse();
         assertThat(before.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
-        // Grant via the admin API -> the operation is now permitted (fails on validation, not auth).
+        // Grant via the admin API -> the operation is now permitted end to end.
         changeRolePermission("NURSE", EPISODE_CREATE, true);
         var granted = createEpisodeAsNurse();
-        assertThat(granted.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(granted.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
-        // Revoke -> forbidden again.
+        // Revoke -> denied again.
         changeRolePermission("NURSE", EPISODE_CREATE, false);
         var after = createEpisodeAsNurse();
         assertThat(after.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    private ResponseEntity<com.superhumans.dto.PermissionMatrixResponse> exchangeMatrix() {
+    private ResponseEntity<PermissionMatrixResponse> exchangeMatrix() {
         return restTemplate.exchange("/api/admin/permissions", HttpMethod.GET,
-                authGet(getAdminToken()), com.superhumans.dto.PermissionMatrixResponse.class);
+                authGet(getAdminToken()), PermissionMatrixResponse.class);
     }
 
     private void changeRolePermission(String role, String code, boolean granted) {
-        var body = new com.superhumans.dto.RolePermissionUpdateRequest();
+        var body = new RolePermissionUpdateRequest();
         body.setRole(role);
         body.setPermissionCode(code);
         body.setGranted(granted);
         var res = restTemplate.exchange("/api/admin/permissions", HttpMethod.PUT,
-                authEntity(body, getAdminToken()), com.superhumans.dto.PermissionMatrixResponse.class);
+                authEntity(body, getAdminToken()), PermissionMatrixResponse.class);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     private ResponseEntity<String> createEpisodeAsNurse() {
-        // admissionDate intentionally omitted: when the permission is granted the
-        // request reaches validation (@NotNull) and fails with 400; when blocked
-        // the security layer rejects it with 403 before validation ever runs.
-        var request = new EpisodeCreateRequest();
-        request.setPatientId(1001L);
-        request.setHospitalizationId(java.util.UUID.randomUUID());
+        var request = new EpisodeCreateRequest(
+                1L, UUID.randomUUID(), null, LocalDateTime.now(), null, null, null, null, null);
         return restTemplate.exchange("/api/episodes", HttpMethod.POST,
                 new HttpEntity<>(request, authHeaders(getNurseToken())), String.class);
     }
