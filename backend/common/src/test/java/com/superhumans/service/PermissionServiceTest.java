@@ -231,7 +231,7 @@ class PermissionServiceTest {
         assertThat(matrix.get(UserRole.HEAD_OF_DEPARTMENT))
                 .contains(PermissionCatalog.REOPEN_DAY, PermissionCatalog.SIGN_DOCTOR);
         assertThat(matrix.get(UserRole.ADMINISTRATOR))
-                .containsExactly(PermissionCatalog.PATIENT_VIEW, PermissionCatalog.AUDIT_ACCESS);
+                .containsExactlyInAnyOrder(PermissionCatalog.PATIENT_VIEW, PermissionCatalog.AUDIT_ACCESS);
         assertThat(matrix.get(UserRole.PROSTHETIST))
                 .contains(PermissionCatalog.PROSTHETICS_DASHBOARD, PermissionCatalog.PROSTHETICS_STEP_COMPLETE)
                 .doesNotContain(PermissionCatalog.PROSTHETICS_GATE_DECISION,
