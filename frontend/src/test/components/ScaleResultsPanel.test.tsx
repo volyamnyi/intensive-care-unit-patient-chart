@@ -43,7 +43,9 @@ describe('ScaleResultsPanel', () => {
     renderPanel({ availableScales: mockScales, onCreateResult: vi.fn() });
     expect(screen.getByRole('combobox', { name: /Шкала/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('combobox', { name: /Шкала/i }));
-    await userEvent.click(screen.getByRole('option', { name: 'APACHE II' }));
+    // The Base UI select renders its options asynchronously (portal + positioning).
+    const option = await screen.findByRole('option', { name: 'APACHE II' });
+    await userEvent.click(option);
     expect(screen.getByText('Додати')).toBeInTheDocument();
   });
 
