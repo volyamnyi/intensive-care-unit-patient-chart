@@ -3,6 +3,7 @@ package com.superhumans.controller;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.service.AuditService;
+import com.superhumans.service.PermissionService;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.repository.AuditLogRepository;
 import org.junit.jupiter.api.Test;
@@ -46,8 +47,12 @@ class AuditControllerTest {
     @MockitoBean
     private AuditLogRepository auditLogRepository;
 
+    @MockitoBean
+    private PermissionService permissionService;
+
     @BeforeEach
     void setUpJwt() {
+        when(permissionService.has("AUDIT_ACCESS")).thenReturn(true);
         when(jwtTokenProvider.validateToken(anyString())).thenReturn(true);
         when(jwtTokenProvider.getLoginFromToken(anyString())).thenReturn("testuser");
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");

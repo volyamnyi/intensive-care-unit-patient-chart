@@ -9,6 +9,7 @@ import com.superhumans.repository.UserRepository;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.repository.AuditLogRepository;
 import com.superhumans.service.AuditService;
+import com.superhumans.service.PermissionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,9 @@ class UserControllerTest {
 
     @MockitoBean
     private AuditService auditService;
+
+    @MockitoBean
+    private PermissionService permissionService;
 
     @BeforeEach
     void setUpJwt() {
