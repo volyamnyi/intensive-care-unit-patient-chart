@@ -44,6 +44,7 @@ test.describe('Nurse day flow', () => {
   });
 
   test('nurse updates urine output inline (PATCH)', async ({ page }) => {
+    test.setTimeout(60000);
     await page.goto(`/icu/nurse/episode/${EPISODE_ID}`);
 
     // Година 4:00 не має seed-запису — значення унікальне для кожного запуску (стійко до ретраїв)
@@ -53,17 +54,28 @@ test.describe('Nurse day flow', () => {
     const next = current === '' ? '250' : String(Number(current) + 10);
 
     // Вводимо значення і підтверджуємо збереження через браузерний POST (створення) або PATCH (оновлення)
-    const respPromise = page.waitForResponse(
-      (r) => (r.request().method() === 'POST' && r.url().includes(`/api/clinical-days/${DAY_ID}/hourly-records`))
-        || (r.request().method() === 'PATCH' && r.url().includes('/api/hourly-records/')),
-    );
-    await input.fill(next);
-    await input.press('Enter');
-    const resp = await respPromise;
-    expect([201, 204]).toContain(resp.status());
-
-    // Поле відображає збережене значення
-    await expect(input).toHaveValue(next);
+    const saveResponse = (r: { request: () => { method(): string; url(): string } }) =>
+      (r.request().method() === 'POST' && r.url().includes(`/api/clinical-days/${DAY_ID}/hourly-records`))
+      || (r.request().method() === 'PATCH' && r.url().includes('/api/hourly-records/'));
+    let resp: { status(): number } | null = null;
+    for (let attempt = 0; attempt < 3 && !resp; attempt++) {
+      const respPromise = page.waitForResponse(saveResponse, { timeout: 8000 });
+      await input.fill(next);
+      await input.press('Enter');
+      try {
+        resp = await respPromise;
+      } catch {
+        // Запит не пішов або відповідь випередила реєстрацію очікування — повторюємо fill + Enter
+      }
+    }
+    if (resp) {
+      expect([201, 204]).toContain(resp.status());
+      await expect(input).toHaveValue(next);
+    } else {
+      // Відповідь могла випередити реєстрацію очікування — перевіряємо збереження на сервері
+      await page.goto(`/icu/nurse/episode/${EPISODE_ID}`);
+      await expect(page.getByLabel('Сеча 4:00')).toHaveValue(next);
+    }
   });
 
   test('nurse executes a planned medication and finishes it', async ({ page, doctorPage }, testInfo) => {

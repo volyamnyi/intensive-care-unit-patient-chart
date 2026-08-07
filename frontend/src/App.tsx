@@ -31,8 +31,9 @@ import FailedScreen from './pages/prosthetics/process/FailedScreen';
 import { ProstheticsProvider } from './prosthetics/ProstheticsContext';
 
 // Module-navigation permissions from the dynamic RBAC matrix (PermissionCatalog).
-const MODULE_ICU = 'MODULE_ICU_ACCESS';
-const MODULE_MEDICATION = 'MODULE_MEDICATION_ACCESS';
+// MODULE_PROSTHETICS_ACCESS / MODULE_ADMIN_ACCESS gate navigation into those
+// modules (role OR permission); ICU/medication module permissions drive the
+// sidebar/selector visibility while their routes stay role-scoped.
 const MODULE_PROSTHETICS = 'MODULE_PROSTHETICS_ACCESS';
 const MODULE_ADMIN = 'MODULE_ADMIN_ACCESS';
 
@@ -126,7 +127,7 @@ function AppRoutes() {
 
         <Route path="/icu">
           <Route path="doctor" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_ICU]}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
               <DoctorLayout />
             </Guard>
           }>
@@ -141,7 +142,7 @@ function AppRoutes() {
           </Route>
 
           <Route path="nurse" element={
-            <Guard roles={['NURSE']} permissions={[MODULE_ICU]}>
+            <Guard roles={['NURSE']}>
               <NurseLayout />
             </Guard>
           }>
@@ -152,22 +153,22 @@ function AppRoutes() {
 
         <Route path="/prescriptions">
           <Route path="doctor" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_MEDICATION]}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
               <PrescriptionPage />
             </Guard>
           } />
           <Route path="doctor/:id" element={
-            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']} permissions={[MODULE_MEDICATION]}>
+            <Guard roles={['DOCTOR', 'HEAD_OF_DEPARTMENT']}>
               <PrescriptionDetailPage />
             </Guard>
           } />
           <Route path="nurse" element={
-            <Guard roles={['NURSE']} permissions={[MODULE_MEDICATION]}>
+            <Guard roles={['NURSE']}>
               <NursePrescriptionPage />
             </Guard>
           } />
           <Route path="nurse/:id" element={
-            <Guard roles={['NURSE']} permissions={[MODULE_MEDICATION]}>
+            <Guard roles={['NURSE']}>
               <PrescriptionDetailPage />
             </Guard>
           } />
