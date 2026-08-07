@@ -3,6 +3,7 @@ package com.superhumans.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.superhumans.dto.EpisodeCreateRequest;
+import com.superhumans.dto.RolePermissionUpdateRequest;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -104,10 +105,36 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void searchEpisodes_asAdmin_isAllowed() {
+    void searchEpisodes_asAdmin_withoutModulePermission_returnsForbidden() {
+        // The admin matrix checkbox (MODULE_ICU_ACCESS) is the gate that lets
+        // ADMINISTRATOR visit the ICU module — without it the read paths are
+        // closed (CLINICAL_CORE roles read by role, everyone else by permission).
         var res = restTemplate.exchange("/api/episodes", HttpMethod.GET,
                 authGet(getAdminToken()), String.class);
 
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void searchEpisodes_asAdmin_withModulePermission_isAllowed() {
+        setRolePermission("ADMINISTRATOR", "MODULE_ICU_ACCESS", true);
+        try {
+            var res = restTemplate.exchange("/api/episodes", HttpMethod.GET,
+                    authGet(getAdminToken()), String.class);
+
+            assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        } finally {
+            setRolePermission("ADMINISTRATOR", "MODULE_ICU_ACCESS", false);
+        }
+    }
+
+    private void setRolePermission(String role, String code, boolean granted) {
+        var body = new RolePermissionUpdateRequest();
+        body.setRole(role);
+        body.setPermissionCode(code);
+        body.setGranted(granted);
+        var res = restTemplate.exchange("/api/admin/permissions", HttpMethod.PUT,
+                authEntity(body, getAdminToken()), String.class);
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }
