@@ -47,7 +47,7 @@ class AuditControllerTest {
     @MockitoBean
     private AuditLogRepository auditLogRepository;
 
-    @MockitoBean
+    @MockitoBean(name = "permissionService")
     private PermissionService permissionService;
 
     @BeforeEach

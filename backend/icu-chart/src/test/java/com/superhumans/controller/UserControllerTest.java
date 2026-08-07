@@ -49,7 +49,7 @@ class UserControllerTest {
     @MockitoBean
     private AuditService auditService;
 
-    @MockitoBean
+    @MockitoBean(name = "permissionService")
     private PermissionService permissionService;
 
     @BeforeEach
