@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  ArrowRight,
   Camera,
   Check,
   ClipboardCheck,
@@ -22,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -77,6 +79,8 @@ const isPpeCheckbox = (label: string): boolean =>
 // Stage-3 PPE items display under their short names; the «Засоби індивідуального
 // захисту: …» prefix is already conveyed by the PPE group header.
 const PPE_SHORT_LABELS: Record<string, string> = {
+  'Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички':
+    'Нестерильні оглядові нітрилові рукавички',
   'Засоби індивідуального захисту: захисні окуляри': 'Захисні окуляри',
   'Засоби індивідуального захисту: респіратор': 'Респіратор',
   'Засоби індивідуального захисту: захисні навушники': 'Захисні навушники',
@@ -178,12 +182,47 @@ function renderElements(
   // «min 3 filled measurements» rule.
   if (stepId === 'e0000002-0000-0000-0000-000000000002') {
     out.push(
+      <div key="ppe-measurement" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Перед вимірюванням підтвердіть засоби індивідуального захисту.
+        </p>
+        <Separator />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+            <Checkbox
+              id="ppe-measurement-non-sterile-gloves"
+              checked={values['ppe-measurement-non-sterile-gloves'] === true}
+              onCheckedChange={(c) => onChange('ppe-measurement-non-sterile-gloves', c === true)}
+            />
+            <Label htmlFor="ppe-measurement-non-sterile-gloves" className="text-xs font-medium">
+              Нестерильні оглядові нітрилові рукавички
+            </Label>
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowRight className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves.png"
+              alt="Засоби індивідуального захисту: нестерильні нітрилові рукавички"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+        </div>
+      </div>,
+    );
+    out.push(
       <MeasurementForms
         key="measurement-forms"
         values={values}
         onChange={(k, v) => onChange(k, v)}
       />,
     );
+    return out;
   }
   let i = 0;
   while (i < els.length) {
@@ -747,11 +786,6 @@ export default function WizardScreen() {
             <CardTitle className="mt-2 text-xl">{step.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="rounded-md border-l-4 border-mint bg-muted p-4 text-sm">
-              Виконайте крок та заповніть обов&apos;язкові поля. Після підтвердження крок буде
-              зафіксовано в журналі процесу.
-            </div>
-
             <div className="space-y-5">
               {step.id === 'e0000005-0000-0000-0000-000000000005' ? (
                 <div className="space-y-3">
