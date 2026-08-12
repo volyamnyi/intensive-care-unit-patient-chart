@@ -30,9 +30,9 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class VitalSignController {
 
-    private final VitalSignService vitalSignService;
-    private final VitalSignDayMapper vitalSignDayMapper;
-    private final VitalSignEntryMapper vitalSignEntryMapper;
+    VitalSignService vitalSignService;
+    VitalSignDayMapper vitalSignDayMapper;
+    VitalSignEntryMapper vitalSignEntryMapper;
 
     @GetMapping
     public List<VitalSignDayResponse> getDaysByPrescriptionList(@RequestParam UUID prescriptionListId) {

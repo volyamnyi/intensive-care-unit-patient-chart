@@ -1,6 +1,7 @@
 package com.superhumans.prosthesismanufacturing.integration;
 
 import com.superhumans.prosthesismanufacturing.entity.*;
+import com.superhumans.prosthetismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.repository.*;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;

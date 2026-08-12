@@ -66,7 +66,7 @@ export class SetupWizardPage {
     this.orderReviewMaterialsPlaceholder = page.getByText(/Специфікація матеріалів відсутня|Дані будуть додані/);
     this.startButton = page.getByRole('button', { name: /Старт/ });
     this.orderDetailsTab = page.getByRole('tab', { name: /Деталі|Загальні відомості/ });
-    this.recipeTab = page.getByRole('tab', { name: /Рецепт|Документація/ });
+    this.recipeTab = page.getByRole('tab', { name: /Замовлення на протез|Документація/ });
     this.materialsTab = page.getByRole('tab', { name: /Матеріали/ });
     
     // Screen 6: Template Selection
@@ -107,20 +107,22 @@ export class SetupWizardPage {
   async selectPatient(nameOrId: string) {
     await this.patientResultsTable.waitFor({ state: 'visible', timeout: 10000 });
     const rows = this.patientResultsTable.locator('tbody tr');
+    // The table shell renders before the search results load — wait for the first row
+    await rows.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
     const count = await rows.count();
     
     for (let i = 0; i < count; i++) {
       const row = rows.nth(i);
       const text = await row.textContent();
       if (text && (text.includes(nameOrId) || text.toLowerCase().includes(nameOrId.toLowerCase()))) {
-        await row.getByRole('button', { name: /Обрати/ }).click();
+        await row.getByRole('button', { name: /Обрати|Обрано/ }).click();
         return;
       }
     }
     
     // Fallback: select first patient
     if (count > 0) {
-      await rows.first().getByRole('button', { name: /Обрати/ }).click();
+      await rows.first().getByRole('button', { name: /Обрати|Обрано/ }).click();
       return;
     }
     
@@ -130,7 +132,7 @@ export class SetupWizardPage {
   async selectFirstPatient() {
     await this.patientResultsTable.waitFor({ state: 'visible', timeout: 10000 });
     const rows = this.patientResultsTable.locator('tbody tr');
-    await rows.first().getByRole('button', { name: /Обрати/ }).click();
+    await rows.first().getByRole('button', { name: /Обрати|Обрано/ }).click();
   }
 
   async verifyNoResultsMessage() {
@@ -148,32 +150,39 @@ export class SetupWizardPage {
   // ==================== SCREEN 4: ORDER SELECTION ====================
   
   async selectOrder(orderNumber: string) {
-    await this.orderResultsTable.waitFor({ state: 'visible', timeout: 10000 });
-    const rows = this.orderResultsTable.locator('tbody tr');
-    const count = await rows.count();
-    
-    for (let i = 0; i < count; i++) {
-      const row = rows.nth(i);
-      const text = await row.textContent();
-      if (text && text.includes(orderNumber)) {
-        await row.getByRole('button', { name: /Обрати/ }).click();
+    // The order list effect can re-run (draft updates) and flip the page back to loading
+    // skeletons after the table appeared — retry until a row is actually present.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await this.orderResultsTable.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+      const rows = this.orderResultsTable.locator('tbody tr');
+      await rows.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+      const count = await rows.count();
+
+      for (let i = 0; i < count; i++) {
+        const row = rows.nth(i);
+        const text = await row.textContent();
+        if (text && text.includes(orderNumber)) {
+          await row.getByRole('button', { name: /Обрати|Обрано/ }).click();
+          return;
+        }
+      }
+
+      // Fallback: select first order
+      if (count > 0) {
+        await rows.first().getByRole('button', { name: /Обрати|Обрано/ }).click();
         return;
       }
+
+      await this.page.waitForTimeout(3000);
     }
-    
-    // Fallback: select first order
-    if (count > 0) {
-      await rows.first().getByRole('button', { name: /Обрати/ }).click();
-      return;
-    }
-    
+
     throw new Error(`Order "${orderNumber}" not found`);
   }
 
   async selectFirstOrder() {
     await this.orderResultsTable.waitFor({ state: 'visible', timeout: 10000 });
     const rows = this.orderResultsTable.locator('tbody tr');
-    await rows.first().getByRole('button', { name: /Обрати/ }).click();
+    await rows.first().getByRole('button', { name: /Обрати|Обрано/ }).click();
   }
 
   async verifyPatientContextCardVisible() {
@@ -221,14 +230,14 @@ export class SetupWizardPage {
     }
     
     // Find and click the enabled "Обрати" button
-    const selectButton = this.page.getByRole('button', { name: 'Обрати' }).first();
+    const selectButton = this.page.getByRole('button', { name: /Обрати|Обрано/ }).first();
     await selectButton.waitFor({ state: 'visible', timeout: 10000 });
     await selectButton.click();
   }
 
   async selectFirstTemplate() {
     await this.page.waitForTimeout(2000);
-    const selectButton = this.page.getByRole('button', { name: 'Обрати' }).first();
+    const selectButton = this.page.getByRole('button', { name: /Обрати|Обрано/ }).first();
     await selectButton.waitFor({ state: 'visible', timeout: 10000 });
     await selectButton.click();
   }

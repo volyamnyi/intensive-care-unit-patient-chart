@@ -1,5 +1,7 @@
 package com.superhumans.prosthesismanufacturing.entity;
 
+import com.superhumans.prosthetismanufacturing.entity.ElementType;
+
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

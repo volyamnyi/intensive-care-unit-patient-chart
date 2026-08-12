@@ -14,8 +14,16 @@ async function getToken(request: any, login = 'doctor1', password = 'doctor123')
 test.describe('MIS Error Scenarios', () => {
   let token: string;
 
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeAll(async ({ request }) => {
     token = await getToken(request);
+  });
+
+  test.afterEach(async ({ request }) => {
+    await request.post(`${API}/mis/error-mode?mode=none`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
   });
 
   test('mis error mode unavailable - patients returns error', async ({ request }) => {

@@ -11,8 +11,6 @@ import java.util.UUID;
 public interface NotificationService {
 
     void notifyPrescriptionCreated(UUID listId, String patientName);
-
     void notifyPrescriptionUpdated(UUID listId, String patientName);
-
     void notifyDoseExecuted(UUID listId, String medicineName, String nurseName);
 }

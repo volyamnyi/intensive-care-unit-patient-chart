@@ -40,7 +40,7 @@ vi.mock('../../services/AuthContext', () => ({
 }));
 
 const mockUsers = [
-  { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR', email: 'doctor1@test.com', specialityCode: '', specialityName: '', phone: '', permissions: 'PRESCRIBER', app: null },
+  { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR', email: 'doctor1@test.com', specialityCode: '', specialityName: '', phone: '', permissions: '', app: null },
   { id: 2, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE', email: 'nurse1@test.com', specialityCode: '', specialityName: '', phone: '', permissions: '', app: null },
 ];
 
@@ -72,7 +72,7 @@ describe('AdminPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUsers.mockResolvedValue({ data: mockUsers });
-    mockGetStats.mockResolvedValue({ data: { totalUsers: 2, doctors: 1, nurses: 1, headsOfDepartment: 0, administrators: 1, prescribers: 1 } });
+    mockGetStats.mockResolvedValue({ data: { totalUsers: 2, doctors: 1, nurses: 1, headsOfDepartment: 0, administrators: 1 } });
     mockGetPermissions.mockResolvedValue({ data: mockMatrix });
   });
 

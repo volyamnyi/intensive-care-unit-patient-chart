@@ -1,0 +1,2 @@
+$process = Start-Process -FilePath "java" -ArgumentList "-jar", "target/icu-chart-1.0.0.jar" -WorkingDirectory "C:\projects\intensive-care-unit-patient-chart\backend\icu-chart" -PassThru -WindowStyle Hidden -RedirectStandardOutput "C:\projects\intensive-care-unit-patient-chart\backend\icu-chart\app.log" -RedirectStandardError "C:\projects\intensive-care-unit-patient-chart\backend\icu-chart\app-error.log"
+Write-Host "Backend started with PID: $($process.Id)"

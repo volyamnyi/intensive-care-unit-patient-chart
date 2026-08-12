@@ -37,7 +37,7 @@ const baseInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance => ({
   currentStepId: 'step-1',
   currentExecutionId: 'exec-1',
   templateName: 'TP-UL-01',
-  patientPib: 'Сніжко Оксана Володимирівна',
+  patientPib: 'Сніжко Іван Петрович',
   orderNumber: 'ПВ-26-0413',
   currentStageName: 'Виготовлення гільзи',
   currentStepName: 'Гіпсовий негатив',
@@ -114,7 +114,7 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('ПВ-26-0413')).toBeInTheDocument();
     });
-    expect(screen.getByText('Сніжко Оксана Володимирівна')).toBeInTheDocument();
+    expect(screen.getByText('Сніжко Іван Петрович')).toBeInTheDocument();
     expect(screen.getByText('TP-UL-01')).toBeInTheDocument();
     expect(screen.getByText('Виготовлення гільзи')).toBeInTheDocument();
     expect(screen.getByText('Гіпсовий негатив')).toBeInTheDocument();

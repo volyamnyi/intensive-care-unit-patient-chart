@@ -22,8 +22,6 @@ public class ResourceUsageRequest {
     String material;
 
     BigDecimal quantity;
-
     String unit;
-
     Integer minutes;
 }

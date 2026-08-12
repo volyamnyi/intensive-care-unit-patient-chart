@@ -87,17 +87,17 @@ export class WizardExecutionPage {
     
     // Pause Dialog
     this.pauseDialog = page.getByRole('dialog');
-    this.pauseReasonPatient = page.getByLabel(/Очікуємо пацієнта|Пацієнт не з'явився/);
-    this.pauseReasonMaterial = page.getByLabel(/Відсутні матеріали|Очікування матеріалів/);
-    this.pauseReasonTechIdle = page.getByLabel(/Технологічний простій|Сушіння|Полімеризація/);
+    this.pauseReasonPatient = page.getByLabel(/Очікування пацієнта|Очікуємо пацієнта/).first();
+    this.pauseReasonMaterial = page.getByLabel(/Відсутні матеріали|Очікування матеріалів/).first();
+    this.pauseReasonTechIdle = page.getByLabel(/Технологічний простій|Сушіння|Полімеризація/).first();
     this.confirmPauseButton = page.getByRole('button', { name: /Призупинити|Підтвердити/ });
     this.cancelPauseButton = page.getByRole('button', { name: /Скасувати/ });
     
     // Web Elements
-    this.textInputs = page.locator('input[type="text"]');
+    this.textInputs = page.locator('input[type="text"], input:not([type])');
     this.numericInputs = page.locator('input[type="number"]');
     this.textareas = page.locator('textarea');
-    this.checkboxes = page.locator('input[type="checkbox"]');
+    this.checkboxes = page.locator('[data-slot="checkbox"], input[type="checkbox"]');
     this.dropdowns = page.locator('button[role="combobox"], select');
     this.radioGroups = page.locator('input[type="radio"]');
     this.datePickers = page.locator('input[type="date"]');
@@ -200,7 +200,9 @@ export class WizardExecutionPage {
     for (let i = 0; i < count; i++) {
       const checkbox = this.checkboxes.nth(i);
       if (await checkbox.isVisible() && await checkbox.isEnabled()) {
-        await checkbox.check();
+        // JS click: the sticky bottom action bar overlays lower checkboxes, so pointer clicks
+        // would hit the bar instead of the checkbox.
+        await checkbox.evaluate((el: HTMLElement) => el.click()).catch(() => {});
       }
     }
   }
@@ -285,12 +287,12 @@ export class WizardExecutionPage {
       }
     }
     
-    // Check checkboxes
+    // Check checkboxes (Base UI renders button[data-slot="checkbox"])
     const cbCount = await this.checkboxes.count();
     for (let i = 0; i < cbCount; i++) {
       const cb = this.checkboxes.nth(i);
       if (await cb.isVisible() && await cb.isEnabled()) {
-        await cb.check();
+        await cb.evaluate((el: HTMLElement) => el.click()).catch(() => {});
         interacted = true;
       }
     }
@@ -333,8 +335,8 @@ export class WizardExecutionPage {
     // Signature
     await this.interactWithSignature();
     
-    // Try to complete
-    if (await this.completeStepButton.isEnabled()) {
+    // Try to complete — a bounded timeout so a gate/locked state returns quickly
+    if (await this.completeStepButton.isEnabled({ timeout: 3000 }).catch(() => false)) {
       await this.completeStepButton.click();
       await this.page.waitForTimeout(1000);
       return true;

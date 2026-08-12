@@ -23,6 +23,5 @@ public class GateDecisionRequest {
     GateDecisionType decision;
 
     List<String> criteriaConfirmed;
-
     String comment;
 }

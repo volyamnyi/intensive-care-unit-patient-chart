@@ -48,6 +48,21 @@ public class ProstheticsOrder extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     String materials;
 
+    @Column(name = "product_code", length = 128)
+    String productCode;
+
+    @Column(name = "manufacturing_approach")
+    String manufacturingApproach;
+
+    @Column(name = "approval_number", length = 32)
+    String approvalNumber;
+
+    @Column(name = "approval_registry", length = 64)
+    String approvalRegistry;
+
+    @Column(name = "approval_seq", length = 16)
+    String approvalSeq;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     @Builder.Default

@@ -2,3 +2,7 @@ spring:
   jackson:
     deserialization:
       fail-on-null-for-primitives: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/icu_chart_test
+    username: icu_user
+    password: icu_pass

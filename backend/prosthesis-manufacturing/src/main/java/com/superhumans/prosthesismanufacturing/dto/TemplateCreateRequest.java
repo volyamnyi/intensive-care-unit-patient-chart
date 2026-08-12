@@ -1,6 +1,6 @@
 package com.superhumans.prosthesismanufacturing.dto;
 
-import com.superhumans.prosthesismanufacturing.entity.ElementType;
+import com.superhumans.prosthetismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.ReworkType;
@@ -34,9 +34,7 @@ public class TemplateCreateRequest {
     ProductType productType;
 
     String amputationLevel;
-
     LimbSide limbSide;
-
     String description;
 
     @NotNull
@@ -59,11 +57,8 @@ public class TemplateCreateRequest {
         StageType type;
 
         Boolean canSkip;
-
         Boolean requiresApproval;
-
         TemplateGateRequest gate;
-
         List<TemplateStepRequest> steps;
     }
 
@@ -83,9 +78,7 @@ public class TemplateCreateRequest {
         String requiredApproverRole;
 
         List<String> checklist;
-
         Boolean attachmentsRequired;
-
         List<GateReworkLoopRequest> reworkLoops;
     }
 
@@ -122,13 +115,9 @@ public class TemplateCreateRequest {
         StepType stepType;
 
         Boolean mandatory;
-
         Boolean allowBackward;
-
         Boolean autoStartTimer;
-
         Integer normDurationMin;
-
         List<TemplateElementRequest> elements;
     }
 
@@ -146,25 +135,15 @@ public class TemplateCreateRequest {
         String label;
 
         String placeholder;
-
         Boolean required;
-
         String unit;
-
         BigDecimal minValue;
-
         BigDecimal maxValue;
-
         Integer minCount;
-
         Integer maxCount;
-
         String regexPattern;
-
         List<String> options;
-
         List<String> mimeTypes;
-
         Integer maxSizeMb;
     }
 }

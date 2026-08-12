@@ -1,4 +1,4 @@
-package com.superhumans.prosthesismanufacturing.entity;
+package com.superhumans.prosthetismanufacturing.entity;
 
 public enum ElementType {
     CHECKBOX,
@@ -10,5 +10,7 @@ public enum ElementType {
     DATE_PICKER,
     FILE_UPLOAD,
     IMAGE_UPLOAD,
-    SIGNATURE_CAPTURE
+    SIGNATURE_CAPTURE,
+    /** Read-only informational text rendered inside a step (e.g. a B-TR service notice). */
+    STEP_MESSAGE
 }

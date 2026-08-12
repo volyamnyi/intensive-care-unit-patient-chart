@@ -31,8 +31,14 @@ export default defineConfig({
       testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts'],
     },
     {
+      name: 'api-error-mode-chromium',
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/api/mis-error-scenarios.spec.ts',
+    },
+    {
       name: 'doctor-chromium',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'api-error-mode-chromium'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/doctor.json',
@@ -41,7 +47,7 @@ export default defineConfig({
     },
     {
       name: 'nurse-chromium',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'api-error-mode-chromium'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/nurse.json',
@@ -50,7 +56,7 @@ export default defineConfig({
     },
     {
       name: 'hod-chromium',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'api-error-mode-chromium'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/hod.json',
@@ -59,7 +65,7 @@ export default defineConfig({
     },
     {
       name: 'admin-chromium',
-      dependencies: ['setup'],
+      dependencies: ['setup', 'api-error-mode-chromium'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/admin.json',
@@ -70,6 +76,21 @@ export default defineConfig({
       name: 'api-chromium',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/api/*.spec.ts',
+      testIgnore: '**/api/mis-error-scenarios.spec.ts',
+      dependencies: ['api-error-mode-chromium'],
+    },
+    {
+      name: 'prosthetics-chromium',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: '.auth/prosthetist.json',
+      },
+      testMatch: '**/prosthetics/*.spec.ts',
+      fullyParallel: false,
+      // The prosthetics specs share a single seed order and leave active flow instances
+      // behind — they must never run concurrently against the same database.
+      workers: 1,
     },
   ],
 });

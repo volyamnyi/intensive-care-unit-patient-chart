@@ -103,7 +103,7 @@ default List<String> parseOptions(String options) {
 cd C:\projects\intensive-care-unit-patient-chart\backend\icu-chart
 mvn spring-boot:run -DskipTests
 ```
-Wait for: `Started PatientChartApplication`
+Wait for: `Started IcuPatientChartApplication`
 
 ### Step 2: Start Frontend (Terminal 2)
 ```powershell

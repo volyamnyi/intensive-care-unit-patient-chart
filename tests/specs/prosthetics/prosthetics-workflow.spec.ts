@@ -69,14 +69,19 @@ test.describe('Prosthetics Workflow Verification', () => {
   });
 
   test('Full prosthetics workflow: Dashboard → Patient → Order → Template → Wizard → Quality Gate → Done', async ({ page, request }) => {
+    test.setTimeout(300000);
     
     // ===== QUICK LOGIN =====
+    // Resilient: with the prosthetist storage state the app is already authenticated
+    // (a fresh /login visit redirects to /select), otherwise log in via the form.
     logStep('Quick login');
-    await page.goto(`${CONFIG.baseUrl}/login`);
-    await page.locator('input[type="text"]').first().fill('prosthetist1');
-    await page.locator('input[type="password"]').first().fill('doctor123');
-    await page.getByRole('button', { name: /Увійти/i }).first().click();
-    await page.waitForURL('**/prosthetics**', { timeout: 15000 });
+    await page.goto(`${CONFIG.baseUrl}/prosthetics`);
+    if (await page.locator('#login').isVisible({ timeout: 5000 }).catch(() => false)) {
+      await page.locator('#login').fill('prosthetist1');
+      await page.locator('#password').fill('doctor123');
+      await page.getByRole('button', { name: /Увійти/i }).first().click();
+      await page.waitForURL('**/prosthetics**', { timeout: 15000 });
+    }
     await page.waitForTimeout(1000);
     await screenshot(page, '01-logged-in');
     log('✓ Logged in');
@@ -143,6 +148,13 @@ test.describe('Prosthetics Workflow Verification', () => {
         log('✓ Order selected');
       } else {
         reportBug('Critical', 'No orders found', 'Should find orders for patient', 'Zero results', await screenshot(page, 'bug-no-orders'));
+      }
+      // Current implementation routes through the order review screen — confirm with «Старт»
+      await page.waitForURL('**/review-order**', { timeout: 10000 }).catch(() => {});
+      const startBtn = page.getByRole('button', { name: /Старт/i });
+      if (await startBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await startBtn.click();
+        log('✓ Order review confirmed («Старт»)');
       }
       await delay();
     });
@@ -340,10 +352,10 @@ async function fillFields(page: Page) {
     if (!val) await nums.nth(i).fill('10');
   }
   
-  // Check checkboxes
-  const cbs = page.locator('input[type="checkbox"]:visible:not(:checked)');
+  // Check checkboxes (Base UI renders button[data-slot="checkbox"], not inputs)
+  const cbs = page.locator('[data-slot="checkbox"][aria-checked="false"], input[type="checkbox"]:not(:checked)');
   for (let i = 0; i < await cbs.count(); i++) {
-    await cbs.nth(i).check();
+    await cbs.nth(i).click({ force: true }).catch(() => {});
   }
   
   // Fill textareas

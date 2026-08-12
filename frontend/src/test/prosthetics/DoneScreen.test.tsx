@@ -38,7 +38,7 @@ const completedInstance: FlowInstance = {
   currentStepId: null,
   currentExecutionId: null,
   templateName: 'TP-LL-01',
-  patientPib: 'Гаврилюк Тарас Олексійович',
+  patientPib: 'Гаврилюк Олена Миколаївна',
   orderNumber: 'ПВ-26-0414',
   currentStageName: null,
   currentStepName: null,

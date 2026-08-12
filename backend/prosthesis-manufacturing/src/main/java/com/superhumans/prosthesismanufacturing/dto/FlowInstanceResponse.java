@@ -3,6 +3,7 @@ package com.superhumans.prosthesismanufacturing.dto;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
@@ -33,4 +34,7 @@ public class FlowInstanceResponse {
     String pauseCategory;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    /** Values captured in previously-completed steps, keyed by stepId.
+     * Used by the wizard to render read-only summaries of earlier steps. */
+    Map<UUID, String> priorStepValues;
 }

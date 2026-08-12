@@ -32,16 +32,16 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionController {
 
-    private final PrescriptionListService listService;
-    private final PrescriptionItemService itemService;
-    private final PrescriptionExecutionService executionService;
-    private final VitalSignService vitalSignService;
-    private final MisService misService;
-    private final PrescriptionListMapper prescriptionListMapper;
-    private final PrescriptionItemMapper prescriptionItemMapper;
-    private final PrescriptionDayPartMapper prescriptionDayPartMapper;
-    private final AllergyMapper allergyMapper;
-    private final MedicineCatalogMapper medicineCatalogMapper;
+    PrescriptionListService listService;
+    PrescriptionItemService itemService;
+    PrescriptionExecutionService executionService;
+    VitalSignService vitalSignService;
+    MisService misService;
+    PrescriptionListMapper prescriptionListMapper;
+    PrescriptionItemMapper prescriptionItemMapper;
+    PrescriptionDayPartMapper prescriptionDayPartMapper;
+    AllergyMapper allergyMapper;
+    MedicineCatalogMapper medicineCatalogMapper;
 
     @GetMapping
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")

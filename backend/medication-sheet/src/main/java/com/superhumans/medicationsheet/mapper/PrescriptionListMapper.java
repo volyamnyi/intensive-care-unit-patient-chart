@@ -10,6 +10,5 @@ import org.mapstruct.ReportingPolicy;
 public interface PrescriptionListMapper {
 
     PrescriptionListResponse toResponse(PrescriptionList entity);
-
     PrescriptionList toEntity(PrescriptionListCreateRequest request);
 }

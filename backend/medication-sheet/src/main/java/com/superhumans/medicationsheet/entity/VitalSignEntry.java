@@ -34,7 +34,6 @@ public class VitalSignEntry extends BaseEntity {
     Integer diastolicBp;
 
     Integer spo2;
-
     Integer pulse;
 
     @Column(length = 50)

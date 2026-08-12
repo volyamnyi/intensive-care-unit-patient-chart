@@ -20,6 +20,5 @@ public class FailRequest {
     String category;
 
     String description;
-
     String snapshot;
 }

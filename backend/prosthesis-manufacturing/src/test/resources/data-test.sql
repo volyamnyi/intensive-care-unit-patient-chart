@@ -6,10 +6,15 @@ VALUES
 (22, 'prosthetist2', '$2a$10$LQeytYedrrlf3Dzg5jaUiuALhgGwku50pJL64hUrc/PkMHm7ulPpO', 'Шевчук Іван Миколайович', 'PROSTHETIST', 'shevchuk@hospital.ua', '401', 'Технолог виготовлення протезів', '380508888888', NOW(), 22, NOW(), 22, 0),
 (23, 'prosthetics_admin1', '$2a$10$LQeytYedrrlf3Dzg5jaUiuALhgGwku50pJL64hUrc/PkMHm7ulPpO', 'Пташник Олена Сергіївна', 'PROSTHETICS_ADMINISTRATOR', 'ptadmin@hospital.ua', '402', 'Адміністратор протезування', '380509999999', NOW(), 23, NOW(), 23, 0);
 
+-- Prosthetics patients
+-- NOTE: demographic data (pib, birth_date, gender, height/weight) MUST match the
+-- MIS Integration Layer (wiremock __files/patients_52.json) — MIS is the single
+-- source of truth for patient demographics (see data-prosthetics.sql). Only
+-- prosthesis-specific fields (cause, amputation, stump) are maintained locally.
 INSERT INTO prosthetics_patients (id, pib, birth_date, gender, height_cm, weight_kg, social_status, cause, amputation_date, affected_limb, amputation_level, stump)
 VALUES
-('900001', 'Сніжко Оксана Володимирівна', '1978-05-12', 'female', 168, 72, 'social', 'trauma', '2025-03-15', 'left', 'upper', '[{"label":"19 см","value":"19"}]'),
-('900002', 'Гаврилюк Тарас Олексійович', '1985-11-20', 'male', 175, 80, 'social', 'trauma', '2025-06-01', 'right', 'lower', '[{"label":"22 см","value":"22"}]');
+('900001', 'Сніжко Іван Петрович', '1991-03-14', 'Чоловіча', 182, 84, 'Військовослужбовець', 'Мінно-вибухова травма', '2024-11-08', 'RIGHT', 'upper_third_forearm', '[{"label":"Форма кукси","value":"Циліндрична"},{"label":"Довжина кукси, см","value":"18"},{"label":"Обхват, см","value":"24"}]'),
+('900002', 'Гаврилюк Олена Миколаївна', '1986-11-02', 'Жіноча', 168, 71, 'Цивільна особа', 'ДТП', '2025-02-19', 'LEFT', 'below_knee', '[{"label":"Форма кукси","value":"Конічна"},{"label":"Довжина кукси, см","value":"12"},{"label":"Обхват, см","value":"28"}]');
 
 INSERT INTO prosthetics_orders (id, order_number, patient_id, prosthesis_type, product_type, amputation_level, limb_side, doctor_name, prescription_date, materials, status)
 VALUES

@@ -28,7 +28,7 @@ export class ProstheticsDashboardPage {
     this.tabs = {
       all: page.getByRole('tab', { name: 'Всі' }),
       active: page.getByRole('tab', { name: 'Активні' }),
-      paused: page.getByRole('tab', { name: 'Припущені' }),
+      paused: page.getByRole('tab', { name: 'Призупинені' }),
       completed: page.getByRole('tab', { name: 'Завершені' }),
       failed: page.getByRole('tab', { name: 'Провалені' }),
     };

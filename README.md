@@ -102,11 +102,11 @@
 | Oxlint | 1.71 | Linter |
 | Vitest | 3.2 | Unit testing |
 
-### E2E Testing
+### E2E Testing (only locally)
 | Technology | Version | Purpose |
 |---|---|---|
 | Playwright | 1.61 | Browser automation |
-| Allure | 3.2 | CI test reporting |
+
 
 ---
 
@@ -417,12 +417,12 @@ java -jar backend/target/patient-chart-backend-*.jar
 | Бондаренко Наталія Петрівна | МК-003456 | 1990 |
 | Ткачук Андрій Миколайович | МК-007890 | 1975 |
 
-Prosthetics seed patients (local mock tables, not MIS):
+Prosthetics seed patients (demographics served by the MIS Integration Layer wiremock `__files/patients_52.json`; clinical fields in local tables):
 
 | Patient | ID | Order | Template |
 |---|---|---|---|
-| Сніжко Оксана Володимирівна | `a0000001...` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
-| Гаврилюк Тарас Олексійович | `a0000002...` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
+| Сніжко Іван Петрович | `900001` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
+| Гаврилюк Олена Миколаївна | `900002` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
 
 3 seed episodes with 4 seed clinical days (3 OPEN, 1 NURSE_SIGNED) with fixed UUIDs (used in integration tests).
 

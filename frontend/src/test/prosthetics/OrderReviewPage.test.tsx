@@ -131,7 +131,7 @@ describe('OrderReviewPage', () => {
     screen.getByRole('tab', { name: 'Деталі' }).click();
     await waitFor(() => expect(screen.getByText(/Замовлення #ORD-001/)).toBeInTheDocument());
     expect(screen.getByRole('tab', { name: 'Деталі' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Рецепт' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Замовлення на протез' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Матеріали' })).toBeInTheDocument();
   });
 
@@ -157,9 +157,9 @@ describe('OrderReviewPage', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByTitle('Рецепт протезу (PDF)')).toBeInTheDocument();
+      expect(screen.getByTitle('Замовлення на протез (PDF)')).toBeInTheDocument();
     });
-    expect(screen.getByRole('link', { name: /Завантажити рецепт/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Завантажити замовлення на протез/ })).toBeInTheDocument();
   });
 
   it('disables start button until document is loaded', async () => {
@@ -170,7 +170,7 @@ describe('OrderReviewPage', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByTitle('Рецепт протезу (PDF)')).toBeInTheDocument();
+      expect(screen.getByTitle('Замовлення на протез (PDF)')).toBeInTheDocument();
     });
   });
 

@@ -19,6 +19,11 @@ public class ProstheticsOrderResponse {
     String doctorName;
     LocalDate prescriptionDate;
     String materials;
+    String productCode;
+    String manufacturingApproach;
+    String approvalNumber;
+    String approvalRegistry;
+    String approvalSeq;
     String status;
     Boolean hasRecipePdf;
     LocalDateTime createdAt;

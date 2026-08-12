@@ -6,7 +6,7 @@ import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
-import com.superhumans.prosthesismanufacturing.entity.ElementType;
+import com.superhumans.prosthetismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.PauseCategory;

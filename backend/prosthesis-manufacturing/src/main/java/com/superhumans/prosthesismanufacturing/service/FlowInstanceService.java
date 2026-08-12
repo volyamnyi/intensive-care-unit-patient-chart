@@ -50,12 +50,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FlowInstanceService {
+
+    /** Transition rule for MEASUREMENT steps: at least this many filled values to proceed. */
+    private static final int MIN_MEASUREMENT_VALUES = 3;
 
     FlowInstanceRepository instanceRepository;
     FlowTemplateRepository templateRepository;
@@ -121,10 +126,18 @@ public class FlowInstanceService {
         orderRepository.findById(instance.getOrderId())
                 .ifPresent(o -> {
                     response.setOrderNumber(o.getOrderNumber());
-                    if (o.getPatient() != null) {
-                        response.setPatientPib(o.getPatient().getPib());
-                    }
+                    response.setPatientPib(resolvePatientPib(o));
                 });
+        // Surface values from completed steps so the wizard can render read-only
+        // summaries of earlier steps (e.g. the measurement form carried forward
+        // to «Перевірка якості гіпсового позитива»).
+        Map<UUID, String> priorValues = new LinkedHashMap<>();
+        executionRepository.findByInstanceId(instance.getId()).stream()
+                .filter(e -> e.getStatus() == StepExecutionStatus.COMPLETED && StringUtils.hasText(e.getValues()))
+                .forEach(e -> priorValues.put(e.getStepId(), e.getValues()));
+        if (!priorValues.isEmpty()) {
+            response.setPriorStepValues(priorValues);
+        }
         if (stepId != null && StringUtils.hasText(instance.getTemplateSnapshot())) {
             try {
                 SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
@@ -166,7 +179,8 @@ public class FlowInstanceService {
         instance.setResumedAt(now);
         instanceRepository.save(instance);
 
-        createExecution(instance, firstStage.getId(), firstStep.getId(), 1, now);
+        createExecution(instance, firstStage.getId(), firstStep.getId(),
+                nextAttemptNumber(instance, firstStep.getId()), now);
         auditService.logAction("FlowInstance", instance.getId(), "START", userId);
         return toResponse(instance);
     }
@@ -261,10 +275,22 @@ public class FlowInstanceService {
         SnapshotStage stage = findStage(snapshot, instance.getCurrentStageId());
         SnapshotStep step = findStep(stage, instance.getCurrentStepId());
         int stepIdx = stepIndex(stage).applyAsInt(step);
+        SnapshotStep target;
+        UUID targetStageId = stage.getId();
         if (stepIdx == 0) {
-            throw new BadRequestException("Повернення можливе лише в межах поточного етапу");
+            int stageIdx = stageIndex(snapshot).applyAsInt(stage);
+            if (stageIdx == 0) {
+                throw new BadRequestException("Повернення неможливе: це перший крок процесу");
+            }
+            SnapshotStage prevStage = snapshot.getStages().get(stageIdx - 1);
+            target = prevStage.getSteps().stream()
+                    .max(Comparator.comparingInt(stepIndex(prevStage)))
+                    .orElseThrow(() -> new BadRequestException(
+                            "Stage " + prevStage.getName() + " has no steps"));
+            targetStageId = prevStage.getId();
+        } else {
+            target = stage.getSteps().get(stepIdx - 1);
         }
-        SnapshotStep target = stage.getSteps().get(stepIdx - 1);
         if (!target.isAllowBackward()) {
             throw new BadRequestException(
                     "Повернення до кроку «" + target.getName() + "» заборонено правилами шаблону");
@@ -280,14 +306,11 @@ public class FlowInstanceService {
                     executionRepository.save(e);
                 });
 
-        int nextAttempt = executionRepository.findByInstanceIdAndStepId(instance.getId(), target.getId()).stream()
-                .map(StepExecution::getAttemptNumber)
-                .filter(Objects::nonNull)
-                .max(Integer::compareTo)
-                .orElse(0) + 1;
+        int nextAttempt = nextAttemptNumber(instance, target.getId());
+        instance.setCurrentStageId(targetStageId);
         instance.setCurrentStepId(target.getId());
         instanceRepository.save(instance);
-        createExecution(instance, stage.getId(), target.getId(), nextAttempt, now);
+        createExecution(instance, targetStageId, target.getId(), nextAttempt, now);
         auditService.logAction("FlowInstance", instance.getId(), "BACKWARD", userId);
         return toResponse(instance);
     }
@@ -479,7 +502,8 @@ public class FlowInstanceService {
             SnapshotStep next = stage.getSteps().get(stepIdx + 1);
             instance.setCurrentStepId(next.getId());
             instanceRepository.save(instance);
-            createExecution(instance, stage.getId(), next.getId(), 1, now);
+            createExecution(instance, stage.getId(), next.getId(),
+                    nextAttemptNumber(instance, next.getId()), now);
             return;
         }
         int stageIdx = stageIndex(snapshot).applyAsInt(stage);
@@ -503,7 +527,8 @@ public class FlowInstanceService {
         instance.setCurrentStageId(stage.getId());
         instance.setCurrentStepId(firstStep.getId());
         instanceRepository.save(instance);
-        createExecution(instance, stage.getId(), firstStep.getId(), 1, now);
+        createExecution(instance, stage.getId(), firstStep.getId(),
+                nextAttemptNumber(instance, firstStep.getId()), now);
     }
 
     void moveToNextStage(FlowInstance instance, SnapshotTemplate snapshot, SnapshotStage currentStage,
@@ -519,7 +544,8 @@ public class FlowInstanceService {
             instance.setCurrentStageId(nextStage.getId());
             instance.setCurrentStepId(firstStep.getId());
             instanceRepository.save(instance);
-            createExecution(instance, nextStage.getId(), firstStep.getId(), 1, now);
+            createExecution(instance, nextStage.getId(), firstStep.getId(),
+                    nextAttemptNumber(instance, firstStep.getId()), now);
         } else {
             instance.setStatus(FlowInstanceStatus.COMPLETED);
             instance.setCurrentStageId(null);
@@ -527,6 +553,14 @@ public class FlowInstanceService {
             instance.setEndTime(now);
             instanceRepository.save(instance);
         }
+    }
+
+    private int nextAttemptNumber(FlowInstance instance, UUID stepId) {
+        return executionRepository.findByInstanceIdAndStepId(instance.getId(), stepId).stream()
+                .map(StepExecution::getAttemptNumber)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
     }
 
     void createExecution(FlowInstance instance, UUID stageId, UUID stepId, int attemptNumber, LocalDateTime now) {
@@ -566,6 +600,34 @@ public class FlowInstanceService {
 
     void validateValues(String valuesJson, SnapshotStep step) {
         Map<String, Object> values = parseValues(valuesJson);
+        if ("MEASUREMENT".equals(step.getStepType())) {
+            // The measurement step collects values via the visual measurement forms:
+            // the transition rule is "at least MIN_MEASUREMENT_VALUES filled values"
+            // (any form field). Required CHECKBOX elements (e.g. the ЗІЗ
+            // acknowledgment merged from the documentation step) gate separately and
+            // do NOT count towards the fill threshold.
+            Set<String> checkboxKeys = step.getElements().stream()
+                    .filter(element -> "CHECKBOX".equals(element.getElementType()))
+                    .map(element -> element.getId().toString())
+                    .collect(Collectors.toSet());
+            long filled = values.entrySet().stream()
+                    .filter(entry -> !checkboxKeys.contains(entry.getKey()))
+                    .filter(entry -> entry.getValue() != null
+                            && !String.valueOf(entry.getValue()).isBlank())
+                    .count();
+            if (filled < MIN_MEASUREMENT_VALUES) {
+                throw new BadRequestException(
+                        "Заповніть щонайменше " + MIN_MEASUREMENT_VALUES
+                                + " значення вимірювань для переходу до наступного кроку");
+            }
+            for (SnapshotElement element : step.getElements()) {
+                if ("CHECKBOX".equals(element.getElementType()) && element.isRequired()
+                        && !Boolean.TRUE.equals(values.get(element.getId().toString()))) {
+                    throw new BadRequestException("Поле «" + element.getLabel() + "» обов'язкове");
+                }
+            }
+            return;
+        }
         for (SnapshotElement element : step.getElements()) {
             Object value = values.get(element.getId().toString());
             if (element.isRequired() && isBlank(value)) {
@@ -780,5 +842,24 @@ public class FlowInstanceService {
             }
             return Integer.MAX_VALUE;
         };
+    }
+
+    /**
+     * Resolves patient full name via the MIS Integration Layer (single source of
+     * truth for patient demographics). Falls back to the locally stored name when
+     * the MIS layer is unavailable (e.g. unit tests without Spring context).
+     */
+    private String resolvePatientPib(ProstheticsOrder order) {
+        if (order.getPatient() == null) {
+            return null;
+        }
+        String localPib = order.getPatient().getPib();
+        try {
+            var patientService = com.superhumans.config.SpringContext
+                    .getBean(ProstheticsPatientService.class);
+            return patientService.get(order.getPatient().getId()).getPib();
+        } catch (Exception e) {
+            return localPib;
+        }
     }
 }

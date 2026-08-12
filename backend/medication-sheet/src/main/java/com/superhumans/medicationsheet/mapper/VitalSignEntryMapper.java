@@ -16,6 +16,5 @@ public interface VitalSignEntryMapper {
     VitalSignEntryResponse toResponse(VitalSignEntry entry);
 
     VitalSignEntry toEntity(VitalSignEntryRequest request);
-
     VitalSignEntry toEntity(VitalSignEntryPatchRequest request);
 }

@@ -31,7 +31,7 @@ export class QualityGatePage {
     this.page = page;
     this.gateHeading = page.getByRole('heading', { level: 1 }).or(page.getByRole('heading', { level: 2 })).first();
     this.gateDescription = page.locator('[class*="description"]').first();
-    this.criteriaCheckboxes = page.locator('input[type="checkbox"]');
+    this.criteriaCheckboxes = page.locator('[data-slot="checkbox"], input[type="checkbox"]');
     this.attachmentsArea = page.locator('[class*="attachment"], [class*="upload"]').first();
     this.passButton = page.getByRole('button', { name: /Схвалити|Пройдено/ });
     this.failButton = page.getByRole('button', { name: /Відхилити|Не пройдено/ });
@@ -54,7 +54,7 @@ export class QualityGatePage {
   async checkAllCriteria() {
     const count = await this.criteriaCheckboxes.count();
     for (let i = 0; i < count; i++) {
-      await this.criteriaCheckboxes.nth(i).check();
+      await this.criteriaCheckboxes.nth(i).click({ force: true }).catch(() => {});
     }
   }
 

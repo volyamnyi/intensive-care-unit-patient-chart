@@ -57,6 +57,25 @@ public class ProstheticsPatient {
     @Column(name = "amputation_level", length = 64)
     String amputationLevel;
 
+    @Column(name = "amputation_site")
+    String amputationSite;
+
+    @Column(name = "phone", length = 32)
+    String phone;
+
+    @Column(name = "email", length = 255)
+    String email;
+
+    @Column(name = "residence")
+    String residence;
+
+    @Column(name = "health_status", length = 128)
+    String healthStatus;
+
+    @Column(name = "clinical_state", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    String clinicalState;
+
     @Column(name = "stump", columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
     String stump;

@@ -18,5 +18,11 @@ public class ProstheticsPatientResponse {
     LocalDate amputationDate;
     String affectedLimb;
     String amputationLevel;
+    String amputationSite;
+    String phone;
+    String email;
+    String residence;
+    String healthStatus;
+    String clinicalState;
     String stump;
 }

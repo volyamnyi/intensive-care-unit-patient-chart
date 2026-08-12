@@ -235,11 +235,12 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 Mock MIS provides 5 test patients: Петренко, Коваленко, Сидоренко, Бондаренко, Ткачук.
 
-Prosthetics seed patients (local mock tables, not MIS):
+Prosthetics seed patients (demographics served by the MIS Integration Layer wiremock `__files/patients_52.json`; clinical fields in local tables):
+
 | Patient | ID | Order | Template |
 |---|---|---|---|
-| Сніжко Оксана Володимирівна | `900001` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
-| Гаврилюк Тарас Олексійович | `900002` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
+| Сніжко Іван Петрович | `900001` | ПВ-26-0413 (upper_limb) | TP-UL-01 (ACTIVE) |
+| Гаврилюк Олена Миколаївна | `900002` | ПВ-26-0414 (lower_limb) | TP-LL-01 (DRAFT) |
 
 3 seed episodes with 4 clinical days:
 

@@ -59,7 +59,7 @@ const inProgressInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance
   currentStepId: 'step-1',
   currentExecutionId: 'exec-1',
   templateName: 'TP-LL-01',
-  patientPib: 'Гаврилюк Тарас Олексійович',
+  patientPib: 'Гаврилюк Олена Миколаївна',
   orderNumber: 'ПВ-26-0414',
   currentStageName: 'Виготовлення',
   currentStepName: 'Зняття мірок',
@@ -147,7 +147,7 @@ describe('WizardScreen', () => {
       data: { id: 'ord-1', orderNumber: 'ПВ-26-0414', patientId: 'pat-1' },
     });
     prostheticsPatientApiMock.getById.mockResolvedValue({
-      data: { id: 'pat-1', pib: 'Гаврилюк Тарас Олексійович' },
+      data: { id: 'pat-1', pib: 'Гаврилюк Олена Миколаївна' },
     });
   });
 
@@ -157,7 +157,7 @@ describe('WizardScreen', () => {
       expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
     });
     await waitFor(() => {
-      expect(screen.getByText(/Гаврилюк Тарас Олексійович · ПВ-26-0414/)).toBeInTheDocument();
+      expect(screen.getByText(/Гаврилюк Олена Миколаївна · ПВ-26-0414/)).toBeInTheDocument();
     });
     expect(screen.getByText('Протез гомілки')).toBeInTheDocument();
     expect(screen.getByText(/Обхват, см/)).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe('WizardScreen', () => {
     });
   });
 
-  it('calls completeStep with values and resources after valid fill', async () => {
+  it('calls completeStep with values after valid fill (resources panel removed)', async () => {
     flowInstanceApiMock.completeStep.mockResolvedValue({
       data: { ...inProgressInstance(), currentStepId: 'step-2' },
     });
@@ -186,12 +186,6 @@ describe('WizardScreen', () => {
     });
 
     fireEvent.change(screen.getByLabelText(/Обхват, см/), { target: { value: '42' } });
-    fireEvent.change(screen.getByPlaceholderText('Матеріал'), { target: { value: 'ПВХ' } });
-    fireEvent.change(screen.getByPlaceholderText('Кількість'), { target: { value: '2' } });
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('Кількість')).toHaveValue('2');
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Додати/ }));
 
     fireEvent.click(screen.getByRole('button', { name: /Готово/ }));
     await waitFor(() => {
@@ -199,10 +193,16 @@ describe('WizardScreen', () => {
         'inst-1',
         'exec-1',
         expect.objectContaining({
-          resources: [{ material: 'ПВХ', quantity: 2, unit: 'шт', minutes: null }],
+          values: expect.any(String),
         })
       );
     });
+    const callArgs = flowInstanceApiMock.completeStep.mock.calls[0][2] as {
+      values: string;
+      resources?: unknown;
+    };
+    expect(callArgs.resources).toBeUndefined();
+    expect(JSON.parse(callArgs.values)).toMatchObject({ 'el-1': '42' });
   });
 
   it('restores the saved draft values of the current execution', async () => {

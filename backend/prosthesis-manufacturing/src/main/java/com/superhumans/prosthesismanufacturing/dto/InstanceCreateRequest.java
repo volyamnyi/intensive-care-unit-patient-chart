@@ -10,6 +10,7 @@ import java.util.UUID;
 public class InstanceCreateRequest {
     @NotNull
     UUID orderId;
+
     @NotNull
     UUID templateId;
 }

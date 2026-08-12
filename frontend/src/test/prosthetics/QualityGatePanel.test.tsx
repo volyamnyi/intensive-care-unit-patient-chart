@@ -14,7 +14,7 @@ const instance: FlowInstance = {
   currentStepId: null,
   currentExecutionId: null,
   templateName: 'TP-UL-01',
-  patientPib: 'Сніжко Оксана Володимирівна',
+  patientPib: 'Сніжко Іван Петрович',
   orderNumber: 'ПВ-26-0413',
   currentStageName: 'Контроль якості',
   currentStepName: null,

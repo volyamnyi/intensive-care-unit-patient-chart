@@ -27,6 +27,7 @@ public class ProstheticsOrderService {
     ProstheticsOrderRepository orderRepository;
     ProstheticsOrderMapper orderMapper;
     ProstheticsPdfService pdfService;
+    MisOrderTemplateDataService misTemplateDataService;
     AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -52,7 +53,8 @@ public class ProstheticsOrderService {
     @Transactional
     public ProstheticsPdfResponse generateRecipe(UUID orderId, Long userId) {
         ProstheticsOrder order = load(orderId);
-        byte[] pdf = pdfService.generateOrderRecipe(order);
+        MisOrderTemplateData misData = misTemplateDataService.load(patientIdOf(order));
+        byte[] pdf = pdfService.generateOrderRecipe(order, misData);
         order.setRecipePdfData(pdf);
         order.setRecipePdfGeneratedAt(LocalDateTime.now());
         orderRepository.save(order);
@@ -70,7 +72,8 @@ public class ProstheticsOrderService {
     public PdfDocument getRecipePdf(UUID orderId, Long userId) {
         ProstheticsOrder order = load(orderId);
         if (order.getRecipePdfData() == null) {
-            byte[] pdf = pdfService.generateOrderRecipe(order);
+            MisOrderTemplateData misData = misTemplateDataService.load(patientIdOf(order));
+            byte[] pdf = pdfService.generateOrderRecipe(order, misData);
             order.setRecipePdfData(pdf);
             order.setRecipePdfGeneratedAt(LocalDateTime.now());
             orderRepository.save(order);
@@ -94,6 +97,10 @@ public class ProstheticsOrderService {
     private ProstheticsOrder load(UUID id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found: " + id));
+    }
+
+    private String patientIdOf(ProstheticsOrder order) {
+        return order.getPatient() == null ? null : order.getPatient().getId();
     }
 
     public record PdfDocument(String fileName, String mimeType, byte[] data) {
