@@ -1,0 +1,84 @@
+{
+  "userList": [
+    {
+      "userID": 11,
+      "userLogin": "doctor1",
+      "userName": "Олександр Мельник",
+      "userShortName": "Мельник О.",
+      "userSpecialityCode": "101",
+      "userSpecialityName": "Лікар-анестезіолог",
+      "userEmail": "melnyk@hospital.ua",
+      "userPhone": "380501111111"
+    },
+    {
+      "userID": 12,
+      "userLogin": "doctor2",
+      "userName": "Наталія Бойко",
+      "userShortName": "Бойко Н.",
+      "userSpecialityCode": "101",
+      "userSpecialityName": "Лікар-анестезіолог",
+      "userEmail": "boyko@hospital.ua",
+      "userPhone": "380502222222"
+    },
+    {
+      "userID": 13,
+      "userLogin": "nurse1",
+      "userName": "Олена Ткаченко",
+      "userShortName": "Ткаченко О.",
+      "userSpecialityCode": "201",
+      "userSpecialityName": "Медична сестра ВАІТ",
+      "userEmail": "tkachenko@hospital.ua",
+      "userPhone": "380503333333"
+    },
+    {
+      "userID": 14,
+      "userLogin": "nurse2",
+      "userName": "Марія Кравчук",
+      "userShortName": "Кравчук М.",
+      "userSpecialityCode": "201",
+      "userSpecialityName": "Медична сестра ВАІТ",
+      "userEmail": "kravchuk@hospital.ua",
+      "userPhone": "380504444444"
+    },
+    {
+      "userID": 15,
+      "userLogin": "head1",
+      "userName": "Василь Гончарук",
+      "userShortName": "Гончарук В.",
+      "userSpecialityCode": "301",
+      "userSpecialityName": "Завідувач ВАІТ",
+      "userEmail": "goncharuk@hospital.ua",
+      "userPhone": "380505555555"
+    },
+    {
+      "userID": 16,
+      "userLogin": "admin",
+      "userName": "Адмін Системи",
+      "userShortName": "Адмін",
+      "userSpecialityCode": "999",
+      "userSpecialityName": "Адміністратор",
+      "userEmail": "admin@hospital.ua",
+      "userPhone": "380506666666"
+    },
+    {
+      "userID": 17,
+      "userLogin": "doctor",
+      "userName": "Ходирєва Ірина Вікторівна",
+      "userShortName": "Ходирєва І.",
+      "userSpecialityCode": "902",
+      "userSpecialityName": "Лікар-фізичної та реабілітаційної медицини",
+      "userEmail": "hodyrieva@superhumans.center",
+      "userPhone": "380933329112"
+    },
+    {
+      "userID": 18,
+      "userLogin": "technician",
+      "userName": "Нагорний Денис Віталійович",
+      "userShortName": "Нагорний Д.В",
+      "userSpecialityCode": "903",
+      "userSpecialityName": "Технік з протезування",
+      "userEmail": "nagornyi@superhumans.center",
+      "userPhone": "380933329113"
+    }
+  ]
+}

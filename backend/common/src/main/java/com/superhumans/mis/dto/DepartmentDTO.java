@@ -10,4 +10,9 @@ public class DepartmentDTO {
     Long id;
     String name;
     String code;
+    String address;
+    String email;
+    String phone;
+    String externalId1;
+    String externalId2;
 }

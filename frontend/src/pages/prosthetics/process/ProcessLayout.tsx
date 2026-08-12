@@ -11,7 +11,10 @@ export default function ProcessLayout() {
 
   return (
     <div className="flex h-screen w-full">
-      <nav className="flex w-56 flex-col gap-1 overflow-y-auto border-r bg-muted/30 p-3">
+      <main className="flex-1 overflow-y-auto p-6">
+        <Outlet />
+      </main>
+      <nav className="flex w-56 flex-col gap-1 overflow-y-auto border-l bg-muted/30 p-3">
         <div className="mb-4 text-sm text-muted-foreground">
           Процес #{id}
         </div>
@@ -33,9 +36,6 @@ export default function ProcessLayout() {
           </NavLink>
         ))}
       </nav>
-      <main className="flex-1 overflow-y-auto p-6">
-        <Outlet />
-      </main>
     </div>
   );
 }

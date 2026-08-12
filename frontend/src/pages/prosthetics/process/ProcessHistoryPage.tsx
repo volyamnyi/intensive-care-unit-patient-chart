@@ -55,7 +55,9 @@ function eventIcon(kind: HistoryEventKind, detail?: string) {
     if (detail === 'REWORK') return <RotateCcw className="size-4" />;
     return <XCircle className="size-4" />;
   }
-  if (kind === 'end') return <XCircle className="size-4" />;
+  if (kind === 'end') {
+    return detail === 'COMPLETED' ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />;
+  }
   if (kind === 'step') {
     if (detail === 'COMPLETED') return <CheckCircle2 className="size-4" />;
     if (detail === 'CANCELLED') return <XCircle className="size-4" />;
@@ -69,6 +71,7 @@ function eventColor(kind: HistoryEventKind, detail?: string) {
   if (kind === 'gate' && detail === 'PASS') return 'bg-success/10 text-success border-success/40';
   if (kind === 'gate' && detail === 'REWORK') return 'bg-accent/10 text-accent border-accent/40';
   if (kind === 'pause') return 'bg-warning/10 text-warning border-warning/40';
+  if (kind === 'end' && detail === 'COMPLETED') return 'bg-success/10 text-success border-success/40';
   if (kind === 'end' || (kind === 'gate' && detail === 'FAIL')) return 'bg-destructive/10 text-destructive border-destructive/40';
   return 'bg-muted text-muted-foreground border-border';
 }
@@ -172,6 +175,7 @@ function buildEvents(
       kind: 'end',
       title: done ? 'Процес завершено успішно' : 'Процес зупинено (брак)',
       description: done ? undefined : instance.failReason ?? undefined,
+      detail: done ? 'COMPLETED' : 'FAILED',
       timestamp: instance.endTime,
     });
   }

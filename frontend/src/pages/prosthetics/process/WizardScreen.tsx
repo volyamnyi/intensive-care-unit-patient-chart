@@ -5,11 +5,9 @@ import {
   Camera,
   Check,
   ClipboardCheck,
-  ClipboardList,
   Home,
   PauseCircle,
   PenLine,
-  Plus,
   Save,
   Timer,
   Upload,
@@ -25,7 +23,6 @@ import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -41,11 +38,11 @@ import { useAuth } from '@/services/AuthContext';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import { QualityGatePanel } from '@/components/prosthetics/QualityGatePanel';
 import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
+import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
 import type {
   FlowInstance,
   GateDecision,
   PauseCategory,
-  ResourceUsageRequest,
   SnapshotElement,
   SnapshotStage,
   SnapshotStep,
@@ -58,8 +55,6 @@ const PAUSE_OPTIONS: { value: PauseCategory; label: string }[] = [
   { value: 'TECH_IDLE', label: 'Технологічний простій (сушіння/полімеризація)' },
 ];
 
-const RESOURCE_UNITS = ['шт', 'кг', 'л', 'м²'];
-
 const STEP_TYPE_LABEL: Record<string, string> = {
   INFORMATION: 'інформація',
   MEASUREMENT: 'вимірювання',
@@ -68,6 +63,175 @@ const STEP_TYPE_LABEL: Record<string, string> = {
   SELECTION: 'вибір',
   COMPOSITE: 'комплексний',
 };
+// Stage-1 and stage-3 steps contain a run of CHECKBOX elements whose labels are
+// prefixed with «Засоби індивідуального захисту: …». They are grouped into a
+// single PPE panel with an illustrative image. The data label (full prefix) is
+// preserved for grouping + image lookup; the display label is the short name.
+
+const PPE_LABEL = 'Засоби індивідуального захисту';
+const PPE_LABEL_LEGACY = 'Засоби індивідуального захисту:';
+const PPE_LABEL_PREFIX = 'Засоби індивідуального захисту:';
+const isPpeCheckbox = (label: string): boolean =>
+  label === PPE_LABEL_LEGACY || label.startsWith(PPE_LABEL_PREFIX);
+
+// Stage-3 PPE items display under their short names; the «Засоби індивідуального
+// захисту: …» prefix is already conveyed by the PPE group header.
+const PPE_SHORT_LABELS: Record<string, string> = {
+  'Засоби індивідуального захисту: захисні окуляри': 'Захисні окуляри',
+  'Засоби індивідуального захисту: респіратор': 'Респіратор',
+  'Засоби індивідуального захисту: захисні навушники': 'Захисні навушники',
+  'Засоби індивідуального захисту: латексні рукавички підвищеної міцності':
+    'Латексні рукавички підвищеної міцності',
+  'Засоби індивідуального захисту: м’які тканинні терморукавиці':
+    'М’які тканинні терморукавиці',
+};
+const ppeDisplayLabel = (label: string): string =>
+  PPE_SHORT_LABELS[label] ?? (label === PPE_LABEL_LEGACY ? PPE_LABEL : label);
+
+// PPE panel header text. Stage 3 (thermoforming) uses a dedicated header
+// («Обробка гільзи засоби індивідуального захисту»); all other stages keep
+// the shared default.
+const PPE_GROUP_HEADER_DEFAULT = 'Засоби індивідуального захисту';
+const PPE_GROUP_HEADER_BY_STAGE: Record<string, string> = {
+  'd0000005-0000-0000-0000-000000000005': 'Обробка гільзи засоби індивідуального захисту',
+};
+const ppeGroupHeader = (stageId?: string): string =>
+  (stageId && PPE_GROUP_HEADER_BY_STAGE[stageId]) || PPE_GROUP_HEADER_DEFAULT;
+
+const PPE_IMAGE_BY_LABEL: Record<string, string | undefined> = {
+  [PPE_LABEL]: '/ppe/non-sterile_gloves.png',
+  [PPE_LABEL_LEGACY]: '/ppe/non-sterile_gloves.png',
+  'Засоби індивідуального захисту: захисні окуляри': '/ppe/goggles_resp_ears.png',
+  'Засоби індивідуального захисту: респіратор': '/ppe/goggles_resp_ears.png',
+  'Засоби індивідуального захисту: захисні навушники': '/ppe/goggles_resp_ears.png',
+  'Засоби індивідуального захисту: латексні рукавички підвищеної міцності':
+    '/ppe/latex_thermal_gloves.png',
+  'Засоби індивідуального захисту: м’які тканинні терморукавиці':
+    '/ppe/latex_thermal_gloves.png',
+};
+
+const PPE_ALT_BY_LABEL: Record<string, string> = {
+  [PPE_LABEL]: 'Засоби індивідуального захисту (рукавички)',
+  [PPE_LABEL_LEGACY]: 'Засоби індивідуального захисту (рукавички)',
+  'Засоби індивідуального захисту: захисні окуляри':
+    'Засоби індивідуального захисту: респіратор із захисним екраном (захисні окуляри, респіратор)',
+  'Засоби індивідуального захисту: респіратор': 'Засоби індивідуального захисту: респіратор',
+  'Засоби індивідуального захисту: захисні навушники':
+    'Засоби індивідуального захисту: захисні навушники',
+  'Засоби індивідуального захисту: латексні рукавички підвищеної міцності':
+    'Латексні рукавички підвищеної міцності на руках медичної працівниці',
+  'Засоби індивідуального захисту: м’які тканинні терморукавиці':
+    'М’які тканинні терморукавиці на руках медичної працівниці',
+};
+
+function PpeChecklistGroup({
+  elements,
+  values,
+  header,
+  onChange,
+}: {
+  elements: SnapshotElement[];
+  values: Record<string, unknown>;
+  header: string;
+  onChange: (id: string, value: unknown) => void;
+}) {
+  const first = elements[0];
+  const img = first ? PPE_IMAGE_BY_LABEL[first.label] : undefined;
+  const alt = first ? PPE_ALT_BY_LABEL[first.label] : undefined;
+  return (
+    <div className="space-y-3 rounded-md border bg-muted/40 p-4">
+      <p className="text-sm font-medium">{header}</p>
+      {img && (
+        <img src={img} alt={alt ?? header} className="h-40 w-auto rounded-md object-contain" />
+      )}
+      <div className="space-y-2">
+        {elements.map((el) => (
+          <div key={el.id} className="flex items-center gap-3 rounded-md border bg-card p-3">
+            <Checkbox
+              id={el.id}
+              checked={values[el.id] === true}
+              onCheckedChange={(c) => onChange(el.id, c === true)}
+            />
+            <Label htmlFor={el.id} className="text-sm">
+              {ppeDisplayLabel(el.label)}
+              {el.required && <span className="text-accent">*</span>}
+            </Label>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function renderElements(
+  els: SnapshotElement[],
+  values: Record<string, unknown>,
+  stageId: string | undefined,
+  stepId: string | undefined,
+  onChange: (id: string, value: unknown) => void,
+  onUpload: (file: File) => void,
+) {
+  const out: React.ReactNode[] = [];
+  // The «Зняття мірок (з пацієнтом)» step renders the pixel-perfect measurement
+  // forms (two anatomical diagrams in a single row). They are data-entry fields
+  // whose values are stored under the element keys, gated by the backend
+  // «min 3 filled measurements» rule.
+  if (stepId === 'e0000002-0000-0000-0000-000000000002') {
+    out.push(
+      <MeasurementForms
+        key="measurement-forms"
+        values={values}
+        onChange={(k, v) => onChange(k, v)}
+      />,
+    );
+  }
+  let i = 0;
+  while (i < els.length) {
+    if (els[i].elementType === 'STEP_MESSAGE') {
+      out.push(
+        <p
+          key={els[i].id}
+          className="rounded-md border-l-4 border-accent bg-muted p-3 text-sm font-medium"
+        >
+          {els[i].label}
+        </p>,
+      );
+      i += 1;
+    } else if (els[i].elementType === 'CHECKBOX' && isPpeCheckbox(els[i].label)) {
+      let j = i;
+      while (
+        j < els.length &&
+        els[j].elementType === 'CHECKBOX' &&
+        isPpeCheckbox(els[j].label)
+      ) {
+        j += 1;
+      }
+      out.push(
+        <PpeChecklistGroup
+          key={`ppe-${i}`}
+          elements={els.slice(i, j)}
+          values={values}
+          header={ppeGroupHeader(stageId)}
+          onChange={onChange}
+        />,
+      );
+      i = j;
+    } else {
+      out.push(
+        <ElementField
+          key={els[i].id}
+          element={els[i]}
+          value={values[els[i].id]}
+          error={undefined}
+          onChange={(v) => onChange(els[i].id, v)}
+          onUpload={onUpload}
+        />,
+      );
+      i += 1;
+    }
+  }
+  return out;
+}
 
 export default function WizardScreen() {
   const { id } = useParams<{ id: string }>();
@@ -84,13 +248,14 @@ export default function WizardScreen() {
   const [seconds, setSeconds] = useState(0);
   const [pauseOpen, setPauseOpen] = useState(false);
   const [pauseCategory, setPauseCategory] = useState<PauseCategory>('PATIENT');
-  const [material, setMaterial] = useState({ material: '', qty: '', unit: 'шт', minutes: '' });
-  const [resources, setResources] = useState<ResourceUsageRequest[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [orderInfo, setOrderInfo] = useState<{ orderNumber: string; patientPib: string } | null>(null);
   const restoredKey = useRef<string | null>(null);
   const prevStepId = useRef<string | null>(null);
+  // Retains the measurement-form values captured on «Зняття мірок» so they can
+  // be shown read-only in a later step («Перевірка якості гіпсового позитива»).
+  const measurementValuesRef = useRef<Record<string, unknown>>({});
 
   useEffect(() => {
     document.title = 'Виконання кроку — Wizard техпроцесу';
@@ -199,6 +364,22 @@ export default function WizardScreen() {
     return stage.steps.find((s) => s.id === instance.currentStepId) ?? null;
   }, [stage, instance?.currentStepId]);
 
+  // Saved measurement-form values from the earlier «Зняття мірок» step, used to
+  // render its read-only copy in later steps. Prefers the backend's persisted
+  // prior-step values (survives reload/returning) and falls back to the
+  // in-session capture while the user is still progressing through the process.
+  const savedMeasurementValues = useMemo<Record<string, unknown>>(() => {
+    const raw = instance?.priorStepValues?.['e0000002-0000-0000-0000-000000000002'];
+    if (raw) {
+      try {
+        return JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        // ignore corrupted payload
+      }
+    }
+    return measurementValuesRef.current;
+  }, [instance?.priorStepValues]);
+
   const stageIndex = useMemo(
     () => (snapshot ? Math.max(0, snapshot.stages.findIndex((s) => s.id === instance?.currentStageId)) : 0),
     [snapshot, instance?.currentStageId],
@@ -239,8 +420,6 @@ export default function WizardScreen() {
       setValues({});
       setTouched(false);
       setSeconds(0);
-      setResources([]);
-      setMaterial({ material: '', qty: '', unit: 'шт', minutes: '' });
     }
     prevStepId.current = current;
   }, [step?.id]);
@@ -274,7 +453,6 @@ export default function WizardScreen() {
     try {
       const res = await flowInstanceApi.completeStep(instance.id, instance.currentExecutionId, {
         values: JSON.stringify(values),
-        resources: resources.length > 0 ? resources : undefined,
       });
       toast.success(step ? `Крок "${step.name}" завершено` : 'Крок завершено');
       applyInstance(res.data);
@@ -294,7 +472,6 @@ export default function WizardScreen() {
     try {
       await flowInstanceApi.saveDraft(instance.id, instance.currentExecutionId, {
         values: JSON.stringify(values),
-        resources: resources.length > 0 ? resources : undefined,
       });
       toast.success('Чернетку збережено');
     } catch (err) {
@@ -555,7 +732,7 @@ export default function WizardScreen() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-center gap-2">
@@ -576,103 +753,37 @@ export default function WizardScreen() {
             </div>
 
             <div className="space-y-5">
-              {step.elements.map((e) => (
-                <ElementField
-                  key={e.id}
-                  element={e}
-                  value={values[e.id]}
-                  error={touched ? invalid[e.id] : undefined}
-                  onChange={(v) => setValues((s) => ({ ...s, [e.id]: v }))}
-                  onUpload={(file) => void uploadEvidence(e, file)}
-                />
-              ))}
+              {step.id === 'e0000005-0000-0000-0000-000000000005' ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Заповнена форма з «ЕТАП 1: Зняття мірок та виготовлення гіпсового
+                    негатива → КРОК 1: Зняття мірок (з пацієнтом)»:
+                  </p>
+                  <MeasurementForms
+                    values={savedMeasurementValues}
+                    onChange={() => {}}
+                    disabled
+                  />
+                </div>
+              ) : (
+                renderElements(
+                  step.elements,
+                  values,
+                  instance?.currentStageId ?? undefined,
+                  step.id,
+                  (id, v) => {
+                    if (step.id === 'e0000002-0000-0000-0000-000000000002') {
+                      measurementValuesRef.current = {
+                        ...measurementValuesRef.current,
+                        [id]: v,
+                      };
+                    }
+                    setValues((s) => ({ ...s, [id]: v }));
+                  },
+                  (file) => void uploadEvidence(step.elements[0], file),
+                )
+              )}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardList className="size-4" /> Витрати ресурсів
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Матеріал"
-                value={material.material}
-                onChange={(ev) => setMaterial({ ...material, material: ev.target.value })}
-                className="col-span-2"
-              />
-              <Input
-                placeholder="Кількість"
-                value={material.qty}
-                onChange={(ev) => setMaterial({ ...material, qty: ev.target.value })}
-              />
-              <Select value={material.unit} onValueChange={(v) => setMaterial({ ...material, unit: v ?? 'шт' })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RESOURCE_UNITS.map((u) => (
-                    <SelectItem key={u} value={u}>
-                      {u}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Час, хв"
-                value={material.minutes}
-                onChange={(ev) => setMaterial({ ...material, minutes: ev.target.value })}
-              />
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (!material.material.trim()) return;
-                  setResources((s) => [
-                    ...s,
-                    {
-                      material: material.material.trim(),
-                      quantity: material.qty ? Number(material.qty) : null,
-                      unit: material.unit,
-                      minutes: material.minutes ? Number(material.minutes) : null,
-                    },
-                  ]);
-                  setMaterial({ material: '', qty: '', unit: 'шт', minutes: '' });
-                }}
-              >
-                <Plus className="size-4" /> Додати
-              </Button>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Матеріал</TableHead>
-                  <TableHead>К-сть</TableHead>
-                  <TableHead>Час</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resources.map((r, i) => (
-                  <TableRow key={`${r.material}-${i}`}>
-                    <TableCell>{r.material}</TableCell>
-                    <TableCell>
-                      {r.quantity ?? '—'} {r.unit}
-                    </TableCell>
-                    <TableCell>{r.minutes ?? 0} хв</TableCell>
-                  </TableRow>
-                ))}
-                {resources.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      Витрат не зафіксовано
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>

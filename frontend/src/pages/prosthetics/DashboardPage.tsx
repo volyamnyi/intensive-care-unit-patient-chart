@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Syringe, Plus, Search, RefreshCw, ClipboardCheck, PauseCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Search, RefreshCw, ClipboardCheck, PauseCircle, CheckCircle2, XCircle, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -129,7 +129,7 @@ export default function DashboardPage() {
     <div className="container mx-auto py-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Syringe className="size-8 text-mint" />
+          <Wrench className="size-8 text-mint" />
           <h1 className="font-display text-2xl font-bold">Виробництво протезів</h1>
         </div>
         <Button onClick={handleCreate} className="gap-2">

@@ -1,0 +1,37 @@
+{
+  "patientInfo": {
+    "patientID": 900001,
+    "patientName": "Сніжко Іван Петрович",
+    "accountValue": 0.0,
+    "patientBirthDate": "1991-03-14T00:00:00.000",
+    "patientAddress": "м. Миколаїв, вул. Чапаєва, буд. 54-А, кв. 17",
+    "patientSexCode": "MAL",
+    "patientPhone": "380933329111",
+    "patientEmail": "snizhko.ivan@example.com",
+    "patientBookingAct": [
+      {
+        "bookingID": 2001,
+        "bookingName": "Силіконовий чохол",
+        "bookingDate": "2026-02-10T10:00:00.000",
+        "serviceID": 101,
+        "serviceCode": "SC-211",
+        "bookingServicePriceValue": 15000.0,
+        "bookingQuantity": 1
+      },
+      {
+        "bookingID": 2002,
+        "bookingName": "Поліпропілен",
+        "bookingDate": "2026-02-10T10:00:00.000",
+        "serviceID": 101,
+        "serviceCode": "PP-04",
+        "bookingServicePriceValue": 800.0,
+        "bookingQuantity": 1
+      }
+    ],
+    "patientBookingSum": 15800.0,
+    "patientDebt": [],
+    "patientDebtSum": 0.0
+  },
+  "companyEDRPOU": "44803597",
+  "companyName": "Медичний центр БО «БФ «СУПЕРЛЮДИ»"
+}

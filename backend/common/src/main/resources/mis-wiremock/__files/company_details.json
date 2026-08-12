@@ -1,0 +1,64 @@
+{
+  "companyList": [
+    {
+      "companyGUID": "a0111111-1111-1111-1111-111111111100",
+      "companyName": "Медичний центр БО «БФ «СУПЕРЛЮДИ»",
+      "companyShortName": "СУПЕРЛЮДИ",
+      "companyAddress": "м. Львів, вул. Івасюка, 2",
+      "companyEmail": "info@superhumans.center",
+      "companyPhone": "380673455221",
+      "companyExternalID1": "SH-001",
+      "companyExternalID2": "EDRPOU-44803597"
+    },
+    {
+      "companyGUID": "a0111111-1111-1111-1111-111111111101",
+      "companyName": "Відділення анестезіології та інтенсивної терапії",
+      "companyShortName": "ВАІТ",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15",
+      "companyEmail": "vait@hospital.ua",
+      "companyPhone": "380441234567",
+      "companyExternalID1": "VAIT-001",
+      "companyExternalID2": "DEP-ICU-001"
+    },
+    {
+      "companyGUID": "a0111111-1111-1111-1111-111111111102",
+      "companyName": "Хірургічне відділення",
+      "companyShortName": "SURG",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15, корпус 2",
+      "companyEmail": "surg@hospital.ua",
+      "companyPhone": "380441234568",
+      "companyExternalID1": "SURG-002",
+      "companyExternalID2": "DEP-SURG-002"
+    },
+    {
+      "companyGUID": "a0111111-1111-1111-1111-111111111103",
+      "companyName": "Терапевтичне відділення",
+      "companyShortName": "THER",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15, корпус 3",
+      "companyEmail": "ther@hospital.ua",
+      "companyPhone": "380441234569",
+      "companyExternalID1": "THER-003",
+      "companyExternalID2": "DEP-THER-003"
+    },
+    {
+      "companyGUID": "a0111111-1111-1111-1111-111111111104",
+      "companyName": "Кардіологічне відділення",
+      "companyShortName": "CARD",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15, корпус 4",
+      "companyEmail": "card@hospital.ua",
+      "companyPhone": "380441234570",
+      "companyExternalID1": "CARD-004",
+      "companyExternalID2": "DEP-CARD-004"
+    },
+    {
+      "companyGUID": "a0111111-1111-1111-1111-111111111105",
+      "companyName": "Неврологічне відділення",
+      "companyShortName": "NEUR",
+      "companyAddress": "м. Київ, вул. Хрещатик, 15, корпус 5",
+      "companyEmail": "neur@hospital.ua",
+      "companyPhone": "380441234571",
+      "companyExternalID1": "NEUR-005",
+      "companyExternalID2": "DEP-NEUR-005"
+    }
+  ]
+}

@@ -85,7 +85,7 @@ export default function OrderReviewPage() {
           setDocLoaded(true);
         } catch (err: unknown) {
           const axiosError = err as { response?: { data?: { message?: string } } };
-          setDocError(axiosError.response?.data?.message || 'Не вдалося завантажити рецепт');
+          setDocError(axiosError.response?.data?.message || 'Не вдалося завантажити замовлення на протез');
           setDocLoaded(true);
         }
       } catch {
@@ -181,7 +181,7 @@ export default function OrderReviewPage() {
       <Tabs defaultValue="document">
         <TabsList className="mb-4">
           <TabsTrigger value="details">Деталі</TabsTrigger>
-          <TabsTrigger value="document">Рецепт</TabsTrigger>
+          <TabsTrigger value="document">Замовлення на протез</TabsTrigger>
           <TabsTrigger value="materials">Матеріали</TabsTrigger>
         </TabsList>
 
@@ -216,7 +216,7 @@ export default function OrderReviewPage() {
         <TabsContent value="document">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Рецепт протезу</CardTitle>
+              <CardTitle>Замовлення на протез</CardTitle>
               <CardDescription>Технічні вимоги до виготовлення</CardDescription>
             </CardHeader>
             <CardContent>
@@ -224,13 +224,13 @@ export default function OrderReviewPage() {
                 <div className="space-y-3">
                   <iframe
                     src={documentUrl}
-                    title="Рецепт протезу (PDF)"
+                    title="Замовлення на протез (PDF)"
                     className="w-full min-h-[520px] rounded-md border bg-white"
                   />
                   <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="block">
                     <Button variant="outline" className="w-full">
                       <FileText className="mr-2 size-4" />
-                      Завантажити рецепт
+                      Завантажити замовлення на протез
                     </Button>
                   </a>
                 </div>
@@ -242,7 +242,7 @@ export default function OrderReviewPage() {
               ) : (
                 <div className="flex items-center justify-center min-h-[200px] rounded-md border border-dashed bg-muted/60">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" /> Завантаження рецепта…
+                    <Loader2 className="size-4 animate-spin" /> Завантаження замовлення на протез…
                   </div>
                 </div>
               )}
@@ -314,7 +314,7 @@ export default function OrderReviewPage() {
             ) : docLoaded ? (
               'Старт'
             ) : (
-              'Очікування рецепта…'
+              'Очікування замовлення на протез…'
             )}
           </Button>
         </div>

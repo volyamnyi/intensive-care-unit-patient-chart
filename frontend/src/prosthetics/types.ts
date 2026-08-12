@@ -127,6 +127,8 @@ export interface FlowInstance {
   pausedAt: string | null;
   resumedAt: string | null;
   pauseCategory: PauseCategory | null;
+  /** Values captured in previously-completed steps, keyed by stepId (JSON string). */
+  priorStepValues?: Record<string, string> | null;
   createdAt: string;
   updatedAt: string;
 }

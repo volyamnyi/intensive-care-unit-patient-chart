@@ -1,6 +1,6 @@
 package com.superhumans.controller;
 
-import com.superhumans.mis.MockMisServiceImpl;
+import com.superhumans.mis.MisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,11 +13,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class MockMedicalInformationSystemController {
 
-    MockMisServiceImpl mockMISService;
+    MisService misService;
 
     @PostMapping("/mis/error-mode")
     public ResponseEntity<Void> setErrorMode(@RequestParam String mode) {
-        mockMISService.setErrorMode(mode);
+        misService.setErrorMode(mode);
         return ResponseEntity.noContent().build();
     }
 }

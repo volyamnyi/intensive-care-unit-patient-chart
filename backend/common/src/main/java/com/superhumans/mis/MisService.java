@@ -51,4 +51,37 @@ public interface MisService {
      * Results are cached locally in allergy_cache table.
      */
     List<AllergyMisDTO> getPatientAllergies(Long patientId);
+
+    /**
+     * Retrieves the list of services (послуги) from MIS — spzIBServiceList.
+     * Services carry ISO 9999 / product codes used by prosthetics order templates.
+     */
+    List<ServiceMisDTO> getServices();
+
+    /**
+     * Retrieves patient bookings (бронювання послуг) from MIS — spzIBBookingList.
+     * Bookings carry service codes, names and dates used by prosthetics order templates.
+     */
+    List<BookingMisDTO> getPatientBookings(Long patientId);
+
+    /**
+     * Retrieves patient documents from MIS — spzIBDocumentList.
+     * Used to link order templates with MIS patient documents.
+     */
+    List<DocumentMisDTO> getPatientDocuments(Long patientId);
+
+    /**
+     * Retrieves extended patient info (account, bookings, debt) from MIS — spzIBPatientInfo.
+     * Used by prosthetics order templates for the "Загальні відомості про особу" section.
+     */
+    Optional<PatientInfoMisDTO> getPatientInfo(Long patientId);
+
+    /**
+     * Sets the MIS error-simulation mode (testing hook) on the active MIS implementation.
+     * Modes: none, timeout, not_found, unavailable. Implementations that do not simulate
+     * errors keep this a no-op.
+     */
+    default void setErrorMode(String mode) {
+        // no-op by default
+    }
 }

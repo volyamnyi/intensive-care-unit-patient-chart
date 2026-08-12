@@ -1,0 +1,38 @@
+{
+  "bookingList": [
+    {
+      "bookingID": 2001,
+      "bookingName": "Силіконовий чохол",
+      "bookingDate": "2026-02-10T10:00:00.000",
+      "patientID": 900001,
+      "scheduleID": 7001,
+      "serviceID": 101,
+      "bookingServicePriceRate": 15000.0,
+      "bookingServicePriceValue": 15000.0,
+      "bookingQuantity": 1,
+      "bookingStatusCode": "COMPLETED",
+      "bookingPaymentStatusCode": "PAY",
+      "bookingCreationDate": "2026-02-01T14:00:00.000",
+      "bookingCreationUserLogin": "integration",
+      "bookingExecutionUserLogin": "hodyrieva",
+      "serviceCode": "SC-211"
+    },
+    {
+      "bookingID": 2002,
+      "bookingName": "Поліпропілен",
+      "bookingDate": "2026-02-10T10:00:00.000",
+      "patientID": 900001,
+      "scheduleID": 7001,
+      "serviceID": 101,
+      "bookingServicePriceRate": 800.0,
+      "bookingServicePriceValue": 800.0,
+      "bookingQuantity": 1,
+      "bookingStatusCode": "COMPLETED",
+      "bookingPaymentStatusCode": "PAY",
+      "bookingCreationDate": "2026-02-01T14:00:00.000",
+      "bookingCreationUserLogin": "integration",
+      "bookingExecutionUserLogin": "hodyrieva",
+      "serviceCode": "PP-04"
+    }
+  ]
+}

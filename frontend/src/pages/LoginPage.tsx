@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Hospital, FileText, Plus, Eye, EyeOff } from 'lucide-react';
+import { Hospital, FileText, Wrench, Plus, Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -9,6 +9,7 @@ import { useAuth } from '../services/AuthContext';
 const platformApps = [
   { icon: <Hospital className="size-5 text-info" />, label: 'Карта інтенсивної терапії' },
   { icon: <FileText className="size-5 text-success" />, label: 'Листок лікарських призначень' },
+  { icon: <Wrench className="size-5 text-mint" />, label: 'Виробництво протезів' },
 ];
 
 export default function LoginPage() {

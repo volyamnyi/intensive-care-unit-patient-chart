@@ -331,12 +331,12 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 function getNextHourISO(): string {
-  const now = new Date();
-  const h = now.getHours() + 1;
-  const y = now.getFullYear();
-  const mo = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  const hh = String(h % 24).padStart(2, '0');
+  const next = new Date();
+  next.setHours(next.getHours() + 1, 0, 0, 0);
+  const y = next.getFullYear();
+  const mo = String(next.getMonth() + 1).padStart(2, '0');
+  const d = String(next.getDate()).padStart(2, '0');
+  const hh = String(next.getHours()).padStart(2, '0');
   return `${y}-${mo}-${d}T${hh}:00`;
 }
 

@@ -58,25 +58,6 @@ public class AdminController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/users/{id}/permissions")
-    public ResponseEntity<User> updatePermissions(@PathVariable Long id, @RequestBody Map<String, Object> body,
-                                                   Authentication auth) {
-        String action = (String) body.get("action");
-        String permission = (String) body.get("permission");
-        return userRepository.findById(id).map(user -> {
-            String old = user.getPermissions();
-            if ("add".equals(action)) {
-                user.addPermission(permission);
-            } else if ("remove".equals(action)) {
-                user.removePermission(permission);
-            }
-            user.setUpdatedBy(getUserId(auth));
-            userRepository.save(user);
-            auditService.logAction("User", null, "ADMIN_UPDATE_PERMISSIONS:" + old + "→" + user.getPermissions(), getUserId(auth));
-            return ResponseEntity.ok(user);
-        }).orElse(ResponseEntity.notFound().build());
-    }
-
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication auth) {
         Long currentUserId = getUserId(auth);
@@ -140,14 +121,12 @@ public class AdminController {
         long nurses = all.stream().filter(u -> u.getRole() == UserRole.NURSE).count();
         long hods = all.stream().filter(u -> u.getRole() == UserRole.HEAD_OF_DEPARTMENT).count();
         long admins = all.stream().filter(u -> u.getRole() == UserRole.ADMINISTRATOR).count();
-        long prescribers = all.stream().filter(u -> u.hasPermission("PRESCRIBER")).count();
         return ResponseEntity.ok(Map.of(
                 "totalUsers", all.size(),
                 "doctors", doctors,
                 "nurses", nurses,
                 "headsOfDepartment", hods,
-                "administrators", admins,
-                "prescribers", prescribers
+                "administrators", admins
         ));
     }
 

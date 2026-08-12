@@ -176,13 +176,6 @@ export default function AdminPage() {
     } catch { /* */ }
   };
 
-  const handlePermissionToggle = async (userId: number, permission: string, hasIt: boolean) => {
-    try {
-      const res = await adminApi.updatePermissions(userId, hasIt ? 'remove' : 'add', permission);
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, permissions: res.data.permissions } : u)));
-    } catch { /* */ }
-  };
-
   const handleDelete = async (userId: number) => {
     setError(null);
     try {
@@ -193,9 +186,6 @@ export default function AdminPage() {
       setError(getErrorMessage(err, 'Не вдалося видалити користувача'));
     }
   };
-
-  const hasPerm = (u: User, perm: string) =>
-    (u.permissions ?? '').split(',').some((p) => p.trim().toUpperCase() === perm.toUpperCase());
 
   return (
     <div>
@@ -232,7 +222,6 @@ export default function AdminPage() {
                         <TableHead>ПІБ</TableHead>
                         <TableHead>Логін</TableHead>
                         <TableHead>Роль</TableHead>
-                        <TableHead>PRESCRIBER</TableHead>
                         <TableHead>Дії</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -263,15 +252,6 @@ export default function AdminPage() {
                                 <SelectItem value="PROSTHETICS_ADMINISTRATOR">Адміністратор протезування</SelectItem>
                               </SelectContent>
                             </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={hasPerm(u, 'PRESCRIBER') ? 'default' : 'outline'}
-                              className="cursor-pointer"
-                              onClick={() => handlePermissionToggle(u.id, 'PRESCRIBER', hasPerm(u, 'PRESCRIBER'))}
-                            >
-                              {hasPerm(u, 'PRESCRIBER') ? 'ТАК' : 'НІ'}
-                            </Badge>
                           </TableCell>
                           <TableCell>
                             <Button
@@ -418,8 +398,7 @@ export default function AdminPage() {
                           : key === 'doctors' ? 'Лікарів'
                           : key === 'nurses' ? 'Медсестер'
                           : key === 'headsOfDepartment' ? 'Завідувачів'
-                          : key === 'administrators' ? 'Адміністраторів'
-                          : key === 'prescribers' ? 'PRESCRIBER' : key}
+                          : key === 'administrators' ? 'Адміністраторів' : key}
                       </div>
                     </div>
                   ))}

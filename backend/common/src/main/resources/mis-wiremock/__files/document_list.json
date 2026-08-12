@@ -1,0 +1,32 @@
+{
+  "documentList": [
+    {
+      "documentID": 3001,
+      "documentName": "Направлення на протезування верхньої кінцівки",
+      "documentCreationDate": "2026-01-20T09:30:00.000",
+      "documentUserLogin": "hodyrieva",
+      "scheduleID": 7001,
+      "documentTemplateID": 120,
+      "documentTemplateName": "Замовлення на протези верхніх кінцівок",
+      "documentKindCode": "REF",
+      "documentKindName": "Направлення",
+      "documentExternalID": "DOC-2026-0001",
+      "documentApproveStatusCode": "APR",
+      "documentApproveStatusName": "Затверджено"
+    },
+    {
+      "documentID": 3002,
+      "documentName": "Висновок лікаря про призначення протезу",
+      "documentCreationDate": "2026-01-25T11:00:00.000",
+      "documentUserLogin": "hodyrieva",
+      "scheduleID": 7001,
+      "documentTemplateID": 121,
+      "documentTemplateName": "Висновок лікаря",
+      "documentKindCode": "CONC",
+      "documentKindName": "Висновок",
+      "documentExternalID": "DOC-2026-0002",
+      "documentApproveStatusCode": "APR",
+      "documentApproveStatusName": "Затверджено"
+    }
+  ]
+}

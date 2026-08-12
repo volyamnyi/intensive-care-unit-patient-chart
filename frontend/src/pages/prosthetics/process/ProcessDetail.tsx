@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Syringe, Calendar, User, FileText, ClipboardList, Play } from 'lucide-react';
+import { Calendar, ClipboardList, FileText, Play, User, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -117,7 +117,7 @@ export default function ProcessDetail() {
         <Card>
           <CardContent className="pt-6">
             <CardTitle className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <Syringe className="size-4 text-muted-foreground" />
+              <Wrench className="size-4 text-muted-foreground" />
               Поточний етап
             </CardTitle>
             <CardDescription>
@@ -129,7 +129,7 @@ export default function ProcessDetail() {
         <Card>
           <CardContent className="pt-6">
             <CardTitle className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <Syringe className="size-4 text-muted-foreground" />
+              <Wrench className="size-4 text-muted-foreground" />
               Поточний крок
             </CardTitle>
             <CardDescription>

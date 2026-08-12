@@ -1,0 +1,15 @@
+{
+  "priority": 3,
+  "request": {
+    "method": "POST",
+    "url": "/api/run",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$[?(@.name == 'spzIBServiceList')]" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "service_list.json",
+    "headers": { "Content-Type": "application/json" }
+  }
+}

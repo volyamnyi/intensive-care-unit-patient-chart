@@ -1,0 +1,44 @@
+{
+  "serviceList": [
+    {
+      "serviceID": 101,
+      "serviceName": "Протез передпліччя з тяговим керуванням",
+      "serviceDesc": "Протез передпліччя з тяговим керуванням комбінований",
+      "serviceCode": "06 18 09",
+      "serviceParentID": 5,
+      "serviceDuration": 120,
+      "serviceExternalID": "ISO-9999-061809",
+      "servicePrice": 150000.0
+    },
+    {
+      "serviceID": 102,
+      "serviceName": "Протез плеча з тяговим керуванням",
+      "serviceDesc": "Протез плеча з тяговим керуванням",
+      "serviceCode": "06 18 12",
+      "serviceParentID": 5,
+      "serviceDuration": 180,
+      "serviceExternalID": "ISO-9999-061812",
+      "servicePrice": 180000.0
+    },
+    {
+      "serviceID": 103,
+      "serviceName": "Протез кисті косметичний",
+      "serviceDesc": "Косметичний протез кисті",
+      "serviceCode": "06 18 03",
+      "serviceParentID": 5,
+      "serviceDuration": 90,
+      "serviceExternalID": "ISO-9999-061803",
+      "servicePrice": 60000.0
+    },
+    {
+      "serviceID": 104,
+      "serviceName": "Протез після вичленення в променезап'ястковому суглобі",
+      "serviceDesc": "Протез після вичленення в променезап'ястковому суглобі",
+      "serviceCode": "06 18 06",
+      "serviceParentID": 5,
+      "serviceDuration": 150,
+      "serviceExternalID": "ISO-9999-061806",
+      "servicePrice": 120000.0
+    }
+  ]
+}
