@@ -224,6 +224,98 @@ function renderElements(
     );
     return out;
   }
+  if (stepId === 'e0000003-0000-0000-0000-000000000003') {
+    out.push(
+      <div key="plaster-confirmation" className="space-y-3 rounded-xl border bg-muted/40 p-5">
+        <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <Checkbox
+            id="plaster-negative-confirmed"
+            checked={values['f0000004-0000-0000-0000-000000000001'] === true}
+            onCheckedChange={(c) =>
+              onChange('f0000004-0000-0000-0000-000000000001', c === true)
+            }
+          />
+          <Label htmlFor="plaster-negative-confirmed" className="text-sm font-medium">
+            Гіпсовий негатив виготовлено
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Після відмітки переходьте до наступного кроку.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000004-0000-0000-0000-000000000004') {
+      out.push(
+        <div key="plaster-quality-check" className="space-y-3 rounded-xl border bg-muted/40 p-5">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="plaster-quality-checked"
+              checked={values['f0000005-0000-0000-0000-000000000001'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000005-0000-0000-0000-000000000001', c === true)
+              }
+            />
+            <Label htmlFor="plaster-quality-checked" className="text-sm font-medium">
+              Гіпсовий негатив перевірено на відповідність антропометричним даним
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Після відмітки переходьте до наступного кроку.
+          </p>
+        </div>,
+      );
+      return out;
+    }
+  if (stepId === 'e0000011-0000-0000-0000-000000000001') {
+    out.push(
+      <div key="positive-production" className="space-y-3 rounded-xl border bg-muted/40 p-5">
+        <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <Checkbox
+            id="plaster-positive-confirmed"
+            checked={values['f0000013-0000-0000-0000-000000000001'] === true}
+            onCheckedChange={(c) =>
+              onChange('f0000013-0000-0000-0000-000000000001', c === true)
+            }
+          />
+          <Label htmlFor="plaster-positive-confirmed" className="text-sm font-medium">
+            Гіпсовий позитив виготовлено
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Після відмітки переходьте до наступного кроку.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000005-0000-0000-0000-000000000005') {
+    out.push(
+      <div key="positive-quality-check" className="space-y-3 rounded-xl border bg-muted/40 p-5">
+        <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <Checkbox
+            id="plaster-positive-quality-checked"
+            checked={values['f0000006-0000-0000-0000-000000000001'] === true}
+            onCheckedChange={(c) =>
+              onChange('f0000006-0000-0000-0000-000000000001', c === true)
+            }
+          />
+          <Label htmlFor="plaster-positive-quality-checked" className="text-sm font-medium">
+            Гіпсовий позитив перевірено на відповідність бланку замірів
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Після відмітки переходьте до наступного кроку.
+        </p>
+      </div>,
+    );
+    return out;
+  }
   let i = 0;
   while (i < els.length) {
     if (els[i].elementType === 'STEP_MESSAGE') {
