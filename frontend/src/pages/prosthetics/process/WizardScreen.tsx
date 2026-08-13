@@ -293,6 +293,353 @@ function renderElements(
     );
     return out;
   }
+  if (stepId === 'e0000022-0000-0000-0000-000000000002') {
+    out.push(
+      <div key="kit-form" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <p className="text-sm font-semibold uppercase tracking-wide">КОМПЛЕКТАЦІЯ</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="kit-hand" className="text-sm font-medium">Кисть</Label>
+            <Input
+              id="kit-hand"
+              value={(values['f0000051-0000-0000-0000-000000000001'] as string) ?? ''}
+              onChange={(e) => onChange('f0000051-0000-0000-0000-000000000001', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kit-hook" className="text-sm font-medium">Гак</Label>
+            <Input
+              id="kit-hook"
+              value={(values['f0000052-0000-0000-0000-000000000002'] as string) ?? ''}
+              onChange={(e) => onChange('f0000052-0000-0000-0000-000000000002', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kit-wrist-unit" className="text-sm font-medium">Блок зап'ястья</Label>
+            <Input
+              id="kit-wrist-unit"
+              value={(values['f0000053-0000-0000-0000-000000000003'] as string) ?? ''}
+              onChange={(e) => onChange('f0000053-0000-0000-0000-000000000003', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kit-bandage" className="text-sm font-medium">Бандаж</Label>
+            <Input
+              id="kit-bandage"
+              value={(values['f0000054-0000-0000-0000-000000000004'] as string) ?? ''}
+              onChange={(e) => onChange('f0000054-0000-0000-0000-000000000004', e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <Label htmlFor="kit-other" className="text-sm font-medium">Інші компоненти</Label>
+            <Textarea
+              id="kit-other"
+              rows={3}
+              value={(values['f0000055-0000-0000-0000-000000000005'] as string) ?? ''}
+              onChange={(e) => onChange('f0000055-0000-0000-0000-000000000005', e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <Checkbox
+            id="kit-formed"
+            checked={values['f0000056-0000-0000-0000-000000000006'] === true}
+            onCheckedChange={(c) =>
+              onChange('f0000056-0000-0000-0000-000000000006', c === true)
+            }
+          />
+          <Label htmlFor="kit-formed" className="text-sm font-medium">
+            Комплектацію сформовано (лист для збірки комплектації на склад)
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Після відмітки переходьте до наступного кроку.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000060-0000-0000-0000-000000000001') {
+    out.push(
+      <div key="kit-form-new" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <p className="text-sm font-semibold uppercase tracking-wide">КОМПЛЕКТАЦІЯ</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="kit-hand" className="text-sm font-medium">Кисть</Label>
+            <Input
+              id="kit-hand"
+              value={(values['f0000061-0000-0000-0000-000000000001'] as string) ?? ''}
+              onChange={(e) => onChange('f0000061-0000-0000-0000-000000000001', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kit-hook" className="text-sm font-medium">Гак</Label>
+            <Input
+              id="kit-hook"
+              value={(values['f0000062-0000-0000-0000-000000000002'] as string) ?? ''}
+              onChange={(e) => onChange('f0000062-0000-0000-0000-000000000002', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kit-wrist-unit" className="text-sm font-medium">Блок зап'ястья</Label>
+            <Input
+              id="kit-wrist-unit"
+              value={(values['f0000063-0000-0000-0000-000000000003'] as string) ?? ''}
+              onChange={(e) => onChange('f0000063-0000-0000-0000-000000000003', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kit-bandage" className="text-sm font-medium">Бандаж</Label>
+            <Input
+              id="kit-bandage"
+              value={(values['f0000064-0000-0000-0000-000000000004'] as string) ?? ''}
+              onChange={(e) => onChange('f0000064-0000-0000-0000-000000000004', e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <Label htmlFor="kit-other" className="text-sm font-medium">Інші компоненти</Label>
+            <Textarea
+              id="kit-other"
+              rows={3}
+              value={(values['f0000065-0000-0000-0000-000000000005'] as string) ?? ''}
+              onChange={(e) => onChange('f0000065-0000-0000-0000-000000000005', e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <Checkbox
+            id="kit-formed"
+            checked={values['f0000066-0000-0000-0000-000000000006'] === true}
+            onCheckedChange={(c) =>
+              onChange('f0000066-0000-0000-0000-000000000006', c === true)
+            }
+          />
+          <Label htmlFor="kit-formed" className="text-sm font-medium">
+            Комплектацію сформовано (лист для збірки комплектації на склад)
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Після відмітки переходьте до наступного кроку.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000041-0000-0000-0000-000000000001') {
+    out.push(
+      <div key="thermoforming-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">
+            КРОК 1: Термоформування та обробка тестової гільзи
+          </p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Крок 1</Badge>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-3 rounded-lg border bg-card p-4">
+            <p className="text-sm font-medium">Обробка гільзи</p>
+            <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="thermoforming-goggles"
+                  checked={values['f0000044-0000-0000-0000-000000000001'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000044-0000-0000-0000-000000000001', c === true)
+                  }
+                />
+                <Label htmlFor="thermoforming-goggles" className="text-sm">
+                  Захисні окуляри
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="thermoforming-respirator"
+                  checked={values['f0000045-0000-0000-0000-000000000001'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000045-0000-0000-0000-000000000001', c === true)
+                  }
+                />
+                <Label htmlFor="thermoforming-respirator" className="text-sm">
+                  Респіратор
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="thermoforming-earmuffs"
+                  checked={values['f0000046-0000-0000-0000-000000000001'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000046-0000-0000-0000-000000000001', c === true)
+                  }
+                />
+                <Label htmlFor="thermoforming-earmuffs" className="text-sm">
+                  Захисні навушники
+                </Label>
+              </div>
+            </div>
+            <div className="flex items-center justify-center">
+              <ArrowRight className="size-8 text-primary" aria-hidden="true" />
+            </div>
+            <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+              <img
+                src="/ppe/latex_thermal_gloves.png"
+                alt="Засоби індивідуального захисту: латексні рукавички підвищеної міцності, м'які тканинні терморукавиці"
+                className="h-56 w-auto rounded-lg object-contain md:h-64"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border bg-card p-4">
+            <p className="text-sm font-medium">Термоформування</p>
+            <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
+            <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+              <img
+                src="/ppe/goggles_resp_ears.png"
+                alt="Засоби індивідуального захисту: захисні окуляри, респіратор, захисні навушники"
+                className="h-56 w-auto rounded-lg object-contain md:h-64"
+              />
+            </div>
+            <div className="flex items-center justify-center">
+              <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="thermoforming-latex-gloves"
+                  checked={values['f0000047-0000-0000-0000-000000000001'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000047-0000-0000-0000-000000000001', c === true)
+                  }
+                />
+                <Label htmlFor="thermoforming-latex-gloves" className="text-sm">
+                  Латексні рукавички підвищеної міцності
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="thermoforming-thermal-gloves"
+                  checked={values['f0000048-0000-0000-0000-000000000001'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000048-0000-0000-0000-000000000001', c === true)
+                  }
+                />
+                <Label htmlFor="thermoforming-thermal-gloves" className="text-sm">
+                  М’які тканинні терморукавиці
+                </Label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="thermoforming-sleeve-formed"
+              checked={values['f0000042-0000-0000-0000-000000000001'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000042-0000-0000-0000-000000000001', c === true)
+              }
+            />
+            <Label htmlFor="thermoforming-sleeve-formed" className="text-sm font-medium">
+              Гільза сформована
+            </Label>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="thermoforming-edges-polished"
+              checked={values['f0000049-0000-0000-0000-000000000001'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000049-0000-0000-0000-000000000001', c === true)
+              }
+            />
+            <Label htmlFor="thermoforming-edges-polished" className="text-sm font-medium">
+              Краї заокруглені та відполіровані, зроблено отвір для примірки
+            </Label>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000042-0000-0000-0000-000000000002') {
+    out.push(
+      <div key="fitting-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">
+            КРОК 2: Примірка тестової гільзи
+          </p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Крок 2</Badge>
+          <span className="text-sm font-medium text-accent">(з пацієнтом)</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+
+        <p className="text-sm font-medium">Засоби індивідуального захисту:</p>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves.png"
+              alt="Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="fitting-nitrile-gloves"
+              checked={values['f0000050-0000-0000-0000-000000000001'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000050-0000-0000-0000-000000000001', c === true)
+              }
+            />
+            <Label htmlFor="fitting-nitrile-gloves" className="text-sm font-medium">
+              Нестерильні оглядові нітрилові рукавички
+            </Label>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="fitting-sleeve-checked"
+              checked={values['f0000043-0000-0000-0000-000000000001'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000043-0000-0000-0000-000000000001', c === true)
+              }
+            />
+            <Label htmlFor="fitting-sleeve-checked" className="text-sm font-medium">
+              Тестову гільзу перевірено на відповідність фактичним антропометричним даним пацієнта
+            </Label>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
   if (stepId === 'e0000005-0000-0000-0000-000000000005') {
     out.push(
       <div key="positive-quality-check" className="space-y-3 rounded-xl border bg-muted/40 p-5">
@@ -619,6 +966,7 @@ export default function WizardScreen() {
       });
       toast.success(step ? `Крок "${step.name}" завершено` : 'Крок завершено');
       applyInstance(res.data);
+      window.location.href = `/prosthetics/process/${instance.id}/wizard`;
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося завершити крок'));
     } finally {
