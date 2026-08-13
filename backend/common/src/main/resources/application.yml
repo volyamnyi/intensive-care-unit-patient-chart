@@ -59,8 +59,8 @@ app:
     expiration-ms: 86400000
 
   mis:
-    mock-enabled: false
-    wiremock-enabled: true
+    mock-enabled: true
+    wiremock-enabled: false
 
   api:
     title: ICU Patient Chart API
