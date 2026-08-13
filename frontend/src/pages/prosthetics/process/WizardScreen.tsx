@@ -302,7 +302,10 @@ function renderElements(
             id="plaster-positive-quality-checked"
             checked={values['f0000006-0000-0000-0000-000000000001'] === true}
             onCheckedChange={(c) =>
-              onChange('f0000006-0000-0000-0000-000000000001', c === true)
+              setValues((s) => ({
+                ...s,
+                'f0000006-0000-0000-0000-000000000001': c === true,
+              }))
             }
           />
           <Label htmlFor="plaster-positive-quality-checked" className="text-sm font-medium">
@@ -329,7 +332,10 @@ function renderElements(
             id="plaster-positive-quality-checked-fallback"
             checked={values['f0000006-0000-0000-0000-000000000001'] === true}
             onCheckedChange={(c) =>
-              onChange('f0000006-0000-0000-0000-000000000001', c === true)
+              setValues((s) => ({
+                ...s,
+                'f0000006-0000-0000-0000-000000000001': c === true,
+              }))
             }
           />
           <Label htmlFor="plaster-positive-quality-checked-fallback" className="text-sm font-medium">
@@ -914,7 +920,10 @@ export default function WizardScreen() {
                         id="plaster-positive-quality-checked"
                         checked={values['f0000006-0000-0000-0000-000000000001'] === true}
                         onCheckedChange={(c) =>
-                          onChange('f0000006-0000-0000-0000-000000000001', c === true)
+                          setValues((s) => ({
+                            ...s,
+                            'f0000006-0000-0000-0000-000000000001': c === true,
+                          }))
                         }
                       />
                       <Label htmlFor="plaster-positive-quality-checked" className="text-sm font-medium">
