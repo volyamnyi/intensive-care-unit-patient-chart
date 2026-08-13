@@ -310,11 +310,37 @@ function renderElements(
           </Label>
         </div>
         <p className="text-xs text-muted-foreground">
-          Після відмітки переходьте до наступного кроку.
+          Після відмітки переходьте до наступного етапу.
         </p>
       </div>,
     );
     return out;
+  }
+  const positiveQualityStepTitle = 'Перевірка якості гіпсового позитива на відповідність бланку замірів';
+  const hasPositiveQualityTitle = els.some(
+    (el) => (el.label ?? '').includes(positiveQualityStepTitle),
+  );
+  if (!out.length && hasPositiveQualityTitle) {
+    out.push(
+      <div key="positive-quality-check-fallback" className="space-y-3 rounded-xl border bg-muted/40 p-5">
+        <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <Checkbox
+            id="plaster-positive-quality-checked-fallback"
+            checked={values['f0000006-0000-0000-0000-000000000001'] === true}
+            onCheckedChange={(c) =>
+              onChange('f0000006-0000-0000-0000-000000000001', c === true)
+            }
+          />
+          <Label htmlFor="plaster-positive-quality-checked-fallback" className="text-sm font-medium">
+            Гіпсовий позитив перевірено на відповідність бланку замірів
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Після відмітки переходьте до наступного етапу.
+        </p>
+      </div>,
+    );
   }
   let i = 0;
   while (i < els.length) {
@@ -880,16 +906,36 @@ export default function WizardScreen() {
           <CardContent className="space-y-6">
             <div className="space-y-5">
               {step.id === 'e0000005-0000-0000-0000-000000000005' ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Заповнена форма з «ЕТАП 1: Зняття мірок та виготовлення гіпсового
-                    негатива → КРОК 1: Зняття мірок (з пацієнтом)»:
-                  </p>
-                  <MeasurementForms
-                    values={savedMeasurementValues}
-                    onChange={() => {}}
-                    disabled
-                  />
+                <div className="space-y-5">
+                  <div className="space-y-3 rounded-xl border bg-muted/40 p-5">
+                    <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
+                    <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+                      <Checkbox
+                        id="plaster-positive-quality-checked"
+                        checked={values['f0000006-0000-0000-0000-000000000001'] === true}
+                        onCheckedChange={(c) =>
+                          onChange('f0000006-0000-0000-0000-000000000001', c === true)
+                        }
+                      />
+                      <Label htmlFor="plaster-positive-quality-checked" className="text-sm font-medium">
+                        Гіпсовий позитив перевірено на відповідність бланку замірів
+                      </Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Після відмітки переходьте до наступного етапу.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Заповнена форма з «ЕТАП 1: Зняття мірок та виготовлення гіпсового
+                      негатива → КРОК 1: Зняття мірок (з пацієнтом)»:
+                    </p>
+                    <MeasurementForms
+                      values={savedMeasurementValues}
+                      onChange={() => {}}
+                      disabled
+                    />
+                  </div>
                 </div>
               ) : (
                 renderElements(
