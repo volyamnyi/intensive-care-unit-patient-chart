@@ -142,8 +142,18 @@ class FlowInstanceControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/fail", instanceId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("category", "technical"))))
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("category", "technical", "description", "Зламано обладнання"))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void fail_rejectsMissingDescription() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                        "/api/prosthesis-manufacturing/instances/{id}/fail", instanceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("category", "technical"))))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

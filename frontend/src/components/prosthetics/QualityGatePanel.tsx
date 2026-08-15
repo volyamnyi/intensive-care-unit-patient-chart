@@ -69,7 +69,7 @@ export function QualityGatePanel({
           {criteria.map((c, i) => {
             const fieldId = `gate-criterion-${i}`;
             return (
-              <div key={c} className="flex items-start gap-3 rounded-md border p-3">
+              <div key={c} className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/30">
                 <Checkbox
                   id={fieldId}
                   disabled={locked}

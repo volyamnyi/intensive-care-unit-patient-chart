@@ -29,8 +29,10 @@
   --color-border: #E8E6E1;
   --color-input: #FAFAF8;
   --color-success: #4CAF50;
+  --color-success-foreground: #1F1F1F;
   --color-error: #FF5252;
   --color-warning: #FFC107;
+  --color-warning-foreground: #1F1F1F;
   --color-info: #64B5F6;
   --color-accent: #F0EDE8;
   --color-accent-foreground: #1F1F1F;
@@ -72,6 +74,8 @@
   /* Prosthetics module dark theme tokens */
   --color-mint: #10b981;
   --color-mint-foreground: #020617;
+  --color-success-foreground: #1F1F1F;
+  --color-warning-foreground: #1F1F1F;
 }
 
 /* Base animations */
@@ -139,6 +143,34 @@
 
 .rotate {
   animation: rotate 2s linear infinite;
+}
+
+/* Wizard & shared checkbox check feedback — one-shot, 180ms, motion-safe */
+@keyframes checkPop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.check-pop {
+  animation: checkPop 0.18s ease-out both;
+}
+
+/* Wizard step-change entrance — 10px drift, 300ms, eased */
+@keyframes stepFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.step-fade-in {
+  animation: stepFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check-pop,
+  .step-fade-in {
+    animation: none;
+  }
 }
 
 /* Fullscreen hourly grid dialog morph (#136, Phase 3) */

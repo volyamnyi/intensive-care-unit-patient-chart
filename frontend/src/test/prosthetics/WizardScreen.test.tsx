@@ -335,4 +335,59 @@ describe('WizardScreen', () => {
       expect(flowInstanceApiMock.pause).toHaveBeenCalledWith('inst-1', { category: 'MATERIAL' });
     });
   });
+
+  it('shows fail button on every step and opens the fail dialog', async () => {
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Позначити процес як провалений/ }));
+    expect(screen.getByText('Категорія провалу')).toBeInTheDocument();
+    expect(screen.getByText('Детальний опис причини')).toBeInTheDocument();
+    expect(screen.getByText('Файли (опційно)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Позначити як провалений/ })).toBeInTheDocument();
+  });
+
+  it('does not call fail API while category or description is missing', async () => {
+    flowInstanceApiMock.fail.mockResolvedValue({ data: inProgressInstance() });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Позначити процес як провалений/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Позначити як провалений/ }));
+    await waitFor(() => {
+      expect(flowInstanceApiMock.fail).not.toHaveBeenCalled();
+    });
+  });
+
+  it('calls fail API with category and description then navigates to the failed report', async () => {
+    flowInstanceApiMock.fail.mockResolvedValue({
+      data: { ...inProgressInstance(), status: 'FAILED' },
+    });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Позначити процес як провалений/ }));
+    fireEvent.click(screen.getByRole('combobox', { name: /Категорія провалу/ }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Виробничий дефект' }));
+    fireEvent.change(screen.getByLabelText(/Детальний опис причини/), {
+      target: { value: 'Гільза тріснула під час ламінації' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Позначити як провалений/ }));
+
+    await waitFor(() => {
+      expect(flowInstanceApiMock.fail).toHaveBeenCalledWith('inst-1', {
+        category: 'defect',
+        description: 'Гільза тріснула під час ламінації',
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByText('Failed Page')).toBeInTheDocument();
+    });
+  });
 });

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CheckCircle2, Download } from 'lucide-react';
+import { CheckCircle2, Download, Diamond, Info, Layers, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ProcessStat } from '@/components/prosthetics/ProcessStat';
 import { flowInstanceApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
 import type {
@@ -27,15 +29,6 @@ function formatHours(seconds: number | null | undefined) {
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   return h > 0 ? `${h} год ${m} хв` : `${m} хв`;
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border bg-card p-4 text-center">
-      <div className="font-display text-xl font-semibold">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-    </div>
-  );
 }
 
 export default function DoneScreen() {
@@ -149,14 +142,16 @@ export default function DoneScreen() {
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <Stat label="Активний час" value={formatHours(instance.totalActiveSeconds)} />
-        <Stat label="Кроків виконано" value={String(totalSteps)} />
-        <Stat label="Доопрацювань" value={String(instance.reworkCount ?? 0)} />
+        <ProcessStat label="Активний час" value={formatHours(instance.totalActiveSeconds)} />
+        <ProcessStat label="Кроків виконано" value={String(totalSteps)} />
+        <ProcessStat label="Доопрацювань" value={String(instance.reworkCount ?? 0)} />
       </div>
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Етапи виготовлення</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Layers className="size-4 text-muted-foreground" /> Етапи виготовлення
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {stageTimeline.map(({ stage, done, total }, idx) => (
@@ -169,12 +164,10 @@ export default function DoneScreen() {
                   {done}/{total} кроків
                 </span>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-success"
-                  style={{ width: total === 0 ? '0%' : `${(done / total) * 100}%` }}
-                />
-              </div>
+              <Progress
+                className="mt-2"
+                value={total === 0 ? 0 : (done / total) * 100}
+              />
               {done > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {stage.steps
@@ -200,7 +193,9 @@ export default function DoneScreen() {
       {decisions.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-base">Контрольні точки</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Diamond className="size-4 text-muted-foreground" /> Контрольні точки
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -236,7 +231,9 @@ export default function DoneScreen() {
       {resources.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-base">Витрачені ресурси</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="size-4 text-muted-foreground" /> Витрачені ресурси
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -267,7 +264,9 @@ export default function DoneScreen() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Метадані процесу</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="size-4 text-muted-foreground" /> Метадані процесу
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between gap-4 border-b pb-2 last:border-0">
@@ -297,7 +296,7 @@ export default function DoneScreen() {
         <Button variant="outline" onClick={() => navigate(`/prosthetics/process/${instance.id}`)}>
           Технологічна карта
         </Button>
-        <Button variant="outline" disabled={exporting} onClick={() => void exportPdf()}>
+        <Button variant="outline" className="gap-2" disabled={exporting} onClick={() => void exportPdf()}>
           <Download className="size-4" /> Експортувати PDF
         </Button>
         <Button onClick={() => navigate('/prosthetics')}>До панелі управління</Button>

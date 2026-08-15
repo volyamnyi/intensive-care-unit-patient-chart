@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Camera,
   Check,
+  CircleAlert,
   ClipboardCheck,
   Home,
   PauseCircle,
@@ -12,8 +14,11 @@ import {
   Save,
   Timer,
   Upload,
+  X,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +46,7 @@ import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import { QualityGatePanel } from '@/components/prosthetics/QualityGatePanel';
 import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
 import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
+import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
 import type {
   FlowInstance,
   GateDecision,
@@ -150,7 +156,7 @@ function PpeChecklistGroup({
       )}
       <div className="space-y-2">
         {elements.map((el) => (
-          <div key={el.id} className="flex items-center gap-3 rounded-md border bg-card p-3">
+          <div key={el.id} className="flex items-center gap-3 rounded-md border bg-card p-3 transition-colors hover:bg-muted/40">
             <Checkbox
               id={el.id}
               checked={values[el.id] === true}
@@ -174,6 +180,7 @@ function renderElements(
   stepId: string | undefined,
   onChange: (id: string, value: unknown) => void,
   onUpload: (file: File) => void,
+  errors: Record<string, string>,
 ) {
   const out: React.ReactNode[] = [];
   // The «Зняття мірок (з пацієнтом)» step renders the pixel-perfect measurement
@@ -228,7 +235,7 @@ function renderElements(
     out.push(
       <div key="plaster-confirmation" className="space-y-3 rounded-xl border bg-muted/40 p-5">
         <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40">
           <Checkbox
             id="plaster-negative-confirmed"
             checked={values['f0000004-0000-0000-0000-000000000001'] === true}
@@ -251,7 +258,7 @@ function renderElements(
       out.push(
         <div key="plaster-quality-check" className="space-y-3 rounded-xl border bg-muted/40 p-5">
           <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40">
             <Checkbox
               id="plaster-quality-checked"
               checked={values['f0000005-0000-0000-0000-000000000001'] === true}
@@ -274,7 +281,7 @@ function renderElements(
     out.push(
       <div key="positive-production" className="space-y-3 rounded-xl border bg-muted/40 p-5">
         <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40">
           <Checkbox
             id="plaster-positive-confirmed"
             checked={values['f0000013-0000-0000-0000-000000000001'] === true}
@@ -293,77 +300,15 @@ function renderElements(
     );
     return out;
   }
-  if (stepId === 'e0000022-0000-0000-0000-000000000002') {
-    out.push(
-      <div key="kit-form" className="space-y-5 rounded-xl border bg-muted/40 p-5">
-        <p className="text-sm font-semibold uppercase tracking-wide">КОМПЛЕКТАЦІЯ</p>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="kit-hand" className="text-sm font-medium">Кисть</Label>
-            <Input
-              id="kit-hand"
-              value={(values['f0000051-0000-0000-0000-000000000001'] as string) ?? ''}
-              onChange={(e) => onChange('f0000051-0000-0000-0000-000000000001', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="kit-hook" className="text-sm font-medium">Гак</Label>
-            <Input
-              id="kit-hook"
-              value={(values['f0000052-0000-0000-0000-000000000002'] as string) ?? ''}
-              onChange={(e) => onChange('f0000052-0000-0000-0000-000000000002', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="kit-wrist-unit" className="text-sm font-medium">Блок зап'ястья</Label>
-            <Input
-              id="kit-wrist-unit"
-              value={(values['f0000053-0000-0000-0000-000000000003'] as string) ?? ''}
-              onChange={(e) => onChange('f0000053-0000-0000-0000-000000000003', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="kit-bandage" className="text-sm font-medium">Бандаж</Label>
-            <Input
-              id="kit-bandage"
-              value={(values['f0000054-0000-0000-0000-000000000004'] as string) ?? ''}
-              onChange={(e) => onChange('f0000054-0000-0000-0000-000000000004', e.target.value)}
-            />
-          </div>
-          <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="kit-other" className="text-sm font-medium">Інші компоненти</Label>
-            <Textarea
-              id="kit-other"
-              rows={3}
-              value={(values['f0000055-0000-0000-0000-000000000005'] as string) ?? ''}
-              onChange={(e) => onChange('f0000055-0000-0000-0000-000000000005', e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-          <Checkbox
-            id="kit-formed"
-            checked={values['f0000056-0000-0000-0000-000000000006'] === true}
-            onCheckedChange={(c) =>
-              onChange('f0000056-0000-0000-0000-000000000006', c === true)
-            }
-          />
-          <Label htmlFor="kit-formed" className="text-sm font-medium">
-            Комплектацію сформовано (лист для збірки комплектації на склад)
-          </Label>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Після відмітки переходьте до наступного кроку.
-        </p>
-      </div>,
-    );
-    return out;
-  }
   if (stepId === 'e0000060-0000-0000-0000-000000000001') {
     out.push(
-      <div key="kit-form-new" className="space-y-5 rounded-xl border bg-muted/40 p-5">
-        <p className="text-sm font-semibold uppercase tracking-wide">КОМПЛЕКТАЦІЯ</p>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div
+        key="kit-form-new"
+        className="space-y-5 rounded-xl border bg-muted/40 p-5"
+        style={{ display: 'contents' }}
+      >
+        <p className="text-sm font-semibold uppercase tracking-wide" style={{ display: 'none' }}>КОМПЛЕКТАЦІЯ</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2" style={{ display: 'none' }}>
           <div className="space-y-2">
             <Label htmlFor="kit-hand" className="text-sm font-medium">Кисть</Label>
             <Input
@@ -406,7 +351,9 @@ function renderElements(
             />
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+        <div
+          className="flex items-center gap-3 rounded-lg border bg-card p-4"
+        >
           <Checkbox
             id="kit-formed"
             checked={values['f0000066-0000-0000-0000-000000000006'] === true}
@@ -418,7 +365,7 @@ function renderElements(
             Комплектацію сформовано (лист для збірки комплектації на склад)
           </Label>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground" style={{ display: 'none' }}>
           Після відмітки переходьте до наступного кроку.
         </p>
       </div>,
@@ -428,13 +375,6 @@ function renderElements(
   if (stepId === 'e0000041-0000-0000-0000-000000000001') {
     out.push(
       <div key="thermoforming-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold uppercase tracking-wide">
-            КРОК 1: Термоформування та обробка тестової гільзи
-          </p>
-          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Крок 1</Badge>
-        </div>
-
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
           <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
@@ -482,13 +422,10 @@ function renderElements(
                 </Label>
               </div>
             </div>
-            <div className="flex items-center justify-center">
-              <ArrowRight className="size-8 text-primary" aria-hidden="true" />
-            </div>
             <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
               <img
-                src="/ppe/latex_thermal_gloves.png"
-                alt="Засоби індивідуального захисту: латексні рукавички підвищеної міцності, м'які тканинні терморукавиці"
+                src="/ppe/goggles_resp_ears.png"
+                alt="Засоби індивідуального захисту: захисні окуляри, респіратор, захисні навушники"
                 className="h-56 w-auto rounded-lg object-contain md:h-64"
               />
             </div>
@@ -497,16 +434,6 @@ function renderElements(
           <div className="space-y-3 rounded-lg border bg-card p-4">
             <p className="text-sm font-medium">Термоформування</p>
             <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
-            <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
-              <img
-                src="/ppe/goggles_resp_ears.png"
-                alt="Засоби індивідуального захисту: захисні окуляри, респіратор, захисні навушники"
-                className="h-56 w-auto rounded-lg object-contain md:h-64"
-              />
-            </div>
-            <div className="flex items-center justify-center">
-              <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
-            </div>
             <div className="space-y-2">
               <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
                 <Checkbox
@@ -532,6 +459,13 @@ function renderElements(
                   М’які тканинні терморукавиці
                 </Label>
               </div>
+            </div>
+            <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+              <img
+                src="/ppe/latex_thermal_gloves.png"
+                alt="Засоби індивідуального захисту: латексні рукавички підвищеної міцності, м'які тканинні терморукавиці"
+                className="h-56 w-auto rounded-lg object-contain md:h-64"
+              />
             </div>
           </div>
         </div>
@@ -573,17 +507,733 @@ function renderElements(
     );
     return out;
   }
+  if (stepId === 'e0000069-0000-0000-0000-000000000009') {
+    out.push(
+      <div key="inner-sleeve-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-3 rounded-lg border bg-card p-4">
+            <p className="text-sm font-medium">Обробка гільзи</p>
+            <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="inner-sleeve-goggles"
+                  checked={values['f0000071-0000-0000-0000-000000000011'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000071-0000-0000-0000-000000000011', c === true)
+                  }
+                />
+                <Label htmlFor="inner-sleeve-goggles" className="text-sm">
+                  Захисні окуляри
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="inner-sleeve-respirator"
+                  checked={values['f0000072-0000-0000-0000-000000000012'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000072-0000-0000-0000-000000000012', c === true)
+                  }
+                />
+                <Label htmlFor="inner-sleeve-respirator" className="text-sm">
+                  Респіратор
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="inner-sleeve-earmuffs"
+                  checked={values['f0000073-0000-0000-0000-000000000013'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000073-0000-0000-0000-000000000013', c === true)
+                  }
+                />
+                <Label htmlFor="inner-sleeve-earmuffs" className="text-sm">
+                  Захисні навушники
+                </Label>
+              </div>
+            </div>
+            <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+              <img
+                src="/ppe/goggles_resp_ears.png"
+                alt="Засоби індивідуального захисту: захисні окуляри, респіратор, захисні навушники"
+                className="h-56 w-auto rounded-lg object-contain md:h-64"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border bg-card p-4">
+            <p className="text-sm font-medium">Термоформування</p>
+            <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="inner-sleeve-latex-gloves"
+                  checked={values['f0000074-0000-0000-0000-000000000014'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000074-0000-0000-0000-000000000014', c === true)
+                  }
+                />
+                <Label htmlFor="inner-sleeve-latex-gloves" className="text-sm">
+                  Латексні рукавички підвищеної міцності
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+                <Checkbox
+                  id="inner-sleeve-thermal-gloves"
+                  checked={values['f0000075-0000-0000-0000-000000000015'] === true}
+                  onCheckedChange={(c) =>
+                    onChange('f0000075-0000-0000-0000-000000000015', c === true)
+                  }
+                />
+                <Label htmlFor="inner-sleeve-thermal-gloves" className="text-sm">
+                  М’які тканинні терморукавиці
+                </Label>
+              </div>
+            </div>
+            <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+              <img
+                src="/ppe/latex_thermal_gloves.png"
+                alt="Засоби індивідуального захисту: латексні рукавички підвищеної міцності, м'які тканинні терморукавиці"
+                className="h-56 w-auto rounded-lg object-contain md:h-64"
+              />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="inner-sleeve-formed"
+              checked={values['f0000076-0000-0000-0000-000000000016'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000076-0000-0000-0000-000000000016', c === true)
+              }
+            />
+            <Label htmlFor="inner-sleeve-formed" className="text-sm font-medium">
+              Гільза сформована
+            </Label>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="inner-sleeve-edges-polished"
+              checked={values['f0000077-0000-0000-0000-000000000017'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000077-0000-0000-0000-000000000017', c === true)
+              }
+            />
+            <Label htmlFor="inner-sleeve-edges-polished" className="text-sm font-medium">
+              Краї заокруглені та відполіровані
+            </Label>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000070-0000-0000-0000-000000000010') {
+    const stepMessage = els.find((el) => el.elementType === 'STEP_MESSAGE');
+    out.push(
+      <div key="inner-fitting-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        {stepMessage && (
+          <p className="rounded-md border-l-4 border-accent bg-muted p-3 text-sm font-medium">
+            {stepMessage.label}
+          </p>
+        )}
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+
+        <p className="text-sm font-medium">Засоби індивідуального захисту:</p>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves.png"
+              alt="Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="inner-fitting-nitrile-gloves"
+              checked={values['f0000079-0000-0000-0000-000000000019'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000079-0000-0000-0000-000000000019', c === true)
+              }
+            />
+            <Label htmlFor="inner-fitting-nitrile-gloves" className="text-sm font-medium">
+              Нестерильні оглядові нітрилові рукавички
+            </Label>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="inner-fitting-sleeve-checked"
+              checked={values['f0000078-0000-0000-0000-000000000018'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000078-0000-0000-0000-000000000018', c === true)
+              }
+            />
+            <Label htmlFor="inner-fitting-sleeve-checked" className="text-sm font-medium">
+              Постійну внутрішню гільзу перевірено на відповідність фактичним антропометричним даним пацієнта
+            </Label>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="inner-fitting-axes-set"
+              checked={values['f0000080-0000-0000-0000-000000000020'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000080-0000-0000-0000-000000000020', c === true)
+              }
+            />
+            <Label htmlFor="inner-fitting-axes-set" className="text-sm font-medium">
+              Задано необхідні вісі для виготовлення формоутворюючої моделі
+            </Label>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000071-0000-0000-0000-000000000011') {
+    out.push(
+      <div key="outer-sleeve-model-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <Checkbox
+            id="outer-sleeve-model-ready"
+            checked={values['f0000082-0000-0000-0000-000000000022'] === true}
+            onCheckedChange={(c) =>
+              onChange('f0000082-0000-0000-0000-000000000022', c === true)
+            }
+          />
+          <Label htmlFor="outer-sleeve-model-ready" className="text-sm font-medium">
+            Формоутворююча модель готова
+          </Label>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000072-0000-0000-0000-000000000012') {
+    out.push(
+      <div key="lamination-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Перед ламінацією підтвердіть засоби індивідуального захисту.
+        </p>
+        <Separator />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="lamination-nitrile-gloves"
+                checked={values['f0000083-0000-0000-0000-000000000023'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000083-0000-0000-0000-000000000023', c === true)
+                }
+              />
+              <Label htmlFor="lamination-nitrile-gloves" className="text-xs font-medium">
+                Нестерильні оглядові нітрилові рукавички
+              </Label>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="lamination-respirator"
+                checked={values['f0000084-0000-0000-0000-000000000024'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000084-0000-0000-0000-000000000024', c === true)
+                }
+              />
+              <Label htmlFor="lamination-respirator" className="text-xs font-medium">
+                Респіратор
+              </Label>
+            </div>
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowRight className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves_resp.png"
+              alt="Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички, респіратор"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="lamination-confirmed"
+              checked={values['f0000085-0000-0000-0000-000000000025'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000085-0000-0000-0000-000000000025', c === true)
+              }
+            />
+            <Label htmlFor="lamination-confirmed" className="text-sm font-medium">
+              Гільза заламінована
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Після відмітки процес можна завершити.
+          </p>
+        </div>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000073-0000-0000-0000-000000000013') {
+    out.push(
+      <div key="processing-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Перед обробкою підтвердіть засоби індивідуального захисту.
+        </p>
+        <Separator />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="processing-safety-glasses"
+                checked={values['f0000086-0000-0000-0000-000000000026'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000086-0000-0000-0000-000000000026', c === true)
+                }
+              />
+              <Label htmlFor="processing-safety-glasses" className="text-xs font-medium">
+                Захисні окуляри
+              </Label>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="processing-respirator"
+                checked={values['f0000087-0000-0000-0000-000000000027'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000087-0000-0000-0000-000000000027', c === true)
+                }
+              />
+              <Label htmlFor="processing-respirator" className="text-xs font-medium">
+                Респіратор
+              </Label>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="processing-headphones"
+                checked={values['f0000088-0000-0000-0000-000000000028'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000088-0000-0000-0000-000000000028', c === true)
+                }
+              />
+              <Label htmlFor="processing-headphones" className="text-xs font-medium">
+                Захисні навушники
+              </Label>
+            </div>
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowRight className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/goggles_resp_ears.png"
+              alt="Засоби індивідуального захисту: захисні окуляри, респіратор, захисні навушники"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="processing-confirmed"
+              checked={values['f0000089-0000-0000-0000-000000000029'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000089-0000-0000-0000-000000000029', c === true)
+              }
+            />
+            <Label htmlFor="processing-confirmed" className="text-sm font-medium">
+              Краї заокруглені та відполіровані
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Після відмітки процес можна завершити.
+          </p>
+        </div>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000074-0000-0000-0000-000000000014') {
+    out.push(
+      <div key="assembly-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="assembly-confirmed"
+              checked={values['f0000090-0000-0000-0000-000000000030'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000090-0000-0000-0000-000000000030', c === true)
+              }
+            />
+            <Label htmlFor="assembly-confirmed" className="text-sm font-medium">
+              Протез складено відповідно до ТТП
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Після відмітки переходьте до наступного кроку.
+          </p>
+        </div>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000075-0000-0000-0000-000000000015') {
+    out.push(
+      <div key="fastening-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="fastening-confirmed"
+              checked={values['f0000091-0000-0000-0000-000000000031'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000091-0000-0000-0000-000000000031', c === true)
+              }
+            />
+            <Label htmlFor="fastening-confirmed" className="text-sm font-medium">
+              Система кріплення протеза виготовлена та зафіксована на протезі
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Після відмітки процес можна завершити.
+          </p>
+        </div>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000076-0000-0000-0000-000000000016') {
+    out.push(
+      <div key="final-assembly-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        <div className="space-y-3">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="final-assembly-rivets"
+                checked={values['f0000092-0000-0000-0000-000000000032'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000092-0000-0000-0000-000000000032', c === true)
+                }
+              />
+              <Label htmlFor="final-assembly-rivets" className="text-xs font-medium">
+                Заклепки на протезі щільно підтягнуті, обтиснуті до повного профілю, не мають гострих країв та задирок
+              </Label>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="final-assembly-hinges"
+                checked={values['f0000093-0000-0000-0000-000000000033'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000093-0000-0000-0000-000000000033', c === true)
+                }
+              />
+              <Label htmlFor="final-assembly-hinges" className="text-xs font-medium">
+                Шарнірні з&apos;єднання забезпечують безшумне, легке, плавне переміщення складових частин, що з&apos;єднуються
+              </Label>
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+              <Checkbox
+                id="final-assembly-components"
+                checked={values['f0000094-0000-0000-0000-000000000034'] === true}
+                onCheckedChange={(c) =>
+                  onChange('f0000094-0000-0000-0000-000000000034', c === true)
+                }
+              />
+              <Label htmlFor="final-assembly-components" className="text-xs font-medium">
+                Всі компоненти надійно з&apos;єднані між собою, протез готовий до фінального налаштування кріплення на пацієнті
+              </Label>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Після відмітки переходьте до наступного кроку.
+          </p>
+        </div>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000077-0000-0000-0000-000000000017') {
+    const stepMessage = els.find((el) => el.elementType === 'STEP_MESSAGE');
+    out.push(
+      <div key="final-fitting-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        {stepMessage && (
+          <p className="rounded-md border-l-4 border-accent bg-muted p-3 text-sm font-medium">
+            {stepMessage.label}
+          </p>
+)}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Перед приміркою підтвердіть засоби індивідуального захисту.
+        </p>
+        <Separator />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+            <Checkbox
+              id="final-fitting-nitrile-gloves"
+              checked={values['f0000095-0000-0000-0000-000000000035'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000095-0000-0000-0000-000000000035', c === true)
+              }
+            />
+            <Label htmlFor="final-fitting-nitrile-gloves" className="text-xs font-medium">
+              Нестерильні оглядові нітрилові рукавички
+            </Label>
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowRight className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves.png"
+              alt="Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+        </div>
+        <Separator />
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="final-fitting-fastening"
+              checked={values['f0000096-0000-0000-0000-000000000036'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000096-0000-0000-0000-000000000036', c === true)
+              }
+            />
+            <Label htmlFor="final-fitting-fastening" className="text-sm font-medium">
+              Кріплення надійно зафіксовано на протезі
+            </Label>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="final-fitting-cables"
+              checked={values['f0000097-0000-0000-0000-000000000037'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000097-0000-0000-0000-000000000037', c === true)
+              }
+            />
+            <Label htmlFor="final-fitting-cables" className="text-sm font-medium">
+              Перевірено екскурсію тяг та спрацьовування термінальних пристроїв протеза
+            </Label>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000078-0000-0000-0000-000000000018') {
+    const stepMessages = els.filter((el) => el.elementType === 'STEP_MESSAGE');
+    out.push(
+      <div key="prosthesis-handover-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        {stepMessages.map((el) => (
+          <p
+            key={el.id}
+            className="rounded-md border-l-4 border-accent bg-muted p-3 text-sm font-medium"
+          >
+            {el.label}
+          </p>
+        ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Перед видачею підтвердіть засоби індивідуального захисту.
+        </p>
+        <Separator />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+            <Checkbox
+              id="handover-nitrile-gloves"
+              checked={values['f0000101-0000-0000-0000-000000000041'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000101-0000-0000-0000-000000000041', c === true)
+              }
+            />
+            <Label htmlFor="handover-nitrile-gloves" className="text-xs font-medium">
+              Нестерильні оглядові нітрилові рукавички
+            </Label>
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowRight className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves.png"
+              alt="Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+        </div>
+        <Separator />
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="handover-passive-rotation"
+              checked={values['f0000102-0000-0000-0000-000000000042'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000102-0000-0000-0000-000000000042', c === true)
+              }
+            />
+            <Label htmlFor="handover-passive-rotation" className="text-sm font-medium">
+              У протезі забезпечується пасивна ротація кисті відносно гільзи передпліччя
+            </Label>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="handover-soft-tissues"
+              checked={values['f0000103-0000-0000-0000-000000000043'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000103-0000-0000-0000-000000000043', c === true)
+              }
+            />
+            <Label htmlFor="handover-soft-tissues" className="text-sm font-medium">
+              При згинанні в ліктьовому суглобі м&apos;які тканини кукси утримуються в гільзі, не нависають над її верхнім краєм і не затискаються нею
+            </Label>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000079-0000-0000-0000-000000000019') {
+    const stepMessages = els.filter((el) => el.elementType === 'STEP_MESSAGE');
+    out.push(
+      <div key="prosthesis-marking-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        {stepMessages.map((el) => (
+          <p
+            key={el.id}
+            className="rounded-md border-l-4 border-accent bg-muted p-3 text-sm font-medium"
+          >
+            {el.label}
+          </p>
+        ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Перед маркуванням підтвердіть засоби індивідуального захисту.
+        </p>
+        <Separator />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
+            <Checkbox
+              id="marking-nitrile-gloves"
+              checked={values['f0000105-0000-0000-0000-000000000045'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000105-0000-0000-0000-000000000045', c === true)
+              }
+            />
+            <Label htmlFor="marking-nitrile-gloves" className="text-xs font-medium">
+              Нестерильні оглядові нітрилові рукавички
+            </Label>
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowRight className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves.png"
+              alt="Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+        </div>
+        <Separator />
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Процес завершується після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="marking-final-inspection"
+              checked={values['f0000106-0000-0000-0000-000000000046'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000106-0000-0000-0000-000000000046', c === true)
+              }
+            />
+            <Label htmlFor="marking-final-inspection" className="text-sm font-medium">
+              Протез фінально оглянутий ззовні на предмет пошкоджень чи несправностей
+            </Label>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="marking-applied"
+              checked={values['f0000107-0000-0000-0000-000000000047'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000107-0000-0000-0000-000000000047', c === true)
+              }
+            />
+            <Label htmlFor="marking-applied" className="text-sm font-medium">
+              На протез нанесено маркування
+            </Label>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Після відмітки процес можна завершити.
+        </p>
+      </div>,
+    );
+    return out;
+  }
   if (stepId === 'e0000042-0000-0000-0000-000000000002') {
     out.push(
       <div key="fitting-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-semibold uppercase tracking-wide">
-            КРОК 2: Примірка тестової гільзи
-          </p>
-          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Крок 2</Badge>
-          <span className="text-sm font-medium text-accent">(з пацієнтом)</span>
-        </div>
-
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
           <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
@@ -635,6 +1285,72 @@ function renderElements(
 
         <p className="text-xs text-muted-foreground">
           Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
+        </p>
+      </div>,
+    );
+    return out;
+  }
+  if (stepId === 'e0000068-0000-0000-0000-000000000008') {
+    const stepMessage = els.find((el) => el.elementType === 'STEP_MESSAGE');
+    out.push(
+      <div key="prototype-fitting-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
+        {stepMessage && (
+          <p className="rounded-md border-l-4 border-accent bg-muted p-3 text-sm font-medium">
+            {stepMessage.label}
+          </p>
+        )}
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРТЕ ВСЕ НЕОБХІДНЕ</p>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">ЗІЗ</Badge>
+        </div>
+
+        <p className="text-sm font-medium">Засоби індивідуального захисту:</p>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_auto] md:items-start">
+          <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
+            <img
+              src="/ppe/non-sterile_gloves.png"
+              alt="Засоби індивідуального захисту: нестерильні оглядові нітрилові рукавички"
+              className="h-56 w-auto rounded-lg object-contain md:h-64"
+            />
+          </div>
+          <div className="flex items-center justify-center">
+            <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="prototype-fitting-nitrile-gloves"
+              checked={values['f0000069-0000-0000-0000-000000000009'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000069-0000-0000-0000-000000000009', c === true)
+              }
+            />
+            <Label htmlFor="prototype-fitting-nitrile-gloves" className="text-sm font-medium">
+              Нестерильні оглядові нітрилові рукавички
+            </Label>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Перехід до наступного етапу після відмітки:</p>
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="prototype-fitting-tested"
+              checked={values['f0000070-0000-0000-0000-000000000010'] === true}
+              onCheckedChange={(c) =>
+                onChange('f0000070-0000-0000-0000-000000000010', c === true)
+              }
+            />
+            <Label htmlFor="prototype-fitting-tested" className="text-sm font-medium">
+              Проведено тестування протеза на пацієнті: перевірено посадку,
+              функціональність та правильність взаємного розташування всіх елементів.
+            </Label>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Перехід до наступного етапу можливий після відмітки усіх чекбоксів вище.
         </p>
       </div>,
     );
@@ -721,13 +1437,14 @@ function renderElements(
       );
       i = j;
     } else {
+      const el = els[i];
       out.push(
         <ElementField
-          key={els[i].id}
-          element={els[i]}
-          value={values[els[i].id]}
-          error={undefined}
-          onChange={(v) => onChange(els[i].id, v)}
+          key={el.id}
+          element={el}
+          value={values[el.id]}
+          error={errors[el.id]}
+          onChange={(v) => onChange(el.id, v)}
           onUpload={onUpload}
         />,
       );
@@ -752,6 +1469,11 @@ export default function WizardScreen() {
   const [seconds, setSeconds] = useState(0);
   const [pauseOpen, setPauseOpen] = useState(false);
   const [pauseCategory, setPauseCategory] = useState<PauseCategory>('PATIENT');
+  const [failOpen, setFailOpen] = useState(false);
+  const [validationAlertDismissed, setValidationAlertDismissed] = useState(false);
+  const [failCategory, setFailCategory] = useState('');
+  const [failDescription, setFailDescription] = useState('');
+  const [failFiles, setFailFiles] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [orderInfo, setOrderInfo] = useState<{ orderNumber: string; patientPib: string } | null>(null);
@@ -911,7 +1633,18 @@ export default function WizardScreen() {
   const isLastStepOfStage = stepIndexInStage === (stage?.steps.length ?? 0) - 1 && stage != null;
   const isLastStage = stageIndex === (snapshot?.stages.length ?? 1) - 1;
   const nextStageHasGate = !isLastStage && !!snapshot?.stages[stageIndex + 1]?.gate;
-  const canGoBack = stepIndexInStage > 0 && !!stage?.steps[stepIndexInStage - 1]?.allowBackward;
+  const prevStep = useMemo(() => {
+    if (stepIndexInStage > 0) {
+      return stage?.steps[stepIndexInStage - 1];
+    }
+    if (stageIndex > 0) {
+      const prevStage = snapshot?.stages[stageIndex - 1];
+      const prevSteps = prevStage?.steps;
+      return prevSteps ? prevSteps[prevSteps.length - 1] : undefined;
+    }
+    return undefined;
+  }, [stepIndexInStage, stage, stageIndex, snapshot]);
+  const canGoBack = !!prevStep?.allowBackward;
   const ctaLabel = isLastStepOfStage && isLastStage
     ? 'Завершити процес'
     : isLastStepOfStage && nextStageHasGate
@@ -924,6 +1657,7 @@ export default function WizardScreen() {
       setValues({});
       setTouched(false);
       setSeconds(0);
+      setValidationAlertDismissed(false);
     }
     prevStepId.current = current;
   }, [step?.id]);
@@ -942,6 +1676,12 @@ export default function WizardScreen() {
   );
 
   const blocked = Object.keys(invalid).length > 0;
+
+  const missingItems = Object.entries(invalid).map(([id, msg]) => ({
+    id,
+    label: step?.elements.find((e) => e.id === id)?.label ?? 'Поле кроку',
+    msg,
+  }));
 
   const completeStep = async () => {
     setTouched(true);
@@ -1049,6 +1789,41 @@ export default function WizardScreen() {
       toast.success('Роботу відновлено');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося відновити процес'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const uploadFailEvidence = async (file: File) => {
+    if (!instance?.currentExecutionId) {
+      toast.error('Активне виконання кроку не знайдено.');
+      return;
+    }
+    try {
+      const res = await flowInstanceApi.uploadEvidence(instance.id, instance.currentExecutionId, file);
+      setFailFiles((s) => [...s, res.data.fileName]);
+      toast.success('Файл завантажено');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося завантажити файл'));
+    }
+  };
+
+  const confirmFail = async () => {
+    if (!instance) return;
+    if (!failCategory || !failDescription.trim()) {
+      toast.error('Оберіть категорію провалу та вкажіть опис причини.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await flowInstanceApi.fail(instance.id, {
+        category: failCategory,
+        description: failDescription.trim(),
+      });
+      toast.error('Процес позначено як провалений');
+      navigate(`/prosthetics/process/${instance.id}/failed`, { replace: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося позначити процес як провалений'));
     } finally {
       setSubmitting(false);
     }
@@ -1207,16 +1982,19 @@ export default function WizardScreen() {
             </div>
           </div>
           <StatusBadge status={instance.status} />
-          <div className="ml-auto flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 font-mono text-sm text-primary-foreground">
+          <div
+            className="ml-auto flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 font-mono text-sm text-primary-foreground tabular-nums select-none"
+            title="Час виконання поточного кроку"
+          >
             <Timer className="size-4" /> {fmt(seconds)}
           </div>
         </div>
         <div className="mt-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
+            <span className="tabular-nums">
               Етап {stageIndex + 1} з {snapshot.stages.length}: {stage.name}
             </span>
-            <span>
+            <span className="tabular-nums">
               Крок {stepIndexInStage + 1} з {stage.steps.length} · загалом {stepsDone}/{totalSteps}
             </span>
           </div>
@@ -1226,7 +2004,7 @@ export default function WizardScreen() {
           {snapshot.stages.map((s, i) => (
             <span
               key={s.id}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs ${
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs transition-colors duration-200 ${
                 i === stageIndex ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}
             >
@@ -1249,10 +2027,48 @@ export default function WizardScreen() {
                 <span className="text-xs text-muted-foreground">норматив: {step.normDurationMin} хв</span>
               )}
             </div>
-            <CardTitle className="mt-2 text-xl">{step.name}</CardTitle>
+            <CardTitle className="mt-2 flex flex-wrap items-center gap-2 font-display text-xl">
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                Крок {stepIndexInStage + 1}
+              </Badge>
+              <span>
+                КРОК {stepIndexInStage + 1}: {step.name}
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-5">
+            {touched && blocked && !validationAlertDismissed && missingItems.length > 0 && (
+              <Alert variant="destructive" className="fade-in border-destructive/40 bg-destructive/5">
+                <AlertTriangle className="size-4" />
+                <AlertTitle>Заповніть обов&apos;язкові поля кроку</AlertTitle>
+                <AlertDescription className="text-destructive/90">
+                  <ul className="mt-1 space-y-1">
+                    {missingItems.slice(0, 5).map(({ id, label, msg }) => (
+                      <li key={id} className="flex items-start gap-1.5 text-xs">
+                        <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                        <span>{label}{msg !== "Поле обов'язкове" ? ` — ${msg}` : ''}</span>
+                      </li>
+                    ))}
+                    {missingItems.length > 5 && (
+                      <li className="text-xs text-muted-foreground">
+                        …та ще {missingItems.length - 5} {missingItems.length - 5 === 1 ? 'поле' : 'полів'}
+                      </li>
+                    )}
+                  </ul>
+                </AlertDescription>
+                <AlertAction>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Сховати перелік"
+                    onClick={() => setValidationAlertDismissed(true)}
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                </AlertAction>
+              </Alert>
+            )}
+            <div key={step.id} className="step-fade-in space-y-5">
               {step.id === 'e0000005-0000-0000-0000-000000000005' ? (
                 <div className="space-y-5">
                   <div className="space-y-3 rounded-xl border bg-muted/40 p-5">
@@ -1304,6 +2120,7 @@ export default function WizardScreen() {
                     setValues((s) => ({ ...s, [id]: v }));
                   },
                   (file) => void uploadEvidence(step.elements[0], file),
+                  invalid,
                 )
               )}
             </div>
@@ -1321,11 +2138,14 @@ export default function WizardScreen() {
         <Button variant="ghost" onClick={() => setPauseOpen(true)}>
           <PauseCircle className="size-4" /> Пауза
         </Button>
+        <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setFailOpen(true)}>
+          <XCircle className="size-4" /> Позначити процес як провалений
+        </Button>
         <Button variant="ghost" onClick={() => navigate('/prosthetics')}>
           <Home className="size-4" /> До головного меню
         </Button>
         <Button
-          className="ml-auto bg-accent text-accent-foreground hover:bg-accent/90"
+          className="ml-auto bg-accent text-accent-foreground shadow-sm hover:bg-accent/90 hover:shadow-md"
           disabled={(touched && blocked) || submitting}
           onClick={() => void completeStep()}
         >
@@ -1355,6 +2175,84 @@ export default function WizardScreen() {
             </Button>
             <Button disabled={submitting} onClick={() => void confirmPause()}>
               Призупинити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={failOpen} onOpenChange={setFailOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Позначити процес як провалений</DialogTitle>
+            <DialogDescription>
+              Буде створено знімок провалу (Failure Snapshot), а процес перейде до вкладки
+              «Провалені». Дію неможливо скасувати.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fail-category" className="text-sm">
+                Категорія провалу<span className="text-accent">*</span>
+              </Label>
+              <Select value={failCategory} onValueChange={setFailCategory}>
+                <SelectTrigger id="fail-category">
+                  <SelectValue placeholder="Оберіть категорію з довідника" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FAILURE_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fail-description" className="text-sm">
+                Детальний опис причини<span className="text-accent">*</span>
+              </Label>
+              <Textarea
+                id="fail-description"
+                rows={4}
+                placeholder="Опишіть, що сталося під час виконання кроку…"
+                value={failDescription}
+                onChange={(e) => setFailDescription(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Файли (опційно)</Label>
+              <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed p-4 text-sm text-muted-foreground transition-colors hover:bg-muted">
+                <Input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    files.forEach((f) => void uploadFailEvidence(f));
+                    e.target.value = '';
+                  }}
+                />
+                <Upload className="size-4" />
+                Додати фото або файли
+              </label>
+              {failFiles.length > 0 && (
+                <ul className="space-y-1">
+                  {failFiles.map((name) => (
+                    <li key={name} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Check className="size-3.5 text-success" />
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFailOpen(false)}>
+              Скасувати
+            </Button>
+            <Button variant="destructive" disabled={submitting} onClick={() => void confirmFail()}>
+              <XCircle className="size-4" /> Позначити як провалений
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1390,7 +2288,7 @@ function ElementField({
     <div className="space-y-2">
       {element.elementType !== 'CHECKBOX' && label}
       {element.elementType === 'CHECKBOX' && (
-        <div className="flex items-center gap-3 rounded-md border p-3">
+        <div className={`flex items-center gap-3 rounded-md border p-3 ${errClass}`}>
           <Checkbox
             id={element.id}
             checked={value === true}
@@ -1403,6 +2301,7 @@ function ElementField({
         <Input
           id={element.id}
           className={errClass}
+          aria-invalid={error ? true : undefined}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -1413,6 +2312,7 @@ function ElementField({
           type="number"
           inputMode="decimal"
           className={errClass}
+          aria-invalid={error ? true : undefined}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -1421,6 +2321,7 @@ function ElementField({
         <Textarea
           id={element.id}
           className={errClass}
+          aria-invalid={error ? true : undefined}
           rows={3}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
@@ -1428,7 +2329,7 @@ function ElementField({
       )}
       {element.elementType === 'DROPDOWN' && (
         <Select value={(value as string) ?? ''} onValueChange={(v) => onChange(v)}>
-          <SelectTrigger id={element.id} className={errClass}>
+          <SelectTrigger id={element.id} className={errClass} aria-invalid={error ? true : undefined}>
             <SelectValue placeholder="Оберіть значення" />
           </SelectTrigger>
           <SelectContent>

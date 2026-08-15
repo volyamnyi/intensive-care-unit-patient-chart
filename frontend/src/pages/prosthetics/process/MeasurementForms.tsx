@@ -112,7 +112,7 @@ export function MeasurementForms({
           aria-label={f.label}
           value={(values[f.key] as string) ?? ''}
           disabled={disabled}
-          onChange={(e) => onChange(f.key, e.target.value)}
+          onChange={(e) => onChange(f.key, e.target.value.replace(/[^\d.,]/g, ''))}
           style={fieldStyle(f)}
         />
       ))}

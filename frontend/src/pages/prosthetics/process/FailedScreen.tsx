@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { XCircle, Lock, Download, RefreshCcw, ClipboardList } from 'lucide-react';
+import { XCircle, Lock, Download, RefreshCcw, ClipboardList, AlertTriangle, Info, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ProcessStat } from '@/components/prosthetics/ProcessStat';
 import { flowInstanceApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
 import type {
@@ -23,16 +24,7 @@ import type {
   SnapshotTemplate,
   StepExecution,
 } from '@/prosthetics/types';
-
-const FAILURE_CATEGORY_LABELS: Record<string, string> = {
-  defect: 'Виробничий дефект',
-  materials: 'Проблеми з матеріалами',
-  quality_gate: 'Повторна невдача на Quality Gate',
-  component_damage: 'Пошкодження компонента',
-  order_cancelled: 'Скасування замовлення пацієнтом',
-  patient: 'Проблеми з пацієнтом',
-  other: 'Інше',
-};
+import { FAILURE_CATEGORY_LABELS } from '@/prosthetics/failureCategories';
 
 function formatHours(seconds: number | null | undefined) {
   const totalMin = Math.round((seconds ?? 0) / 60);
@@ -171,7 +163,9 @@ export default function FailedScreen() {
 
       <Card className="mt-6 border-destructive">
         <CardHeader>
-          <CardTitle className="text-base">Причина провалу</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="size-4 text-muted-foreground" /> Причина провалу
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {failure?.category && (
@@ -190,20 +184,9 @@ export default function FailedScreen() {
       </Card>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 text-center">
-          <div className="font-display text-xl font-semibold">
-            {completedSteps}/{totalSteps}
-          </div>
-          <div className="text-xs text-muted-foreground">Кроків виконано</div>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-center">
-          <div className="font-display text-xl font-semibold">{instance.reworkCount ?? 0}</div>
-          <div className="text-xs text-muted-foreground">Доопрацювань</div>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-center">
-          <div className="font-display text-xl font-semibold">{formatHours(instance.totalActiveSeconds)}</div>
-          <div className="text-xs text-muted-foreground">Активний час</div>
-        </div>
+        <ProcessStat label="Кроків виконано" value={`${completedSteps}/${totalSteps}`} />
+        <ProcessStat label="Доопрацювань" value={String(instance.reworkCount ?? 0)} />
+        <ProcessStat label="Активний час" value={formatHours(instance.totalActiveSeconds)} />
       </div>
 
       <Card className="mt-6">
@@ -248,9 +231,11 @@ export default function FailedScreen() {
 
       {resources.length > 0 && (
         <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-base">Витрачені ресурси</CardTitle>
-          </CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Package className="size-4 text-muted-foreground" /> Витрачені ресурси
+          </CardTitle>
+        </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -280,7 +265,9 @@ export default function FailedScreen() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Метадані процесу</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="size-4 text-muted-foreground" /> Метадані процесу
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between gap-4 border-b pb-2 last:border-0">
@@ -308,10 +295,10 @@ export default function FailedScreen() {
         <Button variant="outline" onClick={() => navigate(`/prosthetics/process/${instance.id}`)}>
           Технологічна карта
         </Button>
-        <Button variant="outline" disabled={exporting} onClick={() => void exportPdf()}>
+        <Button variant="outline" className="gap-2" disabled={exporting} onClick={() => void exportPdf()}>
           <Download className="size-4" /> Експортувати PDF
         </Button>
-        <Button variant="destructive" onClick={() => setReplacementOpen(true)}>
+        <Button variant="destructive" className="gap-2" onClick={() => setReplacementOpen(true)}>
           <RefreshCcw className="size-4" /> Створити замінювальний процес
         </Button>
         <Button onClick={() => navigate('/prosthetics')}>До панелі управління</Button>

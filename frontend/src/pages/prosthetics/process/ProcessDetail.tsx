@@ -34,7 +34,7 @@ export default function ProcessDetail() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -42,20 +42,34 @@ export default function ProcessDetail() {
   }
 
   if (!instance) {
-    return <p className="text-muted-foreground">Процес не знайдено.</p>;
+    return (
+      <div className="py-16 text-center">
+        <h1 className="font-display text-xl font-semibold">Процес не знайдено.</h1>
+        <Button className="mt-4" onClick={() => navigate('/prosthetics')}>
+          До панелі управління
+        </Button>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold">
-          Процес створення протезу
-        </h1>
+        <div>
+          <h1 className="font-display text-2xl font-semibold">
+            Процес створення протезу
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {instance.id.slice(0, 8)} · {instance.orderNumber ?? instance.orderId} ·{' '}
+            {instance.patientPib ?? instance.patientId}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={instance.status} />
           {RESUMABLE_STATUSES.includes(instance.status) && (
             <Button
               size="sm"
+              className="gap-2"
               onClick={() => navigate(`/prosthetics/process/${instance.id}/wizard`)}
             >
               <Play className="size-4" />

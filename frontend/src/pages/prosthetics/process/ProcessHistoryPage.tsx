@@ -244,7 +244,7 @@ export default function ProcessHistoryPage() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-10 w-72" />
         <Skeleton className="h-96" />
@@ -268,13 +268,13 @@ export default function ProcessHistoryPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-semibold">Аудит-лог процесу</h1>
+          <h1 className="font-display text-2xl font-semibold">Аудит-лог процесу</h1>
           <p className="text-sm text-muted-foreground">
             {instance.id.slice(0, 8)} · {instance.orderNumber ?? instance.orderId} ·{' '}
             {instance.patientPib ?? instance.patientId}
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate(`/prosthetics/process/${id}`)}>
+        <Button variant="outline" className="gap-2" onClick={() => navigate(`/prosthetics/process/${id}`)}>
           <ChevronLeft className="size-4" /> Огляд процесу
         </Button>
       </div>
