@@ -1,7 +1,7 @@
 package com.superhumans.mapper;
 
 import com.superhumans.dto.AuditLogResponse;
-import com.superhumans.entity.AuditLog;
+import com.superhumans.entity.core.AuditLog;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")

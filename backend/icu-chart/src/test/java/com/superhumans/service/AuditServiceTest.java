@@ -11,10 +11,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.superhumans.dto.AuditLogResponse;
-import com.superhumans.entity.AuditLog;
+import com.superhumans.entity.core.AuditLog;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.mapper.AuditLogMapper;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -6,7 +6,7 @@ import com.superhumans.dto.MedicalNoteCreateRequest;
 import com.superhumans.dto.MedicalNotePatchRequest;
 import com.superhumans.dto.MedicalNoteResponse;
 import com.superhumans.service.MedicalNoteService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

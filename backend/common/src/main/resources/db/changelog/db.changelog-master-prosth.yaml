@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/001-manufacturing.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/002-pause-tracking.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/003-patient-id-digits.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/004-order-template.sql

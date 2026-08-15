@@ -10,7 +10,7 @@ import com.superhumans.dto.EpisodeResponse;
 import com.superhumans.entity.EpisodeStatus;
 import com.superhumans.service.ClinicalDayService;
 import com.superhumans.service.EpisodeService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

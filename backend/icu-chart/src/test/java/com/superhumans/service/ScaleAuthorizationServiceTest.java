@@ -1,9 +1,9 @@
 package com.superhumans.service;
 
 import com.superhumans.entity.ClinicalScale;
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.exception.NotFoundException;
-import com.superhumans.repository.ClinicalScaleRepository;
+import com.superhumans.repository.icu.ClinicalScaleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

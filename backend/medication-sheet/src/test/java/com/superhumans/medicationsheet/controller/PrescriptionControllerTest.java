@@ -75,7 +75,7 @@ class PrescriptionControllerTest {
     private com.superhumans.auth.JwtTokenProvider jwtTokenProvider;
 
     @MockitoBean
-    private com.superhumans.repository.AuditLogRepository auditLogRepository;
+    private com.superhumans.repository.core.AuditLogRepository auditLogRepository;
 
     @MockitoBean
     private AuditService auditService;

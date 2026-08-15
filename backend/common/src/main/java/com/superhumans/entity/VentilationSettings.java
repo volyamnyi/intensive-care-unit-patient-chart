@@ -2,6 +2,7 @@ package com.superhumans.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.superhumans.entity.base.BaseEntity;
 
 @Entity
 @Table(name = "ventilation_settings")

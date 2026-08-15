@@ -1,6 +1,6 @@
 package com.superhumans.controller;
 
-import com.superhumans.repository.SystemSettingsRepository;
+import com.superhumans.repository.core.SystemSettingsRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;

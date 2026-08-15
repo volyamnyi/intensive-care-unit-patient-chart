@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.SqlConfig;
 
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:data-test.sql")
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:data-test-core.sql",
+     config = @SqlConfig(dataSource = "coreDataSource"))
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:data-test-icu.sql",
+     config = @SqlConfig(dataSource = "icuDataSource"))
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:data-test-med.sql",
+     config = @SqlConfig(dataSource = "medDataSource"))
 class ClinicalScaleIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID SEED_DAY_ID =

@@ -4,7 +4,7 @@ import com.superhumans.entity.ClinicalDay;
 import com.superhumans.entity.Signature;
 import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.ErrorCode;
-import com.superhumans.repository.SignatureRepository;
+import com.superhumans.repository.icu.SignatureRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

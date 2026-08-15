@@ -5,7 +5,7 @@ import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.service.AuditService;
 import com.superhumans.service.PermissionService;
 import com.superhumans.auth.JwtTokenProvider;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -154,7 +154,7 @@ describe('WizardScreen', () => {
   it('renders step header, title, patient info and elements', async () => {
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
     await waitFor(() => {
       expect(screen.getByText(/Гаврилюк Олена Миколаївна · ПВ-26-0414/)).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe('WizardScreen', () => {
   it('does not call completeStep while required fields are empty', async () => {
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Готово/ }));
@@ -182,7 +182,7 @@ describe('WizardScreen', () => {
     });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByLabelText(/Обхват, см/), { target: { value: '42' } });
@@ -221,7 +221,7 @@ describe('WizardScreen', () => {
     flowInstanceApiMock.saveDraft.mockResolvedValue({ data: inProgressInstance() });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByLabelText(/Обхват, см/), { target: { value: '42' } });
@@ -242,7 +242,7 @@ describe('WizardScreen', () => {
   it('disables the backward button on the first step of a stage', async () => {
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /Попередній/ })).toBeDisabled();
   });
@@ -258,7 +258,7 @@ describe('WizardScreen', () => {
     });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Збірка')).toBeInTheDocument();
+      expect(screen.getByText(/Збірка/)).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole('button', { name: /Попередній/ }));
     await waitFor(() => {
@@ -322,7 +322,7 @@ describe('WizardScreen', () => {
     });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Пауза/ }));
@@ -339,7 +339,7 @@ describe('WizardScreen', () => {
   it('shows fail button on every step and opens the fail dialog', async () => {
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Позначити процес як провалений/ }));
@@ -353,7 +353,7 @@ describe('WizardScreen', () => {
     flowInstanceApiMock.fail.mockResolvedValue({ data: inProgressInstance() });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Позначити процес як провалений/ }));
@@ -369,7 +369,7 @@ describe('WizardScreen', () => {
     });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText('Зняття мірок')).toBeInTheDocument();
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Позначити процес як провалений/ }));

@@ -4,7 +4,7 @@ import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.service.FluidBalanceService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

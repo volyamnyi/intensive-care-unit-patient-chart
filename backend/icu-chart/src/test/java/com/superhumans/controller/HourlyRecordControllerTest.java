@@ -6,7 +6,7 @@ import com.superhumans.dto.HourlyRecordCreateRequest;
 import com.superhumans.dto.HourlyRecordPatchRequest;
 import com.superhumans.dto.HourlyRecordResponse;
 import com.superhumans.service.HourlyRecordService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

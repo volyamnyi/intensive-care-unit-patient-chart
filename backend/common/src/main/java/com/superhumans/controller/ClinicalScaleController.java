@@ -4,7 +4,7 @@ import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
 import com.superhumans.entity.ClinicalScale;
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.service.ClinicalScaleService;
 import com.superhumans.service.ScaleAuthorizationService;
 import jakarta.validation.Valid;

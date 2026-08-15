@@ -2,14 +2,14 @@ package com.superhumans.medicationsheet.service;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
-import com.superhumans.entity.User;
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionExecution;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionExecutionRepository;
-import com.superhumans.repository.UserRepository;
+import com.superhumans.repository.core.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;

@@ -3,7 +3,7 @@ package com.superhumans.service;
 import com.superhumans.entity.ClinicalDay;
 import com.superhumans.entity.Signature;
 import com.superhumans.exception.BusinessException;
-import com.superhumans.repository.SignatureRepository;
+import com.superhumans.repository.icu.SignatureRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

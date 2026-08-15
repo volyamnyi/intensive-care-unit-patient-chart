@@ -19,6 +19,8 @@ public class FailRequest {
     @NotBlank
     String category;
 
+    @NotBlank
     String description;
+
     String snapshot;
 }

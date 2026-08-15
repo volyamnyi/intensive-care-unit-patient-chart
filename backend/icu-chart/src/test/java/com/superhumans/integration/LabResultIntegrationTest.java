@@ -5,6 +5,7 @@ import com.superhumans.dto.LabResultPatchRequest;
 import com.superhumans.dto.LabResultResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 
@@ -22,7 +23,8 @@ class LabResultIntegrationTest extends AbstractIntegrationTest {
             UUID.fromString("b1111112-1111-1111-1111-111111111112");
 
     @Test
-    @Sql(statements = "DELETE FROM lab_results WHERE clinical_day_id = 'b1111111-1111-1111-1111-111111111111'")
+    @Sql(statements = "DELETE FROM lab_results WHERE clinical_day_id = 'b1111111-1111-1111-1111-111111111111'",
+         config = @SqlConfig(dataSource = "icuDataSource"))
     void getLabResults_returnsEmptyListInitially() {
         var entity = authGet(getDoctorToken());
 

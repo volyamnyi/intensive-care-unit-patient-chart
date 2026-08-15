@@ -102,8 +102,8 @@ frontend/  (React 19 + TS 6 + Vite 8 + MUI 9, single app)
   src/shared/               ← shared types, API client, components, auth
 backend/   (Spring Boot 4.1.0 + Java 25 + Maven, multi-module)
   pom.xml                   ← parent POM (pom packaging, 4 modules)
-  common/                   ← shared entities, JWT/security, base classes
-  icu-chart/                ← existing app (@SpringBootApplication, single-deployment JAR)
+  common/                   ← single-deployment app (@SpringBootApplication, JAR) + shared config/entities
+  icu-chart/                ← ICU chart feature module (auto-scanned under com.superhumans)
   medication-sheet/         ← medication sheet module (auto-scanned under com.superhumans)
   prosthesis-manufacturing/ ← prosthetics manufacturing module (auto-scanned under com.superhumans)
 tests/     (Playwright 1.61)
@@ -117,9 +117,14 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 - JWT auth stored in `localStorage`.
 - Backend port: **8085** (`application.yml`).
-- DB: PostgreSQL 16, `ddl-auto: none` — schema managed by Liquibase changelogs.
-- Seed data: `backend/src/main/resources/data.sql` (6 users, 3 episodes + 3 open clinical days, `spring.sql.init.mode: always`).
-- CI: `.github/workflows/playwright.yml` — Postgres service, JDK 17, Node 22, Playwright chromium, 40min timeout.
+- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (58 changesets total: core 6, icu 17, med 16, prosth 19):
+  - `my_fullstack_core` — users, permissions, audit, reference values (COMMON module)
+  - `my_fullstack_icu` — ICU chart (episodes, clinical days, records, orders, notes, scales, signatures, PDFs, labs, ventilation, patient state, fluid balance)
+  - `my_fullstack_med` — medication sheet (prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/allergy/drug-interaction caches, telegram subscriptions)
+  - `my_fullstack_prosth` — prosthetics manufacturing (patients, orders, templates, instances, gates, snapshots, evidence files)
+  - Datasources configured in `application.yml` under `app.datasource.{core,icu,med,prosth}.{url,username,password}` (env override: `APP_DATASOURCE_*_URL/USERNAME/PASSWORD`); multi-DB bootstrap in `com.superhumans.config.multidb` (per-DB `DataSource`/EMF/`SpringLiquibase`/`JpaTransactionManager`, chained `transactionManager`).
+- Seed data: `SeedDataInitializer` (COMMON) runs `data-{core,icu,med,prosth}.sql` on the matching datasource at boot (gated by `app.seed-data.enabled: true`; tests disable it). Counts: 9 users (6 core roles + 3 prosthetics), 50 episodes, 90 clinical days, 360 prescription lists, 90 vital sign lists, prosthetics 2 patients/2 orders/2 templates.
+- CI: `.github/workflows/playwright.yml` — Postgres service, JDK 25, Node 22, Playwright chromium, 40min timeout. Every DB-using job creates the 4 DBs (`CREATE DATABASE` ×4) and passes the 12 `APP_DATASOURCE_*` env vars.
 - Mock MIS: `MockMisServiceImpl` provides 5 test patients + department/user data.
 
 ## Repeatable CI Development Workflow (THE Loop)
@@ -593,7 +598,7 @@ Prosthetics module adds 7 additional services in `prosthesis-manufacturing` modu
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer status tracking | `GeneratedPdf.transferStatus` + `TransferStatus` enum (PENDING/SENT/FAILED) + `GET /clinical-days/{id}/pdf/status` |
 | §98 | MIS calls audited | All `MockMisServiceImpl` methods call `auditService.logAction()` including `sendPdf()` |
-| §— | Liquibase schema management | `ddl-auto: none`, schema via `db/changelog/db.changelog-master.yaml` (6 changesets); `spring.sql.init.mode: always` for seed data |
+| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (58 changesets); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
 
 ## Key Patterns
 
@@ -622,8 +627,8 @@ Prosthetics module adds 7 additional services in `prosthesis-manufacturing` modu
 - **Roles**: Gate in backend (Spring Security `@PreAuthorize`) and frontend (`Guard` component)
 - **Routing**: `/doctor/*` for DOCTOR/HOD, `/nurse/*` for NURSE, `/admin/*` for ADMINISTRATOR
 - **DB**: `ddl-auto: none` — schema managed by Liquibase changelogs in `db/changelog/changesets/`; never write manual DDL
-- **Data seeding**: Only via `data.sql` (`spring.sql.init.mode: always`)
-- **Test seed data**: Integration tests use `data-test.sql` (in `src/test/resources/`) with plain INSERTs on a fresh Testcontainers PostgreSQL database. The production `data.sql` keeps `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). Modified data may persist across restarts. Reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
+- **Data seeding**: Only via `SeedDataInitializer` — one script per module: `data-core.sql`, `data-icu.sql`, `data-med.sql`, `data-prosth.sql` (in `backend/common/src/main/resources/`), executed on the matching datasource; gated by `app.seed-data.enabled: true`. Never write manual seed DDL.
+- **Test seed data**: Integration tests use `data-test-core.sql` / `data-test-icu.sql` / `data-test-med.sql` (in `backend/icu-chart/src/test/resources/`) with plain INSERTs, routed per-datasource via `@Sql` + `@SqlConfig(dataSource = ...)` (plus `data-prescription.sql` with `@SqlConfig(dataSource = "medDataSource", separator = "GO")`) on a fresh PostgreSQL database. The production seed files keep `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). Modified data may persist across restarts. Reset each DB with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 
 ## Encoding Policy
 
@@ -633,8 +638,9 @@ Prosthetics module adds 7 additional services in `prosthesis-manufacturing` modu
 - **Verification commands**:
   - `file scripts/*.sql` should report "UTF-8 Unicode text", never "Little-endian UTF-16 Unicode text"
   - `hexdump -C scripts/*.sql | head -3` should show no BOM (`FF FE`) and single-byte (not zero-interleaved) ASCII
-- **`data.sql`**: Must be UTF-8. Any seed SQL file concatenated into `data.sql` must be explicitly written as UTF-8. If a corrupted file was already concatenated, convert it with `Set-Content -Encoding UTF8` or `iconv -f UTF-16 -t UTF-8` and re-insert.
-- **Auto-heal**: If corrupted `document_name` values already exist in the database, the `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` clause on `prescription_lists` INSERTs will overwrite them with clean UTF-8 text on the next `data.sql` execution.
+- **`data-*.sql`**: Must be UTF-8. Any seed SQL file must be explicitly written as UTF-8. If a corrupted file was already concatenated, convert it with `Set-Content -Encoding UTF8` or `iconv -f UTF-16 -t UTF-8` and re-insert.
+- **Auto-heal**: If corrupted `document_name` values already exist in the database, the `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` clause on `prescription_lists` INSERTs will overwrite them with clean UTF-8 text on the next `data-med.sql` execution.
+- **Seed splitting**: `data.sql`/`data-test.sql` are generated per module with the `split-seed.cjs` statement-aware splitter (temp tool, not in repo). Re-run it after changing any seed content — the split files carry "DO NOT EDIT BY HAND" headers.
 
 ## Project Files (kept in repo)
 
@@ -646,7 +652,7 @@ UseManual.md           ← User manual (Ukrainian)
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire
   src/main/java/       ← 163 Java source files
-  src/main/resources/  ← application.yml, data.sql, PDF template, db/changelog/ (Liquibase)
+  src/main/resources/  ← application.yml, data-{core,icu,med,prosth}.sql, PDF template, db/changelog/ (Liquibase)
   src/test/java/       ← 62 test files (32 unit + 13 integration + 1 abstract + 16 more)
 frontend/
   package.json         ← Dependencies

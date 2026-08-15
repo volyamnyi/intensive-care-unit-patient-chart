@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import com.superhumans.entity.base.BaseEntity;
 
 @Entity
 @Table(name = "episodes")

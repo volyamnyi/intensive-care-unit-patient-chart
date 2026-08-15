@@ -1,6 +1,6 @@
 package com.superhumans.dto;
 
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.UserRole;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 

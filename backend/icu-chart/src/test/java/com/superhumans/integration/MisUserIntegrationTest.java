@@ -68,7 +68,7 @@ class MisUserIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/users/me", HttpMethod.GET, entity,
-                com.superhumans.entity.User.class);
+                com.superhumans.entity.core.User.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
@@ -81,7 +81,7 @@ class MisUserIntegrationTest extends AbstractIntegrationTest {
 
         var res = restTemplate.exchange(
                 "/api/users/doctors", HttpMethod.GET, entity,
-                com.superhumans.entity.User[].class);
+                com.superhumans.entity.core.User[].class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotEmpty();

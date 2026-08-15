@@ -5,7 +5,7 @@ import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.DepartmentPatientResponse;
 import com.superhumans.dto.DepartmentStatsResponse;
 import com.superhumans.service.DepartmentService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

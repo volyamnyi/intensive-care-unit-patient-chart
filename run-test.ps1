@@ -1,6 +1,18 @@
 # Start servers and run test
 $ErrorActionPreference = 'Continue'
 
+# Ensure application databases exist
+Write-Host "Checking application databases..."
+$psql = "C:\Program Files\PostgreSQL\18\bin\psql.exe"
+$env:PGPASSWORD = 'admin'
+foreach ($db in @('my_fullstack_core','my_fullstack_icu','my_fullstack_med','my_fullstack_prosth')) {
+    $exists = (& $psql -U postgres -h localhost -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'") -join ''
+    if ($exists -ne '1') {
+        Write-Host "Creating database $db..."
+        & $psql -U postgres -h localhost -d postgres -c "CREATE DATABASE $db"
+    }
+}
+
 # Cleanup
 Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Get-Process -Name java -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -8,7 +20,7 @@ Start-Sleep -Seconds 3
 
 # Start backend
 Write-Host "Starting backend..."
-$backend = Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d C:\projects\intensive-care-unit-patient-chart\backend\icu-chart && mvn spring-boot:run -DskipTests" -PassThru -NoNewWindow -RedirectStandardOutput "C:\projects\intensive-care-unit-patient-chart\backend-run.log" -RedirectStandardError "C:\projects\intensive-care-unit-patient-chart\backend-error.log"
+$backend = Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d C:\projects\intensive-care-unit-patient-chart\backend\common && mvn spring-boot:run -DskipTests" -PassThru -NoNewWindow -RedirectStandardOutput "C:\projects\intensive-care-unit-patient-chart\backend-run.log" -RedirectStandardError "C:\projects\intensive-care-unit-patient-chart\backend-error.log"
 
 # Wait for backend
 Write-Host "Waiting for backend to start..."

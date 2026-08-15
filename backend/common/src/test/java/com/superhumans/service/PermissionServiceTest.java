@@ -1,9 +1,9 @@
 package com.superhumans.service;
 
-import com.superhumans.entity.RolePermission;
-import com.superhumans.entity.UserRole;
-import com.superhumans.repository.PermissionRepository;
-import com.superhumans.repository.RolePermissionRepository;
+import com.superhumans.entity.core.RolePermission;
+import com.superhumans.entity.core.UserRole;
+import com.superhumans.repository.core.PermissionRepository;
+import com.superhumans.repository.core.RolePermissionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

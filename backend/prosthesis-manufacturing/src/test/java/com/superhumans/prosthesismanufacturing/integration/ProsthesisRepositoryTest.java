@@ -3,13 +3,15 @@ package com.superhumans.prosthesismanufacturing.integration;
 import com.superhumans.prosthesismanufacturing.entity.*;
 import com.superhumans.prosthetismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.repository.*;
+import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.exception.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.orm.jpa.EntityManagerFactoryUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,16 +23,20 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@TestPropertySource(properties = {
-    "spring.jpa.hibernate.ddl-auto=update",
-    "spring.liquibase.enabled=false"
-})
+@SpringBootTest(properties = "app.seed-data.enabled=false")
+@Transactional("prosthTransactionManager")
 class ProsthesisRepositoryTest {
 
     @Autowired
-    TestEntityManager em;
+    @Qualifier("prosthEntityManagerFactory")
+    private EntityManagerFactory entityManagerFactory;
+
+    private TestEm em;
+
+    @BeforeEach
+    void setUpEntityManager() {
+        em = new TestEm(EntityManagerFactoryUtils.getTransactionalEntityManager(entityManagerFactory));
+    }
 
     @Autowired
     ProstheticsPatientRepository patientRepository;
@@ -367,8 +373,16 @@ class ProsthesisRepositoryTest {
                 .build();
         em.persistAndFlush(order);
 
+        FlowTemplate template = FlowTemplate.builder()
+                .name("TP-UL-01")
+                .templateVersion(1)
+                .productType(ProductType.UPPER_LIMB)
+                .status(TemplateStatus.ACTIVE)
+                .build();
+        em.persistAndFlush(template);
+
         FlowInstance instance = FlowInstance.builder()
-                .templateId(UUID.randomUUID())
+                .templateId(template.getId())
                 .orderId(order.getId())
                 .status(FlowInstanceStatus.NEW)
                 .build();

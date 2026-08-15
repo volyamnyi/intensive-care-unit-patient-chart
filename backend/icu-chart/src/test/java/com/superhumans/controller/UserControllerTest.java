@@ -1,13 +1,13 @@
 package com.superhumans.controller;
 
 import com.superhumans.config.EnableTestExceptionHandler;
-import com.superhumans.entity.User;
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.UserMisDTO;
-import com.superhumans.repository.UserRepository;
+import com.superhumans.repository.core.UserRepository;
 import com.superhumans.auth.JwtTokenProvider;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import com.superhumans.service.PermissionService;
 import org.junit.jupiter.api.Test;

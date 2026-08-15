@@ -1,29 +1,29 @@
 package com.superhumans.medicationsheet.integration;
 
 import com.superhumans.medicationsheet.entity.*;
+import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.orm.jpa.EntityManagerFactoryUtils;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@TestPropertySource(properties = {
-    "spring.jpa.hibernate.ddl-auto=update",
-    "spring.liquibase.enabled=false"
-})
+@SpringBootTest(properties = "app.seed-data.enabled=false")
+@Transactional("medTransactionManager")
 class PrescriptionRepositoryTest {
 
     @Autowired
-    TestEntityManager em;
+    @Qualifier("medEntityManagerFactory")
+    private EntityManagerFactory entityManagerFactory;
+
+    private TestEm em;
 
     UUID listId;
     UUID itemId;
@@ -31,6 +31,7 @@ class PrescriptionRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        em = new TestEm(EntityManagerFactoryUtils.getTransactionalEntityManager(entityManagerFactory));
         PrescriptionList list = PrescriptionList.builder()
                 .patientId(1001L)
                 .documentName("Test Prescription List")

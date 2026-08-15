@@ -20,15 +20,21 @@ import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
     "spring.sql.init.mode=never",
+    "app.seed-data.enabled=false",
     "app.scheduling.signing-window-start=0",
     "app.scheduling.signing-window-end=23",
     "app.scheduling.signing-window-enabled=false",
     "server.ssl.enabled=false"
 })
 @AutoConfigureTestRestTemplate
-@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test.sql")
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test-core.sql",
+     config = @SqlConfig(dataSource = "coreDataSource"))
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test-icu.sql",
+     config = @SqlConfig(dataSource = "icuDataSource"))
+@Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test-med.sql",
+     config = @SqlConfig(dataSource = "medDataSource"))
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-prescription.sql",
-     config = @SqlConfig(separator = "GO"))
+     config = @SqlConfig(dataSource = "medDataSource", separator = "GO"))
 public abstract class AbstractIntegrationTest {
 
     @LocalServerPort

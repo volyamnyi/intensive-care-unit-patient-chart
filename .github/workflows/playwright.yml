@@ -83,20 +83,37 @@ jobs:
           distribution: 'temurin'
           cache: maven
       
+      - name: Create application databases
+        run: |
+          for db in my_fullstack_core my_fullstack_icu my_fullstack_med my_fullstack_prosth; do
+            if ! PGPASSWORD=icu_pass psql -h localhost -U icu_user -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
+              PGPASSWORD=icu_pass psql -h localhost -U icu_user -d postgres -c "CREATE DATABASE $db"
+            fi
+          done
+      
       - name: Run unit tests with coverage
         run: mvn clean test
         working-directory: backend
         env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/icu_chart_test
-          SPRING_DATASOURCE_USERNAME: icu_user
-          SPRING_DATASOURCE_PASSWORD: icu_pass
+          APP_DATASOURCE_CORE_URL: jdbc:postgresql://localhost:5432/my_fullstack_core
+          APP_DATASOURCE_CORE_USERNAME: icu_user
+          APP_DATASOURCE_CORE_PASSWORD: icu_pass
+          APP_DATASOURCE_ICU_URL: jdbc:postgresql://localhost:5432/my_fullstack_icu
+          APP_DATASOURCE_ICU_USERNAME: icu_user
+          APP_DATASOURCE_ICU_PASSWORD: icu_pass
+          APP_DATASOURCE_MED_URL: jdbc:postgresql://localhost:5432/my_fullstack_med
+          APP_DATASOURCE_MED_USERNAME: icu_user
+          APP_DATASOURCE_MED_PASSWORD: icu_pass
+          APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
+          APP_DATASOURCE_PROSTH_USERNAME: icu_user
+          APP_DATASOURCE_PROSTH_PASSWORD: icu_pass
       
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: jacoco-report
-          path: backend/icu-chart/target/site/jacoco/
+          path: backend/common/target/site/jacoco/
           retention-days: 7
       
       - name: Upload test results
@@ -148,19 +165,30 @@ jobs:
             sleep 2;
           done
       
-      - name: Reset database schema for integration tests
+      - name: Create application databases
         run: |
-          PGPASSWORD=icu_pass psql -h localhost -U icu_user -d icu_chart_test -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO icu_user;"
-        env:
-          PGPASSWORD: icu_pass
+          for db in my_fullstack_core my_fullstack_icu my_fullstack_med my_fullstack_prosth; do
+            if ! PGPASSWORD=icu_pass psql -h localhost -U icu_user -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
+              PGPASSWORD=icu_pass psql -h localhost -U icu_user -d postgres -c "CREATE DATABASE $db"
+            fi
+          done
       
       - name: Run integration tests
-        run: mvn test -Pintegration-test -Dspring.datasource.url=jdbc:postgresql://localhost:5432/icu_chart_test
+        run: mvn test -Pintegration-test
         working-directory: backend
         env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/icu_chart_test
-          SPRING_DATASOURCE_USERNAME: icu_user
-          SPRING_DATASOURCE_PASSWORD: icu_pass
+          APP_DATASOURCE_CORE_URL: jdbc:postgresql://localhost:5432/my_fullstack_core
+          APP_DATASOURCE_CORE_USERNAME: icu_user
+          APP_DATASOURCE_CORE_PASSWORD: icu_pass
+          APP_DATASOURCE_ICU_URL: jdbc:postgresql://localhost:5432/my_fullstack_icu
+          APP_DATASOURCE_ICU_USERNAME: icu_user
+          APP_DATASOURCE_ICU_PASSWORD: icu_pass
+          APP_DATASOURCE_MED_URL: jdbc:postgresql://localhost:5432/my_fullstack_med
+          APP_DATASOURCE_MED_USERNAME: icu_user
+          APP_DATASOURCE_MED_PASSWORD: icu_pass
+          APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
+          APP_DATASOURCE_PROSTH_USERNAME: icu_user
+          APP_DATASOURCE_PROSTH_PASSWORD: icu_pass
       
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
@@ -249,19 +277,39 @@ jobs:
             package-lock.json
             frontend/package-lock.json
       
+      - name: Create application databases
+        run: |
+          for db in my_fullstack_core my_fullstack_icu my_fullstack_med my_fullstack_prosth; do
+            if ! PGPASSWORD=admin psql -h localhost -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
+              PGPASSWORD=admin psql -h localhost -U postgres -d postgres -c "CREATE DATABASE $db"
+            fi
+          done
+      
       - name: Build backend
-        run: mvn clean package -DskipTests -pl icu-chart -am
+        run: mvn clean package -DskipTests -pl common
         working-directory: backend
       
       - name: Start backend
         run: |
-          java -jar icu-chart/target/icu-chart-*.jar &
+          java -jar common/target/common-*.jar &
           echo "Waiting for backend..."
           timeout 60 bash -c 'until curl -s http://localhost:8085/api/auth/login > /dev/null 2>&1; do sleep 2; done'
           echo "Backend is ready"
         working-directory: backend
         env:
           APP_SCHEDULING_SIGNING_WINDOW_ENABLED: "false"
+          APP_DATASOURCE_CORE_URL: jdbc:postgresql://localhost:5432/my_fullstack_core
+          APP_DATASOURCE_CORE_USERNAME: postgres
+          APP_DATASOURCE_CORE_PASSWORD: admin
+          APP_DATASOURCE_ICU_URL: jdbc:postgresql://localhost:5432/my_fullstack_icu
+          APP_DATASOURCE_ICU_USERNAME: postgres
+          APP_DATASOURCE_ICU_PASSWORD: admin
+          APP_DATASOURCE_MED_URL: jdbc:postgresql://localhost:5432/my_fullstack_med
+          APP_DATASOURCE_MED_USERNAME: postgres
+          APP_DATASOURCE_MED_PASSWORD: admin
+          APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
+          APP_DATASOURCE_PROSTH_USERNAME: postgres
+          APP_DATASOURCE_PROSTH_PASSWORD: admin
       
       - name: Install frontend dependencies
         run: npm ci
@@ -331,7 +379,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       
       - name: Build backend JAR
-        run: mvn clean package -DskipTests -pl icu-chart -am
+        run: mvn clean package -DskipTests -pl common
         working-directory: backend
       
       - name: Build frontend
@@ -344,7 +392,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
-          path: backend/icu-chart/target/icu-chart-*.jar
+          path: backend/common/target/common-*.jar
           retention-days: 30
       
       - name: Upload frontend build

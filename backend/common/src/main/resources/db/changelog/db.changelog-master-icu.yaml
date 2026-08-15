@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - include:
+      relativeToChangelogFile: true
+      file: icu/001-initial.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/002-missing-columns.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/003-scale-episode.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/004-hourly-vasopressors.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/005-hourly-care.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/006-order-planning.sql

@@ -8,7 +8,7 @@ import com.superhumans.dto.ClinicalDayResponse;
 import com.superhumans.dto.CloseEarlyRequest;
 import com.superhumans.dto.ReopenRequest;
 import com.superhumans.service.ClinicalDayService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -3,6 +3,7 @@ package com.superhumans.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import com.superhumans.entity.base.BaseEntity;
 
 @Entity
 @Table(name = "lab_results")

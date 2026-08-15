@@ -1,13 +1,13 @@
 package com.superhumans.medicationsheet.service;
 
-import com.superhumans.entity.User;
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionExecution;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionExecutionRepository;
-import com.superhumans.repository.UserRepository;
+import com.superhumans.repository.core.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

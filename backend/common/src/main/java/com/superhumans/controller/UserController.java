@@ -1,10 +1,10 @@
 package com.superhumans.controller;
 
-import com.superhumans.entity.User;
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.UserMisDTO;
-import com.superhumans.repository.UserRepository;
+import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

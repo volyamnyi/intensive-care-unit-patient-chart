@@ -8,7 +8,7 @@ import com.superhumans.dto.OrderExecutionPlanRequest;
 import com.superhumans.dto.OrderExecutionPatchRequest;
 import com.superhumans.dto.OrderExecutionResponse;
 import com.superhumans.service.OrderExecutionService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

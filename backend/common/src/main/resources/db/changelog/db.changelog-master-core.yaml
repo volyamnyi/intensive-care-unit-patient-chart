@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - include:
+      relativeToChangelogFile: true
+      file: core/001-initial.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/002-user-permissions.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/003-role-permissions.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/004-audit-entity-length.sql

@@ -1,6 +1,6 @@
 package com.superhumans.service;
 
-import com.superhumans.entity.UserRole;
+import com.superhumans.entity.core.UserRole;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

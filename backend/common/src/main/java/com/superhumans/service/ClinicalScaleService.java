@@ -10,7 +10,10 @@ import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.ScaleResultMapper;
-import com.superhumans.repository.*;
+import com.superhumans.repository.icu.ClinicalDayRepository;
+import com.superhumans.repository.icu.ClinicalScaleRepository;
+import com.superhumans.repository.icu.HourlyRecordRepository;
+import com.superhumans.repository.icu.ScaleResultRepository;
 import com.superhumans.service.scale.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,17 +40,20 @@ public class ClinicalScaleService {
     ScaleResultMapper scaleResultMapper;
     ObjectMapper objectMapper;
 
+    @Transactional(readOnly = true)
     public ScaleResultResponse getScaleResult(UUID id) {
         ScaleResult result = scaleResultRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Scale result not found: " + id));
         return scaleResultMapper.toResponse(result);
     }
 
+    @Transactional(readOnly = true)
     public List<ScaleResultResponse> getScaleResultsByClinicalDay(UUID clinicalDayId) {
         return scaleResultRepository.findByClinicalDayId(clinicalDayId)
                 .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ScaleResultResponse> getScaleResultsByEpisode(UUID episodeId) {
         return scaleResultRepository.findByEpisodeId(episodeId)
                 .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());

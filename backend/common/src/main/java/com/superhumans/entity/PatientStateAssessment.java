@@ -2,6 +2,7 @@ package com.superhumans.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.superhumans.entity.base.BaseEntity;
 
 @Entity
 @Table(name = "patient_state_assessments")

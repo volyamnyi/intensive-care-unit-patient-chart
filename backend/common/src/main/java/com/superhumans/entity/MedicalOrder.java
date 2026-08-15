@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import com.superhumans.entity.base.BaseEntity;
 
 @Entity
 @Table(name = "medical_orders")

@@ -1,7 +1,7 @@
 package com.superhumans.mapper;
 
 import com.superhumans.dto.UserResponse;
-import com.superhumans.entity.User;
+import com.superhumans.entity.core.User;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")

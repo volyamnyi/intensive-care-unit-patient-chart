@@ -2,8 +2,8 @@ package com.superhumans.auth;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
-import com.superhumans.entity.AuditLog;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.entity.core.AuditLog;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

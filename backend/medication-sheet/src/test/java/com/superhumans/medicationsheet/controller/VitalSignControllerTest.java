@@ -45,7 +45,7 @@ class VitalSignControllerTest {
     private com.superhumans.auth.JwtTokenProvider jwtTokenProvider;
 
     @MockitoBean
-    private com.superhumans.repository.AuditLogRepository auditLogRepository;
+    private com.superhumans.repository.core.AuditLogRepository auditLogRepository;
 
     @MockitoBean
     private com.superhumans.service.AuditService auditService;

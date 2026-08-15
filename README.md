@@ -86,7 +86,6 @@
 | iText 7 | 8.0.4 | PDF generation |
 | Lombok | — | Boilerplate reduction |
 | Maven | — | Build tool |
-| Testcontainers | 1.19.8 | Integration test containers |
 
 ### Frontend
 | Technology | Version | Purpose |
@@ -140,7 +139,7 @@
 - **Node.js** 20 or later, **npm** 10+
 - **PostgreSQL** 16
 - **Maven** 3.9+ (or use `mvnw`)
-- **Docker** (only for integration tests via Testcontainers)
+- **Docker** (not required — integration tests run against a local/CI PostgreSQL 16)
 
 ---
 
@@ -148,16 +147,23 @@
 
 ### 1. Database
 
+The application uses **4 separate PostgreSQL databases** (one per module). Create them all:
+
 ```bash
-psql -U postgres -c "CREATE DATABASE my_fullstack_db;"
+psql -U postgres -c "CREATE DATABASE my_fullstack_core;"
+psql -U postgres -c "CREATE DATABASE my_fullstack_icu;"
+psql -U postgres -c "CREATE DATABASE my_fullstack_med;"
+psql -U postgres -c "CREATE DATABASE my_fullstack_prosth;"
 ```
+
+`run-test.ps1` / `run-full-test.bat` create any missing databases automatically before starting the servers.
 
 ### 2. Backend
 
 ```bash
 cd backend
 mvn clean package -DskipTests
-java -jar target/patient-chart-backend-*.jar
+java -jar common/target/common-*.jar
 # Starts on http://localhost:8085
 ```
 
@@ -176,31 +182,40 @@ Open **http://localhost:5173** and log in with seed credentials.
 
 ## Configuration
 
-Backend settings in `backend/src/main/resources/application.yml`:
+Backend settings in `backend/common/src/main/resources/application.yml`:
 
 ```yaml
 server:
   port: 8085
 
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/my_fullstack_db
-    username: postgres
-    password: admin
-  jpa:
-    hibernate:
-      ddl-auto: none            # schema managed by Liquibase
-  liquibase:
-    enabled: true
-    change-log: classpath:/db/changelog/db.changelog-master.yaml
-
 app:
+  datasource:
+    core:
+      url: jdbc:postgresql://localhost:5432/my_fullstack_core
+      username: postgres
+      password: admin
+    icu:
+      url: jdbc:postgresql://localhost:5432/my_fullstack_icu
+      username: postgres
+      password: admin
+    med:
+      url: jdbc:postgresql://localhost:5432/my_fullstack_med
+      username: postgres
+      password: admin
+    prosth:
+      url: jdbc:postgresql://localhost:5432/my_fullstack_prosth
+      username: postgres
+      password: admin
+  seed-data:
+    enabled: true        # run data-{core,icu,med,prosth}.sql at boot
   jwt:
     secret: <base64-secret>
     expiration-ms: 86400000
   mis:
     mock-enabled: true
 ```
+
+Every datasource can be overridden with environment variables: `APP_DATASOURCE_<CORE|ICU|MED|PROSTH>_<URL|USERNAME|PASSWORD>`. Schema is managed per DB by Liquibase (`db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml`).
 
 Frontend API URL in `frontend/src/api/client.ts`:
 
@@ -395,7 +410,7 @@ java -jar backend/target/patient-chart-backend-*.jar
 
 ## Seed Data
 
-6 users seeded via `backend/src/main/resources/data.sql`:
+9 users seeded via `backend/common/src/main/resources/data-{core,icu,med,prosth}.sql` (executed per-datasource by `SeedDataInitializer` at boot):
 
 | Login | Password | Role |
 |---|---|---|
@@ -543,12 +558,12 @@ Push → CI runs jobs in parallel → if any fails, fix and repeat until every c
 - **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
-- [#71](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/71) **RESOLVED** — Cyrillic encoding: `data.sql` now uses explicit `ON CONFLICT` auto-heal clause
+- [#71](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/71) **RESOLVED** — Cyrillic encoding: `data-med.sql` now uses explicit `ON CONFLICT` auto-heal clause
 - [#72](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/72) **RESOLVED** — MockMIS patient name prefix cleaned
 - [#73](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/73) **RESOLVED** — Nurse detail view fixed
 - [#74](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/74) **RESOLVED** — Ghost button removed
 
-> **Note:** All E2E tests require a fresh PostgreSQL database between full runs because seed `data.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with a clean DB. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` before each test run.
+> **Note:** All E2E tests require fresh PostgreSQL databases between full runs because seed `data-{core,icu,med,prosth}.sql` uses `ON CONFLICT (id) DO NOTHING`. CI always starts with clean DBs. For local development, run `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in each of the 4 databases before each test run.
 
 > **Testing Guide:** See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for comprehensive testing documentation.
 

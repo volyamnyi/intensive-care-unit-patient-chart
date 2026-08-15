@@ -1,6 +1,6 @@
 package com.superhumans.prosthesismanufacturing.entity;
 
-import com.superhumans.entity.BaseEntity;
+import com.superhumans.entity.base.BaseEntity;
 
 import com.superhumans.prosthetismanufacturing.entity.ElementType;
 import jakarta.persistence.*;

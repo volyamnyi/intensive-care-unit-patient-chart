@@ -6,7 +6,7 @@ import com.superhumans.dto.LabResultCreateRequest;
 import com.superhumans.dto.LabResultPatchRequest;
 import com.superhumans.dto.LabResultResponse;
 import com.superhumans.service.LabResultService;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

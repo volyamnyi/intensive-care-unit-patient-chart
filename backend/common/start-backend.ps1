@@ -1,0 +1,2 @@
+$process = Start-Process -FilePath "java" -ArgumentList "-jar", "target/common-1.0.0.jar" -WorkingDirectory "C:\projects\intensive-care-unit-patient-chart\backend\common" -PassThru -WindowStyle Hidden -RedirectStandardOutput "C:\projects\intensive-care-unit-patient-chart\backend\common\app.log" -RedirectStandardError "C:\projects\intensive-care-unit-patient-chart\backend\common\app-error.log"
+Write-Host "Backend started with PID: $($process.Id)"

@@ -2,9 +2,9 @@ package com.superhumans.service;
 
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
-import com.superhumans.entity.User;
-import com.superhumans.entity.UserRole;
-import com.superhumans.repository.UserRepository;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
+import com.superhumans.repository.core.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

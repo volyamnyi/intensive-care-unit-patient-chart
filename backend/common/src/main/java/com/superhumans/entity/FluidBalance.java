@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import com.superhumans.entity.base.BaseEntity;
 
 @Entity
 @Table(name = "fluid_balances")

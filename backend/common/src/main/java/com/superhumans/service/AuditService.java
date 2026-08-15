@@ -3,10 +3,10 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 import com.superhumans.dto.AuditLogResponse;
-import com.superhumans.entity.AuditLog;
+import com.superhumans.entity.core.AuditLog;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.mapper.AuditLogMapper;
-import com.superhumans.repository.AuditLogRepository;
+import com.superhumans.repository.core.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

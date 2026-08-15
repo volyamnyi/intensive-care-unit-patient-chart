@@ -2,8 +2,8 @@ package com.superhumans.service;
 
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
-import com.superhumans.entity.User;
-import com.superhumans.repository.UserRepository;
+import com.superhumans.entity.core.User;
+import com.superhumans.repository.core.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
