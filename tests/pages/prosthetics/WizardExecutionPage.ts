@@ -40,6 +40,7 @@ export class WizardExecutionPage {
   
   // Web Elements (dynamic)
   readonly textInputs: Locator;
+  readonly measurementInputs: Locator;
   readonly numericInputs: Locator;
   readonly textareas: Locator;
   readonly checkboxes: Locator;
@@ -94,7 +95,11 @@ export class WizardExecutionPage {
     this.cancelPauseButton = page.getByRole('button', { name: /Скасувати/ });
     
     // Web Elements
-    this.textInputs = page.locator('input[type="text"], input:not([type])');
+    // Measurement form fields are type=text + inputmode=decimal (their onChange
+    // strips non-digit chars), so they must be handled separately with numeric
+    // values and excluded from the generic text-input fill.
+    this.textInputs = page.locator('input[type="text"]:not([inputmode]), input:not([type])');
+    this.measurementInputs = page.locator('input.measurement-field, input[inputmode="decimal"]');
     this.numericInputs = page.locator('input[type="number"]');
     this.textareas = page.locator('textarea');
     this.checkboxes = page.locator('[data-slot="checkbox"], input[type="checkbox"]');
@@ -256,6 +261,17 @@ export class WizardExecutionPage {
 
   async executeCurrentStep(): Promise<boolean> {
     let interacted = false;
+    
+    // Fill measurement form fields (inputmode=decimal, sanitized to digits) —
+    // the «Зняття мірок» step needs ≥3 non-blank values to advance.
+    const measCount = await this.measurementInputs.count();
+    for (let i = 0; i < measCount; i++) {
+      const input = this.measurementInputs.nth(i);
+      if (await input.isVisible() && await input.isEnabled()) {
+        await input.fill('180');
+        interacted = true;
+      }
+    }
     
     // Fill text inputs
     const textCount = await this.textInputs.count();

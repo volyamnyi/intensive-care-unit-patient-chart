@@ -22,7 +22,10 @@ async function login(request: APIRequestContext, login: string, password: string
 }
 
 /** Builds a values payload for a snapshot step, satisfying required elements. */
-function buildValues(elements: Array<{ id: string; elementType: string; minValue?: number | null; maxValue?: number | null }> | undefined): string {
+function buildValues(
+  elements: Array<{ id: string; elementType: string; minValue?: number | null; maxValue?: number | null }> | undefined,
+  stepType?: string,
+): string {
   const values: Record<string, unknown> = {};
   for (const element of elements ?? []) {
     if (element.elementType === 'CHECKBOX') {
@@ -36,6 +39,16 @@ function buildValues(elements: Array<{ id: string; elementType: string; minValue
       values[element.id] = 'Електронний підпис';
     } else {
       values[element.id] = 'test';
+    }
+  }
+  if (stepType === 'MEASUREMENT') {
+    // The measurement step collects values via the visual measurement forms
+    // (not DB elements) and requires ≥3 filled values + the ЗІЗ gloves
+    // acknowledgment. The step's only DB element is a STEP_MESSAGE, so inject
+    // the required inputs directly.
+    values['ppe-measurement-non-sterile-gloves'] = true;
+    for (const key of ['chest_circumference', 'axilla_circumference', 'forearm_circumference']) {
+      values[key] = '180';
     }
   }
   return JSON.stringify(values);
@@ -98,11 +111,11 @@ export async function completeInstanceViaApi(request: APIRequestContext, instanc
     const snapshotRes = await request.get(`${BASE}/instances/${instanceId}/snapshot`, { headers: prosthetistHeaders });
     const snapshot = await snapshotRes.json();
     const step = (snapshot.stages ?? [])
-      .flatMap((stage: { steps?: Array<{ id: string; elements: Array<{ id: string; elementType: string }> }> }) => stage.steps ?? [])
+      .flatMap((stage: { steps?: Array<{ id: string; stepType?: string; elements: Array<{ id: string; elementType: string }> }> }) => stage.steps ?? [])
       .find((candidate: { id: string }) => candidate.id === pending.stepId);
     const completeRes = await request.post(`${BASE}/instances/${instanceId}/steps/${pending.id}/complete`, {
       headers: prosthetistHeaders,
-      data: { values: buildValues(step?.elements) },
+      data: { values: buildValues(step?.elements, step?.stepType) },
     });
     if (!completeRes.ok()) {
       throw new Error(`Step complete failed: HTTP ${completeRes.status()}: ${await completeRes.text()}`);

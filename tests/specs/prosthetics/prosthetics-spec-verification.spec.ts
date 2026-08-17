@@ -939,8 +939,21 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
 
 // ============== HELPER: Fill Required Fields ==============
 async function fillRequiredFields(page: Page) {
-  // Fill text inputs
-  const textInputs = page.locator('input[type="text"]:visible, input:not([type]):visible');
+  // Fill measurement form fields first (inputmode=decimal, sanitized to digits) —
+  // the «Зняття мірок (з пацієнтом)» step needs ≥3 non-blank values to advance.
+  const measurementInputs = page.locator('input.measurement-field:visible, input[inputmode="decimal"]:visible');
+  const measCount = await measurementInputs.count();
+  for (let i = 0; i < measCount; i++) {
+    const input = measurementInputs.nth(i);
+    const value = await input.inputValue();
+    if (!value) {
+      await input.scrollIntoViewIfNeeded().catch(() => {});
+      await input.fill('180');
+    }
+  }
+
+  // Fill text inputs (measurement fields excluded — handled above)
+  const textInputs = page.locator('input[type="text"]:not([inputmode]):visible, input:not([type]):visible');
   const textCount = await textInputs.count();
   for (let i = 0; i < textCount; i++) {
     const input = textInputs.nth(i);
