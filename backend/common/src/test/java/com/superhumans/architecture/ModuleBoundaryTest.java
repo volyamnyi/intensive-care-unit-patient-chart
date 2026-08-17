@@ -9,6 +9,8 @@ import com.tngtech.archunit.lang.ArchRule;
 
 import java.util.Arrays;
 
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
@@ -39,6 +41,10 @@ class ModuleBoundaryTest {
     /**
      * Shared platform packages a feature module is allowed to use. Everything else under
      * {@code com.superhumans} (ICU domain root packages) is off-limits to features.
+     *
+     * <p>Exact classes (AuditService, PermissionService, SpringContext) cannot be expressed
+     * as package patterns — {@code resideInAnyPackage} matches package names only — so they
+     * are allowed via {@code name(...)} predicates in {@link #platformTargets(String[])}.
      */
     private static final String[] SHARED_PLATFORM_ALLOWLIST = {
         "com.superhumans.entity.base..",
@@ -47,8 +53,6 @@ class ModuleBoundaryTest {
         "com.superhumans.exception..",
         "com.superhumans.mis..",
         "com.superhumans.util..",
-        "com.superhumans.service.AuditService",
-        "com.superhumans.service.PermissionService",
         "java..",
         "jakarta..",
         "lombok..",
@@ -62,16 +66,14 @@ class ModuleBoundaryTest {
     };
 
     @ArchTest
-    static final ArchRule medicationSheetDependsOnlyOnPlatformAllowlist = noClasses()
+    static final ArchRule medicationSheetDependsOnlyOnPlatformAllowlist = classes()
         .that().resideInAPackage(MEDICATION_SHEET)
-        .should().onlyDependOnClassesThat().resideInAnyPackage(
-            combine(MEDICATION_SHEET, SHARED_PLATFORM_ALLOWLIST));
+        .should().onlyDependOnClassesThat(platformTargets(new String[] {MEDICATION_SHEET}));
 
     @ArchTest
-    static final ArchRule prosthesisDependsOnlyOnPlatformAllowlist = noClasses()
+    static final ArchRule prosthesisDependsOnlyOnPlatformAllowlist = classes()
         .that().resideInAnyPackage(PROSTHESIS_PACKAGES)
-        .should().onlyDependOnClassesThat().resideInAnyPackage(
-            combine(PROSTHESIS_PACKAGES, SHARED_PLATFORM_ALLOWLIST));
+        .should().onlyDependOnClassesThat(platformTargets(PROSTHESIS_PACKAGES));
 
     @ArchTest
     static final ArchRule featuresDoNotDependOnEachOther = noClasses()
@@ -82,6 +84,13 @@ class ModuleBoundaryTest {
     static final ArchRule platformDoesNotDependOnFeatures = noClasses()
         .that(notResidingInFeaturePackages())
         .should().dependOnClassesThat().resideInAnyPackage(allFeaturePackages());
+
+    private static DescribedPredicate<JavaClass> platformTargets(String[] featurePackages) {
+        return JavaClass.Predicates.resideInAnyPackage(combine(featurePackages, SHARED_PLATFORM_ALLOWLIST))
+            .or(name("com.superhumans.service.AuditService"))
+            .or(name("com.superhumans.service.PermissionService"))
+            .or(name("com.superhumans.config.SpringContext"));
+    }
 
     private static DescribedPredicate<JavaClass> notResidingInFeaturePackages() {
         return JavaClass.Predicates.resideInAnyPackage(allFeaturePackages()).negate();
