@@ -285,13 +285,13 @@ jobs:
             fi
           done
       
-      - name: Build backend
-        run: mvn clean package -DskipTests -pl common
+- name: Build backend
+        run: mvn clean package -DskipTests
         working-directory: backend
-      
+
       - name: Start backend
         run: |
-          java -jar common/target/common-*.jar &
+          java -jar app/target/app-*.jar &
           echo "Waiting for backend..."
           timeout 60 bash -c 'until curl -s http://localhost:8085/api/auth/login > /dev/null 2>&1; do sleep 2; done'
           echo "Backend is ready"
@@ -379,7 +379,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       
       - name: Build backend JAR
-        run: mvn clean package -DskipTests -pl common
+        run: mvn clean package -DskipTests
         working-directory: backend
       
       - name: Build frontend
@@ -392,7 +392,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
-          path: backend/common/target/common-*.jar
+          path: backend/app/target/app-*.jar
           retention-days: 30
       
       - name: Upload frontend build

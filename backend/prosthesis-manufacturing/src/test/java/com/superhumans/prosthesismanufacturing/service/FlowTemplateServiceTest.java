@@ -2,7 +2,7 @@ package com.superhumans.prosthesismanufacturing.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.dto.TemplateCreateRequest;
-import com.superhumans.prosthetismanufacturing.entity.ElementType;
+import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.ReworkType;

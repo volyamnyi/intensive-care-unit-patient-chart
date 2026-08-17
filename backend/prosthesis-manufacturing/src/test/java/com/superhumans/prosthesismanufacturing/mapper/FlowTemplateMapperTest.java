@@ -7,7 +7,7 @@ import com.superhumans.prosthesismanufacturing.dto.TemplateElementResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateStageResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateStepResponse;
 import com.superhumans.prosthesismanufacturing.entity.*;
-import com.superhumans.prosthetismanufacturing.entity.ElementType;
+import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

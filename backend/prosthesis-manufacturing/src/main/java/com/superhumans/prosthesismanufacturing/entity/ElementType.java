@@ -1,4 +1,4 @@
-package com.superhumans.prosthetismanufacturing.entity;
+package com.superhumans.prosthesismanufacturing.entity;
 
 public enum ElementType {
     CHECKBOX,

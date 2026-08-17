@@ -101,11 +101,12 @@ frontend/  (React 19 + TS 6 + Vite 8 + MUI 9, single app)
   src/prosthetics/          ← Prosthetics manufacturing feature module
   src/shared/               ← shared types, API client, components, auth
 backend/   (Spring Boot 4.1.0 + Java 25 + Maven, multi-module)
-  pom.xml                   ← parent POM (pom packaging, 4 modules)
-  common/                   ← single-deployment app (@SpringBootApplication, JAR) + shared config/entities
+  pom.xml                   ← parent POM (pom packaging, 5 modules)
+  common/                   ← shared platform leaf: entities (base/core), auth, config, MIS, exceptions, RBAC, multi-DB wiring (auto-scanned under com.superhumans)
   icu-chart/                ← ICU chart feature module (auto-scanned under com.superhumans)
   medication-sheet/         ← medication sheet module (auto-scanned under com.superhumans)
   prosthesis-manufacturing/ ← prosthetics manufacturing module (auto-scanned under com.superhumans)
+  app/                      ← deployable shell: depends on common + 3 features, spring-boot plugin produces the runnable JAR (mainClass com.superhumans.IcuPatientChartApplication)
 tests/     (Playwright 1.61)
 ```
 
@@ -190,7 +191,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 ### Backend (`cd backend`)
 | Command | Action |
 |---|---|
-| `mvn spring-boot:run` | Dev server on `:8085` |
+| `mvn -pl app spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
 | `mvn test` | Run unit tests (excludes integration) |

@@ -1,6 +1,6 @@
 package com.superhumans.prosthesismanufacturing.dto;
 
-import com.superhumans.prosthetismanufacturing.entity.ElementType;
+import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.ReworkType;

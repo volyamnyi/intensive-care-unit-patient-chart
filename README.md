@@ -173,7 +173,7 @@ psql -U postgres -c "CREATE DATABASE my_fullstack_prosth;"
 ```bash
 cd backend
 mvn clean package -DskipTests
-java -jar common/target/common-*.jar
+java -jar app/target/app-*.jar
 # Starts on http://localhost:8085
 ```
 
@@ -241,7 +241,7 @@ const API_BASE = 'http://localhost:8085/api';
 
 ```bash
 # Terminal 1 — Backend
-cd backend && mvn spring-boot:run
+cd backend && mvn -pl app spring-boot:run
 
 # Terminal 2 — Frontend
 cd frontend && npm run dev
@@ -262,7 +262,7 @@ Once the backend is running, access the interactive API documentation:
 ```bash
 cd frontend && npm run build          # outputs to frontend/dist/
 cd ../backend && mvn clean package -DskipTests
-java -jar backend/target/patient-chart-backend-*.jar
+java -jar app/target/app-*.jar
 ```
 
 ---
@@ -460,8 +460,8 @@ Prosthetics E2E isolation uses fixed seed IDs per spec (no `.first()` race).
 ```
 icu-patient-chart/
 ├── backend/
-│   ├── pom.xml               ← parent POM (4 modules: common, medication-sheet, icu-chart, prosthesis-manufacturing)
-│   ├── common/               ← shared entities, JWT/security, base classes
+│   ├── pom.xml               ← parent POM (5 modules: common, medication-sheet, icu-chart, prosthesis-manufacturing, app)
+│   ├── common/               ← shared entities, JWT/security, base classes, multi-DB wiring
 │   ├── medication-sheet/     ← prescriptions module (entities, services, controllers)
 │   ├── icu-chart/
 │   │   ├── pom.xml
@@ -520,7 +520,7 @@ icu-patient-chart/
 #### Backend
 | Command | Action |
 |---|---|
-| `mvn spring-boot:run` | Dev server on `:8085` |
+| `mvn -pl app spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
 | `mvn test` | Run unit tests (526) |

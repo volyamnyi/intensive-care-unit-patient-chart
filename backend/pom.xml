@@ -23,6 +23,7 @@
         <module>icu-chart</module>
         <module>medication-sheet</module>
         <module>prosthesis-manufacturing</module>
+        <module>app</module>
     </modules>
 
     <properties>
@@ -40,6 +41,26 @@
             <dependency>
                 <groupId>com.superhumans</groupId>
                 <artifactId>common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.superhumans</groupId>
+                <artifactId>icu-chart</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.superhumans</groupId>
+                <artifactId>medication-sheet</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.superhumans</groupId>
+                <artifactId>prosthesis-manufacturing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.superhumans</groupId>
+                <artifactId>app</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

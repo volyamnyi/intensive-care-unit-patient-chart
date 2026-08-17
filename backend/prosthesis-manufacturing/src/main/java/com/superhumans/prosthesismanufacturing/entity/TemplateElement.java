@@ -2,7 +2,7 @@ package com.superhumans.prosthesismanufacturing.entity;
 
 import com.superhumans.entity.base.BaseEntity;
 
-import com.superhumans.prosthetismanufacturing.entity.ElementType;
+import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.AccessLevel;

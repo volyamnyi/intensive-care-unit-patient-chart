@@ -1,7 +1,7 @@
 package com.superhumans.prosthesismanufacturing.integration;
 
 import com.superhumans.prosthesismanufacturing.entity.*;
-import com.superhumans.prosthetismanufacturing.entity.ElementType;
+import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.repository.*;
 import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.exception.ConstraintViolationException;

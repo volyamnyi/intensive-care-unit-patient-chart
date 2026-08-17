@@ -29,13 +29,10 @@ class ModuleBoundaryTest {
     private static final String MEDICATION_SHEET = "com.superhumans.medicationsheet..";
 
     /**
-     * Prosthetics feature packages. {@code prosthetismanufacturing} is a pre-existing typo
-     * package (ElementType.java declares the wrong package name); it is consolidated under
-     * {@code prosthesismanufacturing} in the Maven split phase.
+     * Prosthetics feature packages.
      */
     private static final String[] PROSTHESIS_PACKAGES = {
-        "com.superhumans.prosthesismanufacturing..",
-        "com.superhumans.prosthetismanufacturing.."
+        "com.superhumans.prosthesismanufacturing.."
     };
 
     /**
