@@ -1,4 +1,4 @@
-package com.superhumans.entity;
+package com.superhumans.icu.entity;
 
 import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
