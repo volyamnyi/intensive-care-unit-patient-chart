@@ -147,7 +147,17 @@
 
 ### 1. Database
 
-The application uses **4 separate PostgreSQL databases** (one per module). Create them all:
+The application uses **4 separate PostgreSQL databases** (one per module), each with its own schema, managed by its own Liquibase changelog:
+
+| Database | Module | Purpose / contents |
+|---|---|---|
+| `my_fullstack_core` | COMMON (single-deployment core) | Users & authentication, dynamic RBAC (`permissions` + `role_permissions` matrix), audit log (`audit_logs`), system settings and reference values |
+| `my_fullstack_icu` | ICU Chart | Episodes, clinical days, hourly records, medical orders & executions, notes, clinical scale results, signatures, generated PDFs, labs, ventilation, patient state, fluid balance |
+| `my_fullstack_med` | Medication Sheet | Prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/allergy/drug-interaction caches, telegram subscriptions |
+| `my_fullstack_prosth` | Prosthetics Manufacturing | Patients, orders, flow templates, flow instances & step executions, quality gates & decisions, failure snapshots, evidence files |
+| `my_fullstack_db` | — (bootstrap only, **not used by the app**) | Default database auto-created by the PostgreSQL Docker service container in CI (`POSTGRES_DB` env var, required by the image); the application never connects to it — all CI jobs create the 4 real databases above inside that container |
+
+Create the 4 application databases:
 
 ```bash
 psql -U postgres -c "CREATE DATABASE my_fullstack_core;"

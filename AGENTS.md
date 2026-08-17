@@ -118,10 +118,15 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 - JWT auth stored in `localStorage`.
 - Backend port: **8085** (`application.yml`).
 - **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (58 changesets total: core 6, icu 17, med 16, prosth 19):
-  - `my_fullstack_core` — users, permissions, audit, reference values (COMMON module)
-  - `my_fullstack_icu` — ICU chart (episodes, clinical days, records, orders, notes, scales, signatures, PDFs, labs, ventilation, patient state, fluid balance)
-  - `my_fullstack_med` — medication sheet (prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/allergy/drug-interaction caches, telegram subscriptions)
-  - `my_fullstack_prosth` — prosthetics manufacturing (patients, orders, templates, instances, gates, snapshots, evidence files)
+
+  | Database | Module | Purpose / contents |
+  |---|---|---|
+  | `my_fullstack_core` | COMMON (single-deployment core) | Users & authentication, dynamic RBAC (`permissions` + `role_permissions` matrix), audit log (`audit_logs`), system settings and reference values |
+  | `my_fullstack_icu` | ICU Chart | Episodes, clinical days, hourly records, medical orders & executions, notes, clinical scale results, signatures, generated PDFs, labs, ventilation, patient state, fluid balance |
+  | `my_fullstack_med` | Medication Sheet | Prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/allergy/drug-interaction caches, telegram subscriptions |
+  | `my_fullstack_prosth` | Prosthetics Manufacturing | Patients, orders, flow templates, flow instances & step executions, quality gates & decisions, failure snapshots, evidence files |
+  | `my_fullstack_db` | — (bootstrap only, **not used by the app**) | Default database auto-created by the PostgreSQL Docker service container in CI (`POSTGRES_DB` env var, required by the image); the application never connects to it — all CI DB-using jobs create the 4 real databases above inside that container (`CREATE DATABASE` ×4) |
+
   - Datasources configured in `application.yml` under `app.datasource.{core,icu,med,prosth}.{url,username,password}` (env override: `APP_DATASOURCE_*_URL/USERNAME/PASSWORD`); multi-DB bootstrap in `com.superhumans.config.multidb` (per-DB `DataSource`/EMF/`SpringLiquibase`/`JpaTransactionManager`, chained `transactionManager`).
 - Seed data: `SeedDataInitializer` (COMMON) runs `data-{core,icu,med,prosth}.sql` on the matching datasource at boot (gated by `app.seed-data.enabled: true`; tests disable it). Counts: 9 users (6 core roles + 3 prosthetics), 50 episodes, 90 clinical days, 360 prescription lists, 90 vital sign lists, prosthetics 2 patients/2 orders/2 templates.
 - CI: `.github/workflows/playwright.yml` — Postgres service, JDK 25, Node 22, Playwright chromium, 40min timeout. Every DB-using job creates the 4 DBs (`CREATE DATABASE` ×4) and passes the 12 `APP_DATASOURCE_*` env vars.
