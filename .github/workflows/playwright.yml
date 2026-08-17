@@ -285,7 +285,7 @@ jobs:
             fi
           done
       
-- name: Build backend
+      - name: Build backend
         run: mvn clean package -DskipTests
         working-directory: backend
 
