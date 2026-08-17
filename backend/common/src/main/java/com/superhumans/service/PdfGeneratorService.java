@@ -5,6 +5,7 @@ import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
@@ -38,6 +39,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -839,8 +841,11 @@ public class PdfGeneratorService {
     }
 
     private PdfFont loadFont() {
+        PdfFont bundled = loadClasspathFont("fonts/DejaVuSans.ttf");
+        if (bundled != null) {
+            return bundled;
+        }
         String[] fontPaths = {
-                "fonts/DejaVuSans.ttf",
                 "C:/Windows/Fonts/arial.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                 "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
@@ -858,8 +863,21 @@ public class PdfGeneratorService {
         }
     }
 
+    private PdfFont loadClasspathFont(String resourcePath) {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
+            if (is != null) {
+                return PdfFontFactory.createFont(is.readAllBytes(), PdfEncodings.IDENTITY_H);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private PdfFont loadBoldFont(PdfFont regular) {
         if (regular == null) return null;
+        PdfFont bundled = loadClasspathFont("fonts/DejaVuSans-Bold.ttf");
+        if (bundled != null) {
+            return bundled;
+        }
         String name = regular.getFontProgram().getFontNames().getFontName();
         if (name != null && !name.isEmpty()) {
             String boldPath = name.replace("Sans-Regular", "Sans-Bold")
@@ -870,7 +888,6 @@ public class PdfGeneratorService {
             } catch (Exception ignored) {}
         }
         String[] boldPaths = {
-                "fonts/DejaVuSans-Bold.ttf",
                 "C:/Windows/Fonts/arialbd.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                 "/usr/share/fonts/truetype/msttcorefonts/Arial-Bold.ttf",

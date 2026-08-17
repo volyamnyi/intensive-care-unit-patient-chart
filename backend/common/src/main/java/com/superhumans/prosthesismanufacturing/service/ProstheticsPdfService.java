@@ -8,6 +8,7 @@ import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
@@ -40,6 +41,7 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -123,8 +125,9 @@ public class ProstheticsPdfService {
 
         // Логотип зверху
         Paragraph logo = new Paragraph()
-                .setFont(bold).setFontSize(11)
-                .setTextAlignment(TextAlignment.RIGHT);
+                .setFont(bold).setFontSize(10)
+                .setTextAlignment(TextAlignment.RIGHT)
+                .setMultipliedLeading(1.0f);
         logo.add(new Text("superhumans "));
         logo.add(new Text("Center").setFont(font).setFontSize(5));
         doc.add(logo);
@@ -135,7 +138,6 @@ public class ProstheticsPdfService {
         header.addCell(logoCell(font, bold));
         header.addCell(approvalCell(font, bold, order));
         doc.add(header);
-        doc.add(new Paragraph("").setFontSize(4));
 
         // Title
         doc.add(new Paragraph("ЗАМОВЛЕННЯ № " + value(order.getOrderNumber()))
@@ -171,7 +173,7 @@ public class ProstheticsPdfService {
 
         // 2. Причина та рівень порушень кінцівки, стан кукси
         doc.add(new Paragraph("Причина та рівень порушень кінцівки, стан кукси")
-                .setFont(bold).setFontSize(9.5f).setTextAlignment(TextAlignment.CENTER).setMarginTop(4));
+                .setFont(bold).setFontSize(9.5f).setTextAlignment(TextAlignment.CENTER).setMarginTop(3));
 
         doc.add(line(font, "Причина ураження:", patient == null ? "—" : patient.getCause()));
         doc.add(line(font, "Дата ампутації", fmtDate(patient == null ? null : patient.getAmputationDate())));
@@ -216,8 +218,7 @@ public class ProstheticsPdfService {
         // 6. Діагноз та виріб
         doc.add(line(font, "Діагноз по типу конструкції протезу:",
                 value(order.getAmputationLevel()) + " " + misProductCode(order, misData))
-                .setMarginTop(4));
-        doc.add(new Paragraph("").setFontSize(2));
+                .setMarginTop(3));
         doc.add(line(font, "Найменування виробу (засобу реабілітації) та код з згідно ISO 9999:2016, IDT):",
                 misProductCode(order, misData)));
         doc.add(new Paragraph(misProductDesc(order, misData) + ".B-TR.c — протези передпліччя з тяговим керуванням комбіновані")
@@ -231,16 +232,16 @@ public class ProstheticsPdfService {
         signTable.addCell(signRoleCell(font, bold, "Технік"));
         signTable.addCell(signNameCell(font, bold, misTechnicianName(misData)));
         signTable.addCell(signLineCell(font, "(підпис)_____________"));
-        signTable.setMarginTop(2);
+        signTable.setMarginTop(1);
         doc.add(signTable);
 
         // 8. Ознайомлення замовника + дата передання
         doc.add(new Paragraph("Із призначенням ознайомлений(на) "
                 + (patient == null ? "—" : patient.getPib())
                 + "  (Власне ім'я ПРІЗВИЩЕ замовника)  (підпис)____________")
-                .setFont(font).setFontSize(6.5f).setMarginTop(2));
+                .setFont(font).setFontSize(6.5f).setMarginTop(1));
         doc.add(new Paragraph("Дата передання виробу у виробництво " + fmtDate(order.getPrescriptionDate()))
-                .setFont(font).setFontSize(6.5f).setMarginTop(2));
+                .setFont(font).setFontSize(6.5f).setMarginTop(1));
 
         footer(doc, font, bold);
     }
@@ -391,18 +392,18 @@ public class ProstheticsPdfService {
         Cell cell = new Cell().setBorder(new SolidBorder(0.6f)).setPadding(1)
                 .setTextAlignment(TextAlignment.CENTER);
         if (misCompany != null && misCompany.getName() != null && !misCompany.getName().isBlank()) {
-            cell.add(new Paragraph(misCompany.getName()).setFont(bold).setFontSize(6.5f));
+            cell.add(new Paragraph(misCompany.getName()).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
         } else {
-            cell.add(new Paragraph(INSTITUTION_NAME).setFont(bold).setFontSize(6.5f));
+            cell.add(new Paragraph(INSTITUTION_NAME).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
         }
-        cell.add(new Paragraph(INSTITUTION_LICENSE).setFont(bold).setFontSize(6.5f));
-        cell.add(new Paragraph(INSTITUTION_NAME_2).setFont(bold).setFontSize(6.5f));
+        cell.add(new Paragraph(INSTITUTION_LICENSE).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
+        cell.add(new Paragraph(INSTITUTION_NAME_2).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
         if (misCompany != null && misCompany.getAddress() != null && !misCompany.getAddress().isBlank()) {
-            cell.add(new Paragraph(misCompany.getAddress()).setFont(bold).setFontSize(6.5f));
+            cell.add(new Paragraph(misCompany.getAddress()).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
         } else {
-            cell.add(new Paragraph(INSTITUTION_ADDRESS).setFont(bold).setFontSize(6.5f));
+            cell.add(new Paragraph(INSTITUTION_ADDRESS).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
         }
-        cell.add(new Paragraph(INSTITUTION_EDRPOU).setFont(bold).setFontSize(6.5f));
+        cell.add(new Paragraph(INSTITUTION_EDRPOU).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
         return cell;
     }
 
@@ -420,9 +421,9 @@ public class ProstheticsPdfService {
         Cell cell = new Cell().setBorder(new SolidBorder(0.6f)).setPadding(1)
                 .setTextAlignment(TextAlignment.CENTER);
         cell.add(new Paragraph("Замовлення на протези верхніх кінцівок")
-                .setFont(font).setFontSize(6f));
-        cell.add(new Paragraph("ЗАТВЕРДЖЕНО").setFont(bold).setFontSize(6.5f));
-        cell.add(new Paragraph(APPROVE_ORG).setFont(bold).setFontSize(6.5f));
+                .setFont(font).setFontSize(6f).setMultipliedLeading(1.1f));
+        cell.add(new Paragraph("ЗАТВЕРДЖЕНО").setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
+        cell.add(new Paragraph(APPROVE_ORG).setFont(bold).setFontSize(6.5f).setMultipliedLeading(1.1f));
         // Код-таблиця: 0 2 . 1 2 . 2 0 2 5 р. № 42
         Table code = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.4f, 1, 1}))
                 .setMarginTop(2).setMarginLeft(18).setWidth(UnitValue.createPercentValue(80));
@@ -880,8 +881,11 @@ public class ProstheticsPdfService {
     }
 
     private PdfFont loadFont() {
+        PdfFont bundled = loadClasspathFont("fonts/DejaVuSans.ttf");
+        if (bundled != null) {
+            return bundled;
+        }
         String[] fontPaths = {
-                "fonts/DejaVuSans.ttf",
                 "C:/Windows/Fonts/arial.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                 "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
@@ -904,8 +908,11 @@ public class ProstheticsPdfService {
         if (regular == null) {
             return null;
         }
+        PdfFont bundled = loadClasspathFont("fonts/DejaVuSans-Bold.ttf");
+        if (bundled != null) {
+            return bundled;
+        }
         String[] boldPaths = {
-                "fonts/DejaVuSans-Bold.ttf",
                 "C:/Windows/Fonts/arialbd.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                 "/usr/share/fonts/truetype/msttcorefonts/Arial-Bold.ttf",
@@ -918,5 +925,15 @@ public class ProstheticsPdfService {
             }
         }
         return regular;
+    }
+
+    private PdfFont loadClasspathFont(String resourcePath) {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
+            if (is != null) {
+                return PdfFontFactory.createFont(is.readAllBytes(), PdfEncodings.IDENTITY_H);
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 }
