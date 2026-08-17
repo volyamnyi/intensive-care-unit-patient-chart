@@ -212,7 +212,7 @@ export interface PauseRequest {
 export interface FailRequest {
   category: string;
   description: string;
-  snapshot: string;
+  snapshot?: string;
 }
 
 export interface EvidenceFile {

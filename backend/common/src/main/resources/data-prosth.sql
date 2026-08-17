@@ -98,6 +98,8 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO prosthetics_template_elements (id, step_id, order_index, element_type, label, placeholder, required, unit, min_value, max_value, options, validation_rules)
 VALUES
     ('f0000002-0000-0000-0000-000000000051', 'e0000002-0000-0000-0000-000000000002', 0, 'STEP_MESSAGE', '* В рамках цього етапу пацієнту надається послуга B-TR Зняття мірок', NULL, false, NULL, NULL, NULL, NULL, NULL),
+    ('f0000108-0000-0000-0000-000000000048', 'e0000003-0000-0000-0000-000000000003', 0, 'STEP_MESSAGE', '* В рамках цього етапу пацієнту надається послуга B-TR Зняття мірок', NULL, false, NULL, NULL, NULL, NULL, NULL),
+    ('f0000109-0000-0000-0000-000000000049', 'e0000004-0000-0000-0000-000000000004', 0, 'STEP_MESSAGE', '* В рамках цього етапу пацієнту надається послуга B-TR Зняття мірок', NULL, false, NULL, NULL, NULL, NULL, NULL),
     ('f0000043-0000-0000-0000-000000000052', 'e0000042-0000-0000-0000-000000000002', 0, 'STEP_MESSAGE', '* В рамках цього кроку пацієнту надається послуга B-TR Примірка тестової гільзи', NULL, false, NULL, NULL, NULL, NULL, NULL),
     ('f0000004-0000-0000-0000-000000000001', 'e0000003-0000-0000-0000-000000000003', 1, 'CHECKBOX', 'Гіпсовий негатив виготовлено', NULL, true, NULL, NULL, NULL, NULL, NULL),
     ('f0000005-0000-0000-0000-000000000001', 'e0000004-0000-0000-0000-000000000004', 1, 'CHECKBOX', 'Гіпсовий негатив перевірено на відповідність антропометричним даним', NULL, true, NULL, NULL, NULL, NULL, NULL),

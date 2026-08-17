@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-ro
 import { useEffect, useRef } from 'react';
 import { ThemeModeProvider } from './styles/ThemeContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider, useAuth } from './services/AuthContext';
 import LoginPage from './pages/LoginPage';
 import GlobalLayout from './layouts/GlobalLayout';
@@ -256,6 +257,7 @@ function ThemedApp() {
       <AuthProvider>
         <TooltipProvider>
           <AppRoutes />
+          <Toaster />
         </TooltipProvider>
       </AuthProvider>
     </BrowserRouter>

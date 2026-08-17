@@ -626,6 +626,13 @@ public class FlowInstanceService {
                     throw new BadRequestException("Поле «" + element.getLabel() + "» обов'язкове");
                 }
             }
+            // The ЗІЗ confirmation on the «Зняття мірок» step is a hardcoded
+            // wizard field (not a DB element): the step cannot advance without it.
+            if (UUID.fromString("e0000002-0000-0000-0000-000000000002").equals(step.getId())
+                    && !Boolean.TRUE.equals(values.get("ppe-measurement-non-sterile-gloves"))) {
+                throw new BadRequestException(
+                        "Поле «Нестерильні оглядові нітрилові рукавички» обов'язкове");
+            }
             return;
         }
         for (SnapshotElement element : step.getElements()) {

@@ -1,6 +1,7 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
@@ -8,6 +9,8 @@ import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.service.EvidenceFileService;
 import com.superhumans.prosthesismanufacturing.service.FlowInstanceService;
 import com.superhumans.prosthesismanufacturing.service.QualityGateService;
+import com.superhumans.repository.core.AuditLogRepository;
+import com.superhumans.service.AuditService;
 import com.superhumans.config.EnableTestExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +52,12 @@ class FlowInstanceControllerTest {
     QualityGateService gateService;
     @MockitoBean
     EvidenceFileService evidenceFileService;
+    @MockitoBean
+    JwtTokenProvider jwtTokenProvider;
+    @MockitoBean
+    AuditLogRepository auditLogRepository;
+    @MockitoBean
+    AuditService auditService;
 
     UUID instanceId = UUID.randomUUID();
     UUID executionId = UUID.randomUUID();

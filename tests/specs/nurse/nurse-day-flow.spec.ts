@@ -45,36 +45,49 @@ test.describe('Nurse day flow', () => {
 
   test('nurse updates urine output inline (PATCH)', async ({ page }) => {
     test.setTimeout(60000);
+
+    // Чекаємо завантаження погодинних записів: комірки редаговані одразу після рендеру,
+    // але значення заповнюються асинхронно після GET — без очікування читання '' дає POST
+    // замість PATCH (409 на повторному запуску, коли запис 4:00 уже існує)
+    const recordsLoaded = page.waitForResponse(
+      (r) => r.request().method() === 'GET' && r.url().includes(`/api/clinical-days/${DAY_ID}/hourly-records`),
+    );
     await page.goto(`/icu/nurse/episode/${EPISODE_ID}`);
+    await recordsLoaded;
 
     // Година 4:00 не має seed-запису — значення унікальне для кожного запуску (стійко до ретраїв)
     const input = page.getByLabel('Сеча 4:00');
     await expect(input).toBeEnabled();
-    const current = await input.inputValue();
-    const next = current === '' ? '250' : String(Number(current) + 10);
 
     // Вводимо значення і підтверджуємо збереження через браузерний POST (створення) або PATCH (оновлення)
     const saveResponse = (r: { request: () => { method(): string; url(): string } }) =>
       (r.request().method() === 'POST' && r.url().includes(`/api/clinical-days/${DAY_ID}/hourly-records`))
       || (r.request().method() === 'PATCH' && r.url().includes('/api/hourly-records/'));
     let resp: { status(): number } | null = null;
+    let savedValue = '';
     for (let attempt = 0; attempt < 3 && !resp; attempt++) {
+      // Значення обчислюємо з актуального стану комірки: якщо сітка довантажилася між
+      // спробами, комірка вже містить серверне значення — тоді коректно йде PATCH, а не POST
+      const valueNow = await input.inputValue();
+      savedValue = valueNow === '' ? '250' : String(Number(valueNow) + 10);
       const respPromise = page.waitForResponse(saveResponse, { timeout: 8000 });
-      await input.fill(next);
+      await input.fill(savedValue);
       await input.press('Enter');
       try {
-        resp = await respPromise;
+        const r = await respPromise;
+        // 409/422 (зміна стану між читанням і збереженням) — повторюємо замість жорсткої помилки
+        if ([201, 204].includes(r.status())) resp = r;
       } catch {
         // Запит не пішов або відповідь випередила реєстрацію очікування — повторюємо fill + Enter
       }
     }
     if (resp) {
       expect([201, 204]).toContain(resp.status());
-      await expect(input).toHaveValue(next);
+      await expect(input).toHaveValue(savedValue);
     } else {
       // Відповідь могла випередити реєстрацію очікування — перевіряємо збереження на сервері
       await page.goto(`/icu/nurse/episode/${EPISODE_ID}`);
-      await expect(page.getByLabel('Сеча 4:00')).toHaveValue(next);
+      await expect(page.getByLabel('Сеча 4:00')).toHaveValue(savedValue);
     }
   });
 
@@ -86,6 +99,9 @@ test.describe('Nurse day flow', () => {
     await doctorPage.goto(`/icu/doctor/episode/${EPISODE_ID}`);
     const doctorRow = doctorPage.locator('tr', { hasText: ORDER_NAME });
     await expect(doctorRow).toBeVisible();
+    // Виконання завантажуються асинхронно після призначень (GET /orders/{id}/executions) —
+    // чекаємо стабілізації сітки, інакше перевірка ✓/✕ може не побачити зайняту годину
+    await doctorPage.waitForLoadState('networkidle');
     let cell = doctorRow.getByRole('cell').nth(cellIndex);
     const occupied = await cell.textContent();
     if (occupied && (occupied.includes('✓') || occupied.includes('✕'))) {
