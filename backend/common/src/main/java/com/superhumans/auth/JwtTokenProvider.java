@@ -26,16 +26,11 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(String login, String role, Long userId) {
-        return generateToken(login, role, userId, null);
-    }
-
-    public String generateToken(String login, String role, Long userId, String permissions) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(login)
                 .claim("role", role)
                 .claim("userId", userId.toString())
-                .claim("permissions", permissions != null ? permissions : "")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs))
                 .signWith(key)
@@ -53,10 +48,6 @@ public class JwtTokenProvider {
     public Long getUserIdFromToken(String token) {
         String userId = parseClaims(token).get("userId", String.class);
         return userId != null ? Long.valueOf(userId) : null;
-    }
-
-    public String getPermissionsFromToken(String token) {
-        return parseClaims(token).get("permissions", String.class);
     }
 
     public boolean validateToken(String token) {

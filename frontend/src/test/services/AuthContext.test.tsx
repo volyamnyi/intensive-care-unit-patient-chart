@@ -16,13 +16,14 @@ vi.mock('../../api/endpoints', () => ({
 }));
 
 function TestComponent() {
-  const { user, isAuthenticated, hasRole, login, logout } = useAuth();
+  const { user, isAuthenticated, hasRole, hasPermission, login, logout } = useAuth();
   return (
     <div>
       <span data-testid="auth">{isAuthenticated ? 'yes' : 'no'}</span>
       <span data-testid="role">{user?.role ?? 'null'}</span>
       <span data-testid="hasRoleDoc">{hasRole('DOCTOR') ? 'true' : 'false'}</span>
       <span data-testid="hasRoleNurse">{hasRole('NURSE') ? 'true' : 'false'}</span>
+      <span data-testid="hasPermIcu">{hasPermission('MODULE_ICU_ACCESS') ? 'true' : 'false'}</span>
       <button data-testid="login-btn" onClick={() => login({ login: 'doctor1', password: 'pass' })}>Login</button>
       <button data-testid="logout-btn" onClick={logout}>Logout</button>
     </div>
@@ -59,6 +60,20 @@ describe('AuthContext', () => {
     await userEvent.click(screen.getByTestId('login-btn'));
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('yes'));
     expect(screen.getByTestId('role')).toHaveTextContent('DOCTOR');
+  });
+
+  it('login loads permissions solely from getMyPermissions (matrix)', async () => {
+    mockGetMe.mockRejectedValue(new Error('no session'));
+    mockGetMyPermissions.mockResolvedValue({ data: ['MODULE_ICU_ACCESS'] });
+    mockLoginFn.mockResolvedValue({
+      data: { userId: '1', login: 'doctor1', fullName: 'Doc', role: 'DOCTOR', email: 'doc@test.com' },
+    });
+    render(<AuthProvider><TestComponent /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('no'));
+    await userEvent.click(screen.getByTestId('login-btn'));
+    await waitFor(() => expect(screen.getByTestId('hasPermIcu')).toHaveTextContent('true'));
+    expect(mockGetMyPermissions).toHaveBeenCalled();
+    expect(screen.getByTestId('hasPermIcu')).toHaveTextContent('true');
   });
 
   it('logout calls api and clears user', async () => {

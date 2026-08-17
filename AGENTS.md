@@ -16,6 +16,10 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
+**2026-08-17: Phase 4 — legacy `users.permissions` CSV removed from the auth flow**
+
+- `LoginResponse` no longer carries the legacy CSV permissions field; `AuthService` no longer populates it; `AuthController` mints JWTs via the 3-arg `JwtTokenProvider.generateToken(login, role, userId)`; the JWT `permissions` claim, the 4-arg `generateToken` overload and `getPermissionsFromToken` are deleted (no consumers existed — enforcement is matrix-based via `PermissionService`). `AuthContext.tsx` + TS `User`/`LoginResponse` types drop the legacy field; effective permissions come solely from `GET /api/users/me/permissions`. The `users.permissions` DB column, entity field and `002-user-permissions.sql` changeset remain untouched (schema never edited); `User.hasPermission/addPermission/removePermission` stay as entity utilities.
+
 **2026-08-07: Module-routing permissions (RBAC matrix)**
 
 - **Module-routing RBAC**: 4 new permission codes in category «Модулі» — `MODULE_ICU_ACCESS`, `MODULE_MEDICATION_ACCESS`, `MODULE_PROSTHETICS_ACCESS`, `MODULE_ADMIN_ACCESS` (catalog 20 → 24 codes; SQL-seeded in `012-role-permissions.sql`). Defaults: DOCTOR/NURSE/HOD → ICU+MEDICATION, PROSTHETIST/PROSTHETICS_ADMIN → PROSTHETICS, ADMINISTRATOR/AUDITOR → ADMIN. `AppSidebar` + `AppSelectorPage` render a module only when the role holds its permission; `App.tsx` `Guard` accepts `permissions` (access = role **OR** permission — revoking a module permission never locks the role out). Prosthetics **read** endpoints widened to `hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')` — a doctor granted the module can navigate and view (read-only); writes still require the specific `PROSTHETICS_*` codes. E2E `permissions.spec.ts` grants DOCTOR `MODULE_PROSTHETICS_ACCESS` → sidebar link appears → navigation works.
@@ -30,7 +34,7 @@ Full role-based access control with an admin-editable matrix. `permissions` + `r
 - **Admin UI**: `AdminPage` new tab «Доступи та ролі» — matrix editor (checkbox grid grouped by category, dirty tracking, «Зберегти зміни» diff-saves via `PUT /api/admin/permissions`). Audit tab «Переглянути» gated by `AUDIT_ACCESS` permission. Role dropdown extended with PROSTHETIST / PROSTHETICS_ADMINISTRATOR.
 - **API**: `GET /api/admin/permissions` (matrix), `PUT /api/admin/permissions` (grant/revoke, body `{role, permissionCode, granted}`), `GET /api/users/me/permissions` (effective codes for current role). `AuthContext` loads effective permissions and `hasPermission` is matrix-based.
 - **Tests**: `PermissionServiceTest` (common unit), `AdminPermissionsIntegrationTest` (grant → 403→400→403 enforcement cycle), E2E `tests/specs/admin/permissions.spec.ts` (UI matrix view + grant/revoke enforcement, serialized).
-- Legacy per-user `PRESCRIBER` CSV (`user.permissions` column) remains untouched; `ScaleAuthorizationService` is now permission-driven (DOCTOR may create Браден per matrix).
+- The legacy per-user `PRESCRIBER` CSV (`user.permissions` column) is no longer part of the auth flow (removed 2026-08-17, see Current Session); the column and entity field remain for schema/data compatibility; `ScaleAuthorizationService` is now permission-driven (DOCTOR may create Браден per matrix).
 
 ### Previous sessions (condensed):
 

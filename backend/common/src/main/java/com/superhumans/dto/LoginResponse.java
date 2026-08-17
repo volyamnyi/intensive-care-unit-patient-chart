@@ -12,5 +12,4 @@ public class LoginResponse {
     String fullName;
     String role;
     String email;
-    String permissions;
 }

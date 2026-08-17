@@ -7,7 +7,6 @@
   specialityCode: string;
   specialityName: string;
   phone: string;
-  permissions: string;
   app: 'icu' | 'prescriptions' | 'prosthetics' | null;
   deleted?: boolean;
 }
@@ -489,7 +488,6 @@ export interface LoginResponse {
   fullName: string;
   role: string;
   email: string;
-  permissions: string;
 }
 
 export interface DepartmentStats {

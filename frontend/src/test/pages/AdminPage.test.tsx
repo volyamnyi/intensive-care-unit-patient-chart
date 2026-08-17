@@ -29,7 +29,7 @@ vi.mock('../../api/endpoints', () => ({
 
 vi.mock('../../services/AuthContext', () => ({
   useAuth: () => ({
-    user: { id: 0, login: 'admin', fullName: 'Адмін', role: 'ADMINISTRATOR', email: 'admin@test.com', permissions: '', app: null },
+    user: { id: 0, login: 'admin', fullName: 'Адмін', role: 'ADMINISTRATOR', email: 'admin@test.com', app: null },
     token: 'mock-token',
     isAuthenticated: true,
     logout: mockLogout,
@@ -40,8 +40,8 @@ vi.mock('../../services/AuthContext', () => ({
 }));
 
 const mockUsers = [
-  { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR', email: 'doctor1@test.com', specialityCode: '', specialityName: '', phone: '', permissions: '', app: null },
-  { id: 2, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE', email: 'nurse1@test.com', specialityCode: '', specialityName: '', phone: '', permissions: '', app: null },
+  { id: 1, login: 'doctor1', fullName: 'Доктор Іван', role: 'DOCTOR', email: 'doctor1@test.com', specialityCode: '', specialityName: '', phone: '', app: null },
+  { id: 2, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE', email: 'nurse1@test.com', specialityCode: '', specialityName: '', phone: '', app: null },
 ];
 
 const mockMatrix = {

@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     userApi.getMe()
       .then((res) => {
-        setUser((prev) => ({ ...res.data, permissions: '', app: (prev?.app ?? null) }));
+        setUser((prev) => ({ ...res.data, app: (prev?.app ?? null) }));
         return userApi.getMyPermissions().then((permRes) => setPermissions(permRes.data));
       })
       .catch(() => {
@@ -49,12 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     const res = await authApi.login(data);
-    const { userId, login: userName, fullName, role, email, permissions: legacyPermissions } = res.data;
+    const { userId, login: userName, fullName, role, email } = res.data;
     localStorage.setItem(SESSION_FLAG, '1');
     setUser({
       id: userId, login: userName, fullName, role: role as User['role'], email,
-      specialityCode: '', specialityName: '', phone: '',
-      permissions: legacyPermissions ?? '', app: null,
+      specialityCode: '', specialityName: '', phone: '', app: null,
     });
     try {
       const permRes = await userApi.getMyPermissions();
