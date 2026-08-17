@@ -1,7 +1,7 @@
 package com.superhumans.integration;
 
 import com.superhumans.dto.*;
-import com.superhumans.entity.ClinicalDayStatus;
+import com.superhumans.icu.entity.ClinicalDayStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
 

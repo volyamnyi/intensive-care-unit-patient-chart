@@ -2,7 +2,7 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.HourlyRecordCreateRequest;
 import com.superhumans.dto.HourlyRecordResponse;
-import com.superhumans.entity.HourlyRecord;
+import com.superhumans.icu.entity.HourlyRecord;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

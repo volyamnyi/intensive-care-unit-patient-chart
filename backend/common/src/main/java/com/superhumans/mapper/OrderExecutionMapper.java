@@ -2,8 +2,8 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.OrderExecutionCreateRequest;
 import com.superhumans.dto.OrderExecutionResponse;
-import com.superhumans.entity.OrderExecution;
-import com.superhumans.entity.OrderExecutionStatus;
+import com.superhumans.icu.entity.OrderExecution;
+import com.superhumans.icu.entity.OrderExecutionStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

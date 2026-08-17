@@ -1,6 +1,6 @@
 package com.superhumans.dto;
 
-import com.superhumans.entity.TransferStatus;
+import com.superhumans.icu.entity.TransferStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

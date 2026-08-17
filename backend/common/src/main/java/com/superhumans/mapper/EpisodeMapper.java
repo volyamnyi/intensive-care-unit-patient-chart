@@ -2,9 +2,9 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.EpisodeCreateRequest;
 import com.superhumans.dto.EpisodeResponse;
-import com.superhumans.entity.Episode;
-import com.superhumans.entity.EpisodeStatus;
-import com.superhumans.entity.EpisodeStatus;
+import com.superhumans.icu.entity.Episode;
+import com.superhumans.icu.entity.EpisodeStatus;
+import com.superhumans.icu.entity.EpisodeStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

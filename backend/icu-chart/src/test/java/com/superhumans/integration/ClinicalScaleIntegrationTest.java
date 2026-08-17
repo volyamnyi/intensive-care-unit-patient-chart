@@ -2,7 +2,7 @@ package com.superhumans.integration;
 
 import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultResponse;
-import com.superhumans.entity.ClinicalScale;
+import com.superhumans.icu.entity.ClinicalScale;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;

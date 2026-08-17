@@ -1,6 +1,6 @@
 package com.superhumans.dto;
 
-import com.superhumans.entity.MedicalOrderStatus;
+import com.superhumans.icu.entity.MedicalOrderStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

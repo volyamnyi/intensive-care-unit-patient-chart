@@ -1,6 +1,6 @@
 package com.superhumans.dto;
 
-import com.superhumans.entity.EpisodeStatus;
+import com.superhumans.icu.entity.EpisodeStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

@@ -1,9 +1,9 @@
 package com.superhumans.service;
 
-import com.superhumans.entity.ClinicalScale;
+import com.superhumans.icu.entity.ClinicalScale;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.exception.NotFoundException;
-import com.superhumans.repository.icu.ClinicalScaleRepository;
+import com.superhumans.icu.repository.ClinicalScaleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -17,7 +17,7 @@ import liquibase.integration.spring.SpringLiquibase;
 
 @Configuration
 @EnableJpaRepositories(
-        basePackages = "com.superhumans.repository.icu",
+        basePackages = "com.superhumans.icu.repository",
         entityManagerFactoryRef = "icuEntityManagerFactory",
         transactionManagerRef = "icuTransactionManager")
 public class IcuDatabaseConfig {
@@ -37,7 +37,7 @@ public class IcuDatabaseConfig {
     public LocalContainerEntityManagerFactoryBean icuEntityManagerFactory(
             @Qualifier("icuDataSource") DataSource dataSource) {
         return MultiDatabaseSupport.entityManagerFactory(dataSource,
-                "com.superhumans.entity", "com.superhumans.entity.base");
+                "com.superhumans.icu.entity", "com.superhumans.entity.base");
     }
 
     @Bean

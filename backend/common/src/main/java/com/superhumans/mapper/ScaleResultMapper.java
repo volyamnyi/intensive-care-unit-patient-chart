@@ -1,7 +1,7 @@
 package com.superhumans.mapper;
 
 import com.superhumans.dto.ScaleResultResponse;
-import com.superhumans.entity.ScaleResult;
+import com.superhumans.icu.entity.ScaleResult;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

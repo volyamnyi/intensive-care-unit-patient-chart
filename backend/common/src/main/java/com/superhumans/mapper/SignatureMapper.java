@@ -1,7 +1,7 @@
 package com.superhumans.mapper;
 
 import com.superhumans.dto.SignResponse;
-import com.superhumans.entity.Signature;
+import com.superhumans.icu.entity.Signature;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

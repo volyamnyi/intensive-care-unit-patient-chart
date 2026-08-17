@@ -1,13 +1,13 @@
 package com.superhumans.service;
 
 import com.superhumans.dto.*;
-import com.superhumans.entity.*;
+import com.superhumans.icu.entity.*;
 import com.superhumans.exception.*;
 import com.superhumans.mapper.ClinicalDayMapper;
 import com.superhumans.mapper.SignatureMapper;
-import com.superhumans.repository.icu.ClinicalDayRepository;
-import com.superhumans.repository.icu.EpisodeRepository;
-import com.superhumans.repository.icu.HourlyRecordRepository;
+import com.superhumans.icu.repository.ClinicalDayRepository;
+import com.superhumans.icu.repository.EpisodeRepository;
+import com.superhumans.icu.repository.HourlyRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

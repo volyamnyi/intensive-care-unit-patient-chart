@@ -1,6 +1,6 @@
 package com.superhumans.dto;
 
-import com.superhumans.entity.ClinicalDayStatus;
+import com.superhumans.icu.entity.ClinicalDayStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

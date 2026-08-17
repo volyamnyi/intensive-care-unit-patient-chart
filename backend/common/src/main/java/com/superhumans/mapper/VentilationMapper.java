@@ -1,7 +1,7 @@
 package com.superhumans.mapper;
 
 import com.superhumans.dto.VentilationResponse;
-import com.superhumans.entity.VentilationSettings;
+import com.superhumans.icu.entity.VentilationSettings;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

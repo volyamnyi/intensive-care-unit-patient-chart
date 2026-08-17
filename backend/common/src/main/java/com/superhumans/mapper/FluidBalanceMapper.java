@@ -1,7 +1,7 @@
 package com.superhumans.mapper;
 
 import com.superhumans.dto.FluidBalanceResponse;
-import com.superhumans.entity.FluidBalance;
+import com.superhumans.icu.entity.FluidBalance;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

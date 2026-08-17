@@ -1,7 +1,7 @@
 package com.superhumans.mapper;
 
 import com.superhumans.dto.PatientStateResponse;
-import com.superhumans.entity.PatientStateAssessment;
+import com.superhumans.icu.entity.PatientStateAssessment;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

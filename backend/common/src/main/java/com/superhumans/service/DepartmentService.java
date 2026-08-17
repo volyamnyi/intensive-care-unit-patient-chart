@@ -2,13 +2,13 @@ package com.superhumans.service;
 
 import com.superhumans.dto.DepartmentPatientResponse;
 import com.superhumans.dto.DepartmentStatsResponse;
-import com.superhumans.entity.ClinicalDayStatus;
-import com.superhumans.entity.Episode;
-import com.superhumans.entity.EpisodeStatus;
+import com.superhumans.icu.entity.ClinicalDayStatus;
+import com.superhumans.icu.entity.Episode;
+import com.superhumans.icu.entity.EpisodeStatus;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.mis.MisService;
-import com.superhumans.repository.icu.ClinicalDayRepository;
-import com.superhumans.repository.icu.EpisodeRepository;
+import com.superhumans.icu.repository.ClinicalDayRepository;
+import com.superhumans.icu.repository.EpisodeRepository;
 import com.superhumans.repository.core.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

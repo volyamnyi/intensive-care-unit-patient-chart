@@ -1,14 +1,14 @@
 package com.superhumans.service;
 
 import com.superhumans.dto.FluidBalanceResponse;
-import com.superhumans.entity.*;
+import com.superhumans.icu.entity.*;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.mapper.FluidBalanceMapper;
-import com.superhumans.repository.icu.ClinicalDayRepository;
-import com.superhumans.repository.icu.FluidBalanceRepository;
-import com.superhumans.repository.icu.HourlyRecordRepository;
-import com.superhumans.repository.icu.MedicalOrderRepository;
-import com.superhumans.repository.icu.OrderExecutionRepository;
+import com.superhumans.icu.repository.ClinicalDayRepository;
+import com.superhumans.icu.repository.FluidBalanceRepository;
+import com.superhumans.icu.repository.HourlyRecordRepository;
+import com.superhumans.icu.repository.MedicalOrderRepository;
+import com.superhumans.icu.repository.OrderExecutionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

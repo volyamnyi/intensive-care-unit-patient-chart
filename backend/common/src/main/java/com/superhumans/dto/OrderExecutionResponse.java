@@ -1,6 +1,6 @@
 package com.superhumans.dto;
 
-import com.superhumans.entity.OrderExecutionStatus;
+import com.superhumans.icu.entity.OrderExecutionStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;

@@ -2,8 +2,8 @@ package com.superhumans.mapper;
 
 import com.superhumans.dto.ClinicalDayCreateRequest;
 import com.superhumans.dto.ClinicalDayResponse;
-import com.superhumans.entity.ClinicalDay;
-import com.superhumans.entity.ClinicalDayStatus;
+import com.superhumans.icu.entity.ClinicalDay;
+import com.superhumans.icu.entity.ClinicalDayStatus;
 import org.mapstruct.*;
 import org.mapstruct.ReportingPolicy;
 

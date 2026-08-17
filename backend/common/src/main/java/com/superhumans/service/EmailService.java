@@ -1,6 +1,6 @@
 package com.superhumans.service;
 
-import com.superhumans.entity.ClinicalDay;
+import com.superhumans.icu.entity.ClinicalDay;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.MailException;

@@ -5,7 +5,7 @@ import com.superhumans.dto.EpisodeCloseRequest;
 import com.superhumans.dto.EpisodeCreateRequest;
 import com.superhumans.dto.EpisodePatchRequest;
 import com.superhumans.dto.EpisodeResponse;
-import com.superhumans.entity.EpisodeStatus;
+import com.superhumans.icu.entity.EpisodeStatus;
 import com.superhumans.service.ClinicalDayService;
 import com.superhumans.service.EpisodeService;
 import jakarta.validation.Valid;

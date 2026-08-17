@@ -1,13 +1,13 @@
 package com.superhumans.service;
 
 import com.superhumans.dto.FluidBalanceResponse;
-import com.superhumans.entity.*;
+import com.superhumans.icu.entity.*;
 import com.superhumans.mapper.FluidBalanceMapper;
-import com.superhumans.repository.icu.ClinicalDayRepository;
-import com.superhumans.repository.icu.FluidBalanceRepository;
-import com.superhumans.repository.icu.HourlyRecordRepository;
-import com.superhumans.repository.icu.MedicalOrderRepository;
-import com.superhumans.repository.icu.OrderExecutionRepository;
+import com.superhumans.icu.repository.ClinicalDayRepository;
+import com.superhumans.icu.repository.FluidBalanceRepository;
+import com.superhumans.icu.repository.HourlyRecordRepository;
+import com.superhumans.icu.repository.MedicalOrderRepository;
+import com.superhumans.icu.repository.OrderExecutionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
