@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import BradenForm from '../../components/common/scales/BradenForm';
+import BradenForm from './BradenForm';
 
 describe('BradenForm', () => {
   it('renders title and all select elements', () => {

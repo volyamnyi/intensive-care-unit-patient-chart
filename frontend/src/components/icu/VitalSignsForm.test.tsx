@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
-import VitalSignsForm from '../../components/common/VitalSignsForm';
+import VitalSignsForm from './VitalSignsForm';
 import type { HourlyRecordCreateRequest } from '../../types/icu';
 
 const emptyValues: HourlyRecordCreateRequest = { recordTime: '' };

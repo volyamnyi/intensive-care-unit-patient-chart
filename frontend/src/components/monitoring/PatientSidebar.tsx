@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 import {
   Sidebar, SidebarRail, SidebarHeader, SidebarContent, SidebarGroup,
 } from '../ui/Sidebar';
-import ScaleResultsPanel from '../common/ScaleResultsPanel';
-import LabResultsPanel from '../common/LabResultsPanel';
-import VentilationPanel from '../common/VentilationPanel';
-import PatientStatePanel from '../common/PatientStatePanel';
+import ScaleResultsPanel from '../icu/ScaleResultsPanel';
+import LabResultsPanel from '../icu/LabResultsPanel';
+import VentilationPanel from '../icu/VentilationPanel';
+import PatientStatePanel from '../icu/PatientStatePanel';
 import type { Episode, ClinicalDay, HourlyRecord, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale, ScaleResult } from '../../types/icu';
 import type { LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types/icu';
 

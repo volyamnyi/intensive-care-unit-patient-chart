@@ -1,3 +1,11 @@
+/**
+ * Validation bounds — the legal physical/clinical input ranges enforced by the
+ * backend on hourly-record fields (rejects out-of-range values on save).
+ *
+ * NOT to be confused with `./criticalRanges.ts`: those are the narrower alarm
+ * thresholds used by the grid/rail/chip to flash values as critical. Validation
+ * bounds and critical thresholds are distinct concepts and must not be merged.
+ */
 export const CLINICAL_RANGES = {
   temperature: { min: 34, max: 42, unit: '°C', label: 'Температура' },
   heartRate: { min: 0, max: 300, unit: 'уд/хв', label: 'ЧСС' },

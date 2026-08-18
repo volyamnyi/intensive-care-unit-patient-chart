@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import ScaleFormFactory from '../../components/common/scales/ScaleFormFactory';
+import ScaleFormFactory from './ScaleFormFactory';
 
 describe('ScaleFormFactory', () => {
   it('renders ApacheIiForm for "APACHE II"', () => {

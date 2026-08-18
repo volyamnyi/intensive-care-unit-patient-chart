@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import SofaForm from '../../components/common/scales/SofaForm';
+import SofaForm from './SofaForm';
 
 describe('SofaForm', () => {
   it('renders title and all input fields', () => {

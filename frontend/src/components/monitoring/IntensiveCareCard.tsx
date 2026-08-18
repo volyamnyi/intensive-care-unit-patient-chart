@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Maximize2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '../ui/Sidebar';
-import { useAutoSave } from '../../hooks/useAutoSave';
+import { useAutoSave } from '../icu/useAutoSave';
 import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/icu';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';

@@ -9,7 +9,7 @@ import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBala
 import { useAuth } from '../../services/AuthContext'
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard'
 import NurseDashboard from '../../components/monitoring/NurseDashboard'
-import DocumentHeader from '../../components/common/DocumentHeader'
+import DocumentHeader from '../../components/icu/DocumentHeader'
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types/icu';
 
 export default function PatientDayPage() {

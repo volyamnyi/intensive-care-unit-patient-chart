@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import CamIcuForm from '../../components/common/scales/CamIcuForm';
+import CamIcuForm from './CamIcuForm';
 
 describe('CamIcuForm', () => {
   it('renders title and all checkboxes', () => {

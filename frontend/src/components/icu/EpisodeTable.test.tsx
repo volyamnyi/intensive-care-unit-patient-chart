@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import EpisodeTable from '../../components/common/EpisodeTable';
+import EpisodeTable from './EpisodeTable';
 import type { Episode } from '../../types/icu';
 
 const mockEpisodes: Episode[] = [

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import DayPartPlanner from '../../../components/prescription/DayPartPlanner';
-import { allDayPartsCompleted } from '../../../utils/prescriptionDayParts';
+import { allDayPartsCompleted } from '../../../components/prescription/prescriptionDayParts';
 import type { PrescriptionDayPart } from '../../../types/medication';
 
 const mockParts: PrescriptionDayPart[] = [

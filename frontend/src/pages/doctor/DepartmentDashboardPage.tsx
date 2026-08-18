@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
 import { departmentApi } from '../../api/icu';
-import EpisodeTable from '../../components/common/EpisodeTable'
-import DepartmentPatientCard from '../../components/common/DepartmentPatientCard'
+import EpisodeTable from '../../components/icu/EpisodeTable'
+import DepartmentPatientCard from '../../components/icu/DepartmentPatientCard'
 import type { DepartmentStats, DepartmentPatient } from '../../types/icu';
 
 const initialStats: DepartmentStats = {

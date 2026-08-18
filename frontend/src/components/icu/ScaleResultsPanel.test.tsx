@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
-import ScaleResultsPanel from '../../components/common/ScaleResultsPanel';
+import ScaleResultsPanel from './ScaleResultsPanel';
 import type { ScaleResult, ClinicalScale } from '../../types/icu';
 
 const mockScales: ClinicalScale[] = [

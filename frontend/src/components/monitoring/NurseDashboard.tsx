@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import ClinicalDayTimeline from '../common/ClinicalDayTimeline';
+import ClinicalDayTimeline from '../icu/ClinicalDayTimeline';
 import IntensiveCareCard from './IntensiveCareCard';
 import type { DashboardProps } from './dashboardTypes';
 

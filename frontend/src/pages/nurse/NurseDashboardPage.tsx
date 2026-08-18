@@ -4,7 +4,7 @@ import { Search, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
 import { episodeApi } from '../../api/icu';
-import EpisodeTable from '../../components/common/EpisodeTable'
+import EpisodeTable from '../../components/icu/EpisodeTable'
 import type { Episode } from '../../types/icu';
 
 export default function NurseDashboardPage() {
