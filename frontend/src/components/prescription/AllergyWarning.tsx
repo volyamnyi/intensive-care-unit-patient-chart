@@ -1,6 +1,6 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TriangleAlert } from 'lucide-react';
-import type { AllergyItem } from '../../types';
+import type { AllergyItem } from '../../types/medication';
 
 interface AllergyWarningProps {
   medicineName: string;

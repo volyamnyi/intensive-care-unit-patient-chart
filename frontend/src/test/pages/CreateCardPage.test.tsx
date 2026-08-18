@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import CreateCardPage from '../../pages/doctor/CreateCardPage';
-import type { PatientDto } from '../../types';
+import type { PatientDto } from '../../types/core';
 
 const mockNavigate = vi.fn();
 const mockCreate = vi.fn();
@@ -15,7 +15,7 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/icu', () => ({
   episodeApi: { create: (...args: unknown[]) => mockCreate(...args) },
 }));
 

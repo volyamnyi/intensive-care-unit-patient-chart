@@ -4,10 +4,10 @@ import { Search, Users, ClipboardList, UserCheck, AlertTriangle, CheckSquare, Ta
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
-import { departmentApi } from '../../api/endpoints'
+import { departmentApi } from '../../api/icu';
 import EpisodeTable from '../../components/common/EpisodeTable'
 import DepartmentPatientCard from '../../components/common/DepartmentPatientCard'
-import type { DepartmentStats, DepartmentPatient } from '../../types'
+import type { DepartmentStats, DepartmentPatient } from '../../types/icu';
 
 const initialStats: DepartmentStats = {
   activePatients: 0,

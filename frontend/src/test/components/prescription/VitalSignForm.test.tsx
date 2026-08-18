@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import VitalSignForm from '../../../components/prescription/VitalSignForm';
-import type { VitalSignEntry } from '../../../types';
+import type { VitalSignEntry } from '../../../types/medication';
 
 const latest: VitalSignEntry = {
   id: 'vs1', dayId: 'd1', period: 'morning',

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import PatientDayPage from '../../pages/doctor/PatientDayPage';
-import type { Episode, ClinicalDay, ClinicalScale } from '../../types';
+import type { Episode, ClinicalDay, ClinicalScale } from '../../types/icu';
 
 const mockNavigate = vi.fn();
 
@@ -26,7 +26,7 @@ const mockGetScaleResults = vi.fn();
 const mockGetAvailableScales = vi.fn();
 const mockGetBalanceItems = vi.fn();
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/icu', () => ({
   episodeApi: {
     getById: (...args: unknown[]) => mockGetById(...args),
     getClinicalDays: (...args: unknown[]) => mockGetClinicalDays(...args),
@@ -69,12 +69,6 @@ vi.mock('../../api/endpoints', () => ({
     getByClinicalDay: (...args: unknown[]) => mockGetBalanceItems(...args),
     recalculate: vi.fn(),
   },
-  settingsApi: {
-    getByKey: vi.fn().mockResolvedValue({ data: { value: '' } }),
-  },
-  patientApi: {
-    getById: vi.fn().mockResolvedValue({ data: { birthDate: null } }),
-  },
   pdfApi: {
     generate: vi.fn().mockResolvedValue({ data: {} }),
   },
@@ -84,6 +78,15 @@ vi.mock('../../api/endpoints', () => ({
     cancel: vi.fn().mockResolvedValue({ data: {} }),
     execute: vi.fn().mockResolvedValue({ data: {} }),
     executeFinish: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
+vi.mock('../../api/platform', () => ({
+  settingsApi: {
+    getByKey: vi.fn().mockResolvedValue({ data: { value: '' } }),
+  },
+  patientApi: {
+    getById: vi.fn().mockResolvedValue({ data: { birthDate: null } }),
   },
 }));
 

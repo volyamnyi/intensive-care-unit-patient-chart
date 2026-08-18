@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import FluidBalancePanel from '../../components/common/FluidBalancePanel';
-import type { FluidBalanceItem } from '../../types';
+import type { FluidBalanceItem } from '../../types/icu';
 
 const mockItems: FluidBalanceItem[] = [
   {

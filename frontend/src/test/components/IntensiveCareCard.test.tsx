@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { useState } from 'react';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import IntensiveCareCard from '../../components/monitoring/IntensiveCareCard';
-import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, OrderExecution } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, OrderExecution } from '../../types/icu';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -131,7 +131,7 @@ let mockOrderExecutionCancel = vi.fn();
 let mockOrderExecutionExecute = vi.fn();
 let mockOrderExecutionExecuteFinish = vi.fn();
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/icu', () => ({
   hourlyRecordApi: {
     getByClinicalDay: vi.fn(),
     create: (...args: unknown[]) => mockHourlyRecordCreate(...args),

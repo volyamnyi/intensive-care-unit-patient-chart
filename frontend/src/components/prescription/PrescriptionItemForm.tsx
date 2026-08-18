@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import type { MedicineCatalogItem, PrescriptionItemAddRequest, AllergyItem } from '../../types';
+import type { MedicineCatalogItem, PrescriptionItemAddRequest, AllergyItem } from '../../types/medication';
 import AllergyWarning from './AllergyWarning';
 
 interface PrescriptionItemFormProps {

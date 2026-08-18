@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import DayPartPlanner from '../../../components/prescription/DayPartPlanner';
 import { allDayPartsCompleted } from '../../../utils/prescriptionDayParts';
-import type { PrescriptionDayPart } from '../../../types';
+import type { PrescriptionDayPart } from '../../../types/medication';
 
 const mockParts: PrescriptionDayPart[] = [
   { id: 'dp1', dayId: 'd1', period: 'morning', dose: null, isPlanned: false, isPlannedFinished: false, isCompleted: false, isCompletedFinished: false, doctorName: null, nurseName: null },

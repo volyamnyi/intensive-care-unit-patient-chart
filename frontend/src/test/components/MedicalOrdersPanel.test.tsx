@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import MedicalOrdersPanel from '../../components/common/MedicalOrdersPanel';
-import type { MedicalOrder } from '../../types';
+import type { MedicalOrder } from '../../types/icu';
 
 const mockOrder: MedicalOrder = {
   id: 'ord-1',

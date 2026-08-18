@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import MedicalNotesPanel from '../../components/common/MedicalNotesPanel';
-import type { MedicalNote } from '../../types';
+import type { MedicalNote } from '../../types/icu';
 
 const mockNote: MedicalNote = {
   id: 'note-1',

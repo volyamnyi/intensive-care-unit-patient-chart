@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import NurseDashboard from '../../components/monitoring/NurseDashboard';
 import type { DashboardProps } from '../../components/monitoring/dashboardTypes';
-import type { Episode, ClinicalDay } from '../../types';
+import type { Episode, ClinicalDay } from '../../types/icu';
 
 
 const baseEpisode: Episode = {

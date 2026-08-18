@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import AllergyWarning from '../../../components/prescription/AllergyWarning';
-import type { AllergyItem } from '../../../types';
+import type { AllergyItem } from '../../../types/medication';
 
 const allergies: AllergyItem[] = [
   { id: 'a1', patientId: 1001, allergenName: 'Penicillin', sourceDocumentId: 1 },

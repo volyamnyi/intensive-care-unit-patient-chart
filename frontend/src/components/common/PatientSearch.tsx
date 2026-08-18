@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
-import { patientApi } from '../../api/endpoints';
-import type { PatientDto } from '../../types';
+import { patientApi } from '../../api/platform';
+import type { PatientDto } from '../../types/core';
 import { cn } from '@/lib/utils';
 
 interface PatientSearchProps {

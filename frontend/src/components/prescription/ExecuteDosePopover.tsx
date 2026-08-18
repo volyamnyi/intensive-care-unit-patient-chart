@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import type { PrescriptionDayPart } from '../../types';
+import type { PrescriptionDayPart } from '../../types/medication';
 
 const PERIOD_FULL: Record<string, string> = {
   morning: 'Ранок', day: 'День', evening: 'Вечір', night: 'Ніч',

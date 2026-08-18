@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import HourlyRecordTable from '../../components/common/HourlyRecordTable';
-import type { HourlyRecord } from '../../types';
+import type { HourlyRecord } from '../../types/icu';
 
 
 const mockRecords: HourlyRecord[] = [

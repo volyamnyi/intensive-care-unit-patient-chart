@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import ClinicalDayTimeline from '../../components/common/ClinicalDayTimeline';
-import type { ClinicalDay } from '../../types';
+import type { ClinicalDay } from '../../types/icu';
 
 const mockDays: ClinicalDay[] = [
   {

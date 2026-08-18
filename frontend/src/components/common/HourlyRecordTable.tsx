@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { HourlyRecord } from '../../types';
+import type { HourlyRecord } from '../../types/icu';
 
 interface HourlyRecordTableProps {
   records: HourlyRecord[];

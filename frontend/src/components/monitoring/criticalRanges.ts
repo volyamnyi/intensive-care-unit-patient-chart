@@ -1,4 +1,4 @@
-import type { HourlyRecord } from '../../types';
+import type { HourlyRecord } from '../../types/icu';
 
 export const CRITICAL_RANGES: Partial<Record<string, { min: number; max: number }>> = {
   systolicBP: { min: 90, max: 180 },

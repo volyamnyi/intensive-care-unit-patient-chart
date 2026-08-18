@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Episode } from '../../types';
+import type { Episode } from '../../types/icu';
 
 interface EpisodeTableProps {
   episodes: Episode[];

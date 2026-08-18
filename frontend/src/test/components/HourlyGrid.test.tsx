@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import HourlyGrid, { type HourlyGridProps } from '../../components/monitoring/HourlyGrid';
-import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types';
+import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types/icu';
 
 const selectedDay = {
   id: 'day-1', episodeId: 'ep-1', dayNumber: 1,

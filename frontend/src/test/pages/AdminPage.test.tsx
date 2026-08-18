@@ -15,7 +15,7 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/platform', () => ({
   adminApi: {
     getUsers: (...args: unknown[]) => mockGetUsers(...args),
     getStats: (...args: unknown[]) => mockGetStats(...args),

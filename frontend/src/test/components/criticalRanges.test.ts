@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CRITICAL_RANGES, isCritical, countCriticalByHour, countCriticalTotal, pluralCritical } from '../../components/monitoring/criticalRanges';
-import type { HourlyRecord } from '../../types';
+import type { HourlyRecord } from '../../types/icu';
 
 const rec = (overrides: Partial<HourlyRecord> = {}): HourlyRecord => ({
   id: 'r1',

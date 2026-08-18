@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import ScaleResultsPanel from '../../components/common/ScaleResultsPanel';
-import type { ScaleResult, ClinicalScale } from '../../types';
+import type { ScaleResult, ClinicalScale } from '../../types/icu';
 
 const mockScales: ClinicalScale[] = [
   { id: 'scale-1', name: 'APACHE II', description: null, isAutomatic: false, status: 'ACTIVE', createdBy: 1, createdAt: '', updatedBy: 0, updatedAt: '', version: 1 },

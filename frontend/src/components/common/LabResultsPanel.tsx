@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
-import type { LabResult, LabResultCreateRequest, HourlyRecord } from '../../types';
+import type { LabResult, LabResultCreateRequest, HourlyRecord } from '../../types/icu';
 
 const PREDEFINED_TESTS: { code: string; name: string; unit: string; min: number | null; max: number | null }[] = [
   { code: 'Hb', name: 'Hemoglobin', unit: 'g/dL', min: 12, max: 16 },

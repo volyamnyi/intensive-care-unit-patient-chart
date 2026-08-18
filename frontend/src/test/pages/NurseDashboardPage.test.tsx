@@ -6,7 +6,7 @@ import NurseDashboardPage from '../../pages/nurse/NurseDashboardPage';
 
 const mockSearch = vi.fn();
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/icu', () => ({
   episodeApi: { search: (...args: unknown[]) => mockSearch(...args) },
 }));
 

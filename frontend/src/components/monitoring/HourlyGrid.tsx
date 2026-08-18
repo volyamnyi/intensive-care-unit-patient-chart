@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { medicalOrderApi } from '../../api/endpoints';
+import { medicalOrderApi } from '../../api/icu';
 import { countCriticalByHour, isCritical } from './criticalRanges';
-import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types';
+import type { ClinicalDay, HourlyRecord, MedicalOrder, OrderExecution } from '../../types/icu';
 
 function GridTable({ sticky, children }: { sticky: boolean; children: ReactNode }) {
   if (!sticky) {

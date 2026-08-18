@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LabResultsPanel from '../../components/common/LabResultsPanel';
-import type { LabResult, LabResultCreateRequest } from '../../types';
+import type { LabResult, LabResultCreateRequest } from '../../types/icu';
 
 const mockLabs: LabResult[] = [
   {

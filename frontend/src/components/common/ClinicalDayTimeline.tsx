@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { ClinicalDay } from '../../types';
+import type { ClinicalDay } from '../../types/icu';
 
 interface ClinicalDayTimelineProps {
   days: ClinicalDay[];

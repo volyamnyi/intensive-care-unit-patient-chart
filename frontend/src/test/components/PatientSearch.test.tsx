@@ -3,13 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import PatientSearch from '../../components/common/PatientSearch';
-import type { PatientDto } from '../../types';
+import type { PatientDto } from '../../types/core';
 
 
 const mockSearch = vi.fn();
 const onSelect = vi.fn();
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/platform', () => ({
   patientApi: { search: (...args: unknown[]) => mockSearch(...args) },
 }));
 

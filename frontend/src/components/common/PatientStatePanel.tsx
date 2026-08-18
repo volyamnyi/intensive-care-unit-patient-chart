@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import type { PatientStateAssessment, PatientStateCreateRequest } from '../../types';
+import type { PatientStateAssessment, PatientStateCreateRequest } from '../../types/icu';
 
 const CONSCIOUSNESS = ['alert', 'drowsy', 'sopor', 'coma', 'sedation'];
 const SKIN = ['normal', 'dry', 'cyanotic', 'jaundiced', 'pale', 'rash', 'marbling'];

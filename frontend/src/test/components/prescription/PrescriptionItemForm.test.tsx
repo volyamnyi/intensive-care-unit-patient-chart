@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import PrescriptionItemForm from '../../../components/prescription/PrescriptionItemForm';
-import type { MedicineCatalogItem } from '../../../types';
+import type { MedicineCatalogItem } from '../../../types/medication';
 
 const mockMedicines: MedicineCatalogItem[] = [
   { id: 1, name: 'Penicillin', categoryRef: 10, ptgCode: 'PTG1', isHighRisk: false },

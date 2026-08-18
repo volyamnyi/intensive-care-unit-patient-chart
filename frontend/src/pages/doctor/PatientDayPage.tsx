@@ -4,12 +4,13 @@ import { ArrowLeft, Lock, Download, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { useThemeMode } from '../../styles/ThemeContext'
-import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi, patientApi, settingsApi } from '../../api/endpoints'
+import { patientApi, settingsApi } from '../../api/platform';
+import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, fluidBalanceApi, pdfApi } from '../../api/icu';
 import { useAuth } from '../../services/AuthContext'
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard'
 import NurseDashboard from '../../components/monitoring/NurseDashboard'
 import DocumentHeader from '../../components/common/DocumentHeader'
-import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types'
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types/icu';
 
 export default function PatientDayPage() {
   const { episodeId } = useParams()

@@ -16,6 +16,10 @@ This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
 
 ## Current Session
 
+**2026-08-18: Phase 5 — frontend API clients & DTO types split into per-feature modules**
+
+`frontend/src/api/endpoints.ts` + `frontend/src/types/index.ts` deleted (no barrels). New modules: `api/platform.ts` (authApi, patientApi, userApi, settingsApi, auditApi, adminApi), `api/icu.ts` (episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi, pdfApi, patientStateApi, ventilationApi, labResultApi, departmentApi), `api/medication.ts` (prescriptionApi, vitalSignApi); types likewise split into `types/{core,icu,medication}.ts` (core holds shared `PatientDto` + auth/RBAC/audit DTOs). `patientApi`/`PatientDto` live in platform/core because medication-sheet pages consume them (mirrors backend MIS-in-common). `api/client.ts` + `api/prosthetics.ts` + `prosthetics/types.ts` unchanged (prosthetics was already isolated). Every importer migrated to direct relative imports (`AuthContext.tsx` now imports `../api/platform`); no feature file imports another feature's API/types module; `endpoints.test.ts` and all test `vi.mock` factories retargeted (PatientDayPage.test.tsx mocks icu + platform separately). Automated via temp script `migrate_imports.py` (statement-aware, symbol→module map; prosthetics `./types`/`@/prosthetics/types` untouched).
+
 **2026-08-17: Phase 4 — legacy `users.permissions` CSV removed from the auth flow**
 
 - `LoginResponse` no longer carries the legacy CSV permissions field; `AuthService` no longer populates it; `AuthController` mints JWTs via the 3-arg `JwtTokenProvider.generateToken(login, role, userId)`; the JWT `permissions` claim, the 4-arg `generateToken` overload and `getPermissionsFromToken` are deleted (no consumers existed — enforcement is matrix-based via `PermissionService`). `AuthContext.tsx` + TS `User`/`LoginResponse` types drop the legacy field; effective permissions come solely from `GET /api/users/me/permissions`. The `users.permissions` DB column, entity field and `002-user-permissions.sql` changeset remain untouched (schema never edited); `User.hasPermission/addPermission/removePermission` stay as entity utilities.
@@ -546,7 +550,7 @@ All endpoints prefixed with `/api`.
 
 ### API Client (`frontend/src/api/`)
 - **`client.ts`**: Axios instance → `http://localhost:8085/api`, JWT interceptor
-- **`endpoints.ts`**: 12 API modules (auth, patient, episode, clinicalDay, hourlyRecord, medicalOrder, orderExecution, medicalNote, clinicalScale, fluidBalance, pdf, user, audit)
+- **Per-feature modules** (no barrel): `platform.ts` (auth, patient, user, settings, audit, admin), `icu.ts` (episode, clinicalDay, hourlyRecord, medicalOrder, orderExecution, medicalNote, clinicalScale, fluidBalance, pdf, patientState, ventilation, labResult, department), `medication.ts` (prescription, vitalSign); prosthetics APIs in `prosthetics.ts` (isolated). Shared DTO types live in `types/core.ts`, ICU types in `types/icu.ts`, medication types in `types/medication.ts`.
 
 ### Auth (`frontend/src/services/AuthContext.tsx`)
 - `AuthProvider` with user/token state, login/logout, role checking

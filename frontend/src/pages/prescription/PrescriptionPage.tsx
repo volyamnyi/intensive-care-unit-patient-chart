@@ -21,11 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { patientApi, prescriptionApi } from '../../api/endpoints';
+import { patientApi } from '../../api/platform';
+import { prescriptionApi } from '../../api/medication';
 import { useAuth } from '../../services/AuthContext';
 import { useThemeMode } from '../../styles/ThemeContext';
 import { getErrorMessage } from '../../utils/errorMessage';
-import type { PatientDto, PrescriptionList } from '../../types';
+import type { PatientDto } from '../../types/core';
+import type { PrescriptionList } from '../../types/medication';
 
 type Department = 'surgery' | 'rehab';
 

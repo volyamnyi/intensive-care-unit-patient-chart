@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PatientStatePanel from '../../components/common/PatientStatePanel';
-import type { PatientStateAssessment, PatientStateCreateRequest } from '../../types';
+import type { PatientStateAssessment, PatientStateCreateRequest } from '../../types/icu';
 
 const mockState: PatientStateAssessment[] = [
   {

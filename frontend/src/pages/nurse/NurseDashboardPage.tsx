@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
-import { episodeApi } from '../../api/endpoints'
+import { episodeApi } from '../../api/icu';
 import EpisodeTable from '../../components/common/EpisodeTable'
-import type { Episode } from '../../types'
+import type { Episode } from '../../types/icu';
 
 export default function NurseDashboardPage() {
   const navigate = useNavigate()

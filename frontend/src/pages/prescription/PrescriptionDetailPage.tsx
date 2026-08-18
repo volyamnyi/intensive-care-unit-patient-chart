@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertAction } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 
-import { prescriptionApi, vitalSignApi } from '../../api/endpoints'
+import { prescriptionApi, vitalSignApi } from '../../api/medication';
 import { useAuth } from '../../services/AuthContext'
 import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid'
 import VitalSignGrid from '../../components/prescription/VitalSignGrid'
 import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog'
 import { getErrorMessage } from '../../utils/errorMessage'
-import type { PrescriptionList, PrescriptionItem, AllergyItem } from '../../types'
+import type { PrescriptionList, PrescriptionItem, AllergyItem } from '../../types/medication';
 
 export default function PrescriptionDetailPage() {
   useEffect(() => { document.title = 'Призначення — Деталі' }, [])
@@ -22,7 +22,7 @@ export default function PrescriptionDetailPage() {
   const [prescription, setPrescription] = useState<PrescriptionList | null>(null)
   const [items, setItems] = useState<PrescriptionItem[]>([])
   const [allergies, setAllergies] = useState<AllergyItem[]>([])
-  const [vitalDays, setVitalDays] = useState<{ id: string; dayDate: string; entries: import('../../types').VitalSignEntry[] }[]>([])
+  const [vitalDays, setVitalDays] = useState<{ id: string; dayDate: string; entries: import('../../types/medication').VitalSignEntry[] }[]>([])
   const [loading, setLoading] = useState(false)
   const [vitalLoading, setVitalLoading] = useState(false)
   const [closing, setClosing] = useState(false)

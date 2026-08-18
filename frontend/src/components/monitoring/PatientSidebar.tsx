@@ -9,8 +9,8 @@ import ScaleResultsPanel from '../common/ScaleResultsPanel';
 import LabResultsPanel from '../common/LabResultsPanel';
 import VentilationPanel from '../common/VentilationPanel';
 import PatientStatePanel from '../common/PatientStatePanel';
-import type { Episode, ClinicalDay, HourlyRecord, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale, ScaleResult } from '../../types';
-import type { LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, FluidBalanceItem, LabResult, VentilationSettings, PatientStateAssessment, ClinicalScale, ScaleResult } from '../../types/icu';
+import type { LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest } from '../../types/icu';
 
 interface NoteItem {
   id: string;

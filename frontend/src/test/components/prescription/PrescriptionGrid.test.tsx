@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import PrescriptionGrid from '../../../components/prescription/PrescriptionGrid';
-import type { PrescriptionItem, PrescriptionDayPart, AllergyItem } from '../../../types';
+import type { PrescriptionItem, PrescriptionDayPart, AllergyItem } from '../../../types/medication';
 
 const mockItems: PrescriptionItem[] = [
   {

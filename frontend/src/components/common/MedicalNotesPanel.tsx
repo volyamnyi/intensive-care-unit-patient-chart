@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useThemeMode } from '../../styles/ThemeContext';
-import type { MedicalNote } from '../../types';
+import type { MedicalNote } from '../../types/icu';
 
 interface MedicalNotesPanelProps {
   notes: MedicalNote[];

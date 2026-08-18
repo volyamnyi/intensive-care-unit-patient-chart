@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { PrescriptionDayPart } from '../../types';
+import type { PrescriptionDayPart } from '../../types/medication';
 import type { GridItem } from './PrescriptionGrid';
 
 const PERIODS = ['morning', 'day', 'evening', 'night'] as const;

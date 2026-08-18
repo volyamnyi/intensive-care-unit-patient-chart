@@ -35,11 +35,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { auditApi, adminApi } from '../../api/endpoints';
+import { auditApi, adminApi } from '../../api/platform';
 import AuditLogTable from '../../components/common/AuditLogTable';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { useAuth } from '../../services/AuthContext';
-import type { User, AuditLog, PermissionMatrix, PermissionDef } from '../../types';
+import type { User, AuditLog, PermissionMatrix, PermissionDef } from '../../types/core';
 
 const ROLE_LABELS: Record<string, string> = {
   DOCTOR: 'Лікар',

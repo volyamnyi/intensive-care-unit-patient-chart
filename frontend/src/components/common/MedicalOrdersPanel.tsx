@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useThemeMode } from '../../styles/ThemeContext';
 
-import type { MedicalOrder, MedicalOrderCreateRequest } from '../../types';
+import type { MedicalOrder, MedicalOrderCreateRequest } from '../../types/icu';
 
 interface MedicalOrdersPanelProps {
   orders: MedicalOrder[];

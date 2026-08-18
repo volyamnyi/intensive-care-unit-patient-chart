@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { MedicineCatalogItem, AllergyItem } from '../../types';
+import type { MedicineCatalogItem, AllergyItem } from '../../types/medication';
 
 const fallbackCatalog: MedicineCatalogItem[] = [
   { id: 1, name: 'Paracetamol', categoryRef: 1, ptgCode: '1', isHighRisk: false },

@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useThemeMode } from '../../styles/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import type { DepartmentPatient } from '../../types';
+import type { DepartmentPatient } from '../../types/icu';
 
 const statusConfig: Record<string, { label: string; borderColor: string }> = {
   OPEN: { label: 'Відкрито', borderColor: '#FF9800' },

@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
 import HourlyGridDialog from '../../components/monitoring/HourlyGridDialog';
-import type { ClinicalDay, Episode, HourlyRecord } from '../../types';
+import type { ClinicalDay, Episode, HourlyRecord } from '../../types/icu';
 
 afterEach(() => {
   document.querySelector('[aria-label="Розгорнути на весь екран"]')?.remove();

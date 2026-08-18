@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import type { VentilationSettings, VentilationCreateRequest } from '../../types';
+import type { VentilationSettings, VentilationCreateRequest } from '../../types/icu';
 
 const MODES = ['CMV', 'SIMV', 'PSV', 'BiPAP', 'CPAP', 'APRV', 'PCV', 'VCV'];
 

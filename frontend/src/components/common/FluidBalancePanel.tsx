@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useThemeMode } from '../../styles/ThemeContext';
 import { cn } from '@/lib/utils';
-import type { FluidBalanceItem } from '../../types';
+import type { FluidBalanceItem } from '../../types/icu';
 
 const INTAKE_LABELS: Record<string, string> = {
   crystalloids: 'Кристалоїди',

@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { PrescriptionDayPart } from '../../types';
+import type { PrescriptionDayPart } from '../../types/medication';
 
 interface DayPartPlannerProps {
   dayParts: PrescriptionDayPart[];

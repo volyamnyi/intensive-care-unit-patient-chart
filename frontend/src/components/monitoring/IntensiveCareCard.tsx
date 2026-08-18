@@ -3,13 +3,13 @@ import { Maximize2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '../ui/Sidebar';
 import { useAutoSave } from '../../hooks/useAutoSave';
-import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/endpoints';
+import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/icu';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import HourlyGrid, { type HourlyGridProps } from './HourlyGrid';
 import HourlyGridDialog from './HourlyGridDialog';
 import PatientSidebar from './PatientSidebar';
-import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, ClinicalScale, ScaleResult, HourlyRecordCreateRequest, MedicalNoteCreateRequest, LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest, OrderExecution } from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem, ClinicalScale, ScaleResult, HourlyRecordCreateRequest, MedicalNoteCreateRequest, LabResultCreateRequest, VentilationCreateRequest, PatientStateCreateRequest, OrderExecution } from '../../types/icu';
 
 interface UserLike { id: number; }
 

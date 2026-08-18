@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  authApi, patientApi, episodeApi, clinicalDayApi, hourlyRecordApi,
-  medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi,
-  fluidBalanceApi, pdfApi, userApi, auditApi, prescriptionApi, vitalSignApi,
-} from '../../api/endpoints';
+import { authApi, patientApi, userApi, auditApi } from '../../api/platform';
+import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi, pdfApi } from '../../api/icu';
+import { prescriptionApi, vitalSignApi } from '../../api/medication';
 
 const { mockClient } = vi.hoisted(() => ({
   mockClient: {

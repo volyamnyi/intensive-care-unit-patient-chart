@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import VitalSignsForm from '../../components/common/VitalSignsForm';
-import type { HourlyRecordCreateRequest } from '../../types';
+import type { HourlyRecordCreateRequest } from '../../types/icu';
 
 const emptyValues: HourlyRecordCreateRequest = { recordTime: '' };
 

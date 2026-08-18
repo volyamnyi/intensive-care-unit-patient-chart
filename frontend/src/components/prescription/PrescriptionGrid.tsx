@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { PrescriptionItem, PrescriptionDayPart, MedicineCatalogItem, AllergyItem } from '../../types';
+import type { PrescriptionItem, PrescriptionDayPart, MedicineCatalogItem, AllergyItem } from '../../types/medication';
 import MedicineSearchInput from './MedicineSearchInput';
 import PrescriptionSpreadsheet from './PrescriptionSpreadsheet';
 import ExecuteDosePopover from './ExecuteDosePopover';

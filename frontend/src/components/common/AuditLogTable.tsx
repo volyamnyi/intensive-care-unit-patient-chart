@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { AuditLog } from '../../types';
+import type { AuditLog } from '../../types/core';
 
 interface AuditLogTableProps {
   logs: AuditLog[];

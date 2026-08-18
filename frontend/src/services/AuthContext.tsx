@@ -1,7 +1,7 @@
 /* eslint-disable react/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { User, LoginRequest } from '../types';
-import { authApi, userApi } from '../api/endpoints';
+import type { User, LoginRequest } from '../types/core';
+import { authApi, userApi } from '../api/platform';
 
 const SESSION_FLAG = 'auth:session';
 

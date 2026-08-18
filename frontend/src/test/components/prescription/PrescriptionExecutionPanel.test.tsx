@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import PrescriptionExecutionPanel from '../../../components/prescription/PrescriptionExecutionPanel';
-import type { PrescriptionDayPart } from '../../../types';
+import type { PrescriptionDayPart } from '../../../types/medication';
 
 const mockParts: PrescriptionDayPart[] = [
   { id: 'dp1', dayId: 'd1', period: 'morning', dose: '5mg', isPlanned: true, isPlannedFinished: false, isCompleted: false, isCompletedFinished: false, doctorName: null, nurseName: null },

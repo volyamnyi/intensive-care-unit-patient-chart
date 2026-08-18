@@ -1,6 +1,4 @@
-import type {
-  Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem,
-} from '../../types';
+import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types/icu';
 
 export interface DashboardUser {
   id: number;

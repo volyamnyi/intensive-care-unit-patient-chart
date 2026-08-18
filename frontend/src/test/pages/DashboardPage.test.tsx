@@ -7,7 +7,7 @@ import DashboardPage from '../../pages/doctor/DashboardPage';
 
 const mockSearch = vi.fn();
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/icu', () => ({
   episodeApi: { search: (...args: unknown[]) => mockSearch(...args) },
 }));
 

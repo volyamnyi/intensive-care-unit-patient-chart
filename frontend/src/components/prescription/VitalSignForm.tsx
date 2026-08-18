@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import type { VitalSignEntry, VitalSignEntryCreateRequest } from '../../types';
+import type { VitalSignEntry, VitalSignEntryCreateRequest } from '../../types/medication';
 
 interface VitalSignFormProps {
   latest?: VitalSignEntry | null;

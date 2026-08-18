@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { useThemeMode } from '../../styles/ThemeContext';
 import ScaleFormFactory from './scales/ScaleFormFactory';
-import type { ScaleResult, ClinicalScale } from '../../types';
+import type { ScaleResult, ClinicalScale } from '../../types/icu';
 
 interface ScaleResultsPanelProps {
   results: ScaleResult[];

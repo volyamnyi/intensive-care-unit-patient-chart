@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
-import { episodeApi } from '../../api/endpoints'
+import { episodeApi } from '../../api/icu';
 import PatientSearch from '../../components/common/PatientSearch'
-import type { PatientDto } from '../../types'
+import type { PatientDto } from '../../types/core';
 
 export default function CreateCardPage() {
   useEffect(() => { document.title = 'ВАІТ — Нова карта' }, [])

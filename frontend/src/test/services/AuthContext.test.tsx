@@ -10,7 +10,7 @@ const { mockLoginFn, mockGetMe, mockLogoutFn, mockGetMyPermissions } = vi.hoiste
   mockGetMyPermissions: vi.fn().mockResolvedValue({ data: [] }),
 }));
 
-vi.mock('../../api/endpoints', () => ({
+vi.mock('../../api/platform', () => ({
   authApi: { login: mockLoginFn, logout: mockLogoutFn },
   userApi: { getMe: mockGetMe, getMyPermissions: mockGetMyPermissions },
 }));

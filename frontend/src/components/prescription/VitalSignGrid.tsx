@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import type { VitalSignEntry } from '../../types';
+import type { VitalSignEntry } from '../../types/medication';
 
 const PERIODS = ['morning', 'day', 'evening', 'night'] as const;
 const PERIOD_LABELS: Record<string, string> = {

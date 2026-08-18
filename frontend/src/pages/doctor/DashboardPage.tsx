@@ -4,9 +4,9 @@ import { Search, Plus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
-import { episodeApi } from '../../api/endpoints'
+import { episodeApi } from '../../api/icu';
 import EpisodeTable from '../../components/common/EpisodeTable'
-import type { Episode } from '../../types'
+import type { Episode } from '../../types/icu';
 
 export default function DashboardPage() {
   const navigate = useNavigate()

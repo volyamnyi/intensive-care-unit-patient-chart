@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { countCriticalTotal, pluralCritical } from './criticalRanges';
-import type { ClinicalDay, Episode, HourlyRecord } from '../../types';
+import type { ClinicalDay, Episode, HourlyRecord } from '../../types/icu';
 
 const STATUS_STYLES: Record<string, string> = {
   OPEN: 'bg-warning/10 text-warning border-warning',

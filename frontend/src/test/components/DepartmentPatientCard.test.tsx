@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import { MemoryRouter } from 'react-router-dom';
 import DepartmentPatientCard from '../../components/common/DepartmentPatientCard';
-import type { DepartmentPatient } from '../../types';
+import type { DepartmentPatient } from '../../types/icu';
 
 const mockNavigate = vi.fn();
 
