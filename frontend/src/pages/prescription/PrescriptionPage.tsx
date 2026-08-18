@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, X, ExternalLink, FileText } from 'lucide-react';
+import { Loader2, X, ExternalLink, FileText, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +62,7 @@ export default function PrescriptionPage() {
   const [deleteTarget, setDeleteTarget] = useState<PrescriptionList | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [creatingPatientId, setCreatingPatientId] = useState<string | null>(null);
 
   const loadPatients = useCallback(async () => {
     setLoading(true);
@@ -114,6 +115,21 @@ export default function PrescriptionPage() {
   const handleDeptChange = (val: Department) => {
     setDept(val);
     localStorage.setItem('prescDept', val);
+  };
+
+  const handleCreate = async (patient: PatientDto) => {
+    setCreatingPatientId(String(patient.id));
+    setError(null);
+    try {
+      const res = await prescriptionApi.create({ patientId: String(patient.id) });
+      const created = res.data;
+      setRows(prev => prev.map(r => r.patient.id === patient.id ? { ...r, lists: [created, ...r.lists] } : r));
+      navigate(`/prescriptions/doctor/${created.id}`);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Не вдалося створити листок призначень'));
+    } finally {
+      setCreatingPatientId(null);
+    }
   };
 
   const handleCloseList = async (list: PrescriptionList) => {
@@ -318,6 +334,16 @@ export default function PrescriptionPage() {
                   <TableCell>{getStatusText(row.lists)}</TableCell>
                   <TableCell>
                     <div className="flex gap-0.5">
+                      <Button
+                        size="sm"
+                        className="rounded-full px-1.5 text-[0.8125rem] font-semibold normal-case"
+                        variant="outline"
+                        disabled={creatingPatientId === String(row.patient.id)}
+                        onClick={() => handleCreate(row.patient)}
+                      >
+                        <Plus className="mr-1 size-4" />
+                        {creatingPatientId === String(row.patient.id) ? '...' : 'Створити'}
+                      </Button>
                       {row.lists.length > 0 && (
                         <Button
                           size="sm"

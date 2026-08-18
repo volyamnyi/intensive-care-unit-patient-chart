@@ -25,4 +25,34 @@ test.describe('Prescription Workflow (Doctor)', () => {
     await page.goto('/prescriptions/doctor');
     await expect(page.getByRole('heading', { name: 'Листок лікарських призначень' })).toBeVisible();
   });
+
+  test('creates a prescription list for a patient via the Дії column', async ({ page }) => {
+    await page.goto('/prescriptions/doctor');
+    await page.getByPlaceholder('Пошук пацієнта').fill('1002');
+    await expect(page.getByRole('cell', { name: 'Коваленко Олена Вікторівна' })).toBeVisible({ timeout: 10000 });
+
+    // «Створити» is always available in the Дії column of the patient list
+    await page.getByRole('button', { name: 'Створити' }).click();
+
+    await page.waitForURL(/\/prescriptions\/doctor\/[0-9a-f-]{36}$/, { timeout: 15000 });
+    await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10000 });
+  });
+
+  test('opens an existing prescription list via the drawer and navigates to details', async ({ page }) => {
+    await page.goto('/prescriptions/doctor');
+    await page.getByPlaceholder('Пошук пацієнта').fill('1002');
+    await expect(page.getByRole('cell', { name: 'Коваленко Олена Вікторівна' })).toBeVisible({ timeout: 10000 });
+
+    // The row shows both «Створити» and «Відкрити»; open the drawer via «Відкрити»
+    const openButton = page.getByRole('button', { name: 'Відкрити' });
+    await openButton.first().click();
+
+    await expect(page.getByText('Листки призначень (')).toBeVisible({ timeout: 10000 });
+
+    // The drawer's inner «Відкрити» button is the last match in DOM order.
+    await page.getByRole('button', { name: 'Відкрити' }).last().click();
+
+    await page.waitForURL(/\/prescriptions\/doctor\/[0-9a-f-]{36}$/, { timeout: 15000 });
+    await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10000 });
+  });
 });
