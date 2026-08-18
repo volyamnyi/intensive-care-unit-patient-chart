@@ -1,5 +1,9 @@
 # ICU Patient Chart — AI Agent Guide
 
+## Current Session
+
+**2026-08-18: Phase 8 — documentation update (issues #157/#158 milestone complete)** — AGENTS.md + README.md rewritten (commit `0f015b6`) to reflect the post-refactor reality: backend Maven module layout with dependency direction (`common` leaf ← `icu-chart`/`medication-sheet`/`prosthesis-manufacturing` ← `app` shell), real frontend layout (`pages/`, per-feature `components/`, `api/` + `types/` modules, isolated `prosthetics/`), new «Module Boundaries» section (ArchUnit allowlist + oxlint `no-restricted-imports`), route prefixes `/icu/doctor/*`/`/icu/nurse/*`, Playwright 9 projects / 6 roles, UserRole 7 values, services grouped by module (common 4, icu-chart 16, med 11, prosth 11), Liquibase 15 changesets (core 4, icu 6, med 1, prosth 4), file counts (Java 348 main/112 test; TS 127 sources/69 test files; E2E 55 specs/~228 tests). README: MUI/Emotion → Base UI + Tailwind CSS (badges, Tech Stack, Project Structure tree), JDK 25, stale test counts replaced with file-based numbers, Module Boundaries paragraph. UseManual.md unchanged (no user-facing change). CI run `32119777622` all 6 jobs green (Code Quality 49s, E2E 11m55s); issue #158 closed. Docs-only commits — Phase 7 (import boundaries, `e7aab6f` + `cf874b2`, run `32116832684` green, #157 closed) and Phase 8 close the Module Separation milestone; only the historical removal notes mention `PRESCRIBER`/`user.permissions`/`src/medication-sheet` — no live references remain.
+
 ## CI RULE (EXECUTE TEST SUITE (UNIT, INTEGRATION, PLAYWRIGHT E2E TESTS) ONLY LOCALLY)
 
 **TESTS RUNNING.** The only valid testing workflow is:
