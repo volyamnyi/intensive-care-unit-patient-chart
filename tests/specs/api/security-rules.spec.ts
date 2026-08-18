@@ -132,29 +132,33 @@ test.describe('API Security Rules', () => {
   test('order plan and cancel endpoints require the prescriber role', async ({ request }) => {
     const orderId = 'd3333001-3333-3333-0000-333333330001';
 
+    // Година планування динамічна: nurse-day-flow вже виконує+завершує цей самий order
+    // у годину (поточна+1)%24, тож фіксована година 6 зламалася б у прогонах CI 05:00-05:59Z.
+    const planHour = new Date(Date.now() + 2 * 3600_000).getHours();
+
     const nurse = await getToken(request, 'nurse1', 'nurse123');
     const nursePlan = await request.put(`${API}/orders/${orderId}/plan`, {
       headers: { Authorization: `Bearer ${nurse}` },
-      data: { hour: 6, dose: '500' },
+      data: { hour: planHour, dose: '500' },
     });
     expect(nursePlan.status()).toBe(403);
 
     const nurseFinish = await request.put(`${API}/orders/${orderId}/plan/finish`, {
       headers: { Authorization: `Bearer ${nurse}` },
-      data: { hour: 6 },
+      data: { hour: planHour },
     });
     expect(nurseFinish.status()).toBe(403);
 
     const nurseCancel = await request.put(`${API}/orders/${orderId}/cancel`, {
       headers: { Authorization: `Bearer ${nurse}` },
-      data: { hour: 6 },
+      data: { hour: planHour },
     });
     expect(nurseCancel.status()).toBe(403);
 
     const doctor = await getToken(request, 'doctor1', 'doctor123');
     const doctorPlan = await request.put(`${API}/orders/${orderId}/plan`, {
       headers: { Authorization: `Bearer ${doctor}` },
-      data: { hour: 6, dose: '500' },
+      data: { hour: planHour, dose: '500' },
     });
     expect(doctorPlan.ok()).toBeTruthy();
   });
