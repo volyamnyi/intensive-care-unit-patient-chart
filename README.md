@@ -5,7 +5,8 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?logo=vite)](https://vite.dev/)
-[![MUI](https://img.shields.io/badge/MUI-9.2-007FFF?logo=mui)](https://mui.com/)
+[![Base UI](https://img.shields.io/badge/Base%20UI-1.6-0054FF?logo=baseui)](https://base-ui.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.3-38BDF8?logo=tailwindcss)](https://tailwindcss.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -93,15 +94,16 @@
 | React | 19.2.7 | UI framework |
 | TypeScript | 6.0 | Type-safe JavaScript |
 | Vite | 8.1 | Build tool / dev server |
-| MUI (Material UI) | 9.2 | Component library |
+| Base UI | 1.6 | Headless UI primitives (shadcn-style components) |
+| Tailwind CSS | 4.3 | Utility-first styling |
 | Axios | 1.18 | HTTP client |
 | React Router DOM | 7.18 | Client-side routing |
-| Emotion | 11.14 | CSS-in-JS styling |
+| Sonner | 2.0 | Toast notifications |
 | Day.js | 1.11 | Date manipulation |
-| Oxlint | 1.71 | Linter |
+| Oxlint | 1.73 | Linter |
 | Vitest | 3.2 | Unit testing |
 
-### E2E Testing (only locally)
+### E2E Testing
 | Technology | Version | Purpose |
 |---|---|---|
 | Playwright | 1.61 | Browser automation |
@@ -129,13 +131,14 @@
 - Frontend communicates via RESTful JSON APIs with JWT Bearer auth
 - Backend integrates with MIS via a pluggable `MisService` interface (mock implementation by default)
 - Scheduled tasks handle day transitions and escalation checks
+- **Module boundaries are enforced**: backend ArchUnit test (`backend/app/src/test/java/com/superhumans/architecture/ModuleBoundaryTest.java`) restricts the feature modules (`medication-sheet`, `prosthesis-manufacturing`) to a shared platform allowlist; frontend oxlint rules (`frontend/.oxlintrc.json` `no-restricted-imports`) forbid cross-feature imports
 - **Prosthetics Manufacturing** is a separate backend module (`prosthesis-manufacturing`) with its own entities, services, and REST endpoints under `/api/prosthesis-manufacturing`, using local mock tables (not MIS)
 
 ---
 
 ## Prerequisites
 
-- **JDK** 17 or later
+- **JDK** 25
 - **Node.js** 20 or later, **npm** 10+
 - **PostgreSQL** 16
 - **Maven** 3.9+ (or use `mvnw`)
@@ -459,55 +462,41 @@ Prosthetics E2E isolation uses fixed seed IDs per spec (no `.first()` race).
 
 ```
 icu-patient-chart/
-├── backend/
-│   ├── pom.xml               ← parent POM (5 modules: common, medication-sheet, icu-chart, prosthesis-manufacturing, app)
-│   ├── common/               ← shared entities, JWT/security, base classes, multi-DB wiring
-│   ├── medication-sheet/     ← prescriptions module (entities, services, controllers)
-│   ├── icu-chart/
-│   │   ├── pom.xml
-│   │   ├── src/main/resources/
-│   │   │   └── db/changelog/   # Liquibase migrations (6 changesets)
-│   │   └── src/main/java/com/superhumans/
-│   │       ├── SuperhumansApplication.java
-│   │       ├── auth/             # JWT authentication (filter + token provider)
-│   │       ├── config/           # Security, CORS
-│   │       ├── controller/       # REST controllers (19)
-│   │       ├── dto/              # Request/response DTOs (48 total)
-│   │       ├── entity/           # JPA entities (25 including enums)
-│   │       ├── exception/        # Domain exceptions + global handler
-│   │       ├── mapper/           # Entity ↔ DTO mappers
-│   │       ├── mis/              # MIS integration (mock + interface)
-│   │       ├── repository/       # Spring Data repositories (18)
-│   │       └── service/          # Business logic services (17 implementation + 2 interfaces)
-│   └── prosthesis-manufacturing/
-│       ├── pom.xml
-│       ├── src/main/resources/
-│       │   └── db/changelog/   # Liquibase migrations (1 changeset)
-│       └── src/main/java/com/superhumans/prosthesismanufacturing/
-│           ├── controller/       # REST controllers (5)
-│           ├── dto/              # Request/response DTOs (24)
-│           ├── entity/           # JPA entities (26 including enums)
-│           ├── mapper/           # Entity ↔ DTO mappers (5)
-│           ├── repository/       # Spring Data repositories (12)
-│           └── service/          # Business logic services (7)
-├── frontend/
+├── backend/                    ← Maven multi-module reactor (parent POM + 5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
+│   ├── common/                 ← shared platform leaf (no internal deps): `@SpringBootApplication` main class, auth/JWT,
+│   │   │                         security config, multi-DB wiring, platform controllers (auth/user/patient/admin/audit/
+│   │   │                         settings/mock-MIS), `entity/base` + `entity/core` (User, Permission, RolePermission,
+│   │   │                         AuditLog, ...), `repository/core`, exception handlers, MIS client, services (Auth,
+│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 15
+│   │   │                         SQL changesets in `db/changelog/{core,icu,med,prosth}/`)
+│   ├── icu-chart/              ← ICU chart feature: `com.superhumans.icu.*` (entities + repositories) + ICU domain
+│   │                             packages (controller ×13, service ×16, dto, mapper); depends on common
+│   ├── medication-sheet/       ← medication sheet feature (`com.superhumans.medicationsheet.*`); depends on common
+│   ├── prosthesis-manufacturing/ ← prosthetics feature (`com.superhumans.prosthesismanufacturing.*`); depends on common
+│   └── app/                    ← deployable shell (no production code): repackages the runnable JAR (mainClass in
+│                                 common); hosts the ArchUnit `ModuleBoundaryTest`
+├── frontend/                   ← React 19 + TypeScript + Vite + Tailwind CSS 4 + Base UI (single app, no feature subfolder roots)
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tsconfig*.json
+│   ├── index.html
 │   └── src/
-│       ├── App.tsx           # Root component + routing
-│       ├── api/              # Axios client + endpoint definitions (prosthetics.ts added)
-│       ├── components/       # Shared UI components (12) + prosthetics/ (3)
-│       ├── layouts/          # Doctor, Nurse, Prosthetics layouts
-│       ├── pages/            # LoginPage, doctor/, nurse/, admin/, prosthetics/
-│       ├── services/         # AuthContext
-│       ├── styles/           # MUI theme + animations
-│       └── types/            # TypeScript interfaces (prosthetics types added)
-├── tests/                    # Playwright E2E tests
+│       ├── App.tsx             # Root component + routing (Guard / LoginRoute / RoleRedirect)
+│       ├── pages/              # LoginPage, AppSelectorPage, doctor/, nurse/, prescription/, prosthetics/, admin/
+│       ├── components/         # per-feature: icu/, monitoring/, prescription/, common/, prosthetics/, navigation/, ui/
+│       ├── api/                # client.ts + per-feature modules (platform, icu, medication, prosthetics)
+│       ├── types/              # shared DTO types: core.ts, icu.ts, medication.ts
+│       ├── prosthetics/        # isolated feature root (ProstheticsContext, types, validation, failureCategories)
+│       ├── services/           # AuthContext
+│       ├── layouts/            # Doctor, Nurse, Global layouts
+│       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
+│       └── test/               # Vitest tests (69 files)
+├── tests/                      # Playwright E2E (55 spec files, 9 projects)
 │   ├── playwright.config.ts
-│   ├── pages/                # Page objects (7)
-│   ├── fixtures/             # Role-based test fixtures
-│   └── specs/                # Test specs (48 files, 186 tests)
+│   ├── pages/                  # Page objects (7)
+│   ├── fixtures/               # Role-based test fixtures
+│   └── specs/                  # Test specs
+├── docs/                       # Технічне завдання (3026 lines), TESTING_GUIDE
 └── README.md
 ```
 
@@ -523,8 +512,8 @@ icu-patient-chart/
 | `mvn -pl app spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (526) |
-| `mvn test -Pintegration-test` | Run integration tests (163) — requires Docker |
+| `mvn test` | Run unit tests (112 test files) |
+| `mvn test -Pintegration-test` | Run integration tests (79) — requires Docker/PostgreSQL |
 
 #### Frontend
 | Command | Action |
@@ -533,12 +522,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (~350 across 44 files) |
+| `npm t` | Run Vitest tests (~583 across 69 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (45 spec files) |
+| `npx playwright test` | Run all E2E tests (55 spec files) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -554,18 +543,17 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (45 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (55 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend unit tests**: 557 tests — common (22 skippable) + medication-sheet (88) + icu-chart (416) + prosthesis-manufacturing (31) — `mvn test`
-- **Backend integration tests**: 163 tests — medication-sheet (22) + icu-chart (141) — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 419 tests (47 files, 0 failures) — includes prosthetics tests
-- **E2E Playwright tests**: 48 spec files, 9 projects (setup, login, doctor, nurse, hod, admin, prosthetist, prosthetadmin, api)
-- **Total**: ~1,187 tests
-- **CI**: GitHub Actions — PostgreSQL service, JDK 17, Node 22, Playwright chromium, 40min timeout
+- **Backend tests**: 112 test files across the multi-module reactor — common (10) + icu-chart (62) + medication-sheet (17) + prosthesis-manufacturing (22) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
+- **Backend integration tests**: 79 tests — `mvn test -Pintegration-test`
+- **Frontend Vitest tests**: 583 tests (69 files) — includes prosthetics tests
+- **E2E Playwright tests**: 55 spec files (~228 tests), 9 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics)
+- **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
 - [#71](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/71) **RESOLVED** — Cyrillic encoding: `data-med.sql` now uses explicit `ON CONFLICT` auto-heal clause
