@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { HourlyRecordCreateRequest } from '../../types/icu';
-import { CLINICAL_RANGES } from '../monitoring/clinicalRanges';
+import { CLINICAL_RANGES } from '../../lib/clinicalRanges';
 
 interface VitalSignsFormProps {
   values: HourlyRecordCreateRequest;

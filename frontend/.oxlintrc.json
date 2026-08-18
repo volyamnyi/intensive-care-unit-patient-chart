@@ -4,5 +4,79 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/pages/prescription/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              { "regex": "(^|/)icu/", "message": "Межа імпортів: pages/prescription не може імпортувати компоненти ICU (components/icu)" },
+              { "regex": "(^|/)monitoring/", "message": "Межа імпортів: pages/prescription не може імпортувати компоненти моніторингу (components/monitoring)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/pages/prosthetics/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              { "regex": "(^|/)icu/", "message": "Межа імпортів: pages/prosthetics не може імпортувати компоненти ICU (components/icu)" },
+              { "regex": "(^|/)prescription/", "message": "Межа імпортів: pages/prosthetics не може імпортувати компоненти призначень (components/prescription)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/components/icu/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              { "regex": "(^|/)prescription/", "message": "Межа імпортів: components/icu не може імпортувати компоненти призначень (components/prescription)" },
+              { "regex": "(^|/)monitoring/", "message": "Межа імпортів: components/icu не може імпортувати компоненти моніторингу (components/monitoring)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/components/prescription/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              { "regex": "(^|/)icu/", "message": "Межа імпортів: components/prescription не може імпортувати компоненти ICU (components/icu)" },
+              { "regex": "(^|/)monitoring/", "message": "Межа імпортів: components/prescription не може імпортувати компоненти моніторингу (components/monitoring)" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/components/common/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              { "regex": "(^|/)icu/", "message": "Межа імпортів: components/common не може імпортувати фічерні компоненти (components/icu)" },
+              { "regex": "(^|/)monitoring/", "message": "Межа імпортів: components/common не може імпортувати фічерні компоненти (components/monitoring)" },
+              { "regex": "(^|/)prescription/", "message": "Межа імпортів: components/common не може імпортувати фічерні компоненти (components/prescription)" },
+              { "regex": "(^|/)prosthetics/", "message": "Межа імпортів: components/common не може імпортувати фічерні компоненти (prosthetics)" }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

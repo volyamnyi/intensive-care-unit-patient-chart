@@ -2,7 +2,7 @@
  * Validation bounds — the legal physical/clinical input ranges enforced by the
  * backend on hourly-record fields (rejects out-of-range values on save).
  *
- * NOT to be confused with `./criticalRanges.ts`: those are the narrower alarm
+ * NOT to be confused with `components/monitoring/criticalRanges.ts`: those are the narrower alarm
  * thresholds used by the grid/rail/chip to flash values as critical. Validation
  * bounds and critical thresholds are distinct concepts and must not be merged.
  */
