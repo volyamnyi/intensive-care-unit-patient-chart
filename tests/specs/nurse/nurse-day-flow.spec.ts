@@ -10,10 +10,13 @@ function cellIndexForHour(hour: number): number {
   return hour >= 8 ? hour - 8 + 1 : hour + 16 + 1;
 }
 
-// Година наступної доби для планування (з урахуванням ретраїв CI)
-function planHour(retry: number): number {
-  const hour = new Date(Date.now() + 60 * 60 * 1000).getHours();
-  return (hour + retry) % 24;
+// Година для планування — поточна реальна година: HourlyGrid позначає минулі
+// комірки доби 08:00->07:59 через isPastMedDay(h, realClockHour) як '✓' (неклікабельні),
+// а поточна година ніколи не вважається минулою. У вікні 07:00-07:59Z клікабельна
+// лише поточна година; modal-therapy.spec.ts лишає в ній план (доза 1000) —
+// лікар може перепланувати заплановану комірку, тож план-інпут з'явиться.
+function planHour(): number {
+  return new Date().getHours();
 }
 
 test.describe('Nurse day flow', () => {
@@ -91,9 +94,8 @@ test.describe('Nurse day flow', () => {
     }
   });
 
-  test('nurse executes a planned medication and finishes it', async ({ page, doctorPage }, testInfo) => {
-    let hour = planHour(testInfo.retry);
-    let cellIndex = cellIndexForHour(hour);
+  test('nurse executes a planned medication and finishes it', async ({ page, doctorPage }) => {
+    let hour = planHour();
 
     // Лікар планує дозу Glucose 5% у комірці обраної години
     await doctorPage.goto(`/icu/doctor/episode/${EPISODE_ID}`);
@@ -102,13 +104,20 @@ test.describe('Nurse day flow', () => {
     // Виконання завантажуються асинхронно після призначень (GET /orders/{id}/executions) —
     // чекаємо стабілізації сітки, інакше перевірка ✓/✕ може не побачити зайняту годину
     await doctorPage.waitForLoadState('networkidle');
-    let cell = doctorRow.getByRole('cell').nth(cellIndex);
-    const occupied = await cell.textContent();
-    if (occupied && (occupied.includes('✓') || occupied.includes('✕'))) {
-      hour = (hour + 1) % 24;
-      cellIndex = cellIndexForHour(hour);
-      cell = doctorRow.getByRole('cell').nth(cellIndex);
+    // Шукаємо першу комірку, яку можна (пере)планувати, від поточної години (wrap 24):
+    // '✓' (виконано/минула) і '✕' (скасовано) неклікабельні; вільна комірка показує
+    // '➚', запланована — дозу (лікар може перепланувати її).
+    let cellIndex = 0;
+    for (let i = 0; i < 24; i++) {
+      const h = (hour + i) % 24;
+      const idx = cellIndexForHour(h);
+      const txt = await doctorRow.getByRole('cell').nth(idx).textContent();
+      if (txt && (txt.includes('✓') || txt.includes('✕'))) continue;
+      hour = h;
+      cellIndex = idx;
+      break;
     }
+    const cell = doctorRow.getByRole('cell').nth(cellIndex);
     await cell.click();
     const planInput = doctorPage.getByLabel(`Запланувати ${ORDER_NAME} ${hour}:00`);
     await expect(planInput).toBeVisible();

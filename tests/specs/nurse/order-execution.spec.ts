@@ -1,7 +1,11 @@
 import { test, expect } from '../../fixtures/index';
 
 const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
-const ORDER_NAME = 'Glucose 5%';
+// Dobutamine створюється doctor-day-flow.spec.ts на тому ж дні (b3333333) перед цим
+// спеком. Glucose 5% (d3333001) контендиться modal-therapy.spec.ts та nurse-day-flow.spec.ts
+// (у вікні 07:00-07:59Z клікабельна лише поточна година) — Dobutamine вільний у кожній
+// годині, тож накладок між спеками немає.
+const ORDER_NAME = 'Dobutamine';
 const PLAN_DOSE = '500';
 
 function cellIndexForHour(hour: number): number {
@@ -13,8 +17,8 @@ function planHour(): number {
   // клікабельними є лише години >= поточної реальної години: HourlyGrid позначає
   // минулі комірки через isPastMedDay(h, realClockHour) — вони рендеряться як '✓'
   // і не клікабельні (план-інпут не з'являється). Тому цілимося в поточну реальну
-  // годину: вона ніколи не вважається минулою. nurse-day-flow.spec.ts планує
-  // в real+1, тож години розведені без накладок.
+  // годину: вона ніколи не вважається минулою. Кожен спек працює з окремим
+  // призначенням (nurse-day-flow — Glucose 5%, цей — Dobutamine), тож накладок немає.
   return new Date().getHours();
 }
 
