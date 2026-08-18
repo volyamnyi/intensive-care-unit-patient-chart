@@ -92,7 +92,7 @@ describe('PrescriptionPage', () => {
     mockSearch.mockResolvedValue({ data: [makePatient({ id: 1001 }), makePatient({ id: 1002, fullName: 'Коваленко Олена' })] });
   });
 
-  it('shows Створити for every patient and Відкрити when a list exists', async () => {
+  it('shows Відкрити for every patient, creation lives inside the drawer', async () => {
     // 1001 has no list, 1002 has one
     mockGetByPatient.mockImplementation((patientId: number) =>
       Promise.resolve({ data: patientId === 1002 ? [makeList('L-1002')] : [] })
@@ -103,12 +103,12 @@ describe('PrescriptionPage', () => {
     expect(await screen.findByText('Петренко Іван')).toBeInTheDocument();
     expect(screen.getByText('Коваленко Олена')).toBeInTheDocument();
 
-    // both rows offer «Створити»; only the patient with a list shows «Відкрити»
-    expect(screen.getAllByRole('button', { name: /Створити/ })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: /Відкрити/ })).toBeInTheDocument();
+    // the Дії column offers only «Відкрити» for every patient
+    expect(screen.getAllByRole('button', { name: /Відкрити/ })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /Створити/ })).not.toBeInTheDocument();
   });
 
-  it('creates a list for the patient, prepends it, and navigates to the detail page', async () => {
+  it('creates a list from the drawer and navigates to the detail page', async () => {
     mockGetByPatient.mockImplementation((patientId: number) =>
       Promise.resolve({ data: patientId === 1001 ? [makeList('L-1001')] : [] })
     );
@@ -116,13 +116,17 @@ describe('PrescriptionPage', () => {
 
     renderPage();
 
-    // wait for the Коваленко row (1002) and click its Створити button
+    // open the drawer for Коваленко (1002) via her row's «Відкрити» button
     const kovalenkoCell = await screen.findByText('Коваленко Олена');
     const row = kovalenkoCell.closest('tr');
     expect(row).not.toBeNull();
-    const createBtn = row!.querySelector('button');
-    expect(createBtn).not.toBeNull();
-    await userEvent.click(createBtn!);
+    const openBtn = row!.querySelector('button');
+    expect(openBtn).not.toBeNull();
+    await userEvent.click(openBtn!);
+
+    // the drawer offers «Створити листок» at the top of the lists section
+    const createBtn = await screen.findByRole('button', { name: /Створити листок/ });
+    await userEvent.click(createBtn);
 
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledTimes(1);
@@ -139,9 +143,12 @@ describe('PrescriptionPage', () => {
 
     renderPage();
 
-    // wait for the patient rows (and their Створити buttons) to render
-    const createButtons = await screen.findAllByRole('button', { name: /Створити/ });
-    await userEvent.click(createButtons[0]);
+    // open the drawer for the first patient, then create from inside it
+    const openButtons = await screen.findAllByRole('button', { name: /Відкрити/ });
+    await userEvent.click(openButtons[0]);
+
+    const createBtn = await screen.findByRole('button', { name: /Створити листок/ });
+    await userEvent.click(createBtn);
 
     await waitFor(() => {
       expect(screen.getByText('Створення заборонено')).toBeInTheDocument();

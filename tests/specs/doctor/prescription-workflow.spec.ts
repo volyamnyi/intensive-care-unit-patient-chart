@@ -26,13 +26,16 @@ test.describe('Prescription Workflow (Doctor)', () => {
     await expect(page.getByRole('heading', { name: 'Листок лікарських призначень' })).toBeVisible();
   });
 
-  test('creates a prescription list for a patient via the Дії column', async ({ page }) => {
+  test('creates a prescription list for a patient from the lists drawer', async ({ page }) => {
     await page.goto('/prescriptions/doctor');
     await page.getByPlaceholder('Пошук пацієнта').fill('1002');
     await expect(page.getByRole('cell', { name: 'Коваленко Олена Вікторівна' })).toBeVisible({ timeout: 10000 });
 
-    // «Створити» is always available in the Дії column of the patient list
-    await page.getByRole('button', { name: 'Створити' }).click();
+    // The Дії column offers only «Відкрити»; creation lives inside the drawer
+    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await expect(page.getByText('Листки призначень (')).toBeVisible({ timeout: 10000 });
+
+    await page.getByRole('button', { name: 'Створити листок' }).click();
 
     await page.waitForURL(/\/prescriptions\/doctor\/[0-9a-f-]{36}$/, { timeout: 15000 });
     await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10000 });

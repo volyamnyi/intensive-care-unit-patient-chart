@@ -333,29 +333,15 @@ export default function PrescriptionPage() {
                   <TableCell>{row.patient.doctorName || '—'}</TableCell>
                   <TableCell>{getStatusText(row.lists)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-0.5">
-                      <Button
-                        size="sm"
-                        className="rounded-full px-1.5 text-[0.8125rem] font-semibold normal-case"
-                        variant="outline"
-                        disabled={creatingPatientId === String(row.patient.id)}
-                        onClick={() => handleCreate(row.patient)}
-                      >
-                        <Plus className="mr-1 size-4" />
-                        {creatingPatientId === String(row.patient.id) ? '...' : 'Створити'}
-                      </Button>
-                      {row.lists.length > 0 && (
-                        <Button
-                          size="sm"
-                          className="rounded-full px-1.5 text-[0.8125rem] font-semibold normal-case"
-                          variant="outline"
-                          onClick={() => handleOpenDrawer(row.patient, row.lists)}
-                        >
-                          <FileText className="mr-1 size-4" />
-                          Відкрити
-                        </Button>
-                      )}
-                    </div>
+                    <Button
+                      size="sm"
+                      className="rounded-full px-1.5 text-[0.8125rem] font-semibold normal-case"
+                      variant="outline"
+                      onClick={() => handleOpenDrawer(row.patient, row.lists)}
+                    >
+                      <FileText className="mr-1 size-4" />
+                      Відкрити
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -385,6 +371,17 @@ export default function PrescriptionPage() {
               <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.5px] text-muted-foreground">
                 Листки призначень ({drawerLists.length})
               </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="mb-2 w-full"
+                disabled={creatingPatientId === String(drawerPatient?.id)}
+                onClick={() => drawerPatient && handleCreate(drawerPatient)}
+              >
+                <Plus className="mr-1 size-4" />
+                {creatingPatientId === String(drawerPatient?.id) ? 'Створення...' : 'Створити листок'}
+              </Button>
 
               {drawerLists.length === 0 ? (
                 <div className="py-4 text-center text-muted-foreground">Немає листків призначень</div>
