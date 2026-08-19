@@ -216,11 +216,11 @@ export default function TemplateSelectPage() {
         </div>
       )}
 
-      <div className="mt-6 flex gap-3">
-        <Button variant="outline" onClick={() => navigate('/prosthetics/new/review-order')}>
+      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex flex-col gap-3 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-6 sm:flex-row sm:items-center sm:px-6 sm:pb-3">
+        <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/prosthetics/new/review-order')}>
           Назад
         </Button>
-        <Button variant="ghost" onClick={() => navigate('/prosthetics')}>
+        <Button variant="ghost" className="w-full sm:w-auto" onClick={() => navigate('/prosthetics')}>
           Скасувати
         </Button>
       </div>

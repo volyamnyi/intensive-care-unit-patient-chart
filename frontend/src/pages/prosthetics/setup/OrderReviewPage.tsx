@@ -294,17 +294,17 @@ export default function OrderReviewPage() {
         </Alert>
       )}
 
-      <div className="mt-8 flex flex-wrap justify-between gap-3">
-        <Button variant="outline" onClick={() => navigate('/prosthetics/new/select-order')}>
+      <div className="sticky bottom-0 z-10 -mx-4 mt-8 flex flex-col gap-3 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6 sm:pb-3">
+        <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/prosthetics/new/select-order')}>
           Назад
         </Button>
-        <div className="flex gap-3">
-          <Button variant="ghost" onClick={() => navigate('/prosthetics')}>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <Button variant="ghost" className="w-full sm:w-auto" onClick={() => navigate('/prosthetics')}>
             До головного меню
           </Button>
           <Button
             disabled={!docLoaded || checking}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
+            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
             onClick={() => void handleStart()}
           >
             {checking ? (

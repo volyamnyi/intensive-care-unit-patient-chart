@@ -99,7 +99,7 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, aller
               {options.map((option) => (
                 <div
                   key={option.id || option.name}
-                  className="px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                  className="flex min-h-11 items-center px-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
                   onClick={() => {
                     setMedicine(option);
                     setInputValue(option.name);
@@ -129,7 +129,7 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, aller
           />
         </div>
         <div className="col-span-12 sm:col-span-2">
-          <Button variant="default" size="sm" disabled={disabled || !medicine} onClick={handleSubmit}>
+          <Button variant="default" size="sm" className="min-h-11" disabled={disabled || !medicine} onClick={handleSubmit}>
             Додати
           </Button>
         </div>

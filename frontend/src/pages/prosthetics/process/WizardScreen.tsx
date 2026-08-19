@@ -2038,7 +2038,7 @@ export default function WizardScreen() {
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-20 -mx-6 border-b bg-card/95 px-6 py-3 backdrop-blur">
+      <div className="sticky top-0 z-20 -mx-4 border-b bg-card/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex flex-wrap items-center gap-4">
           <div>
             <div className="font-display text-sm font-semibold">{snapshot.name}</div>
@@ -2056,7 +2056,7 @@ export default function WizardScreen() {
           </div>
         </div>
         <div className="mt-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 text-xs text-muted-foreground">
             <span className="tabular-nums">
               Етап {stageIndex + 1} з {snapshot.stages.length}: {stage.name}
             </span>
@@ -2066,11 +2066,11 @@ export default function WizardScreen() {
           </div>
           <Progress value={progress} className="mt-2" />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
           {snapshot.stages.map((s, i) => (
             <span
               key={s.id}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs transition-colors duration-200 ${
+              className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs transition-colors duration-200 ${
                 i === stageIndex ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}
             >
@@ -2194,24 +2194,24 @@ export default function WizardScreen() {
         </Card>
       </div>
 
-      <div className="sticky bottom-0 z-20 -mx-6 flex flex-wrap items-center gap-3 border-t bg-card px-6 py-3">
-        <Button variant="outline" disabled={!canGoBack || submitting} onClick={() => void goBack()}>
+      <div className="sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center gap-3 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 sm:pb-3">
+        <Button variant="outline" className="min-h-11" disabled={!canGoBack || submitting} onClick={() => void goBack()}>
           <ArrowLeft className="size-4" /> Попередній
         </Button>
-        <Button variant="outline" disabled={submitting} onClick={() => void saveDraft()}>
+        <Button variant="outline" className="min-h-11" disabled={submitting} onClick={() => void saveDraft()}>
           <Save className="size-4" /> Зберегти чернетку
         </Button>
-        <Button variant="ghost" onClick={() => setPauseOpen(true)}>
+        <Button variant="ghost" className="min-h-11" onClick={() => setPauseOpen(true)}>
           <PauseCircle className="size-4" /> Пауза
         </Button>
-        <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setFailOpen(true)}>
+        <Button variant="ghost" className="min-h-11 text-destructive hover:bg-destructive/10" onClick={() => setFailOpen(true)}>
           <XCircle className="size-4" /> Позначити процес як провалений
         </Button>
-        <Button variant="ghost" onClick={() => navigate('/prosthetics')}>
+        <Button variant="ghost" className="min-h-11" onClick={() => navigate('/prosthetics')}>
           <Home className="size-4" /> До головного меню
         </Button>
         <Button
-          className="ml-auto bg-accent text-accent-foreground shadow-sm hover:bg-accent/90 hover:shadow-md"
+          className="ml-auto min-h-11 w-full bg-accent text-accent-foreground shadow-sm hover:bg-accent/90 hover:shadow-md sm:w-auto"
           disabled={(touched && blocked) || submitting}
           onClick={() => void completeStep()}
         >
@@ -2220,7 +2220,7 @@ export default function WizardScreen() {
       </div>
 
       <Dialog open={pauseOpen} onOpenChange={setPauseOpen}>
-        <DialogContent>
+        <DialogContent mobileFullscreen>
           <DialogHeader>
             <DialogTitle>Призупинення роботи</DialogTitle>
             <DialogDescription>
@@ -2247,7 +2247,7 @@ export default function WizardScreen() {
       </Dialog>
 
       <Dialog open={failOpen} onOpenChange={setFailOpen}>
-        <DialogContent>
+        <DialogContent mobileFullscreen>
           <DialogHeader>
             <DialogTitle>Позначити процес як провалений</DialogTitle>
             <DialogDescription>

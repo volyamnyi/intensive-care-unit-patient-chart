@@ -48,7 +48,7 @@ export default function PatientSearchPage() {
 
   return (
     <div className="container mx-auto max-w-2xl py-8">
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/prosthetics')}>
           <ChevronLeft className="size-4" />
           Назад
@@ -124,13 +124,13 @@ export default function PatientSearchPage() {
         ) : null}
       </div>
 
-      <div className="mt-6 flex justify-between">
-        <Button variant="outline" onClick={() => navigate('/prosthetics')}>
+      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex flex-col gap-3 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pb-3">
+        <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/prosthetics')}>
           Назад
         </Button>
         <Button
           disabled={!draft.patientId}
-          className="bg-accent text-accent-foreground hover:bg-accent/90"
+          className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
           onClick={() => navigate('/prosthetics/new/select-order')}
         >
           Далі

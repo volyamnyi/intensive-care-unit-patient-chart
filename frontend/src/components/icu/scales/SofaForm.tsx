@@ -49,26 +49,26 @@ export default function SofaForm({ onCalculate, disabled }: SofaFormProps) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs font-semibold mb-1">SOFA — параметри</p>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-        <Input placeholder="PaO₂ (mmHg)" value={paO2} onChange={e => setPaO2(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="FiO₂ (%)" value={fio2} onChange={e => setFio2(e.target.value)} className="h-7 text-xs" disabled={disabled} />
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3">
+        <Input placeholder="PaO₂ (mmHg)" value={paO2} onChange={e => setPaO2(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="FiO₂ (%)" value={fio2} onChange={e => setFio2(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
         <Select value={onVentilator} onValueChange={v => setOnVentilator(v ?? '')} disabled={disabled}>
-          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="ШВЛ?" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs pointer-coarse:min-h-11"><SelectValue placeholder="ШВЛ?" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="false">Ні</SelectItem>
             <SelectItem value="true">Так</SelectItem>
           </SelectContent>
         </Select>
-        <Input placeholder="Тромбоцити (×10⁹/л)" value={platelets} onChange={e => setPlatelets(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Білірубін (мкмоль/л або мг/дл)" value={bilirubin} onChange={e => setBilirubin(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="MAP (mmHg)" value={map} onChange={e => setMap(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Допамін (µg/kg/min)" value={dopamine} onChange={e => setDopamine(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Добутамін (µg/kg/min)" value={dobutamine} onChange={e => setDobutamine(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Норепінефрин (µg/kg/min)" value={norepinephrine} onChange={e => setNorepinephrine(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Епінефрин (µg/kg/min)" value={epinephrine} onChange={e => setEpinephrine(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-         <Input placeholder="GCS (3–15)" value={gcs} onChange={e => setGcs(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Креатинін (мкмоль/л або мг/дл)" value={creatinine} onChange={e => setCreatinine(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Добовий діурез (mL)" value={urineOutput} onChange={e => setUrineOutput(e.target.value)} className="h-7 text-xs" disabled={disabled} />
+        <Input placeholder="Тромбоцити (×10⁹/л)" value={platelets} onChange={e => setPlatelets(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Білірубін (мкмоль/л або мг/дл)" value={bilirubin} onChange={e => setBilirubin(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="MAP (mmHg)" value={map} onChange={e => setMap(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Допамін (µg/kg/min)" value={dopamine} onChange={e => setDopamine(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Добутамін (µg/kg/min)" value={dobutamine} onChange={e => setDobutamine(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Норепінефрин (µg/kg/min)" value={norepinephrine} onChange={e => setNorepinephrine(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Епінефрин (µg/kg/min)" value={epinephrine} onChange={e => setEpinephrine(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+         <Input placeholder="GCS (3–15)" value={gcs} onChange={e => setGcs(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Креатинін (мкмоль/л або мг/дл)" value={creatinine} onChange={e => setCreatinine(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Добовий діурез (mL)" value={urineOutput} onChange={e => setUrineOutput(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
       </div>
       <div className="mt-1">
         <Button size="sm" onClick={handleCalculate} disabled={!canCalculate || disabled}>

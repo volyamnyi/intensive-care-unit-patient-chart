@@ -107,7 +107,7 @@ export default function VitalSignForm({ latest, onSubmit, disabled, saving }: Vi
           />
         </div>
       </div>
-      <Button variant="default" className="mt-2" disabled={disabled || saving} onClick={handleSubmit}>
+      <Button variant="default" className="mt-2 min-h-11" disabled={disabled || saving} onClick={handleSubmit}>
         {saving ? 'Збереження...' : 'Зберегти'}
       </Button>
     </div>

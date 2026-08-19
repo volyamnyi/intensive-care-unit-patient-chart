@@ -14,7 +14,7 @@ interface ClosePrescriptionDialogProps {
 export default function ClosePrescriptionDialog({ open, onClose, onConfirm, allCompleted, closing }: ClosePrescriptionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent>
+      <DialogContent mobileFullscreen>
         <DialogHeader>
           <DialogTitle className="font-rubik">Закрити листок призначень</DialogTitle>
         </DialogHeader>

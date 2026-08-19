@@ -41,7 +41,7 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
         <div className="mb-2">
           <div className="flex flex-wrap items-start gap-2 mb-2">
             <Select value={selectedScaleId} onValueChange={(v: string | null) => { if (v !== null) setSelectedScaleId(v); }}>
-              <SelectTrigger aria-label="Шкала" className="h-7 w-full sm:w-[200px]">
+              <SelectTrigger aria-label="Шкала" className="h-7 w-full sm:w-[200px] pointer-coarse:min-h-11">
                 <SelectValue placeholder="Шкала" />
               </SelectTrigger>
               <SelectContent>
@@ -56,9 +56,9 @@ export default function ScaleResultsPanel({ results, availableScales, onCreateRe
                   placeholder="Результат"
                   value={resultValue}
                   onChange={(e) => setResultValue(e.target.value)}
-                  className="flex h-7 w-full sm:w-[120px] rounded-md border border-input bg-transparent px-2.5 py-1 text-xs transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm"
+                  className="flex h-7 w-full sm:w-[120px] rounded-md border border-input bg-transparent px-2.5 py-1 text-xs transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm pointer-coarse:min-h-11"
                 />
-                <Button size="sm" onClick={handleCreate}>Додати</Button>
+                <Button size="sm" className="min-h-11" onClick={handleCreate}>Додати</Button>
               </>
             )}
           </div>

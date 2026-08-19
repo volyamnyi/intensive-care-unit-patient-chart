@@ -231,6 +231,30 @@ body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialo
   --tw-ring-offset-color: var(--color-card);
 }
 
+/* Mobile full-screen dialog variant (#163, Phase 4) — centered popup → full
+   viewport below sm (bottom-sheet style), no translate centering */
+@media (max-width: 639.98px) {
+  [data-slot="dialog-content"][data-fullscreen="mobile"] {
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    translate: none;
+  }
+
+  body:has([data-slot="dialog-content"][data-fullscreen="mobile"]) [data-slot="dialog-overlay"] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .dark body:has([data-slot="dialog-content"][data-fullscreen="mobile"]) [data-slot="dialog-overlay"] {
+    background-color: rgb(0 0 0 / 0.2);
+  }
+}
+
 /* Sheet (ui/sheet.tsx, Base UI Drawer) — per-side slide transitions (#160) */
 @keyframes sheetOverlayIn {
   from { opacity: 0; }

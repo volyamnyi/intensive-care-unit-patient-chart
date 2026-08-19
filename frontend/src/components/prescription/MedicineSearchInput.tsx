@@ -97,7 +97,7 @@ export default function MedicineSearchInput({
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-1.5 flex gap-1 items-center flex-wrap relative">
-      <div className="relative min-w-[220px]">
+      <div className="relative min-w-[220px] flex-1">
         <Input
           placeholder="Препарат"
           value={medSearch}
@@ -116,7 +116,7 @@ export default function MedicineSearchInput({
                 key={med.id}
                 type="button"
                 className={cn(
-                  'w-full text-left px-2 py-1 text-sm hover:bg-accent hover:text-accent-foreground',
+                  'flex w-full min-h-11 items-center px-2 text-left text-sm hover:bg-accent hover:text-accent-foreground',
                   selectedMed?.id === med.id && 'bg-accent'
                 )}
                 onClick={() => selectMedicine(med)}
@@ -132,7 +132,7 @@ export default function MedicineSearchInput({
         onChange={e => setNewMethod(e.target.value)} className="w-[120px]" />
       <Input placeholder="Режим" value={newRegime}
         onChange={e => setNewRegime(e.target.value)} className="w-[100px]" />
-      <Button variant="default" size="sm" disabled={!selectedMed || addingDrug}
+      <Button variant="default" size="sm" className="min-h-11" disabled={!selectedMed || addingDrug}
         onClick={handleAddDrug}><Plus className="size-4 mr-1" />Додати</Button>
     </div>
   );

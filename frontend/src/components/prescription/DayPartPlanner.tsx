@@ -72,6 +72,7 @@ export default function DayPartPlanner({
                     />
                     <Button
                       size="sm"
+                      className="min-h-11"
                       variant="default"
                       disabled={planning || !doses[part.id]}
                       onClick={() => onPlan(part.id, doses[part.id])}
@@ -83,6 +84,7 @@ export default function DayPartPlanner({
                 {part.isPlanned && !part.isCompleted && canComplete && (
                   <Button
                     size="sm"
+                    className="min-h-11"
                     variant="default"
                     disabled={completing}
                     onClick={() => onComplete(part.id)}

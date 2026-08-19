@@ -69,7 +69,7 @@ export function QualityGatePanel({
           {criteria.map((c, i) => {
             const fieldId = `gate-criterion-${i}`;
             return (
-              <div key={c} className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/30">
+              <div key={c} className="flex min-h-11 items-center gap-3 rounded-md border p-3 transition-colors hover:bg-muted/30">
                 <Checkbox
                   id={fieldId}
                   disabled={locked}
@@ -92,9 +92,9 @@ export function QualityGatePanel({
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Button
-          className="bg-success text-success-foreground hover:bg-success/90"
+          className="w-full bg-success text-success-foreground hover:bg-success/90 sm:w-auto"
           disabled={locked || submitting || !allChecked}
           onClick={() => onPass(criteria.filter((c) => checked[c]))}
         >
@@ -102,6 +102,7 @@ export function QualityGatePanel({
         </Button>
         <Button
           variant="outline"
+          className="w-full sm:w-auto"
           disabled={locked || submitting || !comment.trim()}
           onClick={() => onRework(comment.trim())}
         >
@@ -109,6 +110,7 @@ export function QualityGatePanel({
         </Button>
         <Button
           variant="destructive"
+          className="w-full sm:w-auto"
           disabled={locked || submitting || !comment.trim()}
           onClick={() => onFail(comment.trim())}
         >

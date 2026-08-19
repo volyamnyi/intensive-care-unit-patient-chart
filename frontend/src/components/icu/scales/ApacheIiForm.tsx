@@ -64,39 +64,39 @@ export default function ApacheIiForm({ onCalculate, disabled }: ApacheIiFormProp
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs font-semibold mb-1">APACHE II — параметри (найгірші за 24 год)</p>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
-        <Input placeholder="Температура (°C)" value={temperatureC} onChange={e => setTemperatureC(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Середній АТ (mmHg)" value={meanArterialPressure} onChange={e => setMeanArterialPressure(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="ЧСС (уд/хв)" value={heartRate} onChange={e => setHeartRate(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="ЧД (дих/хв)" value={respiratoryRate} onChange={e => setRespiratoryRate(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-         <Input placeholder="FiO₂ (%)" value={fio2} onChange={e => setFio2(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="PaO₂ (mmHg)" value={paO2} onChange={e => setPaO2(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="PaCO₂ (mmHg)" value={paCO2} onChange={e => setPaCO2(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="pH (крові)" value={ph} onChange={e => setPh(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="HCO₃⁻ (mmol/L)" value={serumHco3} onChange={e => setSerumHco3(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Na⁺ (mmol/L)" value={serumSodium} onChange={e => setSerumSodium(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="K⁺ (mmol/L)" value={serumPotassium} onChange={e => setSerumPotassium(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-         <Input placeholder="Креатинін (мкмоль/л або мг/дл)" value={serumCreatinine} onChange={e => setSerumCreatinine(e.target.value)} className="h-7 text-xs" disabled={disabled} />
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <Input placeholder="Температура (°C)" value={temperatureC} onChange={e => setTemperatureC(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Середній АТ (mmHg)" value={meanArterialPressure} onChange={e => setMeanArterialPressure(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="ЧСС (уд/хв)" value={heartRate} onChange={e => setHeartRate(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="ЧД (дих/хв)" value={respiratoryRate} onChange={e => setRespiratoryRate(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+         <Input placeholder="FiO₂ (%)" value={fio2} onChange={e => setFio2(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="PaO₂ (mmHg)" value={paO2} onChange={e => setPaO2(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="PaCO₂ (mmHg)" value={paCO2} onChange={e => setPaCO2(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="pH (крові)" value={ph} onChange={e => setPh(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="HCO₃⁻ (mmol/L)" value={serumHco3} onChange={e => setSerumHco3(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Na⁺ (mmol/L)" value={serumSodium} onChange={e => setSerumSodium(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="K⁺ (mmol/L)" value={serumPotassium} onChange={e => setSerumPotassium(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+         <Input placeholder="Креатинін (мкмоль/л або мг/дл)" value={serumCreatinine} onChange={e => setSerumCreatinine(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
         <Select value={acuteRenalFailure} onValueChange={v => setAcuteRenalFailure(v ?? '')} disabled={disabled}>
-          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="ГНН?" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs pointer-coarse:min-h-11"><SelectValue placeholder="ГНН?" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="false">Немає ГНН</SelectItem>
             <SelectItem value="true">ГНН</SelectItem>
           </SelectContent>
         </Select>
-        <Input placeholder="Гематокрит (%)" value={hematocrit} onChange={e => setHematocrit(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="WBC (×10³/µL)" value={whiteBloodCount} onChange={e => setWhiteBloodCount(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-         <Input placeholder="GCS (3–15)" value={gcs} onChange={e => setGcs(e.target.value)} className="h-7 text-xs" disabled={disabled} />
-        <Input placeholder="Вік (роки)" value={age} onChange={e => setAge(e.target.value)} className="h-7 text-xs" disabled={disabled} />
+        <Input placeholder="Гематокрит (%)" value={hematocrit} onChange={e => setHematocrit(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="WBC (×10³/µL)" value={whiteBloodCount} onChange={e => setWhiteBloodCount(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+         <Input placeholder="GCS (3–15)" value={gcs} onChange={e => setGcs(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
+        <Input placeholder="Вік (роки)" value={age} onChange={e => setAge(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
         <Select value={chronicHealthType} onValueChange={v => setChronicHealthType(v ?? '')} disabled={disabled}>
-          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Хронічне здоров'я" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs pointer-coarse:min-h-11"><SelectValue placeholder="Хронічне здоров'я" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="NONE">Немає</SelectItem>
             <SelectItem value="CHRONIC">Хронічна недостатність</SelectItem>
           </SelectContent>
         </Select>
         <Select value={emergencySurgical} onValueChange={v => setEmergencySurgical(v ?? '')} disabled={disabled}>
-          <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Тип операції" /></SelectTrigger>
+          <SelectTrigger className="h-7 text-xs pointer-coarse:min-h-11"><SelectValue placeholder="Тип операції" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="false">Не хірургічний / плановий</SelectItem>
             <SelectItem value="true">Екстрений хірургічний</SelectItem>
