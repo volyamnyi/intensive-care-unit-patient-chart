@@ -328,15 +328,32 @@ jobs:
         working-directory: frontend
       
       - name: Fix Stuck Ubuntu Repositories
+        shell: bash
         run: |
-          # GitHub-hosted Ubuntu runners pull apt packages from Azure mirror
-          # (azure.archive.ubuntu.com) which intermittently throttles/stalls,
-          # freezing `apt-get update` and therefore `playwright install --with-deps`
-          # for many minutes (observed 35-minute install on run 32262539145).
-          # Point apt back at the main `archive.ubuntu.com` before Playwright
-          # installs its system dependencies.
-          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu/|http://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list.d/*.sources || true
-          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu/|http://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list || true
+          set -euo pipefail
+          # GitHub-hosted Ubuntu 24.04 (noble) runners resolve their Ubuntu
+          # mirror through an APT *mirrorlist*, not a fixed URI: the deb822
+          # file /etc/apt/sources.list.d/ubuntu.sources points at
+          # `mirror+file:/etc/apt/apt-mirrors.txt`, and that mirrorlist ranks
+          # azure.archive.ubuntu.com first (priority:1). That Azure mirror
+          # intermittently throttles/stalls, freezing `apt-get update` and
+          # therefore `npx playwright install --with-deps` for many minutes
+          # (observed 35-minute install on run 32262539145).
+          #
+          # `sed` on the .sources files is NOT enough here — APT re-reads the
+          # mirrorlist on every invocation and re-selects the Azure mirror.
+          # The authoritative override is rewriting the mirrorlist file itself
+          # so archive.ubuntu.com (Canonical) is the only host APT may use.
+          # `printf` is required: the spec needs a literal TAB between URI and
+          # `priority:N`, which a quoted echo would escape literally.
+          printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' \
+            | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          echo "=== /etc/apt/apt-mirrors.txt (pinned) ==="; cat /etc/apt/apt-mirrors.txt
+          # Belt-and-suspenders: also rewrite any classic/deb822 URIs that
+          # still hard-code the Azure mirror, in case the image layout differs.
+          sudo sed -Ei 's|https?://azure\.archive\.ubuntu\.com/ubuntu/|https://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list.d/*.sources || true
+          sudo sed -Ei 's|https?://azure\.archive\.ubuntu\.com/ubuntu/|https://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list || true
+          sudo rm -f /var/lib/apt/lists/partial/mirrorlist-* 2>/dev/null || true
           sudo apt-get update
 
       - name: Install Playwright browsers
