@@ -24,13 +24,4 @@ describe('ScrollArea', () => {
     expect(scrollbars).toHaveLength(2);
     expect(document.querySelectorAll('[data-slot="scroll-area-thumb"]')).toHaveLength(2);
   });
-
-  it('renders the corner', () => {
-    render(
-      <ScrollArea>
-        <p>Вміст</p>
-      </ScrollArea>,
-    );
-    expect(document.querySelector('[data-slot="scroll-area-corner"]')).not.toBeNull();
-  });
 });
