@@ -2,6 +2,8 @@
 
 ## Current Session
 
+**2026-08-19: Responsive QA phase (issue #165)** — 2 new Playwright projects + 5 responsive specs (10 mobile + 26 tablet tests); commits `b7ed366` (projects + specs), `e71f5f6` (prosthetics dashboard overflow fix + spec alignment), `f56f448` (strict-mode locators); CI runs `32305140094` (failed: 3 test bugs + 2 REAL responsive bugs) → `32307157147` (failed: 2 strict-mode locators) → `32308478131` all 6 jobs green (E2E 14m6s); issue #165 closed. **Projects**: `responsive-mobile-chromium` (iPhone 13 emulation, chromium, `.auth/doctor.json`, testMatch `mobile-nav`/`touch-targets`/`mobile-wizard-smoke`, `fullyParallel: false`) + `responsive-tablet-chromium` (Desktop Chrome 768×1024 `hasTouch`, testMatch `no-horizontal-scroll`/`tablet-dashboard`, `fullyParallel: false`), both after `prosthetics-chromium`, deps `['setup']`. **Specs** (`tests/specs/responsive/`): mobile-nav (hamburger → sheet → route → auto-close), touch-targets (44px CTAs incl. create-card patient search «Ткачук Андрій Вікторович» — mock MIS has 3 Ткачуків — and episode «Панель пацієнта»), mobile-wizard-smoke (API-created instances auto-start IN_PROGRESS → wizard opens directly on stage 1, no «Розпочати процес» screen; completes stage 1 at 360px via `WizardExecutionPage`; strict-mode: stage texts match both title + step chip → `.first()`), no-horizontal-scroll (docWidth audit at 360+768; offenders inside `overflow-x-auto` ancestors skipped — tables/scroll containers legitimately extend), tablet-dashboard (rail `w-[60px]`→`w-[220px]` expansion polled past the CSS width transition; stat cards «Активні»/«Призупинені» share a row in the 2-col grid). **REAL bugs found + fixed** in `pages/prosthetics/DashboardPage.tsx`: header row `flex-wrap` (5px overflow at 360px) + instances table wrapped in `overflow-x-auto touch-pan-x` (1026px at 768px). Episode page needs the full seed UUID (`a3333333-3333-3333-3333-333333333333` — short form 404s «Епізод не знайдено»). Suite now 268 tests / 59 files / 11 projects.
+
 **2026-08-19: Responsive UI Phase 5 — touch targets, safe-area sheets, WCAG focus rings (issue #164)** — commits `cc0c0f0` + `992a662` (Vitest fixes), CI run `32300494295` all 6 jobs green (E2E 10m48s), issue #164 closed. First run `32299674854` failed 3 new Vitest assertions → fixed in `992a662`. **Touch targets** (`pointer-coarse:` variant — fires only on coarse pointers, inert in desktop E2E and jsdom): `button` base `pointer-coarse:min-h-11`; `icon`/`icon-xs`/`icon-sm`/`icon-lg` sizes `pointer-coarse:size-11` (incl. `HourlyGrid` cell buttons — grid rows grow to 44px on touch by design); `checkbox`/`switch` enlarge the hit area via invisible `after:` pseudo-element (`after:-inset-x-3.5 after:-inset-y-3.5`); `radio` same via `relative` + `pointer-coarse:after:absolute after:-inset-3.5 after:rounded-full after:content-['']`; `SelectTrigger`/`Input`/`TabsList`/`TabsTrigger` `pointer-coarse:min-h-11`; textarea skipped (min-h-16 ≥44). **Safe areas**: `SheetContent` per-side `env(safe-area-inset-*)` with 1.5rem fallback via `pt-[max(1.5rem,env(safe-area-inset-top))]`-style longhands in `sideClasses` (base `p-6` kept — longhand wins; `pb-` fallback matches the `bottom` side). **WCAG 1.4.11 focus rings**: all `ring-ring/50` → `ring-ring` full opacity in ui primitives AND the 5 feature copies (`PatientDayPage:303`, `MedicalNotesPanel:27`, `VitalSignsForm:189`, `PatientStatePanel:103`, `ScaleResultsPanel:59`) + destructive variants; radio `ring-1`→`ring-2`. Rationale: `ring/50` ≈1.7:1 fails; full `#FF5F33` vs light bg ≈3.0:1 + border change = composite ≥3:1 (same pattern as the `index.css` fullscreen override from #137). **Touch feedback**: `active:translate-y-px` on `NavLink` + interactive Stepper `StepIndicator`; `touch-pan-x` on 15 horizontal scrollers (tabs list, wizard chips, ProcessLayout rail, tables, Breadcrumbs, AdminPage matrix, AuditLogTable, HourlyGrid…). **Contrast**: tabs inactive `text-foreground/60` → `/70` (4.26→5.99:1); `muted-foreground` audited — passes AA everywhere (light `#5A5A5A` 6.6/6.6/5.6; dark `#A0A0A0` 7.4/6.2/5.4) → unchanged; primary white-on-orange 3.0:1 kept as brand token (documented out of scope). **Reduced motion**: media gate extended with `fade-in-up`, `fade-in`, `slide-in-left`, `scale-in`, `pulse`, `skeleton`, `[data-slot=stepper-loading]`, `dialog-content`, `dialog-overlay`, `select-content`. **Perf**: `AppNavList` links memoized via `useMemo` (no re-render on every route change); no JS resize listeners anywhere. **Tests**: new `ui/a11y.test.tsx` (roles + coarse-pointer class contract) + `sheet`/`stepper`/`GlobalLayout` extensions. Base UI render reality (lessons for future tests): Select accessible name must go on `SelectTrigger` (Root renders no DOM); Base UI Input emits NO `type` attribute when `type` omitted → `input[type="text"]` selectors return null, use `[data-slot="input"]`; Base UI Drawer does NOT set `aria-modal` → sheet test asserts `role="dialog"` + accessible name only.
 
 **2026-08-19: Responsive UI Phase 4 — wizard steppers, sticky CTAs, mobile dialogs (issue #163)** — commit `f73bc58`, CI run `32286616343` all 6 jobs green (E2E 10m28s), issue #163 closed. Layout/interaction markup only; no Vitest spec updates were needed (all assertions are role/text-based; responsive classes are inert in jsdom). `SetupSteps.tsx` rewritten on the `Stepper` primitive (`size="md"`, `gap-1.5`): each step title is `hidden md:inline` except the active one → mobile shows compact dots + active label only (labels verified rendered exactly once in `SetupSteps.test.tsx`); App.tsx routes the `*Page.tsx` wrappers, the `*Step.tsx` components are Vitest-only. Setup pages (`PatientSearchPage`, `OrderSelectPage`, `OrderReviewPage`, `TemplateSelectPage`) + `WizardScreen`: sticky bottom action bars `sticky bottom-0 z-10 -mx-4 sm:-mx-6 border-t bg-background/95 backdrop-blur` with `pb-[max(0.75rem,env(safe-area-inset-bottom))]` (safe-area) and stacked `flex-col sm:flex-row` buttons (`w-full sm:w-auto`); `WizardScreen` also fixed the top-bar `-mx-6` overflow in the `p-4` mobile `ProcessLayout` main, progress row `flex-wrap`, stage chips `overflow-x-auto` + `shrink-0 whitespace-nowrap`. **Mobile fullscreen dialogs**: `DialogContent` gains `mobileFullscreen?: boolean` → `data-fullscreen="mobile"`; new `index.css` rules under `@media (max-width: 639.98px)` — `inset: 0`, full width/height, `border-radius: 0`, `translate: none` (Tailwind v4 translate utilities use the `translate` property, not `transform`), overlay `backdrop-filter: none` + dark tint; existing `[data-fullscreen]` modalMorph animations apply automatically. Used by `ClosePrescriptionDialog` + WizardScreen pause/fail dialogs; `HourlyGridDialog` passes `data-fullscreen="true"` via `{...props}` spread AFTER the new attribute → unaffected. Touch targets: all wizard secondary buttons + CTAs, `QualityGatePanel` criteria rows (`min-h-11`) and decision buttons (`flex-col sm:flex-row`, `w-full sm:w-auto`), `MedicineSearchInput`/`PrescriptionItemForm` dropdown rows + add buttons, `VitalSignForm` save, `DayPartPlanner` plan/complete buttons, `ScaleResultsPanel` select/input/Додати. ICU scale forms: `ApacheIiForm` grid → `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`, `SofaForm`/`BradenForm` → `grid-cols-1 sm:grid-cols-2 md:grid-cols-3`; all four `h-7 text-xs` inputs replaced with `pointer-coarse:min-h-11` (touch-only sizing); `CamIcuForm` labels + `RassSelector` trigger likewise. Verified already-compliant (no edits): `PrescriptionSpreadsheet` horizontal `overflow-auto` + sticky first column (Task 7), `MeasurementForms` `inputMode="decimal"` + `flex-col md:flex-row` (Task 4).
@@ -224,7 +226,7 @@ The complete development loop:
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | `backend-test-results` (surefire-reports) |
 | `backend-integration` | `mvn test -Pintegration-test` | `backend-integration-results` |
 | `frontend-test` | Vitest + production build | `vitest-coverage` |
-| `e2e-test` | Playwright (55 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
+| `e2e-test` | Playwright (59 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
 | `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
 
 ### Exit criteria
@@ -254,7 +256,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (55 spec files) |
+| `npx playwright test` | Run all E2E tests (59 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
@@ -262,7 +264,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 - **Backend**: 348 main sources / 112 test files across the multi-module reactor (common 119/10, icu-chart 84/62, medication-sheet 61/17, prosthesis-manufacturing 84/22, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: 583 Vitest tests across 69 test files (127 TS/TSX sources). Run with `npm t`.
-- **E2E**: 55 Playwright spec files (~228 tests) across 9 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics).
+- **E2E**: 59 Playwright spec files (268 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -277,6 +279,8 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | admin-chromium | setup, api-error-mode | `.auth/admin.json` | User tables, RBAC matrix, audit log |
 | api-chromium | api-error-mode | none | Patient search API, error handling, scales access control |
 | prosthetics-chromium | setup | `.auth/prosthetist.json` | Prosthetics workflow, quality gates |
+| responsive-mobile-chromium | setup | `.auth/doctor.json` | Mobile 360px smoke (iPhone 13 emulation): nav sheet, touch targets, wizard smoke; `fullyParallel: false` |
+| responsive-tablet-chromium | setup | `.auth/doctor.json` | Tablet 768×1024 (`hasTouch`): no-horizontal-scroll audits, sidebar rail expand, 2-col stats; `fullyParallel: false` |
 
 ## Seed Data
 
@@ -715,9 +719,9 @@ frontend/
   public/              ← Static assets
   src/                 ← 127 TS/TSX source + 69 test files
 tests/
-  playwright.config.ts ← Playwright config with 9 projects
+  playwright.config.ts ← Playwright config with 11 projects
   package.json         ← Test dependencies
-  specs/               ← 55 spec files
+  specs/               ← 59 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/
