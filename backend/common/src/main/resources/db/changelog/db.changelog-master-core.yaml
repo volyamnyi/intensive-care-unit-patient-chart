@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/004-audit-entity-length.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/005-role-permissions-add-prescription-list-create.sql

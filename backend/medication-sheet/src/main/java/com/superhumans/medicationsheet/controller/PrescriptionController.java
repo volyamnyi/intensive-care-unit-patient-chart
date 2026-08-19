@@ -67,10 +67,10 @@ public class PrescriptionController {
         return prescriptionListMapper.toResponse(listService.getById(id));
     }
 
-    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_LIST_CREATE')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create prescription list", description = "Creates a new prescription list for a patient. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
+    @Operation(summary = "Create prescription list", description = "Creates a new prescription list for a patient. Requires PRESCRIPTION_LIST_CREATE permission (DOCTOR by default).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Prescription list created successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request body"),

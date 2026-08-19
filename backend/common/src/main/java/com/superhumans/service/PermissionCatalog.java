@@ -26,6 +26,8 @@ public final class PermissionCatalog {
     public static final String SIGN_DOCTOR = "SIGN_DOCTOR";
     public static final String REOPEN_DAY = "REOPEN_DAY";
     public static final String PRESCRIPTION_CREATE = "PRESCRIPTION_CREATE";
+
+    public static final String PRESCRIPTION_LIST_CREATE = "PRESCRIPTION_LIST_CREATE";
     public static final String PRESCRIPTION_EXECUTE = "PRESCRIPTION_EXECUTE";
     public static final String VITALS_ENTER = "VITALS_ENTER";
     public static final String PATIENT_VIEW = "PATIENT_VIEW";
@@ -72,7 +74,9 @@ public final class PermissionCatalog {
             new Def(REOPEN_DAY, "Перевідкриття дня",
                     "Перевідкриття підписаного клінічного дня", CLINICAL),
             new Def(PRESCRIPTION_CREATE, "Створення призначень",
-                    "Створення та планування лікарських призначень і медичних замовлень", CLINICAL),
+                    "Планування призначень: додавання позицій у листок, планування та скасування доз", CLINICAL),
+            new Def(PRESCRIPTION_LIST_CREATE, "Створення листка лікарських призначень",
+                    "Створення нового листка лікарських призначень (екземпляра) для пацієнта", CLINICAL),
             new Def(PRESCRIPTION_EXECUTE, "Виконання призначень",
                     "Виконання та завершення призначень медсестрою", CLINICAL),
             new Def(VITALS_ENTER, "Введення показників",
@@ -118,7 +122,7 @@ public final class PermissionCatalog {
     private static final Map<UserRole, Set<String>> DEFAULT_MATRIX = Map.ofEntries(
             Map.entry(UserRole.DOCTOR, Set.of(
                     EPISODE_CREATE, CLINICAL_DAY_CREATE, SIGN_DOCTOR,
-                    PRESCRIPTION_CREATE, PATIENT_VIEW,
+                    PRESCRIPTION_CREATE, PRESCRIPTION_LIST_CREATE, PATIENT_VIEW,
                     SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS,
                     MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.NURSE, Set.of(
@@ -127,7 +131,7 @@ public final class PermissionCatalog {
                     MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.HEAD_OF_DEPARTMENT, Set.of(
                     EPISODE_CREATE, CLINICAL_DAY_CREATE, SIGN_DOCTOR, REOPEN_DAY,
-                    PRESCRIPTION_CREATE, PATIENT_VIEW,
+                    PRESCRIPTION_CREATE, PRESCRIPTION_LIST_CREATE, PATIENT_VIEW,
                     SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS,
                     MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.ADMINISTRATOR, Set.of(

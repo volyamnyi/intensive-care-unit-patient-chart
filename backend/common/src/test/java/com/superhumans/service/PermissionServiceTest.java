@@ -207,14 +207,15 @@ class PermissionServiceTest {
 
     @Test
     void catalog_containsAllDefinedCodes() {
-        assertThat(permissionService.catalog()).hasSize(24);
+        assertThat(permissionService.catalog()).hasSize(25);
         assertThat(PermissionCatalog.allCodes())
                 .contains(PermissionCatalog.EPISODE_CREATE, PermissionCatalog.AUDIT_ACCESS,
                         PermissionCatalog.PROSTHETICS_GATE_DECISION,
                         PermissionCatalog.MODULE_ICU_ACCESS,
                         PermissionCatalog.MODULE_MEDICATION_ACCESS,
                         PermissionCatalog.MODULE_PROSTHETICS_ACCESS,
-                        PermissionCatalog.MODULE_ADMIN_ACCESS);
+                        PermissionCatalog.MODULE_ADMIN_ACCESS,
+                        PermissionCatalog.PRESCRIPTION_LIST_CREATE);
     }
 
     @Test

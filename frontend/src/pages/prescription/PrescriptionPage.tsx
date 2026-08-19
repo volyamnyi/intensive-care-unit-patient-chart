@@ -43,7 +43,7 @@ export default function PrescriptionPage() {
   useThemeMode();
   useEffect(() => { document.title = 'Призначення — Лікар'; }, []);
   const navigate = useNavigate();
-  useAuth();
+  const { hasPermission } = useAuth();
 
   const [dept, setDept] = useState<Department>(
     () => (localStorage.getItem('prescDept') as Department) || 'surgery',
@@ -74,18 +74,17 @@ export default function PrescriptionPage() {
         return p.departmentId === 1;
       });
 
-      setRows(deptPatients.map(p => ({ patient: p, lists: [], loading: false })));
-
-      for (const p of deptPatients) {
-        try {
-          const lr = await prescriptionApi.getByPatient(p.id);
-          setRows(prev =>
-            prev.map(r => r.patient.id === p.id ? { ...r, lists: lr.data } : r)
-          );
-        } catch {
-          // prescription not found, leave []
-        }
-      }
+      const listResults = await Promise.all(
+        deptPatients.map(async (p) => {
+          try {
+            const lr = await prescriptionApi.getByPatient(p.id);
+            return { patient: p, lists: lr.data, loading: false };
+          } catch {
+            return { patient: p, lists: [], loading: false };
+          }
+        }),
+      );
+      setRows(listResults);
     } catch (err) {
       setError(getErrorMessage(err, 'Не вдалося завантажити пацієнтів'));
     } finally {
@@ -372,16 +371,18 @@ export default function PrescriptionPage() {
                 Листки призначень ({drawerLists.length})
               </div>
 
-              <Button
-                size="sm"
-                variant="outline"
-                className="mb-2 w-full"
-                disabled={creatingPatientId === String(drawerPatient?.id)}
-                onClick={() => drawerPatient && handleCreate(drawerPatient)}
-              >
-                <Plus className="mr-1 size-4" />
-                {creatingPatientId === String(drawerPatient?.id) ? 'Створення...' : 'Створити листок'}
-              </Button>
+              {hasPermission('PRESCRIPTION_LIST_CREATE') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mb-2 w-full"
+                  disabled={creatingPatientId === String(drawerPatient?.id)}
+                  onClick={() => drawerPatient && handleCreate(drawerPatient)}
+                >
+                  <Plus className="mr-1 size-4" />
+                  {creatingPatientId === String(drawerPatient?.id) ? 'Створення...' : 'Створити листок'}
+                </Button>
+              )}
 
               {drawerLists.length === 0 ? (
                 <div className="py-4 text-center text-muted-foreground">Немає листків призначень</div>
