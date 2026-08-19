@@ -337,7 +337,17 @@ body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialo
 
 @media (prefers-reduced-motion: reduce) {
   [data-slot="sheet-content"],
-  [data-slot="sheet-overlay"] {
+  [data-slot="sheet-overlay"],
+  .fade-in-up,
+  .fade-in,
+  .slide-in-left,
+  .scale-in,
+  .pulse,
+  .skeleton,
+  [data-slot="stepper-loading"],
+  [data-slot="dialog-content"],
+  [data-slot="dialog-overlay"],
+  [data-slot="select-content"] {
     animation: none;
   }
 }

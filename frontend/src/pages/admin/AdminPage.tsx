@@ -214,7 +214,7 @@ export default function AdminPage() {
                     Оновити
                   </Button>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto touch-pan-x">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -299,7 +299,7 @@ export default function AdminPage() {
                 {matrixNotice && <p className="mb-1.5 text-sm text-emerald-600">{matrixNotice}</p>}
                 {matrixError && <p className="mb-1.5 text-sm text-destructive">{matrixError}</p>}
                 {matrix && (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto touch-pan-x">
                     <Table>
                       <TableHeader>
                         <TableRow>

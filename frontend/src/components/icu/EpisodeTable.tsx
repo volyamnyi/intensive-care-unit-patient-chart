@@ -83,7 +83,7 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto touch-pan-x">
       <Table>
         <TableHeader>
           <TableRow>

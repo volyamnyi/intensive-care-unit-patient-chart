@@ -107,7 +107,7 @@ export default function MedicalOrdersPanel({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border">
+      <div className="overflow-x-auto rounded-xl border touch-pan-x">
         <Table className="min-w-[500px]">
           <TableHeader>
             <TableRow>

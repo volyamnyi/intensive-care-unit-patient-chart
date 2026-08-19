@@ -202,7 +202,7 @@ const StepIndicator = React.forwardRef<HTMLSpanElement, StepIndicatorProps>(
           state === "active" && "border-primary bg-background text-primary ring-2 ring-primary/20",
           state === "completed" && "border-primary bg-primary text-primary-foreground",
           state === "inactive" && "border-border text-muted-foreground",
-          interactive && "cursor-pointer",
+          interactive && "cursor-pointer active:translate-y-px",
         )}
       >
         {loading ? (

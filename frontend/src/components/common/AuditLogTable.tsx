@@ -24,7 +24,7 @@ export default function AuditLogTable({ logs, loading }: AuditLogTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto touch-pan-x">
       <Table>
         <TableHeader>
           <TableRow>

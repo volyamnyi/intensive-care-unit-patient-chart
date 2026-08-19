@@ -54,16 +54,16 @@ interface AppNavListProps {
  */
 export function AppNavList({ collapsed = false, onNavigate }: AppNavListProps) {
   const navItems = useNavItems();
-  return (
-    <nav className="flex flex-col gap-0.5 p-2 flex-1" aria-label="Головна навігація">
-      {navItems.map(item => (
+  const items = useMemo(
+    () =>
+      navItems.map(item => (
         <NavLink
           key={item.to}
           to={item.to}
           end={item.to === '/select'}
           onClick={onNavigate}
           className={({ isActive }) => cn(
-            'flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors',
+            'flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors active:translate-y-px',
             'hover:bg-accent hover:text-accent-foreground',
             isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground',
             collapsed && 'justify-center px-1',
@@ -73,7 +73,12 @@ export function AppNavList({ collapsed = false, onNavigate }: AppNavListProps) {
           {item.icon}
           {!collapsed && <span>{item.label}</span>}
         </NavLink>
-      ))}
+      )),
+    [navItems, collapsed, onNavigate],
+  );
+  return (
+    <nav className="flex flex-col gap-0.5 p-2 flex-1" aria-label="Головна навігація">
+      {items}
     </nav>
   );
 }

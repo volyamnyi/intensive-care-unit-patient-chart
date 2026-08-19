@@ -34,7 +34,7 @@ export default function PrescriptionTable({ prescriptions, onSelect, loading }: 
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto touch-pan-x">
       <Table>
         <TableHeader>
           <TableRow>

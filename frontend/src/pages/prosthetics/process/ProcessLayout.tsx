@@ -16,7 +16,7 @@ export default function ProcessLayout() {
     return (
       <div className="flex h-screen w-full flex-col">
         <nav
-          className="flex shrink-0 items-center gap-1 overflow-x-auto border-b bg-muted/30 px-2 py-1"
+          className="flex shrink-0 items-center gap-1 overflow-x-auto border-b bg-muted/30 px-2 py-1 touch-pan-x"
           aria-label="Навігація процесу"
         >
           {items.map((item) => (

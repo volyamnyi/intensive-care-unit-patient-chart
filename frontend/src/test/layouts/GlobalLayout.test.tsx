@@ -163,6 +163,12 @@ describe('GlobalLayout - sidebar and breadcrumbs', () => {
     expect(screen.getByLabelText('Breadcrumb')).toBeInTheDocument();
     expect(screen.getAllByText('Призначення').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('exposes banner and main landmarks', () => {
+    renderLayout('/icu/doctor');
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
 });
 
 describe('GlobalLayout - mobile navigation sheet', () => {

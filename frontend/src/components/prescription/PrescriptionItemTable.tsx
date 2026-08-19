@@ -15,7 +15,7 @@ export default function PrescriptionItemTable({ items, onDelete, canEdit }: Pres
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto touch-pan-x">
       <Table>
         <TableHeader>
           <TableRow>

@@ -18,7 +18,7 @@ export default function HourlyRecordTable({ records, hours }: HourlyRecordTableP
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
+    <div className="overflow-x-auto rounded-xl border border-border shadow-sm touch-pan-x">
       <Table>
         <TableHeader>
           <TableRow>

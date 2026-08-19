@@ -23,6 +23,17 @@ describe('Stepper', () => {
     expect(container.querySelectorAll('[data-slot="stepper-indicator"]')).toHaveLength(3);
   });
 
+  it('renders the step list as an ordered list landmark', () => {
+    render(
+      <Stepper>
+        <Step title="Крок 1" />
+        <Step title="Крок 2" />
+      </Stepper>,
+    );
+    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+
   it('marks previous steps completed, the current step active, and later steps inactive', () => {
     const { container } = render(
       <Stepper step={2}>

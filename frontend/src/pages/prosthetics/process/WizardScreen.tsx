@@ -2066,7 +2066,7 @@ export default function WizardScreen() {
           </div>
           <Progress value={progress} className="mt-2" />
         </div>
-        <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 touch-pan-x">
           {snapshot.stages.map((s, i) => (
             <span
               key={s.id}
