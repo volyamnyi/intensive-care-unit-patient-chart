@@ -327,6 +327,18 @@ jobs:
           echo "Frontend is ready"
         working-directory: frontend
       
+      - name: Fix Stuck Ubuntu Repositories
+        run: |
+          # GitHub-hosted Ubuntu runners pull apt packages from Azure mirror
+          # (azure.archive.ubuntu.com) which intermittently throttles/stalls,
+          # freezing `apt-get update` and therefore `playwright install --with-deps`
+          # for many minutes (observed 35-minute install on run 32262539145).
+          # Point apt back at the main `archive.ubuntu.com` before Playwright
+          # installs its system dependencies.
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu/|http://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list.d/*.sources || true
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu/|http://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list || true
+          sudo apt-get update
+
       - name: Install Playwright browsers
         run: |
           npm ci
