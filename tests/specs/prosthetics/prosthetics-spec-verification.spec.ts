@@ -167,11 +167,12 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
       // Wait for navigation (may go to /select first)
       await page.waitForURL(/\/(prosthetics|select)/, { timeout: 15000 });
       
-      // If on select page, navigate to prosthetics
+      // If on select page, navigate to prosthetics via the module card
+      // (SPA navigation — page.goto here races the post-login router redirect)
       if (page.url().includes('/select')) {
         log('On select page, navigating to prosthetics');
-        await page.goto(`${CONFIG.baseUrl}/prosthetics`);
-        await page.waitForTimeout(1000);
+        await page.getByText('Виробництво протезів', { exact: true }).first().click();
+        await page.waitForURL('**/prosthetics**', { timeout: 10000 });
       }
       
       await takeScreenshot(page, '01-logged-in');

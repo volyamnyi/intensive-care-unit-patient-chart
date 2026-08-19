@@ -247,6 +247,45 @@ describe('WizardScreen', () => {
     expect(screen.getByRole('button', { name: /Попередній/ })).toBeDisabled();
   });
 
+  it('keeps the process timer running across step navigation (does not reset to zero)', async () => {
+    // totalActiveSeconds is the accumulated active time of the whole process
+    // (here: 2 minutes from earlier steps → baseline 00:02:00). Start on step-2
+    // (Збірка); listExecutions is empty so the seed effect uses the baseline.
+    flowInstanceApiMock.getById.mockResolvedValue({
+      data: inProgressInstance({ currentStepId: 'step-2', currentStepName: 'Збірка' }),
+    });
+    flowInstanceApiMock.listExecutions.mockResolvedValue({ data: [] });
+    // Navigating back to step-1 keeps the same execution, so the restore effect
+    // must NOT re-seed and the (removed) per-step reset must not zero it either.
+    flowInstanceApiMock.backward.mockResolvedValue({
+      data: inProgressInstance({ currentStepId: 'step-1', currentStepName: 'Зняття мірок' }),
+    });
+    renderWizard();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Збірка/)).toBeInTheDocument();
+    });
+    // Baseline (00:02:00) is visible while on step-2.
+    await waitFor(() => {
+      expect(screen.getByText(/^00:02:0\d/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Попередній/ }));
+    await waitFor(() => {
+      expect(flowInstanceApiMock.backward).toHaveBeenCalledWith('inst-1');
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
+    });
+
+    // After the step change the timer still reflects the accumulated process
+    // baseline — never reset back to 00:00:00.
+    await waitFor(() => {
+      expect(screen.getByText(/^00:02:0\d/)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/^00:00:0\d/)).not.toBeInTheDocument();
+  });
+
   it('calls backward API when navigating to the previous step', async () => {
     flowInstanceApiMock.backward.mockResolvedValue({ data: inProgressInstance() });
     flowInstanceApiMock.getById.mockResolvedValue({

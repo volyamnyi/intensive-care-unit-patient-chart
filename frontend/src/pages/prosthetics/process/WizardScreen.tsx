@@ -1610,6 +1610,10 @@ export default function WizardScreen() {
     const key = `${instance.id}:${instance.currentExecutionId}`;
     if (restoredKey.current === key) return;
     restoredKey.current = key;
+    const baseline = instance.totalActiveSeconds ?? 0;
+    // Seed with the process-accumulated active time (all completed steps) so the
+    // timer reflects the whole process and never flashes to zero on navigation.
+    setSeconds(baseline);
     flowInstanceApi
       .listExecutions(instance.id)
       .then((res) => {
@@ -1627,11 +1631,11 @@ export default function WizardScreen() {
             0,
             Math.floor((Date.now() - new Date(current.startedAt).getTime()) / 1000),
           );
-          if (elapsed > 0) setSeconds(elapsed);
+          setSeconds(baseline + elapsed);
         }
       })
       .catch(() => {
-        // draft restore is best-effort
+        // draft restore is best-effort; the timer keeps the process baseline
       });
   }, [instance]);
 
@@ -1711,7 +1715,9 @@ export default function WizardScreen() {
     if (prevStepId.current !== null && current !== prevStepId.current) {
       setValues({});
       setTouched(false);
-      setSeconds(0);
+      // The timer keeps running across step navigation — it measures the whole
+      // process (start → end), so it is NOT reset here. It stops only on Пауза,
+      // «Позначити процес як провалений» or full completion.
       setValidationAlertDismissed(false);
     }
     prevStepId.current = current;
@@ -2044,7 +2050,7 @@ export default function WizardScreen() {
           <StatusBadge status={instance.status} />
           <div
             className="ml-auto flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 font-mono text-sm text-primary-foreground tabular-nums select-none"
-            title="Час виконання поточного кроку"
+            title="Накопичений час виконання процесу"
           >
             <Timer className="size-4" /> {fmt(seconds)}
           </div>
