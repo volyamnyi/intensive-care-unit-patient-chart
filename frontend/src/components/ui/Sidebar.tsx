@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useThemeMode } from '../../styles/ThemeContext';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 interface SidebarContextValue {
   open: boolean;
@@ -34,22 +35,6 @@ export interface SidebarProps {
   collapsible?: 'none' | 'offcanvas' | 'icon';
 }
 
-function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(query).matches;
-  });
-
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [query]);
-
-  return matches;
-}
-
 export function SidebarProvider({
   children,
   defaultOpen = true,
@@ -68,7 +53,7 @@ export function SidebarProvider({
     const cached = localStorage.getItem(`${persistKey}-width`);
     return cached !== null ? Math.min(maxWidth, Math.max(minWidth, Number(cached))) : defaultWidth;
   });
-  const isMobile = useMediaQuery('(max-width:1200px)');
+  const isMobile = useMediaQuery('(max-width:1023.98px)');
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
   const sidebarWidthRef = useRef(sidebarWidth);
   sidebarWidthRef.current = sidebarWidth;

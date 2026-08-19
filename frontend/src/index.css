@@ -52,6 +52,13 @@
   --font-mulish: "Mulish", sans-serif;
   --radius: 0.75rem;
   --radius-md: 0.5rem;
+
+  /* Responsive breakpoints — mobile < 640px (base), tablet 640–1024px (sm..lg),
+     desktop > 1024px (lg+) */
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
 }
 
 .dark {
@@ -222,6 +229,93 @@ body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialo
   --tw-ring-color: var(--color-ring);
   --tw-ring-offset-shadow: 0 0 0 2px var(--color-card);
   --tw-ring-offset-color: var(--color-card);
+}
+
+/* Sheet (ui/sheet.tsx, Base UI Drawer) — per-side slide transitions (#160) */
+@keyframes sheetOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sheetOverlayOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes sheetInLeft {
+  from { opacity: 0; transform: translateX(-100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes sheetOutLeft {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-100%); }
+}
+
+@keyframes sheetInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes sheetOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes sheetInTop {
+  from { opacity: 0; transform: translateY(-100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sheetOutTop {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-100%); }
+}
+
+@keyframes sheetInBottom {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sheetOutBottom {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(100%); }
+}
+
+[data-slot="sheet-overlay"] {
+  animation: sheetOverlayIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[data-slot="sheet-overlay"][data-closed] {
+  animation-name: sheetOverlayOut;
+  animation-duration: 0.15s;
+}
+
+[data-slot="sheet-content"][data-open] {
+  animation-duration: 0.25s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+[data-slot="sheet-content"][data-closed] {
+  animation-duration: 0.15s;
+  animation-fill-mode: both;
+}
+
+[data-slot="sheet-content"][data-side="left"][data-open] { animation-name: sheetInLeft; }
+[data-slot="sheet-content"][data-side="left"][data-closed] { animation-name: sheetOutLeft; }
+[data-slot="sheet-content"][data-side="right"][data-open] { animation-name: sheetInRight; }
+[data-slot="sheet-content"][data-side="right"][data-closed] { animation-name: sheetOutRight; }
+[data-slot="sheet-content"][data-side="top"][data-open] { animation-name: sheetInTop; }
+[data-slot="sheet-content"][data-side="top"][data-closed] { animation-name: sheetOutTop; }
+[data-slot="sheet-content"][data-side="bottom"][data-open] { animation-name: sheetInBottom; }
+[data-slot="sheet-content"][data-side="bottom"][data-closed] { animation-name: sheetOutBottom; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sheet-content"],
+  [data-slot="sheet-overlay"] {
+    animation: none;
+  }
 }
 
 /* Scrollbar */

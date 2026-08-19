@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Maximize2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '../ui/Sidebar';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useAutoSave } from '../icu/useAutoSave';
 import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/icu';
 import { Button } from '@/components/ui/button';
@@ -383,14 +384,7 @@ export default function IntensiveCareCard({
   const dailyBalance = totalIntake - totalOutput;
   const cumulativeBalance = balanceItems[balanceItems.length - 1]?.cumulativeBalance ?? 0;
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width:1200px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  const isMobile = useMediaQuery('(max-width:1023.98px)');
 
   const gridProps: HourlyGridProps = {
     isMobile,
