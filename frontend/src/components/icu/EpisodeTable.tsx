@@ -124,7 +124,7 @@ export default function EpisodeTable({ episodes, onSelect, loading }: EpisodeTab
           {sortedEpisodes.map((ep) => (
             <TableRow
               key={ep.id}
-              className={onSelect ? 'cursor-pointer' : ''}
+              className={(onSelect ? 'cursor-pointer ' : '') + 'pointer-coarse:min-h-11'}
               onClick={() => onSelect?.(ep)}
             >
               <TableCell className="font-semibold">

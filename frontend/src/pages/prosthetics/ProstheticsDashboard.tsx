@@ -20,7 +20,7 @@ export default function ProstheticsDashboard() {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <Syringe className="size-8 text-mint" />
           <h1 className="font-display text-2xl font-bold">Виробництво протезів</h1>
@@ -35,9 +35,9 @@ export default function ProstheticsDashboard() {
         Вітаю, {user?.fullName ?? ''}. Оберіть дію для початку роботи.
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card
-          className="cursor-pointer"
+          className="h-full cursor-pointer"
           onClick={handleNewProcess}
         >
           <CardContent className="pt-6">
@@ -54,7 +54,7 @@ export default function ProstheticsDashboard() {
         </Card>
 
         <Card
-          className="cursor-pointer"
+          className="h-full cursor-pointer"
           onClick={() => navigate('/prosthetics')}
         >
           <CardContent className="pt-6">

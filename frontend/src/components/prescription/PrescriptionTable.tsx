@@ -39,7 +39,7 @@ export default function PrescriptionTable({ prescriptions, onSelect, loading }: 
         <TableHeader>
           <TableRow>
             <TableHead>Документ</TableHead>
-            <TableHead>Пацієнт ID</TableHead>
+            <TableHead className="hidden sm:table-cell">Пацієнт ID</TableHead>
             <TableHead>Статус</TableHead>
             <TableHead></TableHead>
           </TableRow>
@@ -52,7 +52,7 @@ export default function PrescriptionTable({ prescriptions, onSelect, loading }: 
               onClick={() => onSelect?.(prescription)}
             >
               <TableCell className="font-semibold">{prescription.documentName}</TableCell>
-              <TableCell>{prescription.patientId}</TableCell>
+              <TableCell className="hidden sm:table-cell">{prescription.patientId}</TableCell>
               <TableCell>
                 <Badge variant={statusVariant[prescription.status] || 'outline'}>
                   {statusLabels[prescription.status] || prescription.status}

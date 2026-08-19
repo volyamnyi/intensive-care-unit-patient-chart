@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Maximize2, RefreshCw } from 'lucide-react';
+import { Maximize2, PanelRightOpen, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '../ui/Sidebar';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useAutoSave } from '../icu/useAutoSave';
 import { hourlyRecordApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, ventilationApi, labResultApi, patientStateApi } from '../../api/icu';
@@ -385,6 +386,7 @@ export default function IntensiveCareCard({
   const cumulativeBalance = balanceItems[balanceItems.length - 1]?.cumulativeBalance ?? 0;
 
   const isMobile = useMediaQuery('(max-width:1023.98px)');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const gridProps: HourlyGridProps = {
     isMobile,
@@ -442,6 +444,24 @@ export default function IntensiveCareCard({
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="lg:hidden"
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="Панель пацієнта"
+                >
+                  <PanelRightOpen className="size-4" />
+                </Button>
+              )}
+            />
+            <TooltipContent side="bottom">{'Панель пацієнта'}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={(
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={onRefresh}
                   disabled={!selectedDay}
                   aria-label="Оновити показники"
@@ -457,6 +477,40 @@ export default function IntensiveCareCard({
     </div>
   );
 
+  const sidebarContent = (
+    <PatientSidebar
+      episode={episode}
+      selectedDay={selectedDay}
+      isLocked={isLocked}
+      records={records}
+      notes={notes}
+      noteText={noteText}
+      autoSaveStatus={autoSaveStatus}
+      savingNote={savingNote}
+      scales={scales}
+      ventilation={ventilation}
+      labs={labs}
+      patientState={patientState}
+      loadingSidebar={loadingSidebar}
+      balanceItems={balanceItems}
+      totalIntake={totalIntake}
+      totalOutput={totalOutput}
+      dailyBalance={dailyBalance}
+      cumulativeBalance={cumulativeBalance}
+      keyScales={keyScales}
+      canEditSidebar={canEditSidebar}
+      onNoteChange={handleNoteChange}
+      onSaveNote={saveNow}
+      onCreateLab={createLab}
+      onCreateVentilation={createVentilation}
+      onCreatePatientState={createPatientState}
+      availableScales={availableScales}
+      onCreateScale={createScale}
+      onCalculateScale={calculateScale}
+      episodeId={episode.id}
+    />
+  );
+
   return (
     <>
       <SidebarProvider defaultWidth={300} minWidth={200} maxWidth={600}>
@@ -467,38 +521,15 @@ export default function IntensiveCareCard({
           onHeaderDoubleClick={() => setGridExpanded(true)}
         />
         <div className={cn(isMobile && 'hidden')}>
-          <PatientSidebar
-            episode={episode}
-            selectedDay={selectedDay}
-            isLocked={isLocked}
-            records={records}
-            notes={notes}
-            noteText={noteText}
-            autoSaveStatus={autoSaveStatus}
-            savingNote={savingNote}
-            scales={scales}
-            ventilation={ventilation}
-            labs={labs}
-            patientState={patientState}
-            loadingSidebar={loadingSidebar}
-            balanceItems={balanceItems}
-            totalIntake={totalIntake}
-            totalOutput={totalOutput}
-            dailyBalance={dailyBalance}
-            cumulativeBalance={cumulativeBalance}
-            keyScales={keyScales}
-            canEditSidebar={canEditSidebar}
-            onNoteChange={handleNoteChange}
-            onSaveNote={saveNow}
-            onCreateLab={createLab}
-            onCreateVentilation={createVentilation}
-            onCreatePatientState={createPatientState}
-            availableScales={availableScales}
-            onCreateScale={createScale}
-            onCalculateScale={calculateScale}
-            episodeId={episode.id}
-          />
+          {sidebarContent}
         </div>
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent side="right" className="w-full p-0 sm:max-w-sm">
+            <div className="h-full overflow-y-auto">
+              {sidebarContent}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </SidebarProvider>
     <HourlyGridDialog

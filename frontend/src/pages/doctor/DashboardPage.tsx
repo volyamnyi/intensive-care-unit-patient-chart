@@ -40,7 +40,7 @@ export default function DashboardPage() {
             Відділення анестезіології та інтенсивної терапії
           </p>
         </div>
-        <Button onClick={() => navigate('/icu/doctor/create-card')}>
+        <Button className="w-full sm:w-auto" onClick={() => navigate('/icu/doctor/create-card')}>
           <Plus />
           Нова карта
         </Button>

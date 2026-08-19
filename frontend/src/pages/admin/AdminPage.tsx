@@ -303,7 +303,7 @@ export default function AdminPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="min-w-[260px]">Операція</TableHead>
+                          <TableHead className="sticky left-0 z-10 min-w-[260px] bg-card">Операція</TableHead>
                           {matrix.roles.map((role) => (
                             <TableHead key={role} className="text-center">
                               {ROLE_LABELS[role] ?? role}
@@ -315,13 +315,13 @@ export default function AdminPage() {
                         {matrixCategories.map(([category, perms]) => (
                           <Fragment key={category}>
                             <TableRow className="bg-muted/40">
-                              <TableCell colSpan={matrix.roles.length + 1} className="font-semibold">
+                              <TableCell colSpan={matrix.roles.length + 1} className="sticky left-0 z-10 bg-muted/40 font-semibold">
                                 {category}
                               </TableCell>
                             </TableRow>
                             {perms.map((p) => (
                               <TableRow key={p.code}>
-                                <TableCell>
+                                <TableCell className="sticky left-0 z-10 bg-card">
                                   <div className="font-medium">{p.label}</div>
                                   {p.description && (
                                     <div className="text-xs text-muted-foreground">{p.description}</div>
@@ -373,7 +373,7 @@ export default function AdminPage() {
                         placeholder="Фільтр за сутністю"
                         value={auditFilterEntity}
                         onChange={(e) => setAuditFilterEntity(e.target.value)}
-                        className="w-[200px]"
+                        className="w-full sm:w-[200px]"
                       />
                       <Button variant="outline" size="sm" onClick={loadAudit}>Пошук</Button>
                     </div>
@@ -386,11 +386,11 @@ export default function AdminPage() {
             <TabsContent value="stats">
               <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-2.5">
                 <h2 className="font-rubik mb-2 text-base font-medium">Статистика системи</h2>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {Object.entries(stats).map(([key, val]) => (
                     <div
                       key={key}
-                      className="min-w-[150px] rounded-xl border bg-card p-2 text-center shadow-sm"
+                      className="rounded-xl border bg-card p-2 text-center shadow-sm"
                     >
                       <div className="text-2xl font-bold">{val}</div>
                       <div className="text-sm text-muted-foreground">

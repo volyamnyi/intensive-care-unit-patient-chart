@@ -150,11 +150,11 @@ export default function HourlyGridDialog({
       >
         <DialogTitle className="sr-only">{`Погодинна карта — ${patientName}`}</DialogTitle>
 
-        <header className="flex min-h-12 min-w-0 items-center justify-between gap-2 border-b border-border bg-card px-3 pt-[env(safe-area-inset-top)]">
+        <header className="flex min-h-12 min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 pt-[env(safe-area-inset-top)]">
           <div className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm font-semibold text-card-foreground">{patientName}</span>
             {selectedDay && (
-              <Badge variant="outline" className="shrink-0 border-border text-muted-foreground">
+              <Badge variant="outline" className="hidden shrink-0 border-border text-muted-foreground sm:inline-flex">
                 {`Доба ${selectedDay.dayNumber}`}
               </Badge>
             )}
@@ -250,7 +250,7 @@ export default function HourlyGridDialog({
                       aria-label="Скасувати останню зміну"
                     >
                       <Undo2 className="size-3.5" />
-                      {'Скасувати останню зміну'}
+                      <span className="hidden sm:inline">{'Скасувати останню зміну'}</span>
                     </Button>
                   )}
                 />
