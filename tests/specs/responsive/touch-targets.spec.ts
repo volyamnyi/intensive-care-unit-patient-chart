@@ -16,7 +16,17 @@ test.describe('touch targets — doctor', () => {
     await page.goto('/icu/doctor');
     await expectTouchTarget(page.getByRole('button', { name: 'Нова карта' }), 'Нова карта');
 
+    // The create-card form (and its submit button) renders after a patient is
+    // picked; Ткачук has no seeded episode, so the form stays unobstructed.
     await page.goto('/icu/doctor/create-card');
+    await page.getByLabel('ПІБ, телефон або № медкарти').fill('Ткачук');
+    const option = page.getByText(/Ткачук/);
+    await expect(option).toBeVisible({ timeout: 10000 });
+    await option.click();
+    await expect(
+      page.getByRole('button', { name: 'Створити карту' }),
+      'create-card form did not render after patient selection',
+    ).toBeVisible();
     await expectTouchTarget(
       page.getByRole('button', { name: 'Створити карту' }),
       'Створити карту',
@@ -24,9 +34,9 @@ test.describe('touch targets — doctor', () => {
   });
 
   test('patient-panel toggle on the episode page is at least 44px', async ({ page }) => {
-    await page.goto('/icu/doctor/episode/a3333333');
+    await page.goto('/icu/doctor/episode/a3333333-3333-3333-3333-333333333333');
     const panelButton = page.getByRole('button', { name: 'Панель пацієнта' });
-    await expect(panelButton).toBeVisible();
+    await expect(panelButton).toBeVisible({ timeout: 15000 });
     await expectTouchTarget(panelButton, 'Панель пацієнта');
   });
 });

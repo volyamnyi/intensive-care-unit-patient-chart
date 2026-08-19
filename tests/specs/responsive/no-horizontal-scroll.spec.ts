@@ -15,7 +15,7 @@ const VIEWPORTS = [
 const DOCTOR_ROUTES = [
   '/icu/doctor',
   '/icu/doctor/create-card',
-  '/icu/doctor/episode/a3333333',
+  '/icu/doctor/episode/a3333333-3333-3333-3333-333333333333',
   '/prescriptions/doctor',
 ];
 
@@ -34,7 +34,23 @@ async function assertNoHorizontalScroll(page: Page, route: string) {
     const viewportWidth = window.innerWidth;
     const offenders: string[] = [];
     if (docWidth > viewportWidth + 1) {
-      for (const el of Array.from(document.querySelectorAll('body *')) as HTMLElement[]) {
+      const limit = 6;
+      const elements = Array.from(document.querySelectorAll('body *')) as HTMLElement[];
+      for (const el of elements) {
+        // Skip elements inside horizontal scroll containers (tables, grids) —
+        // their content legitimately extends past the viewport.
+        let parent = el.parentElement;
+        let insideScrollContainer = false;
+        while (parent) {
+          const overflowX = window.getComputedStyle(parent).overflowX;
+          if (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'hidden') {
+            insideScrollContainer = true;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        if (insideScrollContainer) continue;
+
         const rect = el.getBoundingClientRect();
         if (rect.right > viewportWidth + 1 || rect.left < -1) {
           const tag = el.tagName.toLowerCase();
@@ -42,7 +58,7 @@ async function assertNoHorizontalScroll(page: Page, route: string) {
           offenders.push(
             `${tag}.${cls} left=${Math.round(rect.left)} right=${Math.round(rect.right)}`,
           );
-          if (offenders.length >= 6) break;
+          if (offenders.length >= limit) break;
         }
       }
     }

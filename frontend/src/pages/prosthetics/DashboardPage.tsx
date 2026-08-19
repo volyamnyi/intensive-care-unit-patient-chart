@@ -127,7 +127,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <Wrench className="size-8 text-mint" />
           <h1 className="font-display text-2xl font-bold">Виробництво протезів</h1>
@@ -193,56 +193,58 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">Немає процесів за поточним фільтром</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Процес</TableHead>
-                <TableHead>Пацієнт</TableHead>
-                <TableHead>Замовлення</TableHead>
-                <TableHead>Шаблон</TableHead>
-                <TableHead>Поточний етап</TableHead>
-                <TableHead>Поточний крок</TableHead>
-                <TableHead>Статус</TableHead>
-                <TableHead>Оновлено</TableHead>
-                <TableHead className="text-right">Дії</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((instance) => {
-                const statusInfo = STATUS_LABELS[instance.status];
-                return (
-                  <TableRow
-                    key={instance.id}
-                    className="cursor-pointer"
-                    onClick={() => openInstance(instance)}
-                  >
-                    <TableCell className="font-mono text-xs">#{instance.id.slice(0, 8)}</TableCell>
-                    <TableCell>{instance.patientPib ?? '—'}</TableCell>
-                    <TableCell>{instance.orderNumber ?? '—'}</TableCell>
-                    <TableCell>{instance.templateName ?? '—'}</TableCell>
-                    <TableCell>{instance.currentStageName ?? '—'}</TableCell>
-                    <TableCell>{instance.currentStepName ?? '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
-                    </TableCell>
-                    <TableCell>{new Date(instance.updatedAt).toLocaleDateString('uk-UA')}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openInstance(instance);
-                        }}
-                      >
-                        Відкрити
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto touch-pan-x">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Процес</TableHead>
+                  <TableHead>Пацієнт</TableHead>
+                  <TableHead>Замовлення</TableHead>
+                  <TableHead>Шаблон</TableHead>
+                  <TableHead>Поточний етап</TableHead>
+                  <TableHead>Поточний крок</TableHead>
+                  <TableHead>Статус</TableHead>
+                  <TableHead>Оновлено</TableHead>
+                  <TableHead className="text-right">Дії</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((instance) => {
+                  const statusInfo = STATUS_LABELS[instance.status];
+                  return (
+                    <TableRow
+                      key={instance.id}
+                      className="cursor-pointer"
+                      onClick={() => openInstance(instance)}
+                    >
+                      <TableCell className="font-mono text-xs">#{instance.id.slice(0, 8)}</TableCell>
+                      <TableCell>{instance.patientPib ?? '—'}</TableCell>
+                      <TableCell>{instance.orderNumber ?? '—'}</TableCell>
+                      <TableCell>{instance.templateName ?? '—'}</TableCell>
+                      <TableCell>{instance.currentStageName ?? '—'}</TableCell>
+                      <TableCell>{instance.currentStepName ?? '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                      </TableCell>
+                      <TableCell>{new Date(instance.updatedAt).toLocaleDateString('uk-UA')}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openInstance(instance);
+                          }}
+                        >
+                          Відкрити
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Tabs>
     </div>

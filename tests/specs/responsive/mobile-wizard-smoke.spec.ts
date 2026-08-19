@@ -101,14 +101,10 @@ test.describe('mobile wizard smoke — prosthetist', () => {
       .toBeLessThanOrEqual(1);
   });
 
-  test('starts the process and completes one stage at 360px', async ({ page }) => {
+  test('completes the first stage at 360px', async ({ page }) => {
+    // POST /instances auto-starts the process — the wizard opens directly on
+    // stage 1 (no «Розпочати процес» screen).
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
-
-    const start = page.getByRole('button', { name: /Розпочати процес/ });
-    await expect(start).toBeVisible();
-    const startBox = await start.boundingBox();
-    expect(startBox!.height).toBeGreaterThanOrEqual(44);
-    await start.click();
 
     const stage1 = page.getByText('Зняття мірок та виготовлення гіпсового негатива');
     await expect(stage1).toBeVisible();

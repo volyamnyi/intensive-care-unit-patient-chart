@@ -15,8 +15,10 @@ test.describe('tablet — doctor layout', () => {
     expect(collapsedBox!.width).toBeLessThanOrEqual(64);
 
     await page.getByRole('button', { name: 'Розгорнути меню' }).click();
-    const expandedBox = await aside.boundingBox();
-    expect(expandedBox!.width).toBeGreaterThanOrEqual(200);
+    // The rail animates its width — poll until the transition settles.
+    await expect
+      .poll(async () => (await aside.boundingBox())!.width, { timeout: 10000 })
+      .toBeGreaterThanOrEqual(200);
 
     // The hamburger is mobile-only (<640px) — it must not render at 768px.
     await expect(page.getByRole('button', { name: 'Відкрити навігацію' })).toHaveCount(0);
@@ -30,15 +32,16 @@ test.describe('tablet — prosthetist dashboard', () => {
     await page.goto('/prosthetics');
 
     // Stat labels duplicate the filter-tab labels; the stat cards come first
-    // in the DOM, so .first() picks the card.
+    // in the DOM, so .first() picks the card. In a 2-column grid the first
+    // row holds «Активні» + «Призупинені»: same y, different x.
+    const active = page.getByText('Активні').first();
     const paused = page.getByText('Призупинені').first();
-    const completed = page.getByText('Завершені').first();
+    await expect(active).toBeVisible();
     await expect(paused).toBeVisible();
-    await expect(completed).toBeVisible();
 
+    const activeBox = await active.boundingBox();
     const pausedBox = await paused.boundingBox();
-    const completedBox = await completed.boundingBox();
-    expect(pausedBox!.y).toBe(completedBox!.y);
-    expect(Math.abs(pausedBox!.x - completedBox!.x)).toBeGreaterThan(0);
+    expect(activeBox!.y).toBe(pausedBox!.y);
+    expect(pausedBox!.x).toBeGreaterThan(activeBox!.x);
   });
 });
