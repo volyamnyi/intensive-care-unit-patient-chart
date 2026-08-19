@@ -9,7 +9,7 @@ export default function ThemeToggle() {
       <TooltipTrigger
         onClick={toggleTheme}
         aria-label="Переключити тему"
-        className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground hover:text-primary hover:bg-primary/10"
+        className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground hover:text-primary hover:bg-primary/10 sm:size-8"
       >
         {mode === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
       </TooltipTrigger>
