@@ -92,5 +92,40 @@ export default defineConfig({
       // behind — they must never run concurrently against the same database.
       workers: 1,
     },
+    // Responsive UI Phase 6 (issue #165): mobile + tablet smoke projects.
+    // Ordered AFTER prosthetics-chromium so mobile-wizard-smoke's runtime flow
+    // instance (created on a seed order) can never race the desktop prosthetics
+    // specs; it is driven to COMPLETED in afterAll so the "new process" review
+    // screen stays unblocked for later projects.
+    {
+      name: 'responsive-mobile-chromium',
+      dependencies: ['setup'],
+      use: {
+        ...devices['iPhone 13'],
+        browserName: 'chromium',
+        storageState: '.auth/doctor.json',
+      },
+      testMatch: [
+        '**/responsive/mobile-nav.spec.ts',
+        '**/responsive/touch-targets.spec.ts',
+        '**/responsive/mobile-wizard-smoke.spec.ts',
+      ],
+      fullyParallel: false,
+    },
+    {
+      name: 'responsive-tablet-chromium',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 768, height: 1024 },
+        hasTouch: true,
+        storageState: '.auth/doctor.json',
+      },
+      testMatch: [
+        '**/responsive/no-horizontal-scroll.spec.ts',
+        '**/responsive/tablet-dashboard.spec.ts',
+      ],
+      fullyParallel: false,
+    },
   ],
 });
