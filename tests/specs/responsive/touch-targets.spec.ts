@@ -20,7 +20,7 @@ test.describe('touch targets — doctor', () => {
     // picked; Ткачук has no seeded episode, so the form stays unobstructed.
     await page.goto('/icu/doctor/create-card');
     await page.getByLabel('ПІБ, телефон або № медкарти').fill('Ткачук');
-    const option = page.getByText(/Ткачук/);
+    const option = page.getByText('Ткачук Андрій Вікторович');
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
     await expect(

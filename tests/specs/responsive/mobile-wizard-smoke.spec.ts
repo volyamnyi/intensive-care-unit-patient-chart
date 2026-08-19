@@ -106,7 +106,7 @@ test.describe('mobile wizard smoke — prosthetist', () => {
     // stage 1 (no «Розпочати процес» screen).
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
 
-    const stage1 = page.getByText('Зняття мірок та виготовлення гіпсового негатива');
+    const stage1 = page.getByText('Зняття мірок та виготовлення гіпсового негатива').first();
     await expect(stage1).toBeVisible();
 
     const wizard = new WizardExecutionPage(page);
@@ -120,12 +120,13 @@ test.describe('mobile wizard smoke — prosthetist', () => {
       if (!advanced) break;
       const reachedStage2 = await page
         .getByText('Виготовлення гіпсового позитива')
+        .first()
         .isVisible({ timeout: 1000 })
         .catch(() => false);
       if (reachedStage2) break;
     }
 
-    await expect(page.getByText('Виготовлення гіпсового позитива')).toBeVisible({
+    await expect(page.getByText('Виготовлення гіпсового позитива').first()).toBeVisible({
       timeout: 15000,
     });
     await expect
