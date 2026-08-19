@@ -19,8 +19,8 @@ describe('ui accessibility contract', () => {
           <RadioGroupItem value="a" />
           <RadioGroupItem value="b" />
         </RadioGroup>
-        <Select aria-label="Вибір">
-          <SelectTrigger>
+        <Select>
+          <SelectTrigger aria-label="Вибір">
             <SelectValue placeholder="Оберіть" />
           </SelectTrigger>
         </Select>
@@ -55,8 +55,8 @@ describe('ui accessibility contract', () => {
         <RadioGroup aria-label="Група">
           <RadioGroupItem value="a" />
         </RadioGroup>
-        <Select aria-label="Вибір">
-          <SelectTrigger>
+        <Select>
+          <SelectTrigger aria-label="Вибір">
             <SelectValue placeholder="Оберіть" />
           </SelectTrigger>
         </Select>
@@ -83,6 +83,6 @@ describe('ui accessibility contract', () => {
       'pointer-coarse:min-h-11',
     );
     expect(container.querySelector('[data-slot="tabs-list"]')).toHaveClass('pointer-coarse:min-h-11');
-    expect(container.querySelector('input[type="text"]')).toHaveClass('pointer-coarse:min-h-11');
+    expect(container.querySelector('[data-slot="input"]')).toHaveClass('pointer-coarse:min-h-11');
   });
 });

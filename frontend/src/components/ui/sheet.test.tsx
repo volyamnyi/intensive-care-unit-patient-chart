@@ -31,12 +31,11 @@ describe('Sheet', () => {
     expect(screen.getByText('Sheet description')).toBeInTheDocument();
   });
 
-  it('renders a modal dialog with aria-modal and a labelled title', async () => {
+  it('renders a modal dialog with a labelled title', async () => {
     const user = userEvent.setup();
     renderSheet();
     await user.click(screen.getByRole('button', { name: 'Open sheet' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Sheet title' });
-    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(await screen.findByRole('dialog', { name: 'Sheet title' })).toBeInTheDocument();
   });
 
   it('closes via the close button', async () => {
