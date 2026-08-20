@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import WizardScreen from '@/pages/prosthetics/process/WizardScreen';
 import type { FlowInstance, SnapshotTemplate } from '@/prosthetics/types';
@@ -439,9 +439,13 @@ describe('WizardScreen', () => {
       expect(screen.getByText(/Збірка/)).toBeInTheDocument();
     });
 
-    const checkbox = screen.getByRole('checkbox', { name: 'Підтвердити збірку' });
+    // The accessible name of the Base UI checkbox span comes from the label
+    // association only in a real browser engine — in jsdom's
+    // dom-accessibility-api a span[role=checkbox] has no name, so scope the
+    // query to the row (the label wrapper) instead.
     const row = screen.getByText('Підтвердити збірку').closest('label');
     expect(row).not.toBeNull();
+    const checkbox = within(row!).getByRole('checkbox');
     expect(checkbox).toHaveAttribute('aria-checked', 'false');
 
     // Click on the label text — native label activation toggles the control.
