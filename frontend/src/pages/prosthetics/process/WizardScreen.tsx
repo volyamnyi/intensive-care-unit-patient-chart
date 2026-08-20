@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -41,6 +41,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { flowInstanceApi, prostheticsOrderApi, prostheticsPatientApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/services/AuthContext';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import { QualityGatePanel } from '@/components/prosthetics/QualityGatePanel';
@@ -140,6 +141,48 @@ const PPE_ALT_BY_LABEL: Record<string, string> = {
     'М’які тканинні терморукавиці на руках медичної працівниці',
 };
 
+// A checkbox row whose ENTIRE surface toggles the checkbox: the row itself is
+// a <label htmlFor>, so native label activation covers the padding/gap/text
+// areas, and clicking the Base UI checkbox span stays a single toggle (label
+// activation is suppressed for interactive content per the HTML spec).
+function CheckboxRow({
+  id,
+  checked,
+  onChange,
+  variant = 'card',
+  className,
+  labelClassName,
+  children,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  variant?: 'card' | 'muted' | 'plain';
+  className?: string;
+  labelClassName?: string;
+  children: ReactNode;
+}) {
+  const variants: Record<typeof variant, { row: string; label: string }> = {
+    card: {
+      row: 'rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40',
+      label: 'text-sm font-medium',
+    },
+    muted: { row: 'rounded-md border bg-muted/40 p-3', label: 'text-sm' },
+    plain: { row: 'rounded-md border p-3', label: 'text-sm' },
+  };
+  return (
+    <label
+      htmlFor={id}
+      className={cn('flex cursor-pointer items-center gap-3', variants[variant].row, className)}
+    >
+      <Checkbox id={id} checked={checked} onCheckedChange={onChange} />
+      <span data-slot="label" className={cn(variants[variant].label, labelClassName)}>
+        {children}
+      </span>
+    </label>
+  );
+}
+
 function PpeChecklistGroup({
   elements,
   values,
@@ -162,17 +205,17 @@ function PpeChecklistGroup({
       )}
       <div className="space-y-2">
         {elements.map((el) => (
-          <div key={el.id} className="flex items-center gap-3 rounded-md border bg-card p-3 transition-colors hover:bg-muted/40">
-            <Checkbox
-              id={el.id}
-              checked={values[el.id] === true}
-              onCheckedChange={(c) => onChange(el.id, c === true)}
-            />
-            <Label htmlFor={el.id} className="text-sm">
-              {ppeDisplayLabel(el.label)}
-              {el.required && <span className="text-accent">*</span>}
-            </Label>
-          </div>
+          <CheckboxRow
+            key={el.id}
+            id={el.id}
+            checked={values[el.id] === true}
+            onChange={(c) => onChange(el.id, c)}
+            variant="muted"
+            className="bg-card transition-colors hover:bg-muted/40"
+          >
+            {ppeDisplayLabel(el.label)}
+            {el.required && <span className="text-accent">*</span>}
+          </CheckboxRow>
         ))}
       </div>
     </div>
@@ -217,16 +260,16 @@ function renderElements(
         <Separator />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
           <div className="flex flex-col gap-1.5">
-            <div className={`flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40${errors[PPE_MEASUREMENT_GLOVES_KEY] ? ' border-destructive ring-1 ring-destructive' : ''}`}>
-              <Checkbox
-                id={PPE_MEASUREMENT_GLOVES_KEY}
-                checked={values[PPE_MEASUREMENT_GLOVES_KEY] === true}
-                onCheckedChange={(c) => onChange(PPE_MEASUREMENT_GLOVES_KEY, c === true)}
-              />
-              <Label htmlFor={PPE_MEASUREMENT_GLOVES_KEY} className="text-sm font-medium">
-                {PPE_MEASUREMENT_GLOVES_LABEL}
-              </Label>
-            </div>
+            <CheckboxRow
+              id={PPE_MEASUREMENT_GLOVES_KEY}
+              checked={values[PPE_MEASUREMENT_GLOVES_KEY] === true}
+              onChange={(c) => onChange(PPE_MEASUREMENT_GLOVES_KEY, c)}
+              className={
+                errors[PPE_MEASUREMENT_GLOVES_KEY] ? 'border-destructive ring-1 ring-destructive' : ''
+              }
+            >
+              {PPE_MEASUREMENT_GLOVES_LABEL}
+            </CheckboxRow>
             {errors[PPE_MEASUREMENT_GLOVES_KEY] && (
               <p className="px-1 text-xs text-destructive">{errors[PPE_MEASUREMENT_GLOVES_KEY]}</p>
             )}
@@ -268,18 +311,13 @@ function renderElements(
     out.push(
       <div key="plaster-confirmation" className="space-y-3 rounded-xl border bg-muted/40 p-5">
         <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40">
-          <Checkbox
-            id="plaster-negative-confirmed"
-            checked={values['f0000004-0000-0000-0000-000000000001'] === true}
-            onCheckedChange={(c) =>
-              onChange('f0000004-0000-0000-0000-000000000001', c === true)
-            }
-          />
-          <Label htmlFor="plaster-negative-confirmed" className="text-sm font-medium">
-            Гіпсовий негатив виготовлено
-          </Label>
-        </div>
+        <CheckboxRow
+          id="plaster-negative-confirmed"
+          checked={values['f0000004-0000-0000-0000-000000000001'] === true}
+          onChange={(c) => onChange('f0000004-0000-0000-0000-000000000001', c)}
+        >
+          Гіпсовий негатив виготовлено
+        </CheckboxRow>
         <p className="text-xs text-muted-foreground">
           Після відмітки переходьте до наступного кроку.
         </p>
@@ -302,18 +340,13 @@ function renderElements(
       out.push(
         <div key="plaster-quality-check" className="space-y-3 rounded-xl border bg-muted/40 p-5">
           <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40">
-            <Checkbox
-              id="plaster-quality-checked"
-              checked={values['f0000005-0000-0000-0000-000000000001'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000005-0000-0000-0000-000000000001', c === true)
-              }
-            />
-            <Label htmlFor="plaster-quality-checked" className="text-sm font-medium">
-              Гіпсовий негатив перевірено на відповідність антропометричним даним
-            </Label>
-          </div>
+          <CheckboxRow
+            id="plaster-quality-checked"
+            checked={values['f0000005-0000-0000-0000-000000000001'] === true}
+            onChange={(c) => onChange('f0000005-0000-0000-0000-000000000001', c)}
+          >
+            Гіпсовий негатив перевірено на відповідність антропометричним даним
+          </CheckboxRow>
           <p className="text-xs text-muted-foreground">
             Після відмітки переходьте до наступного кроку.
           </p>
@@ -325,18 +358,13 @@ function renderElements(
     out.push(
       <div key="positive-production" className="space-y-3 rounded-xl border bg-muted/40 p-5">
         <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/40">
-          <Checkbox
-            id="plaster-positive-confirmed"
-            checked={values['f0000013-0000-0000-0000-000000000001'] === true}
-            onCheckedChange={(c) =>
-              onChange('f0000013-0000-0000-0000-000000000001', c === true)
-            }
-          />
-          <Label htmlFor="plaster-positive-confirmed" className="text-sm font-medium">
-            Гіпсовий позитив виготовлено
-          </Label>
-        </div>
+        <CheckboxRow
+          id="plaster-positive-confirmed"
+          checked={values['f0000013-0000-0000-0000-000000000001'] === true}
+          onChange={(c) => onChange('f0000013-0000-0000-0000-000000000001', c)}
+        >
+          Гіпсовий позитив виготовлено
+        </CheckboxRow>
         <p className="text-xs text-muted-foreground">
           Після відмітки переходьте до наступного кроку.
         </p>
@@ -395,20 +423,13 @@ function renderElements(
             />
           </div>
         </div>
-        <div
-          className="flex items-center gap-3 rounded-lg border bg-card p-4"
+        <CheckboxRow
+          id="kit-formed"
+          checked={values['f0000066-0000-0000-0000-000000000006'] === true}
+          onChange={(c) => onChange('f0000066-0000-0000-0000-000000000006', c)}
         >
-          <Checkbox
-            id="kit-formed"
-            checked={values['f0000066-0000-0000-0000-000000000006'] === true}
-            onCheckedChange={(c) =>
-              onChange('f0000066-0000-0000-0000-000000000006', c === true)
-            }
-          />
-          <Label htmlFor="kit-formed" className="text-sm font-medium">
-            Комплектацію сформовано (лист для збірки комплектації на склад)
-          </Label>
-        </div>
+          Комплектацію сформовано (лист для збірки комплектації на склад)
+        </CheckboxRow>
         <p className="text-xs text-muted-foreground" style={{ display: 'none' }}>
           Після відмітки переходьте до наступного кроку.
         </p>
@@ -429,42 +450,30 @@ function renderElements(
             <p className="text-sm font-medium">Обробка гільзи</p>
             <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
             <div className="space-y-2">
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="thermoforming-goggles"
-                  checked={values['f0000044-0000-0000-0000-000000000001'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000044-0000-0000-0000-000000000001', c === true)
-                  }
-                />
-                <Label htmlFor="thermoforming-goggles" className="text-sm">
-                  Захисні окуляри
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="thermoforming-respirator"
-                  checked={values['f0000045-0000-0000-0000-000000000001'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000045-0000-0000-0000-000000000001', c === true)
-                  }
-                />
-                <Label htmlFor="thermoforming-respirator" className="text-sm">
-                  Респіратор
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="thermoforming-earmuffs"
-                  checked={values['f0000046-0000-0000-0000-000000000001'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000046-0000-0000-0000-000000000001', c === true)
-                  }
-                />
-                <Label htmlFor="thermoforming-earmuffs" className="text-sm">
-                  Захисні навушники
-                </Label>
-              </div>
+              <CheckboxRow
+                id="thermoforming-goggles"
+                checked={values['f0000044-0000-0000-0000-000000000001'] === true}
+                onChange={(c) => onChange('f0000044-0000-0000-0000-000000000001', c)}
+                variant="muted"
+              >
+                Захисні окуляри
+              </CheckboxRow>
+              <CheckboxRow
+                id="thermoforming-respirator"
+                checked={values['f0000045-0000-0000-0000-000000000001'] === true}
+                onChange={(c) => onChange('f0000045-0000-0000-0000-000000000001', c)}
+                variant="muted"
+              >
+                Респіратор
+              </CheckboxRow>
+              <CheckboxRow
+                id="thermoforming-earmuffs"
+                checked={values['f0000046-0000-0000-0000-000000000001'] === true}
+                onChange={(c) => onChange('f0000046-0000-0000-0000-000000000001', c)}
+                variant="muted"
+              >
+                Захисні навушники
+              </CheckboxRow>
             </div>
             <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
               <img
@@ -479,30 +488,22 @@ function renderElements(
             <p className="text-sm font-medium">Термоформування</p>
             <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
             <div className="space-y-2">
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="thermoforming-latex-gloves"
-                  checked={values['f0000047-0000-0000-0000-000000000001'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000047-0000-0000-0000-000000000001', c === true)
-                  }
-                />
-                <Label htmlFor="thermoforming-latex-gloves" className="text-sm">
-                  Латексні рукавички підвищеної міцності
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="thermoforming-thermal-gloves"
-                  checked={values['f0000048-0000-0000-0000-000000000001'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000048-0000-0000-0000-000000000001', c === true)
-                  }
-                />
-                <Label htmlFor="thermoforming-thermal-gloves" className="text-sm">
-                  М’які тканинні терморукавиці
-                </Label>
-              </div>
+              <CheckboxRow
+                id="thermoforming-latex-gloves"
+                checked={values['f0000047-0000-0000-0000-000000000001'] === true}
+                onChange={(c) => onChange('f0000047-0000-0000-0000-000000000001', c)}
+                variant="muted"
+              >
+                Латексні рукавички підвищеної міцності
+              </CheckboxRow>
+              <CheckboxRow
+                id="thermoforming-thermal-gloves"
+                checked={values['f0000048-0000-0000-0000-000000000001'] === true}
+                onChange={(c) => onChange('f0000048-0000-0000-0000-000000000001', c)}
+                variant="muted"
+              >
+                М’які тканинні терморукавиці
+              </CheckboxRow>
             </div>
             <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
               <img
@@ -518,30 +519,20 @@ function renderElements(
 
         <div className="space-y-3">
           <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="thermoforming-sleeve-formed"
-              checked={values['f0000042-0000-0000-0000-000000000001'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000042-0000-0000-0000-000000000001', c === true)
-              }
-            />
-            <Label htmlFor="thermoforming-sleeve-formed" className="text-sm font-medium">
-              Гільза сформована
-            </Label>
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="thermoforming-edges-polished"
-              checked={values['f0000049-0000-0000-0000-000000000001'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000049-0000-0000-0000-000000000001', c === true)
-              }
-            />
-            <Label htmlFor="thermoforming-edges-polished" className="text-sm font-medium">
-              Краї заокруглені та відполіровані, зроблено отвір для примірки
-            </Label>
-          </div>
+          <CheckboxRow
+            id="thermoforming-sleeve-formed"
+            checked={values['f0000042-0000-0000-0000-000000000001'] === true}
+            onChange={(c) => onChange('f0000042-0000-0000-0000-000000000001', c)}
+          >
+            Гільза сформована
+          </CheckboxRow>
+          <CheckboxRow
+            id="thermoforming-edges-polished"
+            checked={values['f0000049-0000-0000-0000-000000000001'] === true}
+            onChange={(c) => onChange('f0000049-0000-0000-0000-000000000001', c)}
+          >
+            Краї заокруглені та відполіровані, зроблено отвір для примірки
+          </CheckboxRow>
         </div>
 
         <p className="text-xs text-muted-foreground">
@@ -564,42 +555,30 @@ function renderElements(
             <p className="text-sm font-medium">Обробка гільзи</p>
             <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
             <div className="space-y-2">
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="inner-sleeve-goggles"
-                  checked={values['f0000071-0000-0000-0000-000000000011'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000071-0000-0000-0000-000000000011', c === true)
-                  }
-                />
-                <Label htmlFor="inner-sleeve-goggles" className="text-sm">
-                  Захисні окуляри
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="inner-sleeve-respirator"
-                  checked={values['f0000072-0000-0000-0000-000000000012'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000072-0000-0000-0000-000000000012', c === true)
-                  }
-                />
-                <Label htmlFor="inner-sleeve-respirator" className="text-sm">
-                  Респіратор
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="inner-sleeve-earmuffs"
-                  checked={values['f0000073-0000-0000-0000-000000000013'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000073-0000-0000-0000-000000000013', c === true)
-                  }
-                />
-                <Label htmlFor="inner-sleeve-earmuffs" className="text-sm">
-                  Захисні навушники
-                </Label>
-              </div>
+              <CheckboxRow
+                id="inner-sleeve-goggles"
+                checked={values['f0000071-0000-0000-0000-000000000011'] === true}
+                onChange={(c) => onChange('f0000071-0000-0000-0000-000000000011', c)}
+                variant="muted"
+              >
+                Захисні окуляри
+              </CheckboxRow>
+              <CheckboxRow
+                id="inner-sleeve-respirator"
+                checked={values['f0000072-0000-0000-0000-000000000012'] === true}
+                onChange={(c) => onChange('f0000072-0000-0000-0000-000000000012', c)}
+                variant="muted"
+              >
+                Респіратор
+              </CheckboxRow>
+              <CheckboxRow
+                id="inner-sleeve-earmuffs"
+                checked={values['f0000073-0000-0000-0000-000000000013'] === true}
+                onChange={(c) => onChange('f0000073-0000-0000-0000-000000000013', c)}
+                variant="muted"
+              >
+                Захисні навушники
+              </CheckboxRow>
             </div>
             <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
               <img
@@ -614,30 +593,22 @@ function renderElements(
             <p className="text-sm font-medium">Термоформування</p>
             <p className="text-xs text-muted-foreground">Засоби індивідуального захисту:</p>
             <div className="space-y-2">
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="inner-sleeve-latex-gloves"
-                  checked={values['f0000074-0000-0000-0000-000000000014'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000074-0000-0000-0000-000000000014', c === true)
-                  }
-                />
-                <Label htmlFor="inner-sleeve-latex-gloves" className="text-sm">
-                  Латексні рукавички підвищеної міцності
-                </Label>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-                <Checkbox
-                  id="inner-sleeve-thermal-gloves"
-                  checked={values['f0000075-0000-0000-0000-000000000015'] === true}
-                  onCheckedChange={(c) =>
-                    onChange('f0000075-0000-0000-0000-000000000015', c === true)
-                  }
-                />
-                <Label htmlFor="inner-sleeve-thermal-gloves" className="text-sm">
-                  М’які тканинні терморукавиці
-                </Label>
-              </div>
+              <CheckboxRow
+                id="inner-sleeve-latex-gloves"
+                checked={values['f0000074-0000-0000-0000-000000000014'] === true}
+                onChange={(c) => onChange('f0000074-0000-0000-0000-000000000014', c)}
+                variant="muted"
+              >
+                Латексні рукавички підвищеної міцності
+              </CheckboxRow>
+              <CheckboxRow
+                id="inner-sleeve-thermal-gloves"
+                checked={values['f0000075-0000-0000-0000-000000000015'] === true}
+                onChange={(c) => onChange('f0000075-0000-0000-0000-000000000015', c)}
+                variant="muted"
+              >
+                М’які тканинні терморукавиці
+              </CheckboxRow>
             </div>
             <div className="flex items-center rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
               <img
@@ -653,30 +624,20 @@ function renderElements(
 
         <div className="space-y-3">
           <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="inner-sleeve-formed"
-              checked={values['f0000076-0000-0000-0000-000000000016'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000076-0000-0000-0000-000000000016', c === true)
-              }
-            />
-            <Label htmlFor="inner-sleeve-formed" className="text-sm font-medium">
-              Гільза сформована
-            </Label>
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="inner-sleeve-edges-polished"
-              checked={values['f0000077-0000-0000-0000-000000000017'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000077-0000-0000-0000-000000000017', c === true)
-              }
-            />
-            <Label htmlFor="inner-sleeve-edges-polished" className="text-sm font-medium">
-              Краї заокруглені та відполіровані
-            </Label>
-          </div>
+          <CheckboxRow
+            id="inner-sleeve-formed"
+            checked={values['f0000076-0000-0000-0000-000000000016'] === true}
+            onChange={(c) => onChange('f0000076-0000-0000-0000-000000000016', c)}
+          >
+            Гільза сформована
+          </CheckboxRow>
+          <CheckboxRow
+            id="inner-sleeve-edges-polished"
+            checked={values['f0000077-0000-0000-0000-000000000017'] === true}
+            onChange={(c) => onChange('f0000077-0000-0000-0000-000000000017', c)}
+          >
+            Краї заокруглені та відполіровані
+          </CheckboxRow>
         </div>
 
         <p className="text-xs text-muted-foreground">
@@ -712,48 +673,33 @@ function renderElements(
           <div className="flex items-center justify-center">
             <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
           </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="inner-fitting-nitrile-gloves"
-              checked={values['f0000079-0000-0000-0000-000000000019'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000079-0000-0000-0000-000000000019', c === true)
-              }
-            />
-            <Label htmlFor="inner-fitting-nitrile-gloves" className="text-sm font-medium">
-              Нестерильні оглядові нітрилові рукавички
-            </Label>
-          </div>
+          <CheckboxRow
+            id="inner-fitting-nitrile-gloves"
+            checked={values['f0000079-0000-0000-0000-000000000019'] === true}
+            onChange={(c) => onChange('f0000079-0000-0000-0000-000000000019', c)}
+          >
+            Нестерильні оглядові нітрилові рукавички
+          </CheckboxRow>
         </div>
 
         <Separator />
 
         <div className="space-y-3">
           <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="inner-fitting-sleeve-checked"
               checked={values['f0000078-0000-0000-0000-000000000018'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000078-0000-0000-0000-000000000018', c === true)
-              }
-            />
-            <Label htmlFor="inner-fitting-sleeve-checked" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000078-0000-0000-0000-000000000018', c)}
+            >
               Постійну внутрішню гільзу перевірено на відповідність фактичним антропометричним даним пацієнта
-            </Label>
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+            </CheckboxRow>
+          <CheckboxRow
               id="inner-fitting-axes-set"
               checked={values['f0000080-0000-0000-0000-000000000020'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000080-0000-0000-0000-000000000020', c === true)
-              }
-            />
-            <Label htmlFor="inner-fitting-axes-set" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000080-0000-0000-0000-000000000020', c)}
+            >
               Задано необхідні вісі для виготовлення формоутворюючої моделі
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
 
         <p className="text-xs text-muted-foreground">
@@ -766,18 +712,13 @@ function renderElements(
   if (stepId === 'e0000071-0000-0000-0000-000000000011') {
     out.push(
       <div key="outer-sleeve-model-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-          <Checkbox
-            id="outer-sleeve-model-ready"
-            checked={values['f0000082-0000-0000-0000-000000000022'] === true}
-            onCheckedChange={(c) =>
-              onChange('f0000082-0000-0000-0000-000000000022', c === true)
-            }
-          />
-          <Label htmlFor="outer-sleeve-model-ready" className="text-sm font-medium">
-            Формоутворююча модель готова
-          </Label>
-        </div>
+        <CheckboxRow
+          id="outer-sleeve-model-ready"
+          checked={values['f0000082-0000-0000-0000-000000000022'] === true}
+          onChange={(c) => onChange('f0000082-0000-0000-0000-000000000022', c)}
+        >
+          Формоутворююча модель готова
+        </CheckboxRow>
 
         <p className="text-xs text-muted-foreground">
           Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
@@ -799,30 +740,20 @@ function renderElements(
         <Separator />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
           <div className="space-y-2">
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="lamination-nitrile-gloves"
-                checked={values['f0000083-0000-0000-0000-000000000023'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000083-0000-0000-0000-000000000023', c === true)
-                }
-              />
-              <Label htmlFor="lamination-nitrile-gloves" className="text-sm font-medium">
-                Нестерильні оглядові нітрилові рукавички
-              </Label>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="lamination-respirator"
-                checked={values['f0000084-0000-0000-0000-000000000024'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000084-0000-0000-0000-000000000024', c === true)
-                }
-              />
-              <Label htmlFor="lamination-respirator" className="text-sm font-medium">
-                Респіратор
-              </Label>
-            </div>
+            <CheckboxRow
+              id="lamination-nitrile-gloves"
+              checked={values['f0000083-0000-0000-0000-000000000023'] === true}
+              onChange={(c) => onChange('f0000083-0000-0000-0000-000000000023', c)}
+            >
+              Нестерильні оглядові нітрилові рукавички
+            </CheckboxRow>
+            <CheckboxRow
+              id="lamination-respirator"
+              checked={values['f0000084-0000-0000-0000-000000000024'] === true}
+              onChange={(c) => onChange('f0000084-0000-0000-0000-000000000024', c)}
+            >
+              Респіратор
+            </CheckboxRow>
           </div>
           <div className="flex items-center justify-center">
             <ArrowRight className="size-8 text-primary" aria-hidden="true" />
@@ -837,18 +768,13 @@ function renderElements(
         </div>
         <div className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="lamination-confirmed"
-              checked={values['f0000085-0000-0000-0000-000000000025'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000085-0000-0000-0000-000000000025', c === true)
-              }
-            />
-            <Label htmlFor="lamination-confirmed" className="text-sm font-medium">
-              Гільза заламінована
-            </Label>
-          </div>
+          <CheckboxRow
+            id="lamination-confirmed"
+            checked={values['f0000085-0000-0000-0000-000000000025'] === true}
+            onChange={(c) => onChange('f0000085-0000-0000-0000-000000000025', c)}
+          >
+            Гільза заламінована
+          </CheckboxRow>
           <p className="text-xs text-muted-foreground">
             Після відмітки процес можна завершити.
           </p>
@@ -870,42 +796,27 @@ function renderElements(
         <Separator />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
           <div className="space-y-2">
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="processing-safety-glasses"
-                checked={values['f0000086-0000-0000-0000-000000000026'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000086-0000-0000-0000-000000000026', c === true)
-                }
-              />
-              <Label htmlFor="processing-safety-glasses" className="text-sm font-medium">
-                Захисні окуляри
-              </Label>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="processing-respirator"
-                checked={values['f0000087-0000-0000-0000-000000000027'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000087-0000-0000-0000-000000000027', c === true)
-                }
-              />
-              <Label htmlFor="processing-respirator" className="text-sm font-medium">
-                Респіратор
-              </Label>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="processing-headphones"
-                checked={values['f0000088-0000-0000-0000-000000000028'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000088-0000-0000-0000-000000000028', c === true)
-                }
-              />
-              <Label htmlFor="processing-headphones" className="text-sm font-medium">
-                Захисні навушники
-              </Label>
-            </div>
+            <CheckboxRow
+              id="processing-safety-glasses"
+              checked={values['f0000086-0000-0000-0000-000000000026'] === true}
+              onChange={(c) => onChange('f0000086-0000-0000-0000-000000000026', c)}
+            >
+              Захисні окуляри
+            </CheckboxRow>
+            <CheckboxRow
+              id="processing-respirator"
+              checked={values['f0000087-0000-0000-0000-000000000027'] === true}
+              onChange={(c) => onChange('f0000087-0000-0000-0000-000000000027', c)}
+            >
+              Респіратор
+            </CheckboxRow>
+            <CheckboxRow
+              id="processing-headphones"
+              checked={values['f0000088-0000-0000-0000-000000000028'] === true}
+              onChange={(c) => onChange('f0000088-0000-0000-0000-000000000028', c)}
+            >
+              Захисні навушники
+            </CheckboxRow>
           </div>
           <div className="flex items-center justify-center">
             <ArrowRight className="size-8 text-primary" aria-hidden="true" />
@@ -920,18 +831,13 @@ function renderElements(
         </div>
         <div className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="processing-confirmed"
-              checked={values['f0000089-0000-0000-0000-000000000029'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000089-0000-0000-0000-000000000029', c === true)
-              }
-            />
-            <Label htmlFor="processing-confirmed" className="text-sm font-medium">
-              Краї заокруглені та відполіровані
-            </Label>
-          </div>
+          <CheckboxRow
+            id="processing-confirmed"
+            checked={values['f0000089-0000-0000-0000-000000000029'] === true}
+            onChange={(c) => onChange('f0000089-0000-0000-0000-000000000029', c)}
+          >
+            Краї заокруглені та відполіровані
+          </CheckboxRow>
           <p className="text-xs text-muted-foreground">
             Після відмітки процес можна завершити.
           </p>
@@ -945,18 +851,13 @@ function renderElements(
       <div key="assembly-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
         <div className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="assembly-confirmed"
               checked={values['f0000090-0000-0000-0000-000000000030'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000090-0000-0000-0000-000000000030', c === true)
-              }
-            />
-            <Label htmlFor="assembly-confirmed" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000090-0000-0000-0000-000000000030', c)}
+            >
               Протез складено відповідно до ТТП
-            </Label>
-          </div>
+            </CheckboxRow>
           <p className="text-xs text-muted-foreground">
             Після відмітки переходьте до наступного кроку.
           </p>
@@ -970,18 +871,13 @@ function renderElements(
       <div key="fastening-step" className="space-y-5 rounded-xl border bg-muted/40 p-5">
         <div className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="fastening-confirmed"
               checked={values['f0000091-0000-0000-0000-000000000031'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000091-0000-0000-0000-000000000031', c === true)
-              }
-            />
-            <Label htmlFor="fastening-confirmed" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000091-0000-0000-0000-000000000031', c)}
+            >
               Система кріплення протеза виготовлена та зафіксована на протезі
-            </Label>
-          </div>
+            </CheckboxRow>
           <p className="text-xs text-muted-foreground">
             Після відмітки процес можна завершити.
           </p>
@@ -996,42 +892,27 @@ function renderElements(
         <div className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-wide">ПІДТВЕРДЖЕННЯ ВИРОБНИЦТВА</p>
           <div className="space-y-2">
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="final-assembly-rivets"
-                checked={values['f0000092-0000-0000-0000-000000000032'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000092-0000-0000-0000-000000000032', c === true)
-                }
-              />
-              <Label htmlFor="final-assembly-rivets" className="text-sm font-medium">
-                Заклепки на протезі щільно підтягнуті, обтиснуті до повного профілю, не мають гострих країв та задирок
-              </Label>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="final-assembly-hinges"
-                checked={values['f0000093-0000-0000-0000-000000000033'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000093-0000-0000-0000-000000000033', c === true)
-                }
-              />
-              <Label htmlFor="final-assembly-hinges" className="text-sm font-medium">
-                Шарнірні з&apos;єднання забезпечують безшумне, легке, плавне переміщення складових частин, що з&apos;єднуються
-              </Label>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-              <Checkbox
-                id="final-assembly-components"
-                checked={values['f0000094-0000-0000-0000-000000000034'] === true}
-                onCheckedChange={(c) =>
-                  onChange('f0000094-0000-0000-0000-000000000034', c === true)
-                }
-              />
-              <Label htmlFor="final-assembly-components" className="text-sm font-medium">
-                Всі компоненти надійно з&apos;єднані між собою, протез готовий до фінального налаштування кріплення на пацієнті
-              </Label>
-            </div>
+            <CheckboxRow
+              id="final-assembly-rivets"
+              checked={values['f0000092-0000-0000-0000-000000000032'] === true}
+              onChange={(c) => onChange('f0000092-0000-0000-0000-000000000032', c)}
+            >
+              Заклепки на протезі щільно підтягнуті, обтиснуті до повного профілю, не мають гострих країв та задирок
+            </CheckboxRow>
+            <CheckboxRow
+              id="final-assembly-hinges"
+              checked={values['f0000093-0000-0000-0000-000000000033'] === true}
+              onChange={(c) => onChange('f0000093-0000-0000-0000-000000000033', c)}
+            >
+              Шарнірні з&apos;єднання забезпечують безшумне, легке, плавне переміщення складових частин, що з&apos;єднуються
+            </CheckboxRow>
+            <CheckboxRow
+              id="final-assembly-components"
+              checked={values['f0000094-0000-0000-0000-000000000034'] === true}
+              onChange={(c) => onChange('f0000094-0000-0000-0000-000000000034', c)}
+            >
+              Всі компоненти надійно з&apos;єднані між собою, протез готовий до фінального налаштування кріплення на пацієнті
+            </CheckboxRow>
           </div>
           <p className="text-xs text-muted-foreground">
             Після відмітки переходьте до наступного кроку.
@@ -1059,18 +940,13 @@ function renderElements(
         </p>
         <Separator />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
-              id="final-fitting-nitrile-gloves"
-              checked={values['f0000095-0000-0000-0000-000000000035'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000095-0000-0000-0000-000000000035', c === true)
-              }
-            />
-            <Label htmlFor="final-fitting-nitrile-gloves" className="text-sm font-medium">
-              Нестерильні оглядові нітрилові рукавички
-            </Label>
-          </div>
+          <CheckboxRow
+            id="final-fitting-nitrile-gloves"
+            checked={values['f0000095-0000-0000-0000-000000000035'] === true}
+            onChange={(c) => onChange('f0000095-0000-0000-0000-000000000035', c)}
+          >
+            Нестерильні оглядові нітрилові рукавички
+          </CheckboxRow>
           <div className="flex items-center justify-center">
             <ArrowRight className="size-8 text-primary" aria-hidden="true" />
           </div>
@@ -1085,30 +961,20 @@ function renderElements(
         <Separator />
         <div className="space-y-3">
           <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="final-fitting-fastening"
               checked={values['f0000096-0000-0000-0000-000000000036'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000096-0000-0000-0000-000000000036', c === true)
-              }
-            />
-            <Label htmlFor="final-fitting-fastening" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000096-0000-0000-0000-000000000036', c)}
+            >
               Кріплення надійно зафіксовано на протезі
-            </Label>
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+            </CheckboxRow>
+          <CheckboxRow
               id="final-fitting-cables"
               checked={values['f0000097-0000-0000-0000-000000000037'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000097-0000-0000-0000-000000000037', c === true)
-              }
-            />
-            <Label htmlFor="final-fitting-cables" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000097-0000-0000-0000-000000000037', c)}
+            >
               Перевірено екскурсію тяг та спрацьовування термінальних пристроїв протеза
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
         <p className="text-xs text-muted-foreground">
           Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
@@ -1138,18 +1004,13 @@ function renderElements(
         </p>
         <Separator />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="handover-nitrile-gloves"
               checked={values['f0000101-0000-0000-0000-000000000041'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000101-0000-0000-0000-000000000041', c === true)
-              }
-            />
-            <Label htmlFor="handover-nitrile-gloves" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000101-0000-0000-0000-000000000041', c)}
+            >
               Нестерильні оглядові нітрилові рукавички
-            </Label>
-          </div>
+            </CheckboxRow>
           <div className="flex items-center justify-center">
             <ArrowRight className="size-8 text-primary" aria-hidden="true" />
           </div>
@@ -1164,30 +1025,20 @@ function renderElements(
         <Separator />
         <div className="space-y-3">
           <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="handover-passive-rotation"
               checked={values['f0000102-0000-0000-0000-000000000042'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000102-0000-0000-0000-000000000042', c === true)
-              }
-            />
-            <Label htmlFor="handover-passive-rotation" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000102-0000-0000-0000-000000000042', c)}
+            >
               У протезі забезпечується пасивна ротація кисті відносно гільзи передпліччя
-            </Label>
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+            </CheckboxRow>
+          <CheckboxRow
               id="handover-soft-tissues"
               checked={values['f0000103-0000-0000-0000-000000000043'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000103-0000-0000-0000-000000000043', c === true)
-              }
-            />
-            <Label htmlFor="handover-soft-tissues" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000103-0000-0000-0000-000000000043', c)}
+            >
               При згинанні в ліктьовому суглобі м&apos;які тканини кукси утримуються в гільзі, не нависають над її верхнім краєм і не затискаються нею
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
         <p className="text-xs text-muted-foreground">
           Перехід до наступного кроку можливий після відмітки усіх чекбоксів вище.
@@ -1217,18 +1068,13 @@ function renderElements(
         </p>
         <Separator />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto_auto] md:items-start">
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="marking-nitrile-gloves"
               checked={values['f0000105-0000-0000-0000-000000000045'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000105-0000-0000-0000-000000000045', c === true)
-              }
-            />
-            <Label htmlFor="marking-nitrile-gloves" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000105-0000-0000-0000-000000000045', c)}
+            >
               Нестерильні оглядові нітрилові рукавички
-            </Label>
-          </div>
+            </CheckboxRow>
           <div className="flex items-center justify-center">
             <ArrowRight className="size-8 text-primary" aria-hidden="true" />
           </div>
@@ -1243,30 +1089,20 @@ function renderElements(
         <Separator />
         <div className="space-y-3">
           <p className="text-sm font-medium">Процес завершується після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="marking-final-inspection"
               checked={values['f0000106-0000-0000-0000-000000000046'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000106-0000-0000-0000-000000000046', c === true)
-              }
-            />
-            <Label htmlFor="marking-final-inspection" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000106-0000-0000-0000-000000000046', c)}
+            >
               Протез фінально оглянутий ззовні на предмет пошкоджень чи несправностей
-            </Label>
-          </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+            </CheckboxRow>
+          <CheckboxRow
               id="marking-applied"
               checked={values['f0000107-0000-0000-0000-000000000047'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000107-0000-0000-0000-000000000047', c === true)
-              }
-            />
-            <Label htmlFor="marking-applied" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000107-0000-0000-0000-000000000047', c)}
+            >
               На протез нанесено маркування
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
         <p className="text-xs text-muted-foreground">
           Після відмітки процес можна завершити.
@@ -1306,36 +1142,26 @@ function renderElements(
           <div className="flex items-center justify-center">
             <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
           </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="fitting-nitrile-gloves"
               checked={values['f0000050-0000-0000-0000-000000000001'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000050-0000-0000-0000-000000000001', c === true)
-              }
-            />
-            <Label htmlFor="fitting-nitrile-gloves" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000050-0000-0000-0000-000000000001', c)}
+            >
               Нестерильні оглядові нітрилові рукавички
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
 
         <Separator />
 
         <div className="space-y-3">
           <p className="text-sm font-medium">Перехід до наступного кроку після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="fitting-sleeve-checked"
               checked={values['f0000043-0000-0000-0000-000000000001'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000043-0000-0000-0000-000000000001', c === true)
-              }
-            />
-            <Label htmlFor="fitting-sleeve-checked" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000043-0000-0000-0000-000000000001', c)}
+            >
               Тестову гільзу перевірено на відповідність фактичним антропометричним даним пацієнта
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
 
         <p className="text-xs text-muted-foreground">
@@ -1371,37 +1197,27 @@ function renderElements(
           <div className="flex items-center justify-center">
             <ArrowLeft className="size-8 text-primary" aria-hidden="true" />
           </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="prototype-fitting-nitrile-gloves"
               checked={values['f0000069-0000-0000-0000-000000000009'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000069-0000-0000-0000-000000000009', c === true)
-              }
-            />
-            <Label htmlFor="prototype-fitting-nitrile-gloves" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000069-0000-0000-0000-000000000009', c)}
+            >
               Нестерильні оглядові нітрилові рукавички
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
 
         <Separator />
 
         <div className="space-y-3">
           <p className="text-sm font-medium">Перехід до наступного етапу після відмітки:</p>
-          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-            <Checkbox
+          <CheckboxRow
               id="prototype-fitting-tested"
               checked={values['f0000070-0000-0000-0000-000000000010'] === true}
-              onCheckedChange={(c) =>
-                onChange('f0000070-0000-0000-0000-000000000010', c === true)
-              }
-            />
-            <Label htmlFor="prototype-fitting-tested" className="text-sm font-medium">
+              onChange={(c) => onChange('f0000070-0000-0000-0000-000000000010', c)}
+            >
               Проведено тестування протеза на пацієнті: перевірено посадку,
               функціональність та правильність взаємного розташування всіх елементів.
-            </Label>
-          </div>
+            </CheckboxRow>
         </div>
 
         <p className="text-xs text-muted-foreground">
@@ -1415,18 +1231,13 @@ function renderElements(
     out.push(
       <div key="positive-quality-check" className="space-y-3 rounded-xl border bg-muted/40 p-5">
         <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-          <Checkbox
-            id="plaster-positive-quality-checked"
-            checked={values['f0000006-0000-0000-0000-000000000001'] === true}
-            onCheckedChange={(c) =>
-              onChange('f0000006-0000-0000-0000-000000000001', c === true)
-            }
-          />
-          <Label htmlFor="plaster-positive-quality-checked" className="text-sm font-medium">
-            Гіпсовий позитив перевірено на відповідність бланку замірів
-          </Label>
-        </div>
+        <CheckboxRow
+          id="plaster-positive-quality-checked"
+          checked={values['f0000006-0000-0000-0000-000000000001'] === true}
+          onChange={(c) => onChange('f0000006-0000-0000-0000-000000000001', c)}
+        >
+          Гіпсовий позитив перевірено на відповідність бланку замірів
+        </CheckboxRow>
         <p className="text-xs text-muted-foreground">
           Після відмітки переходьте до наступного етапу.
         </p>
@@ -1442,18 +1253,13 @@ function renderElements(
     out.push(
       <div key="positive-quality-check-fallback" className="space-y-3 rounded-xl border bg-muted/40 p-5">
         <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-          <Checkbox
+        <CheckboxRow
             id="plaster-positive-quality-checked-fallback"
             checked={values['f0000006-0000-0000-0000-000000000001'] === true}
-            onCheckedChange={(c) =>
-              onChange('f0000006-0000-0000-0000-000000000001', c === true)
-            }
-          />
-          <Label htmlFor="plaster-positive-quality-checked-fallback" className="text-sm font-medium">
+            onChange={(c) => onChange('f0000006-0000-0000-0000-000000000001', c)}
+          >
             Гіпсовий позитив перевірено на відповідність бланку замірів
-          </Label>
-        </div>
+          </CheckboxRow>
         <p className="text-xs text-muted-foreground">
           Після відмітки переходьте до наступного етапу.
         </p>
@@ -2139,21 +1945,18 @@ export default function WizardScreen() {
                 <div className="space-y-5">
                   <div className="space-y-3 rounded-xl border bg-muted/40 p-5">
                     <p className="text-sm font-semibold uppercase tracking-wide">ПЕРЕВІРКА ЯКОСТІ</p>
-                    <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-                      <Checkbox
-                        id="plaster-positive-quality-checked"
-                        checked={values['f0000006-0000-0000-0000-000000000001'] === true}
-                        onCheckedChange={(c) =>
-                          setValues((s) => ({
-                            ...s,
-                            'f0000006-0000-0000-0000-000000000001': c === true,
-                          }))
-                        }
-                      />
-                      <Label htmlFor="plaster-positive-quality-checked" className="text-sm font-medium">
-                        Гіпсовий позитив перевірено на відповідність бланку замірів
-                      </Label>
-                    </div>
+                    <CheckboxRow
+                      id="plaster-positive-quality-checked"
+                      checked={values['f0000006-0000-0000-0000-000000000001'] === true}
+                      onChange={(c) =>
+                        setValues((s) => ({
+                          ...s,
+                          'f0000006-0000-0000-0000-000000000001': c,
+                        }))
+                      }
+                    >
+                      Гіпсовий позитив перевірено на відповідність бланку замірів
+                    </CheckboxRow>
                     <p className="text-xs text-muted-foreground">
                       Після відмітки переходьте до наступного етапу.
                     </p>
@@ -2354,14 +2157,17 @@ function ElementField({
     <div className="space-y-2">
       {element.elementType !== 'CHECKBOX' && label}
       {element.elementType === 'CHECKBOX' && (
-        <div className={`flex items-center gap-3 rounded-md border p-3 ${errClass}`}>
-          <Checkbox
-            id={element.id}
-            checked={value === true}
-            onCheckedChange={(c) => onChange(c === true)}
-          />
-          {label}
-        </div>
+        <CheckboxRow
+          id={element.id}
+          checked={value === true}
+          onChange={onChange}
+          variant="plain"
+          className={errClass}
+        >
+          {element.label}
+          {element.unit ? `, ${element.unit}` : ''}
+          {element.required && <span className="text-accent">*</span>}
+        </CheckboxRow>
       )}
       {element.elementType === 'TEXT_INPUT' && (
         <Input

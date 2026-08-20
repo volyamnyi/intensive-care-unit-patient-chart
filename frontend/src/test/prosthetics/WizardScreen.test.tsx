@@ -429,4 +429,38 @@ describe('WizardScreen', () => {
       expect(screen.getByText('Failed Page')).toBeInTheDocument();
     });
   });
+
+  it('toggles a checkbox from anywhere on its parent row surface', async () => {
+    flowInstanceApiMock.getById.mockResolvedValue({
+      data: inProgressInstance({ currentStepId: 'step-2', currentStepName: 'Збірка' }),
+    });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText(/Збірка/)).toBeInTheDocument();
+    });
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Підтвердити збірку' });
+    const row = screen.getByText('Підтвердити збірку').closest('label');
+    expect(row).not.toBeNull();
+    expect(checkbox).toHaveAttribute('aria-checked', 'false');
+
+    // Click on the label text — native label activation toggles the control.
+    fireEvent.click(screen.getByText('Підтвердити збірку'));
+    await waitFor(() => {
+      expect(checkbox).toHaveAttribute('aria-checked', 'true');
+    });
+
+    // Click on the row surface (the label element, away from text/control).
+    fireEvent.click(row!);
+    await waitFor(() => {
+      expect(checkbox).toHaveAttribute('aria-checked', 'false');
+    });
+
+    // Clicking the checkbox control itself stays a single toggle (the label
+    // must not re-fire for interactive content).
+    fireEvent.click(checkbox);
+    await waitFor(() => {
+      expect(checkbox).toHaveAttribute('aria-checked', 'true');
+    });
+  });
 });

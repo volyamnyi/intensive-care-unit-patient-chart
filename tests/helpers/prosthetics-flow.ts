@@ -22,7 +22,7 @@ async function login(request: APIRequestContext, login: string, password: string
 }
 
 /** Builds a values payload for a snapshot step, satisfying required elements. */
-function buildValues(
+export function buildValues(
   elements: Array<{ id: string; elementType: string; minValue?: number | null; maxValue?: number | null }> | undefined,
   stepType?: string,
 ): string {
@@ -123,6 +123,36 @@ export async function completeInstanceViaApi(request: APIRequestContext, instanc
   }
 
   throw new Error(`Instance ${instanceId} did not reach COMPLETED in time`);
+}
+
+/** Completes the instance's current (first pending) step execution via the API. */
+export async function completeCurrentStepViaApi(
+  request: APIRequestContext,
+  instanceId: string,
+): Promise<void> {
+  const token = await login(request, 'prosthetist1', 'doctor123');
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const stepsRes = await request.get(`${BASE}/instances/${instanceId}/step-executions`, {
+    headers,
+  });
+  const steps = (await stepsRes.json()) as Array<{ id: string; stepId: string; status: string }>;
+  const pending = steps.find((step) => step.status === 'IN_PROGRESS' || step.status === 'NOT_STARTED');
+  if (!pending) {
+    throw new Error(`No pending step execution for instance ${instanceId}`);
+  }
+  const snapshotRes = await request.get(`${BASE}/instances/${instanceId}/snapshot`, { headers });
+  const snapshot = await snapshotRes.json();
+  const step = (snapshot.stages ?? [])
+    .flatMap((stage: { steps?: Array<{ id: string; stepType?: string; elements: Array<{ id: string; elementType: string }> }> }) => stage.steps ?? [])
+    .find((candidate: { id: string }) => candidate.id === pending.stepId);
+  const completeRes = await request.post(`${BASE}/instances/${instanceId}/steps/${pending.id}/complete`, {
+    headers,
+    data: { values: buildValues(step?.elements, step?.stepType) },
+  });
+  if (!completeRes.ok()) {
+    throw new Error(`Step complete failed: HTTP ${completeRes.status()}: ${await completeRes.text()}`);
+  }
 }
 
 /** Clicks «Розпочати процес» when the wizard shows the NEW-instance start screen. */
