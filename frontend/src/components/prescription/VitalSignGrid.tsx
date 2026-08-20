@@ -98,7 +98,7 @@ export default function VitalSignGrid({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3 text-card-foreground shadow-sm">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 text-card-foreground shadow-sm">
         <Button variant="ghost" size="icon-sm" onClick={shiftLeft} disabled={viewStart === 0}>
           <ChevronLeft className="size-4" />
         </Button>
@@ -115,28 +115,44 @@ export default function VitalSignGrid({
       {loading ? (
         <Loader2 className="mx-auto mt-4 size-6 animate-spin text-primary" />
       ) : days.length === 0 ? (
-        <div className="rounded-xl border bg-card p-4 text-center text-card-foreground shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-4 text-center text-card-foreground shadow-sm">
           <p className="text-muted-foreground font-mulish">Немає даних життєвих показників</p>
         </div>
       ) : (
-        <div className="overflow-auto rounded-xl border bg-card shadow-sm">
+        <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm">
           <table className="border-collapse" style={{ minWidth: 200 + visibleDays.length * 300 }}>
             <thead>
               <tr>
-                <th className="sticky left-0 z-[2] min-w-[180px] bg-card p-[6px_8px] text-left">
+                <th
+                  className="sticky left-0 z-[2] min-w-[180px] border-b border-l border-r border-border bg-card p-[6px_8px] text-left"
+                  style={{ borderRight: '2px solid #94a3b8', borderBottom: '2px solid #94a3b8' }}
+                >
                   <span className="text-xs font-bold font-rubik">Показник</span>
                 </th>
-                {visibleDays.map(day => (
-                  <th key={day.id} colSpan={4} className="bg-muted p-[4px_2px] text-center">
+                {visibleDays.map((day, dayIdx) => (
+                  <th
+                    key={day.id}
+                    colSpan={4}
+                    className="border-b border-border bg-muted p-[4px_2px] text-center"
+                    style={dayIdx === visibleDays.length - 1
+                      ? { borderBottom: '2px solid #94a3b8' }
+                      : { borderRight: '2px solid #94a3b8', borderBottom: '2px solid #94a3b8' }}
+                  >
                     <span className="text-xs font-bold font-rubik">{formatDate(day.dayDate)}</span>
                   </th>
                 ))}
               </tr>
               <tr>
-                <th className="sticky left-0 z-[2] bg-card" />
-                {visibleDays.map(day =>
-                  PERIODS.map(p => (
-                    <th key={`${day.id}-${p}`} className="w-[68px] p-[2px] text-[10px] text-muted-foreground font-mulish">
+                <th className="sticky left-0 z-[2] border-r border-border bg-card" style={{ borderRight: '2px solid #94a3b8' }} />
+                {visibleDays.map((day, dayIdx) =>
+                  PERIODS.map((p, pIdx) => (
+                    <th
+                      key={`${day.id}-${p}`}
+                      className="border border-border w-[68px] p-[2px] text-[10px] text-muted-foreground font-mulish"
+                      style={pIdx === PERIODS.length - 1 && dayIdx !== visibleDays.length - 1
+                        ? { borderRight: '2px solid #94a3b8' }
+                        : undefined}
+                    >
                       {PERIOD_LABELS[p]}
                     </th>
                   ))
@@ -146,15 +162,18 @@ export default function VitalSignGrid({
             <tbody>
               {VITAL_PARAMS.map(param => (
                 <tr key={param.key}>
-                  <td className="sticky left-0 z-[1] min-w-[180px] bg-card p-[4px_8px]">
+                  <td
+                    className="sticky left-0 z-[1] min-w-[180px] border border-border bg-card p-[4px_8px]"
+                    style={{ borderRight: '2px solid #94a3b8' }}
+                  >
                     <span className="text-sm font-semibold font-rubik">{param.label}</span>
                     {param.unit && (
                       <span className="block text-xs text-muted-foreground font-mulish">{param.unit}</span>
                     )}
                   </td>
 
-                  {visibleDays.map(day =>
-                    PERIODS.map(period => {
+                  {visibleDays.map((day, dayIdx) =>
+                    PERIODS.map((period, pIdx) => {
                       const entry = entriesByDayPeriod.get(dayPartKey(day.id, period));
                       const value = entryValue(entry, param.key);
                       const cellKey = `${day.id}|${period}|${param.key}`;
@@ -172,6 +191,13 @@ export default function VitalSignGrid({
                             'relative h-8 w-[68px] bg-white text-center align-middle',
                             canEdit && isDoctor ? 'cursor-pointer' : 'cursor-default',
                           )}
+                          style={{
+                            border: '1px solid var(--color-border)',
+                            ...(pIdx === PERIODS.length - 1 && dayIdx !== visibleDays.length - 1
+                              ? { borderRight: '2px solid #94a3b8' } : {}),
+                            ...(param.key === VITAL_PARAMS[VITAL_PARAMS.length - 1].key
+                              ? { borderBottom: '2px solid #94a3b8' } : {}),
+                          }}
                           onClick={onClick}
                         >
                           {isEditing ? (

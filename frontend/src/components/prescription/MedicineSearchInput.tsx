@@ -67,9 +67,12 @@ export default function MedicineSearchInput({
   };
 
   const handleAddDrug = async () => {
-    if (!selectedMed) return;
+    // Resolve the drug name: prefer the selected suggestion, else fall back to
+    // the user-typed text so «Додати» is not locked behind a dropdown click.
+    const medName = selectedMed?.name?.trim() || medSearch.trim();
+    if (!medName) return;
     const allergy = allergies.find(a =>
-      a.allergenName.toLowerCase() === selectedMed.name.toLowerCase()
+      a.allergenName.toLowerCase() === medName.toLowerCase()
     );
     if (allergy) {
       alert(`У пацієнта алергія на препарат "${allergy.allergenName}"!`);
@@ -78,7 +81,7 @@ export default function MedicineSearchInput({
     setAddingDrug(true);
     try {
       await onAddItem({
-        medicineName: selectedMed.name,
+        medicineName: medName,
         medicineMethod: newMethod || undefined,
         regime: newRegime || undefined,
       });
@@ -92,6 +95,8 @@ export default function MedicineSearchInput({
       setAddingDrug(false);
     }
   };
+
+  const hasValidDrug = !!(selectedMed?.name?.trim() || medSearch.trim());
 
   if (!canEdit || !isDoctor) return null;
 
@@ -132,7 +137,7 @@ export default function MedicineSearchInput({
         onChange={e => setNewMethod(e.target.value)} className="w-[120px]" />
       <Input placeholder="Режим" value={newRegime}
         onChange={e => setNewRegime(e.target.value)} className="w-[100px]" />
-      <Button variant="default" size="sm" className="min-h-11" disabled={!selectedMed || addingDrug}
+      <Button variant="default" size="sm" className="min-h-11" disabled={!hasValidDrug || addingDrug}
         onClick={handleAddDrug}><Plus className="size-4 mr-1" />Додати</Button>
     </div>
   );

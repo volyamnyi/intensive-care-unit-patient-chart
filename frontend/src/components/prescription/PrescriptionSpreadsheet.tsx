@@ -122,39 +122,72 @@ export default function PrescriptionSpreadsheet({
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-auto">
+        <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-auto">
           <table className="w-full border-collapse" style={{ minWidth: 200 + visibleDates.length * 300 }}>
             <thead>
               <tr>
-                <th className="sticky left-0 bg-card z-20 min-w-[180px] p-1.5 border-b border-r text-left">
+                <th
+                  className="sticky left-0 bg-card z-20 min-w-[180px] p-1.5 border border-border text-left"
+                  style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
+                >
                   <span className="text-[10px] font-bold">Препарат / Метод</span>
                 </th>
-                {visibleDates.map(date => (
-                  <th key={date} colSpan={4} className="p-1 border-b bg-muted text-center">
+                {visibleDates.map((date, dateIdx) => (
+                  <th
+                    key={date}
+                    colSpan={4}
+                    className="p-1 border border-border bg-muted text-center"
+                    style={
+                      dateIdx < visibleDates.length - 1
+                        ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
+                        : undefined
+                    }
+                  >
                     <span className="text-[10px] font-bold">
                       {formatDate(date)}
                     </span>
                   </th>
                 ))}
-                {canEdit && isDoctor && <th className="w-10 border-b" />}
+                {canEdit && isDoctor && <th className="w-10 border border-border" />}
               </tr>
               <tr>
-                <th className="sticky left-0 bg-card z-20 border-b border-r" />
-                {visibleDates.map(date =>
-                  PERIODS.map(p => (
-                    <th key={`${date}-${p}`}
-                      className="w-[68px] text-[10px] text-muted-foreground p-0.5 border-b">
-                      {PERIOD_LABELS[p]}
-                    </th>
-                  ))
+                <th
+                  className="sticky left-0 bg-card z-20 border border-border"
+                  style={{ borderRightWidth: 2, borderRightColor: '#94a3b8', borderBottomWidth: 2, borderBottomColor: '#94a3b8' }}
+                />
+                {visibleDates.map((date, dateIdx) =>
+                  PERIODS.map(p => {
+                    const dayEdge = p === 'night' && dateIdx < visibleDates.length - 1;
+                    return (
+                      <th
+                        key={`${date}-${p}`}
+                        className="w-[68px] text-[10px] text-muted-foreground p-0.5 border border-border"
+                        style={{
+                          borderBottomWidth: 2,
+                          borderBottomColor: '#94a3b8',
+                          ...(dayEdge ? { borderRightWidth: 2, borderRightColor: '#94a3b8' } : null),
+                        }}
+                      >
+                        {PERIOD_LABELS[p]}
+                      </th>
+                    );
+                  })
                 )}
-                {canEdit && isDoctor && <th className="border-b" />}
+                {canEdit && isDoctor && (
+                  <th
+                    className="border border-border"
+                    style={{ borderBottomWidth: 2, borderBottomColor: '#94a3b8' }}
+                  />
+                )}
               </tr>
             </thead>
             <tbody>
               {gridItems.map(item => (
                 <tr key={item.id}>
-                  <td className="sticky left-0 bg-card z-10 p-1 min-w-[180px] border-b border-r">
+                  <td
+                    className="sticky left-0 bg-card z-10 p-1 min-w-[180px] border border-border"
+                    style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
+                  >
                     <p className="text-sm font-semibold">
                       {item.medicineName}
                     </p>
@@ -163,7 +196,7 @@ export default function PrescriptionSpreadsheet({
                     </p>
                   </td>
 
-                  {visibleDates.map(date =>
+                  {visibleDates.map((date, dateIdx) =>
                     PERIODS.map(period => {
                       const dp = item.cells.get(dayPartKey(date, period));
                       const bg = cellBg(dp);
@@ -184,11 +217,17 @@ export default function PrescriptionSpreadsheet({
                       };
 
                       return (
-                        <td key={`${date}-${period}`} style={{
-                          width: 68, height: 32, cursor: bg === '#fff' || !dp ? 'default' : 'pointer',
-                          backgroundColor: bg, textAlign: 'center', verticalAlign: 'middle',
-                          position: 'relative', borderBottom: '1px solid hsl(var(--border))',
-                        }}
+                        <td
+                          key={`${date}-${period}`}
+                          style={{
+                            width: 68, height: 32, cursor: bg === '#fff' || !dp ? 'default' : 'pointer',
+                            backgroundColor: bg, textAlign: 'center', verticalAlign: 'middle',
+                            position: 'relative',
+                            border: '1px solid var(--color-border)',
+                            ...(period === 'night' && dateIdx < visibleDates.length - 1
+                              ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
+                              : null),
+                          }}
                           onClick={onClick}
                           onAuxClick={onAuxClick}
                         >
@@ -229,7 +268,7 @@ export default function PrescriptionSpreadsheet({
                   )}
 
                   {canEdit && isDoctor && (
-                    <td className="w-10 text-center border-b">
+                    <td className="w-10 text-center border border-border">
                       <Button variant="ghost" size="icon-xs" onClick={(e) => onOpenDeleteConfirm(item.id, e.currentTarget as HTMLElement)}>
                         <Trash2 className="size-3" />
                       </Button>
