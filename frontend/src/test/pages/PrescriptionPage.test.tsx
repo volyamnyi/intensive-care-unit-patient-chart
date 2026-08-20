@@ -8,6 +8,7 @@ const mockNavigate = vi.fn();
 const mockSearch = vi.fn();
 const mockGetByPatient = vi.fn();
 const mockCreate = vi.fn();
+let mockHasPermission: (code: string) => boolean = () => true;
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -35,7 +36,7 @@ vi.mock('../../services/AuthContext', () => ({
     isAuthenticated: true,
     logout: vi.fn(),
     hasRole: (...roles: string[]) => roles.includes('DOCTOR'),
-    hasPermission: () => true,
+    hasPermission: (code: string) => mockHasPermission(code),
     permissions: ['PRESCRIPTION_CREATE'],
   }),
 }));
@@ -88,6 +89,7 @@ function renderPage() {
 describe('PrescriptionPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasPermission = () => true;
     // surgery department (id 2) is the default; both patients are in surgery
     mockSearch.mockResolvedValue({ data: [makePatient({ id: 1001 }), makePatient({ id: 1002, fullName: 'Коваленко Олена' })] });
   });
@@ -153,5 +155,20 @@ describe('PrescriptionPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Створення заборонено')).toBeInTheDocument();
     });
+  });
+
+  it('hides Створити листок without the PRESCRIPTION_LIST_CREATE permission', async () => {
+    mockGetByPatient.mockResolvedValue({ data: [] });
+    mockHasPermission = (code: string) => code !== 'PRESCRIPTION_LIST_CREATE';
+
+    renderPage();
+
+    const openButtons = await screen.findAllByRole('button', { name: /Відкрити/ });
+    await userEvent.click(openButtons[0]);
+
+    // the drawer opens but offers no creation entry point
+    expect(await screen.findByText('Немає листків призначень')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Створити листок/ })).not.toBeInTheDocument();
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

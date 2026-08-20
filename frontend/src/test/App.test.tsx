@@ -23,53 +23,11 @@ vi.mock('../services/AuthContext', () => ({
   }),
 }));
 
-const mockTheme = {
-  palette: {
-    mode: 'dark' as const,
-    common: { black: '#000', white: '#fff' },
-    primary: { main: '#1976d2', light: '#42a5f5', dark: '#1565c0', contrastText: '#fff' },
-    secondary: { main: '#9c27b0', light: '#ba68c8', dark: '#7b1fa2', contrastText: '#fff' },
-    error: { main: '#d32f2f', light: '#ef5350', dark: '#c62828', contrastText: '#fff' },
-    warning: { main: '#ed6c02', light: '#ff9800', dark: '#e65100', contrastText: '#fff' },
-    info: { main: '#0288d1', light: '#03a9f4', dark: '#01579b', contrastText: '#fff' },
-    success: { main: '#2e7d32', light: '#4caf50', dark: '#1b5e20', contrastText: '#fff' },
-    text: { primary: '#fff', secondary: 'rgba(255,255,255,0.7)', disabled: 'rgba(255,255,255,0.5)' },
-    background: { default: '#121212', paper: '#1e1e1e' },
-    divider: 'rgba(255,255,255,0.12)',
-    action: {
-      active: '#fff', hover: 'rgba(255,255,255,0.08)', selected: 'rgba(255,255,255,0.16)',
-      disabled: 'rgba(255,255,255,0.3)', disabledBackground: 'rgba(255,255,255,0.12)',
-    },
-  },
-  typography: {
-    fontWeightBold: 700,
-    fontWeightLight: 300,
-    fontWeightMedium: 500,
-    fontWeightRegular: 400,
-    fontFamily: '"Roboto","Helvetica","Arial",sans-serif',
-    htmlFontSize: 16,
-    pxToRem: (px: number) => `${px / 16}rem`,
-  },
-  breakpoints: {
-    keys: ['xs', 'sm', 'md', 'lg', 'xl'],
-    values: { xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 },
-    up: () => '', down: () => '', between: () => '', only: () => '', not: () => '',
-  },
-  shape: { borderRadius: 4 },
-  spacing: (factor: number) => `${8 * factor}px`,
-  direction: 'ltr' as const,
-  mixins: { toolbar: { minHeight: 56 } },
-  shadows: Array(25).fill('none') as any,
-  transitions: { create: () => '', duration: { standard: 300 }, easing: { easeInOut: 'cubic-bezier(0.4,0,0.2,1)' } },
-  zIndex: { mobileStepper: 1000, fab: 1050, speedDial: 1050, appBar: 1100, drawer: 1200, modal: 1300, snackbar: 1400, tooltip: 1500 },
-};
-
 vi.mock('../styles/ThemeContext', () => ({
   ThemeModeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useThemeMode: () => ({
     mode: 'dark' as const,
     toggleTheme: vi.fn(),
-    theme: mockTheme as any,
   }),
 }));
 
@@ -122,10 +80,6 @@ vi.mock('../pages/prescription/PrescriptionDetailPage', () => ({
 
 vi.mock('../pages/prescription/NursePrescriptionPage', () => ({
   default: () => <div>Nurse Prescription Page</div>,
-}));
-
-vi.mock('../pages/AppSelectorPage', () => ({
-  default: () => <div>App Selector</div>,
 }));
 
 vi.mock('../pages/prosthetics/DashboardPage', () => ({

@@ -7,6 +7,7 @@ import com.superhumans.icu.entity.ClinicalDay;
 import com.superhumans.icu.entity.ClinicalDayStatus;
 import com.superhumans.icu.entity.HourlyRecord;
 import com.superhumans.exception.DocumentLockedException;
+import com.superhumans.exception.DuplicateHourlyRecordException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.HourlyRecordMapper;
@@ -152,6 +153,26 @@ class HourlyRecordServiceTest {
 
         assertThatThrownBy(() -> hourlyRecordService.createHourlyRecord(clinicalDayId, req, userId))
                 .isInstanceOf(DocumentLockedException.class);
+    }
+
+    @Test
+    void createHourlyRecord_whenHourAlreadyExists_throws() {
+        HourlyRecordCreateRequest req = new HourlyRecordCreateRequest();
+        req.setRecordTime(LocalDateTime.of(2025, 6, 1, 8, 0));
+        req.setHeartRate(80);
+        req.setSystolicBP(120);
+
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+        HourlyRecord existing = HourlyRecord.builder().build();
+        existing.setId(recordId);
+        existing.setRecordHour(8);
+        when(hourlyRecordRepository.findByClinicalDayIdAndRecordHour(clinicalDayId, 8))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> hourlyRecordService.createHourlyRecord(clinicalDayId, req, userId))
+                .isInstanceOf(DuplicateHourlyRecordException.class);
+        verify(hourlyRecordRepository, never()).save(any(HourlyRecord.class));
+        verify(auditService, never()).logCreate(any(), any(), any());
     }
 
     @Test

@@ -442,6 +442,85 @@ class HourlyRecordValidationTest {
     }
 
     @Test
+    void dobutamine_belowMin_throws() {
+        HourlyRecord record = createRecord();
+        record.setDobutamine(-0.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Dobutamine");
+    }
+
+    @Test
+    void dobutamine_aboveMax_throws() {
+        HourlyRecord record = createRecord();
+        record.setDobutamine(100.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Dobutamine");
+    }
+
+    @Test
+    void norepinephrine_belowMin_throws() {
+        HourlyRecord record = createRecord();
+        record.setNorepinephrine(-0.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Norepinephrine");
+    }
+
+    @Test
+    void norepinephrine_aboveMax_throws() {
+        HourlyRecord record = createRecord();
+        record.setNorepinephrine(100.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Norepinephrine");
+    }
+
+    @Test
+    void epinephrine_belowMin_throws() {
+        HourlyRecord record = createRecord();
+        record.setEpinephrine(-0.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Epinephrine");
+    }
+
+    @Test
+    void epinephrine_aboveMax_throws() {
+        HourlyRecord record = createRecord();
+        record.setEpinephrine(100.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Epinephrine");
+    }
+
+    // ========== gastricOutput ==========
+
+    @Test
+    void gastricOutput_belowMin_throws() {
+        HourlyRecord record = createRecord();
+        record.setGastricOutput(-0.1);
+        assertThatThrownBy(record::validateClinicalRanges)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Gastric output");
+    }
+
+    @Test
+    void gastricOutput_atMin_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setGastricOutput(0.0);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    @Test
+    void gastricOutput_positive_doesNotThrow() {
+        HourlyRecord record = createRecord();
+        record.setGastricOutput(30.0);
+        assertThatCode(record::validateClinicalRanges).doesNotThrowAnyException();
+    }
+
+    @Test
     void setsRecordHourFromRecordTime() {
         HourlyRecord record = createRecord();
         record.setRecordTime(LocalDateTime.of(2025, 6, 1, 14, 30));

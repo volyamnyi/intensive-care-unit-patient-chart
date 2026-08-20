@@ -36,7 +36,8 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        assertThat(parseContent(res.getBody())).isNotNull();
+        // every test logs in via getAdminToken(), so at least one LOGIN row exists
+        assertThat(parseContent(res.getBody())).isNotEmpty();
     }
 
     @Test
@@ -49,9 +50,7 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         var logs = parseContent(res.getBody());
-        if (!logs.isEmpty()) {
-            assertThat(logs).allMatch(a -> "AUTH".equals(a.getEntity()));
-        }
+        assertThat(logs).isNotEmpty().allMatch(a -> "AUTH".equals(a.getEntity()));
     }
 
     @Test
@@ -64,9 +63,7 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         var logs = parseContent(res.getBody());
-        if (!logs.isEmpty()) {
-            assertThat(logs).allMatch(a -> "LOGIN".equals(a.getAction()));
-        }
+        assertThat(logs).isNotEmpty().allMatch(a -> "LOGIN".equals(a.getAction()));
     }
 
     @Test
@@ -83,7 +80,7 @@ class AuditIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
-        assertThat(parseContent(res.getBody())).isNotNull();
+        assertThat(parseContent(res.getBody())).isNotEmpty();
     }
 
     @Test
