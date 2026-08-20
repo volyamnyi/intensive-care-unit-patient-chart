@@ -1,4 +1,4 @@
-import { test, expect, Page, Locator } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { mkdirSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { completeInstanceViaApi } from '../../helpers/prosthetics-flow';
 
@@ -7,7 +7,6 @@ const CONFIG = {
   screenshotDir: 'screenshots/prosthetics-spec-verification',
   bugReportFile: 'test-results/prosthetics-spec-bugs.json',
   logFile: 'test-results/prosthetics-spec-test-log.txt',
-  delayMs: 100, // Minimal delay for fast execution
   maxWizardSteps: 50,
   baseUrl: 'http://localhost:5173',
 };
@@ -108,13 +107,8 @@ function setupPageMonitoring(page: Page, consoleErrors: string[], networkErrors:
 }
 
 // ============== HELPER FUNCTIONS ==============
-async function delay() {
-  await new Promise(resolve => setTimeout(resolve, CONFIG.delayMs));
-}
-
 async function waitForPageLoad(page: Page) {
   await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
-  await delay();
 }
 
 // ============== TEST SUITE ==============
@@ -127,7 +121,7 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     writeFileSync(CONFIG.logFile, `=== Prosthetics Specification Verification Test Log - ${new Date().toISOString()} ===\n\n`);
     log('Test suite started');
-    log(`Configuration: delay=${CONFIG.delayMs}ms, maxWizardSteps=${CONFIG.maxWizardSteps}`);
+    log(`Configuration: maxWizardSteps=${CONFIG.maxWizardSteps}`);
   });
 
   test.afterAll(async () => {
@@ -234,7 +228,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         const tab = page.getByRole('tab', { name: tabName }).or(page.getByText(tabName)).first();
         if (await tab.isVisible({ timeout: 2000 }).catch(() => false)) {
           await tab.click();
-          await delay();
           log(`✓ Filter tab "${tabName}" clicked`);
         } else {
           log(`⚠ Filter tab "${tabName}" not found`);
@@ -245,7 +238,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
       const allTab = page.getByText('Всі').first();
       if (await allTab.isVisible({ timeout: 2000 }).catch(() => false)) {
         await allTab.click();
-        await delay();
       }
       await takeScreenshot(page, '07-dashboard-filters-tested');
     });
@@ -256,14 +248,11 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
       const searchInput = page.getByPlaceholder(/Пошук/i).or(page.locator('input[type="search"], input[placeholder*="пошук" i]').first());
       if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await searchInput.fill('ПВ-26');
-        await delay();
-        await delay(); // Wait for debounce
         log('✓ Search executed with "ПВ-26"');
         await takeScreenshot(page, '08-search-results');
 
-        // Clear search
+        // Clear search (client-side filter re-renders synchronously)
         await searchInput.fill('');
-        await delay();
       } else {
         log('⚠ Search input not found');
       }
@@ -332,7 +321,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         (res) => res.url().includes('/prosthesis-manufacturing/patients') && res.request().method() === 'GET',
         { timeout: 15000 }
       ).catch(() => {});
-      await delay();
 
       await takeScreenshot(page, '11-patient-search-results');
 
@@ -374,7 +362,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         (res) => res.url().includes('/prosthesis-manufacturing/patients') && res.request().method() === 'GET',
         { timeout: 15000 }
       ).catch(() => {});
-      await delay();
 
       const noResults = await page.getByText(/не знайдено|Немає результатів/i).isVisible({ timeout: 5000 }).catch(() => false);
       if (noResults) {
@@ -391,7 +378,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         (res) => res.url().includes('/prosthesis-manufacturing/patients') && res.request().method() === 'GET',
         { timeout: 15000 }
       ).catch(() => {});
-      await delay();
     });
 
     await test.step('3.5 Select patient (Spec 2.3.1)', async () => {
@@ -412,7 +398,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         }
       }
 
-      await delay();
       await takeScreenshot(page, '13-patient-selected');
 
       // Verify "Далі" button becomes enabled (Hard Block released)
@@ -495,7 +480,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         reportBug('Critical', 'No orders available to select', 'Orders table should have at least one active order', 'Zero orders in table');
       }
 
-      await delay();
       await takeScreenshot(page, '16-order-selected');
     });
 
@@ -564,7 +548,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
 
       // Wait for button to become enabled (PDF loaded)
       await startButton.waitFor({ state: 'visible', timeout: 15000 });
-      await delay();
 
       const enabled = await startButton.isEnabled({ timeout: 5000 }).catch(() => false);
       if (enabled) {
@@ -576,7 +559,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         await startButton.click({ force: true });
       }
 
-      await delay();
       await takeScreenshot(page, '19-after-start');
     });
 
@@ -635,7 +617,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
 
       if (cardVisible) {
         await templateCard.click();
-        await delay();
         log('✓ Template card selected');
       }
 
@@ -650,8 +631,10 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         reportBug('Major', '"Обрати" button not found', 'Button should be visible after template selection', 'Button not found');
       }
 
-      await delay();
-      await delay();
+      // The process instance opens after «Обрати» — wait for the wizard URL
+      // instead of a double sleep (tolerant: the fallback in step 4.1 handles
+      // the case where navigation did not happen).
+      await page.waitForURL('**/prosthetics/process/**', { timeout: 15000 }).catch(() => {});
       await takeScreenshot(page, '22-after-template-selection');
     });
 
@@ -671,13 +654,11 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
       } else {
         // Try to navigate to process page
         await page.goto(`${CONFIG.baseUrl}/prosthetics`);
-        await delay();
 
         // Find and click on the new process
         const openButton = page.getByRole('button', { name: /Відкрити|Переглянути/i }).first();
         if (await openButton.isVisible({ timeout: 5000 }).catch(() => false)) {
           await openButton.click();
-          await delay();
         }
       }
 
@@ -724,7 +705,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         log('✓ Process started');
       }
 
-      await delay();
       await takeScreenshot(page, '25-wizard-start');
     });
 
@@ -774,10 +754,18 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
             await fillRequiredFields(page);
             const before = await countCompleted();
             await completeButton.click({ timeout: 5000 }).catch(() => {});
-            for (let retry = 0; retry < 4; retry++) {
-              await page.waitForTimeout(2000);
-              if (await countCompleted() > before || page.url().includes('/done')) break;
-              await completeButton.click({ timeout: 5000, force: true }).catch(() => {});
+            let stepDone = false;
+            for (let retry = 0; retry < 4 && !stepDone; retry++) {
+              // Deterministic completion signal: the API COMPLETED count rises
+              // or the wizard lands on /done — poll instead of sleeping.
+              await expect
+                .poll(countCompleted, { timeout: 2000, intervals: [250, 500] })
+                .toBeGreaterThan(before)
+                .catch(() => {});
+              stepDone = (await countCompleted()) > before || page.url().includes('/done');
+              if (!stepDone) {
+                await completeButton.click({ timeout: 5000, force: true }).catch(() => {});
+              }
             }
             stepsCompleted++;
             log(`✓ Step ${i + 1} completed (${stepsCompleted} total)`);
@@ -788,10 +776,16 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
             // Try clicking anyway
             const before = await countCompleted();
             await completeButton.click({ timeout: 5000, force: true }).catch(() => {});
-            for (let retry = 0; retry < 4; retry++) {
-              await page.waitForTimeout(2000);
-              if (await countCompleted() > before || page.url().includes('/done')) break;
-              await completeButton.click({ timeout: 5000, force: true }).catch(() => {});
+            let stepDone = false;
+            for (let retry = 0; retry < 4 && !stepDone; retry++) {
+              await expect
+                .poll(countCompleted, { timeout: 2000, intervals: [250, 500] })
+                .toBeGreaterThan(before)
+                .catch(() => {});
+              stepDone = (await countCompleted()) > before || page.url().includes('/done');
+              if (!stepDone) {
+                await completeButton.click({ timeout: 5000, force: true }).catch(() => {});
+              }
             }
             stepsCompleted++;
             log(`⚠ Step ${i + 1} completed (forced click)`);
@@ -799,10 +793,8 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         } else {
           // No complete button - try filling fields and see if auto-advances
           await fillRequiredFields(page);
-          await delay();
         }
 
-        await delay();
         await takeScreenshot(page, `26-wizard-step-${i + 1}`);
       }
 
@@ -836,7 +828,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         }
         log('✓ All criteria checked');
 
-        await delay();
         await takeScreenshot(page, '27-quality-gate-checked');
 
         // Pass the gate
@@ -848,7 +839,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         log('⚠ No quality gate detected - checking current state');
       }
 
-      await delay();
       await takeScreenshot(page, '28-after-quality-gate');
     });
 
@@ -859,7 +849,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
       if (instanceId) {
         await completeInstanceViaApi(request, instanceId);
         await page.reload();
-        await page.waitForTimeout(1000);
         log('✓ Process completed via API');
       }
     });
@@ -912,7 +901,6 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
         await page.goto(`${CONFIG.baseUrl}/prosthetics`);
       }
 
-      await delay();
       await takeScreenshot(page, '30-back-to-dashboard');
       log('✓ Navigated to dashboard');
     });

@@ -25,10 +25,13 @@ export default defineConfig({
     },
     {
       name: 'login-chromium',
+      // access-control.spec.ts runs with per-test storageState (admin/doctor/nurse)
+      // so the .auth/*.json files must exist before this project starts.
+      dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
       },
-      testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts'],
+      testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts', '**/auth/access-control.spec.ts'],
     },
     {
       name: 'api-error-mode-chromium',

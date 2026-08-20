@@ -173,10 +173,10 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
     });
 
     test('search filters table by patient name', async ({ page }) => {
-      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Петренко');
-      // Wait for filtering
-      await page.waitForTimeout(500);
       const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');
+      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Петренко');
+      // Client-side filter: the auto-waiting text assertion covers the re-render.
+      await expect(rows.first()).toContainText('Петренко', { timeout: 5000 });
       const count = await rows.count();
       expect(count).toBeGreaterThan(0);
       // All visible rows should contain "Петренко"
@@ -187,24 +187,24 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
     });
 
     test('search is case-insensitive', async ({ page }) => {
-      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('петренко');
-      await page.waitForTimeout(500);
       const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');
+      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('петренко');
+      await expect(rows.first()).toContainText(/петренко/i, { timeout: 5000 });
       const count = await rows.count();
       expect(count).toBeGreaterThan(0);
     });
 
     test('clearing search shows all rows again', async ({ page }) => {
-      // First filter
+      const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');
+      // First filter — wait for the re-render via the auto-waiting assertion.
       await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Петренко');
-      await page.waitForTimeout(500);
-      const filteredCount = await page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]').count();
+      await expect(rows.first()).toContainText('Петренко', { timeout: 5000 });
+      const filteredCount = await rows.count();
 
-      // Clear search
+      // Clear search — poll until the full row set is back (condition, not sleep).
       await page.getByPlaceholder('Пошук пацієнта за ПІБ...').clear();
-      await page.waitForTimeout(500);
-      const allCount = await page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]').count();
-
+      await expect.poll(() => rows.count(), { timeout: 5000 }).toBeGreaterThanOrEqual(filteredCount);
+      const allCount = await rows.count();
       expect(allCount).toBeGreaterThanOrEqual(filteredCount);
     });
   });
@@ -214,15 +214,14 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
   test.describe('Negative: Empty / No Results', () => {
     test('search with no matches shows empty state message', async ({ page }) => {
       await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('ZZZNONEXISTENT');
-      await page.waitForTimeout(500);
       await expect(page.getByText('Немає пацієнтів за запитом')).toBeVisible();
     });
 
     test('search with no matches hides the table', async ({ page }) => {
       await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('ZZZNONEXISTENT');
-      await page.waitForTimeout(500);
       const table = page.getByRole('table');
-      // Table should be hidden when no results
+      // Table should be hidden when no results — not.toBeVisible auto-waits
+      // for the re-render.
       await expect(table).not.toBeVisible();
     });
 
@@ -230,14 +229,12 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       // Fill with very long string
       const longQuery = 'a'.repeat(500);
       await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill(longQuery);
-      await page.waitForTimeout(500);
       // Page should still be responsive
       await expect(page.getByText('Активні пацієнти')).toBeVisible();
     });
 
     test('search with SQL-like injection characters does not crash', async ({ page }) => {
       await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill("'; DROP TABLE episodes; --");
-      await page.waitForTimeout(500);
       await expect(page.getByText('Активні пацієнти')).toBeVisible();
     });
   });
@@ -299,9 +296,8 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
 
   test.describe('Boundary: Keyboard Accessibility', () => {
     test('tabbing focuses the open button', async ({ page }) => {
-      // Tab to the first open button
+      // Tab to the first open button — focus is set synchronously, no sleep.
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(200);
 
       // The first interactive element after page load should be focusable
       const focused = await page.evaluate(() => document.activeElement?.tagName);

@@ -1,4 +1,4 @@
-import type { APIRequestContext } from '@playwright/test';
+import { expect, type APIRequestContext, type Page } from '@playwright/test';
 
 /**
  * Shared API helpers for the prosthetics E2E specs.
@@ -126,10 +126,12 @@ export async function completeInstanceViaApi(request: APIRequestContext, instanc
 }
 
 /** Clicks «Розпочати процес» when the wizard shows the NEW-instance start screen. */
-export async function startProcessIfNeeded(page: import('@playwright/test').Page): Promise<void> {
+export async function startProcessIfNeeded(page: Page): Promise<void> {
   const startButton = page.getByRole('button', { name: /Розпочати процес/ });
   if (await startButton.isVisible({ timeout: 3000 }).catch(() => false)) {
     await startButton.click();
-    await page.waitForTimeout(1500);
+    // Deterministic: the start screen must be gone once the process starts —
+    // wait for the transition instead of a sleep.
+    await expect(startButton).toBeHidden({ timeout: 10000 });
   }
 }

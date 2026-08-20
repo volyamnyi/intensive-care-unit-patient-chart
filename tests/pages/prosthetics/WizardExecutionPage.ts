@@ -132,10 +132,13 @@ export class WizardExecutionPage {
 
   async verifyTimerIsRunning() {
     const time1 = await this.liveTimer.textContent();
-    await this.page.waitForTimeout(2000);
-    const time2 = await this.liveTimer.textContent();
-    // Timer should change (increment)
-    expect(time1).not.toEqual(time2);
+    // Deterministic: poll until the live timer ticks forward — no fixed sleep.
+    await expect
+      .poll(async () => this.liveTimer.textContent(), {
+        timeout: 5000,
+        message: 'live timer never ticked',
+      })
+      .not.toBe(time1);
   }
 
   // ==================== PROGRESS ====================
@@ -152,8 +155,15 @@ export class WizardExecutionPage {
   // ==================== STEP COMPLETION ====================
   
   async completeStep() {
+    // Deterministic: wait for the step-completion POST (registered before the
+    // click so the round-trip cannot be missed). Soft-catch keeps the caller's
+    // own state checks authoritative when the button is not yet actionable.
+    const completed = this.page.waitForResponse(
+      (r) => r.request().method() === 'POST' && r.url().includes('/steps/') && r.url().includes('/complete'),
+      { timeout: 10000 },
+    );
     await this.completeStepButton.click();
-    await this.page.waitForTimeout(1000);
+    await completed.catch(() => {});
   }
 
   async isCompleteButtonEnabled(): Promise<boolean> {
@@ -218,8 +228,9 @@ export class WizardExecutionPage {
       const dropdown = this.dropdowns.nth(i);
       if (await dropdown.isVisible() && await dropdown.isEnabled()) {
         await dropdown.click();
-        await this.page.waitForTimeout(300);
         const options = this.page.getByRole('option');
+        // Wait for the popup to render its options instead of a fixed sleep.
+        await options.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
         if (await options.count() > 0) {
           await options.first().click();
         }
@@ -250,7 +261,11 @@ export class WizardExecutionPage {
   async interactWithSignature() {
     if (await this.signaturePad.isVisible({ timeout: 3000 }).catch(() => false)) {
       await this.signaturePad.first().click();
-      await this.page.waitForTimeout(500);
+      // The signature toggle flips its label to «Підпис отримано» once the
+      // capture is stored — wait for that state instead of a fixed sleep.
+      await expect(
+        this.page.getByRole('button', { name: 'Підпис отримано' }),
+      ).toBeVisible({ timeout: 3000 }).catch(() => {});
       // Confirm signature if dialog appears
       const confirmBtn = this.page.getByRole('button', { name: /Підтвердити|Готово/ }).first();
       if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -319,8 +334,9 @@ export class WizardExecutionPage {
       const dd = this.dropdowns.nth(i);
       if (await dd.isVisible() && await dd.isEnabled()) {
         await dd.click();
-        await this.page.waitForTimeout(300);
         const opts = this.page.getByRole('option');
+        // Wait for the popup to render its options instead of a fixed sleep.
+        await opts.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
         if (await opts.count() > 0) {
           await opts.first().click();
           interacted = true;
@@ -353,8 +369,7 @@ export class WizardExecutionPage {
     
     // Try to complete — a bounded timeout so a gate/locked state returns quickly
     if (await this.completeStepButton.isEnabled({ timeout: 3000 }).catch(() => false)) {
-      await this.completeStepButton.click();
-      await this.page.waitForTimeout(1000);
+      await this.completeStep();
       return true;
     }
     
@@ -380,7 +395,8 @@ export class WizardExecutionPage {
     }
     
     await this.confirmPauseButton.click();
-    await this.page.waitForTimeout(1000);
+    // The pause dialog closes once the instance is paused — wait for that.
+    await expect(this.pauseDialog).toBeHidden({ timeout: 10000 });
   }
 
   async verifyPauseDialogVisible() {
@@ -396,7 +412,9 @@ export class WizardExecutionPage {
       await this.timeSpentInput.fill(minutes);
     }
     await this.addResourceButton.click();
-    await this.page.waitForTimeout(500);
+    // The resource row appears in the table once saved — wait for it (soft:
+    // some steps render resources outside the panel locator).
+    await expect(this.resourcesTable.getByText(material)).toBeVisible({ timeout: 5000 }).catch(() => {});
   }
 
   async verifyResourcesPanelVisible() {
@@ -406,8 +424,16 @@ export class WizardExecutionPage {
   // ==================== NAVIGATION ====================
   
   async goBack() {
+    const before = await this.progressText.textContent().catch(() => '');
     await this.backStepButton.click();
-    await this.page.waitForTimeout(1000);
+    // The progress indicator ("N/M") changes when the previous step loads —
+    // poll for the change instead of a fixed sleep.
+    await expect
+      .poll(async () => this.progressText.textContent(), {
+        timeout: 10000,
+        message: 'step indicator never changed after back',
+      })
+      .not.toBe(before);
   }
 
   async goHome() {
@@ -416,7 +442,11 @@ export class WizardExecutionPage {
 
   async saveDraft() {
     await this.saveDraftButton.click();
-    await this.page.waitForTimeout(500);
+    // A save toast confirms the draft was stored — wait for it (soft fallback:
+    // callers assert the draft state themselves).
+    await expect(
+      this.page.getByText(/збережено/i).first(),
+    ).toBeVisible({ timeout: 5000 }).catch(() => {});
   }
 
   // ==================== STEP STATE CHECKS ====================

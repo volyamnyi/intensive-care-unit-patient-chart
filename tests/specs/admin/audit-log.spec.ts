@@ -35,8 +35,13 @@ test.describe('Admin Audit Log', () => {
     const filter = page.getByLabel(/сутність|entity/i);
     if (await filter.count()) {
       await filter.fill('AUTH');
+      // Deterministic: wait for the filtered audit round-trip, not a sleep.
+      const auditResponse = page.waitForResponse(
+        (r) => r.request().method() === 'GET' && r.url().includes('/api/audit'),
+        { timeout: 10000 },
+      );
       await page.getByRole('button', { name: 'Пошук' }).click();
-      await page.waitForTimeout(500);
+      await auditResponse;
     }
     expect(pageErrors).toEqual([]);
   });
@@ -50,8 +55,12 @@ test.describe('Admin Audit Log', () => {
     const filter = page.getByLabel(/сутність|entity/i);
     if (await filter.count()) {
       await filter.fill('NON_EXISTENT_ENTITY');
+      const auditResponse = page.waitForResponse(
+        (r) => r.request().method() === 'GET' && r.url().includes('/api/audit'),
+        { timeout: 10000 },
+      );
       await page.getByRole('button', { name: 'Пошук' }).click();
-      await page.waitForTimeout(500);
+      await auditResponse;
     }
     expect(pageErrors).toEqual([]);
   });

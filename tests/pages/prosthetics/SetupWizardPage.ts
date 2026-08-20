@@ -90,8 +90,14 @@ export class SetupWizardPage {
    * after 300ms debounce when query >= 2 characters
    */
   async searchPatient(query: string) {
+    // Search fires automatically after the 300ms debounce — wait for the
+    // patients GET response (registered before the fill so it cannot be missed).
+    const searchResponse = this.page.waitForResponse(
+      (r) => r.request().method() === 'GET' && r.url().includes('/prosthesis-manufacturing/patients'),
+      { timeout: 10000 },
+    );
     await this.patientSearchInput.fill(query);
-    await this.page.waitForTimeout(1500); // Wait for debounce + API response
+    await searchResponse;
   }
 
   async searchPatientAndWaitForResults(query: string) {
@@ -173,7 +179,12 @@ export class SetupWizardPage {
         return;
       }
 
-      await this.page.waitForTimeout(3000);
+      // The order list effect re-runs on draft updates (flipping the page back to
+      // loading skeletons) — wait for the refetch response instead of a fixed sleep.
+      await this.page.waitForResponse(
+        (r) => r.request().method() === 'GET' && r.url().includes('/prosthesis-manufacturing/orders'),
+        { timeout: 15000 },
+      );
     }
 
     throw new Error(`Order "${orderNumber}" not found`);
@@ -192,7 +203,10 @@ export class SetupWizardPage {
   // ==================== SCREEN 5: ORDER REVIEW ====================
   
   async waitForPdfToLoad() {
-    await this.page.waitForTimeout(3000); // PDF load time
+    // «Старт» stays disabled until the order document finishes loading — waiting
+    // for it to become enabled is the deterministic readiness signal (the button
+    // being already enabled is fine too: the caller asserts the viewer itself).
+    await expect(this.startButton).toBeEnabled({ timeout: 15000 }).catch(() => {});
   }
 
   async clickStart() {
@@ -220,23 +234,20 @@ export class SetupWizardPage {
   // ==================== SCREEN 6: TEMPLATE SELECTION ====================
   
   async selectTemplate(templateName: string) {
-    await this.page.waitForTimeout(2000);
-    
-    // Try to find the template card by text and click it
+    // Template cards load asynchronously — wait for the named card (no pre-sleep).
     const card = this.page.getByText(templateName).first();
-    if (await card.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await expect(card).toBeVisible({ timeout: 10000 }).catch(() => {});
+    if (await card.isVisible().catch(() => false)) {
       await card.click();
-      await this.page.waitForTimeout(500);
     }
-    
-    // Find and click the enabled "Обрати" button
+
+    // Selecting a card enables «Обрати» — wait for that state instead of a fixed delay.
     const selectButton = this.page.getByRole('button', { name: /Обрати|Обрано/ }).first();
-    await selectButton.waitFor({ state: 'visible', timeout: 10000 });
+    await expect(selectButton).toBeEnabled({ timeout: 10000 });
     await selectButton.click();
   }
 
   async selectFirstTemplate() {
-    await this.page.waitForTimeout(2000);
     const selectButton = this.page.getByRole('button', { name: /Обрати|Обрано/ }).first();
     await selectButton.waitFor({ state: 'visible', timeout: 10000 });
     await selectButton.click();

@@ -5,7 +5,6 @@ const CONFIG = {
   screenshotDir: 'screenshots/prosthetics-workflow',
   bugReportFile: 'test-results/prosthetics-workflow-bugs.json',
   logFile: 'test-results/prosthetics-workflow-log.txt',
-  delayMs: 200,
   maxWizardSteps: 50,
   baseUrl: 'http://localhost:5173',
 };
@@ -50,10 +49,6 @@ async function screenshot(page: Page, name: string): Promise<string> {
   return file;
 }
 
-async function delay() {
-  await new Promise(r => setTimeout(r, CONFIG.delayMs));
-}
-
 test.describe('Prosthetics Workflow Verification', () => {
   test.beforeAll(async () => {
     if (!existsSync('test-results')) mkdirSync('test-results', { recursive: true });
@@ -82,7 +77,6 @@ test.describe('Prosthetics Workflow Verification', () => {
       await page.getByRole('button', { name: /Увійти/i }).first().click();
       await page.waitForURL('**/prosthetics**', { timeout: 15000 });
     }
-    await page.waitForTimeout(1000);
     await screenshot(page, '01-logged-in');
     log('✓ Logged in');
 
@@ -114,8 +108,15 @@ test.describe('Prosthetics Workflow Verification', () => {
     await test.step('Search and select patient (Spec 2.3.1)', async () => {
       logStep('Search for Сніжко');
       const searchInput = page.getByPlaceholder(/Пошук|ПІБ|ID/i).or(page.locator('input[type="text"], input[type="search"]').first());
+      // Deterministic: the debounced search fires one GET — await its
+      // round-trip, then the first rendered row (count() is not auto-waiting).
+      const patientsResp = page.waitForResponse(
+        (r) => r.request().method() === 'GET' && r.url().includes('/prosthesis-manufacturing/patients'),
+        { timeout: 10000 },
+      ).catch(() => {});
       await searchInput.first().fill('Сніжко');
-      await page.waitForTimeout(1500);
+      await patientsResp;
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 10000 }).catch(() => {});
       
       const rows = page.locator('tbody tr');
       const count = await rows.count();
@@ -127,7 +128,6 @@ test.describe('Prosthetics Workflow Verification', () => {
       } else {
         reportBug('Critical', 'No patients found', 'Should find patients in mock data', 'Zero results', await screenshot(page, 'bug-no-patients'));
       }
-      await delay();
     });
 
     // ===== PHASE 3: ORDER SELECTION (Screen 4) =====
@@ -137,7 +137,14 @@ test.describe('Prosthetics Workflow Verification', () => {
     await test.step('Select order (Spec 2.3.2)', async () => {
       logStep('Select order');
       await page.waitForURL('**/select-order**', { timeout: 10000 }).catch(() => {});
-      await page.waitForTimeout(1000);
+      // The orders fetch fires on navigation — await its round-trip, then the
+      // first rendered row (count() is not auto-waiting).
+      const ordersResp = page.waitForResponse(
+        (r) => r.request().method() === 'GET' && r.url().includes('/prosthesis-manufacturing/orders'),
+        { timeout: 10000 },
+      ).catch(() => {});
+      await ordersResp;
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 10000 }).catch(() => {});
       
       const rows = page.locator('tbody tr');
       const count = await rows.count();
@@ -156,7 +163,6 @@ test.describe('Prosthetics Workflow Verification', () => {
         await startBtn.click();
         log('✓ Order review confirmed («Старт»)');
       }
-      await delay();
     });
 
     // ===== PHASE 4: TEMPLATE SELECTION (Screen 6) =====
@@ -166,13 +172,12 @@ test.describe('Prosthetics Workflow Verification', () => {
     await test.step('Select template (Spec 2.3.4)', async () => {
       logStep('Select template');
       await page.waitForURL('**/select-template**', { timeout: 10000 }).catch(() => {});
-      await page.waitForTimeout(2000);
       
-      // Click template card
+      // Click template card (the tolerant isVisible checks below are the
+      // condition-based waits — no sleep needed after navigation).
       const card = page.locator('[class*="cursor-pointer"]').filter({ hasText: /TP-UL|TP-LL|Шаблон/i }).first();
       if (await card.isVisible({ timeout: 5000 }).catch(() => false)) {
         await card.click();
-        await delay();
         log('✓ Template card clicked');
       }
       
@@ -184,7 +189,8 @@ test.describe('Prosthetics Workflow Verification', () => {
       } else {
         reportBug('Major', 'No Обрати button found', 'Should have Обрати button', 'Button not found');
       }
-      await page.waitForTimeout(2000);
+      // The process wizard opens on «Обрати» — wait for the URL, not time.
+      await page.waitForURL('**/process/**', { timeout: 15000 }).catch(() => {});
     });
 
     // ===== PHASE 5: WIZARD EXECUTION (Screen 8) =====
@@ -221,18 +227,28 @@ test.describe('Prosthetics Workflow Verification', () => {
         const completeBtn = page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first();
         if (await completeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
           const enabled = await completeBtn.isEnabled({ timeout: 1000 }).catch(() => false);
+          // Deterministic: the step-complete POST is the signal the wizard
+          // advanced — register the waiter before the click (soft: a stuck
+          // wizard must not hard-fail this self-reporting spec).
+          const stepResp = page.waitForResponse(
+            (r) => r.request().method() === 'POST' && r.url().includes('/step-executions/') && r.url().endsWith('/complete'),
+            { timeout: 1500 },
+          ).catch(() => {});
           if (enabled) {
             await completeBtn.click();
+            await stepResp;
             completed++;
             log(`  Step ${i + 1} completed (${completed} total)`);
           } else {
             await completeBtn.click({ force: true });
+            await stepResp;
             completed++;
           }
         } else {
-          await delay();
+          // Step transition in progress — the bounded loop retries via a
+          // condition wait instead of a throttle.
+          await completeBtn.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
         }
-        await delay();
       }
       
       log(`✓ Completed ${completed} wizard steps`);
@@ -284,23 +300,32 @@ test.describe('Prosthetics Workflow Verification', () => {
             } else {
               log('✓ Quality gate passed by administrator (API)');
               await page.reload();
-              await page.waitForTimeout(1500);
+              // The post-gate wizard (or /done) renders after reload — wait for
+              // either signal instead of a sleep.
+              await page.waitForURL('**/done**', { timeout: 5000 }).catch(() => {});
+              await page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first()
+                .waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
               for (let i = 0; i < 6; i++) {
                 if (page.url().includes('/done')) break;
                 await fillFields(page);
                 const continueBtn = page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first();
                 if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+                  const stepResp = page.waitForResponse(
+                    (r) => r.request().method() === 'POST' && r.url().includes('/step-executions/') && r.url().endsWith('/complete'),
+                    { timeout: 1500 },
+                  ).catch(() => {});
                   await continueBtn.click({ force: true });
+                  await stepResp;
                   log(`  Post-gate step ${i + 1} completed`);
+                } else {
+                  await continueBtn.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
                 }
-                await delay();
               }
               await screenshot(page, '05-post-gate-continue');
             }
           }
         }
       }
-      await delay();
     });
 
     // ===== PHASE 7: COMPLETION =====
@@ -309,7 +334,9 @@ test.describe('Prosthetics Workflow Verification', () => {
 
     await test.step('Verify completion (Spec 2.6.1)', async () => {
       logStep('Verify completion');
-      await page.waitForTimeout(2000);
+      // The wizard either lands on /done or /failed — wait for the final
+      // state instead of a sleep.
+      await page.waitForURL(/\/prosthetics\/process\/[0-9a-f-]+\/(done|failed)/, { timeout: 10000 }).catch(() => {});
       await screenshot(page, '05-final-state');
       
       const url = page.url();

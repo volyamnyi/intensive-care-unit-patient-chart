@@ -200,8 +200,8 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       logStep('Test all filter tabs');
       
       for (const tabName of ['active', 'paused', 'completed', 'failed'] as const) {
+        // Client-side filter — the tolerant isVisible checks below are the wait.
         await dashboardPage.filterBy(tabName);
-        await page.waitForTimeout(800);
         const hasTable = await dashboardPage.hasProcessTable();
         const hasEmpty = await dashboardPage.hasEmptyState();
         log(`✓ Filter "${tabName}": table=${hasTable}, empty=${hasEmpty}`);
@@ -209,21 +209,18 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       
       // Reset to All
       await dashboardPage.filterBy('all');
-      await page.waitForTimeout(500);
     });
 
     await test.step('1.4 Test Search Functionality (Spec 2.2)', async () => {
       logStep('Test search by order number');
       
       await dashboardPage.search('ПВ-26');
-      await page.waitForTimeout(1500);
       const hasTable = await dashboardPage.hasProcessTable();
       log(`✓ Search "ПВ-26": table visible=${hasTable}`);
       await takeScreenshot(page, '03-search-results');
       
-      // Clear search
+      // Clear search (client-side filter re-renders synchronously)
       await dashboardPage.search('');
-      await page.waitForTimeout(800);
     });
 
     // ============== PHASE 2: PATIENT SELECTION ==============
@@ -278,7 +275,6 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       logStep('Test search with no matching results');
       
       await setupWizardPage.searchPatient('ZZZZZZZZZZZ');
-      await page.waitForTimeout(1500);
       
       try {
         await setupWizardPage.verifyNoResultsMessage();
@@ -351,10 +347,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     await test.step('4.1 Verify Template Selection UI (Spec 2.3.4)', async () => {
       logStep('Verify template selection screen elements');
       
-      // Wait for page to load
-      await page.waitForTimeout(3000);
-      
-      // Context summary — shows "Пацієнт" with patient ID
+      // Context summary — shows "Пацієнт" with patient ID (tolerant wait below)
       const contextCard = page.getByText(/Пацієнт/);
       if (await contextCard.first().isVisible({ timeout: 5000 }).catch(() => false)) {
         log('✓ Context summary visible');
@@ -362,8 +355,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
         log('⚠ Context summary not found — checking for patient ID in draft');
       }
       
-      // Template cards — wait for them to render
-      await page.waitForTimeout(2000);
+      // Template cards — the auto-waiting assertion below covers the render
       const templateHeading = page.getByText(/Вибір технологічного маршруту/);
       await expect(templateHeading).toBeVisible({ timeout: 10000 });
       log('✓ Template selection heading visible');
@@ -397,23 +389,18 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     await test.step('4.2 Select Template and Create Process (Spec 2.3.4)', async () => {
       logStep('Select template card, then click "Обрати" to create process');
       
-      // Wait for templates to load
-      await page.waitForTimeout(3000);
-      
-      // Find and click the template card to select it
+      // Find and click the template card to select it (auto-waiting isVisible below)
       const clickableCard = page.locator('[class*="cursor-pointer"]').filter({ hasText: 'TP-UL-01' }).first();
       const cardVisible = await clickableCard.isVisible({ timeout: 10000 }).catch(() => false);
       
       if (cardVisible) {
         await clickableCard.click();
-        await page.waitForTimeout(500);
         log('✓ Template card clicked (selected)');
       } else {
         // Fallback: try clicking any available template card
         const anyCard = page.locator('[class*="cursor-pointer"]').first();
         if (await anyCard.isVisible({ timeout: 3000 }).catch(() => false)) {
           await anyCard.click();
-          await page.waitForTimeout(500);
           log('✓ First available template card clicked');
         } else {
           throw new Error('No template cards found to select');
@@ -426,9 +413,9 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       await selectButton.click();
       log('✓ "Обрати" button clicked');
       
-      // Wait for process creation — should navigate to process page
-      // Note: The actual implementation may redirect to process view or back to setup
-      await page.waitForTimeout(5000);
+      // Wait for process creation — the process page URL is the signal
+      // (tolerant: the implementation may redirect back to setup).
+      await page.waitForURL('**/prosthetics/process/**', { timeout: 15000 }).catch(() => {});
       await takeScreenshot(page, '10-after-template-select');
       
       const currentUrl = page.url();
@@ -452,7 +439,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     await test.step('5.1 Navigate to Wizard (Spec 2.4.1)', async () => {
       logStep('Navigate to wizard execution');
       
-      await page.waitForTimeout(2000);
+      await page.waitForURL('**/prosthetics/process/**', { timeout: 10000 }).catch(() => {});
       await takeScreenshot(page, '11-process-view');
       
       let url = page.url();
@@ -466,13 +453,12 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
         log('⚠ Not on process page — attempting to find created process');
         // Navigate to dashboard to check for the new process
         await page.goto('/prosthetics');
-        await page.waitForTimeout(2000);
         
-        // Check if there's a process in the table
+        // Check if there's a process in the table (tolerant isVisible wait below)
         const openButton = page.getByRole('button', { name: /Відкрити/ }).first();
         if (await openButton.isVisible({ timeout: 5000 }).catch(() => false)) {
           await openButton.click();
-          await page.waitForTimeout(2000);
+          await page.waitForURL('**/prosthetics/process/**', { timeout: 10000 }).catch(() => {});
           url = page.url();
           instanceId = url.split('/process/')[1]?.split('/')[0];
           log(`Found process via dashboard: ${instanceId}`);
@@ -483,7 +469,13 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       if (instanceId) {
         createdInstanceId = instanceId;
         await page.goto(`/prosthetics/process/${instanceId}/wizard`);
-        await page.waitForTimeout(2000);
+        // The wizard renders either the start screen («Розпочати процес») or
+        // stage 1 — wait for either signal instead of a sleep.
+        await page
+          .getByRole('button', { name: /Розпочати процес|Готово|Завершити процес/ })
+          .first()
+          .waitFor({ state: 'visible', timeout: 10000 })
+          .catch(() => {});
         // A freshly created instance starts in the NEW state — start it if the wizard asks
         await startProcessIfNeeded(page);
         await takeScreenshot(page, '12-wizard-start');
@@ -501,8 +493,6 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
 
     await test.step('5.2 Execute Wizard Steps (Spec 2.4.2)', async () => {
       logStep('Execute wizard steps');
-      
-      await page.waitForTimeout(2000);
       
       let stepsCompleted = 0;
       let qualityGateFound = false;
@@ -533,8 +523,8 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
           stepsCompleted++;
           log(`✓ Step ${i + 1} completed (${stepsCompleted} total)`);
         } else {
-          // Check if page changed (auto-advanced)
-          await page.waitForTimeout(1000);
+          // Check if page changed (auto-advanced) — wait for the URL signal
+          await page.waitForURL(/\/(quality-gate|done|failed)/, { timeout: 5000 }).catch(() => {});
           const newUrl = page.url();
           if (newUrl.includes('/quality-gate')) {
             qualityGateFound = true;
@@ -549,16 +539,19 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
           log(`⚠ Step ${i + 1} did not complete — trying to advance`);
           const completeBtn = page.getByRole('button', { name: /Готово|Завершити крок/ });
           if (await completeBtn.isEnabled({ timeout: 3000 }).catch(() => false)) {
+            // Deterministic: the step-complete POST round-trip is the signal.
+            const stepResp = page.waitForResponse(
+              (r) => r.request().method() === 'POST' && r.url().includes('/step-executions/') && r.url().endsWith('/complete'),
+              { timeout: 5000 },
+            ).catch(() => {});
             await completeBtn.click();
-            await page.waitForTimeout(1000);
+            await stepResp;
             stepsCompleted++;
           } else {
             log('Breaking step execution loop');
             break;
           }
         }
-        
-        await page.waitForTimeout(1000);
       }
       
       log(`✓ Completed ${stepsCompleted} wizard steps`);
@@ -573,7 +566,6 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     await test.step('6.1 Handle Quality Gate (Spec 2.5.1)', async () => {
       logStep('Handle quality gate decision');
       
-      await page.waitForTimeout(1500);
       await takeScreenshot(page, '14-quality-gate');
       
       // Check if at quality gate
@@ -628,7 +620,6 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     await test.step('7.1 Verify Process Completion (Spec 2.6.1)', async () => {
       logStep('Verify completion state');
       
-      await page.waitForTimeout(2000);
       await takeScreenshot(page, '16-process-final-state');
       
       const url = page.url();
@@ -658,7 +649,8 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       logStep('Navigate back to dashboard');
       
       await page.goto('/prosthetics');
-      await page.waitForTimeout(1000);
+      // Wait for the dashboard heading before the evidence screenshot.
+      await dashboardPage.heading.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
       await takeScreenshot(page, '17-back-to-dashboard');
       log('✓ Navigated to dashboard');
     });
@@ -750,11 +742,12 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       
       // Navigate back to patient selection
       await page.goto('/prosthetics/new/select-patient');
-      await page.waitForTimeout(2000);
       
       // Search again to see if patient context is preserved
       await setupWizardPage.searchPatient('Сніжко');
-      await page.waitForTimeout(1500);
+      // searchPatient already awaited the round-trip — wait for the first row
+      // before counting (count() is not auto-waiting).
+      await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
       
       // The patient should appear in search results
       const count = await setupWizardPage.getPatientCount();
@@ -806,7 +799,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       // Select template
       const templateCard = page.getByText('TP-UL-01').first();
       await templateCard.click();
-      await page.waitForTimeout(500);
+      // The click below auto-waits for the button to become enabled.
       const selectButton = page.getByRole('button', { name: 'Обрати' }).first();
       await selectButton.click();
       await page.waitForURL('**/prosthetics/process/**', { timeout: 15000 });
@@ -817,7 +810,12 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       if (instanceId) {
         pausedInstanceId = instanceId;
         await page.goto(`/prosthetics/process/${instanceId}/wizard`);
-        await page.waitForTimeout(2000);
+        // Wait for either the start screen or stage-1 CTA (tolerant).
+        await page
+          .getByRole('button', { name: /Розпочати процес|Готово|Завершити процес/ })
+          .first()
+          .waitFor({ state: 'visible', timeout: 10000 })
+          .catch(() => {});
         // A freshly created instance starts in the NEW state — start it first
         await startProcessIfNeeded(page);
       }
@@ -830,8 +828,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       await wizardExecutionPage.pauseProcess('PATIENT');
       log('✓ Pause dialog opened and patient reason selected');
       
-      // Verify paused state
-      await page.waitForTimeout(1500);
+      // Verify paused state (pauseProcess already awaited the dialog close)
       await takeScreenshot(page, '19-paused-state');
       log('✓ Process paused successfully');
     });

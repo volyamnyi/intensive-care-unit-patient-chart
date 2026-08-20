@@ -27,8 +27,21 @@ const SEED_PATIENT_ID = '900002';
 const SEED_ORDER_ID = '20000000-0000-4000-8000-000000000002';
 
 async function assertNoHorizontalScroll(page: Page, route: string) {
-  await page.goto(route);
-  await page.waitForLoadState('networkidle');
+  await page.goto(route, { waitUntil: 'domcontentloaded' });
+  // Layout can shift after async fonts/data settle — poll scrollWidth until two
+  // consecutive samples agree (condition-based, no sleep, no network-silence).
+  let previousWidth = Number.NaN;
+  await expect
+    .poll(
+      async () => {
+        const current = await page.evaluate(() => document.documentElement.scrollWidth);
+        const stable = current === previousWidth;
+        previousWidth = current;
+        return { stable, width: current };
+      },
+      { timeout: 15000, intervals: [250, 500, 1000] },
+    )
+    .toMatchObject({ stable: true });
   const report = await page.evaluate(() => {
     const docWidth = document.documentElement.scrollWidth;
     const viewportWidth = window.innerWidth;

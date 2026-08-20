@@ -59,13 +59,21 @@ export class QualityGatePage {
   }
 
   async passGate() {
+    // Deterministic: wait for the gate-decision POST round-trip (registered
+    // before the click so it cannot be missed). Soft-catch keeps the caller's
+    // own state checks authoritative.
+    const decision = this.page.waitForResponse(
+      (r) => r.request().method() === 'POST' && r.url().includes('/gates/') && r.url().includes('/decision'),
+      { timeout: 10000 },
+    );
     await this.passButton.click();
-    await this.page.waitForTimeout(1000);
+    await decision.catch(() => {});
   }
 
   async clickFail() {
     await this.failButton.click();
-    await this.page.waitForTimeout(500);
+    // The rework/fail dialog opens in response — wait for it instead of a sleep.
+    await expect(this.failDialog).toBeVisible({ timeout: 5000 }).catch(() => {});
   }
 
   async failWithRework(targetStep: string, reason: string) {
@@ -73,8 +81,12 @@ export class QualityGatePage {
     await this.reworkDialog.waitFor({ state: 'visible', timeout: 5000 });
     await this.selectReworkTarget(targetStep);
     await this.reworkReasonInput.fill(reason);
+    const decision = this.page.waitForResponse(
+      (r) => r.request().method() === 'POST' && r.url().includes('/decision'),
+      { timeout: 10000 },
+    );
     await this.confirmReworkButton.click();
-    await this.page.waitForTimeout(1000);
+    await decision.catch(() => {});
   }
 
   async failPermanently(category: string, description: string) {
@@ -82,8 +94,12 @@ export class QualityGatePage {
     await this.failDialog.waitFor({ state: 'visible', timeout: 5000 });
     await this.selectFailCategory(category);
     await this.failDescriptionInput.fill(description);
+    const decision = this.page.waitForResponse(
+      (r) => r.request().method() === 'POST' && r.url().includes('/decision'),
+      { timeout: 10000 },
+    );
     await this.confirmFailButton.click();
-    await this.page.waitForTimeout(1000);
+    await decision.catch(() => {});
   }
 
   async selectReworkTarget(targetStep: string) {

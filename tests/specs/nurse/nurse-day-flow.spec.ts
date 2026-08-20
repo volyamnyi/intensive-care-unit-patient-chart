@@ -97,13 +97,18 @@ test.describe('Nurse day flow', () => {
   test('nurse executes a planned medication and finishes it', async ({ page, doctorPage }) => {
     let hour = planHour();
 
-    // Лікар планує дозу Glucose 5% у комірці обраної години
+    // Лікар планує дозу Glucose 5% у комірці обраної години.
+    // Виконання завантажуються асинхронно після призначень (GET /orders/{id}/executions) —
+    // чекаємо їхнього round-trip замість мережевої тиші, інакше перевірка ✓/✕
+    // може не побачити зайняту годину.
+    const executionsLoaded = doctorPage.waitForResponse(
+      (r) => r.request().method() === 'GET' && r.url().includes('/executions'),
+      { timeout: 10000 },
+    );
     await doctorPage.goto(`/icu/doctor/episode/${EPISODE_ID}`);
     const doctorRow = doctorPage.locator('tr', { hasText: ORDER_NAME });
     await expect(doctorRow).toBeVisible();
-    // Виконання завантажуються асинхронно після призначень (GET /orders/{id}/executions) —
-    // чекаємо стабілізації сітки, інакше перевірка ✓/✕ може не побачити зайняту годину
-    await doctorPage.waitForLoadState('networkidle');
+    await executionsLoaded;
     // Шукаємо першу комірку, яку можна (пере)планувати, від поточної години (wrap 24):
     // '✓' (виконано/минула) і '✕' (скасовано) неклікабельні; вільна комірка показує
     // '➚', запланована — дозу (лікар може перепланувати її).
