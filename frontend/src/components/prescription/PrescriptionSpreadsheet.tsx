@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PrescriptionDayPart } from '../../types/medication';
@@ -38,6 +38,16 @@ function cellLabel(part: PrescriptionDayPart | undefined) {
 
 function dayPartKey(date: string, period: string) { return `${date}|${period}`; }
 
+export interface DayContextMenuState {
+  clientX: number;
+  clientY: number;
+  itemId: string;
+  dayId?: string;
+  cellLabel: string;
+  cancelEnabled: boolean;
+  cancelDayPart: PrescriptionDayPart | null;
+}
+
 export interface PrescriptionSpreadsheetProps {
   canEdit: boolean;
   isDoctor: boolean;
@@ -50,6 +60,8 @@ export interface PrescriptionSpreadsheetProps {
   loading?: boolean;
   onShiftLeft: () => void;
   onShiftRight: () => void;
+  onAddDay?: (itemId: string) => Promise<void> | void;
+  onRemoveDay?: (itemId: string, dayId: string) => Promise<void> | void;
   onPlan: (dayPartId: string, dose: string) => Promise<void>;
   onCancel: (dayPartId: string) => Promise<void>;
   onOpenExecute: (dp: PrescriptionDayPart, el: HTMLElement) => void;
@@ -58,10 +70,11 @@ export interface PrescriptionSpreadsheetProps {
 
 export default function PrescriptionSpreadsheet({
   canEdit, isDoctor, isNurse, gridItems, visibleDates, allDates, viewStart, daysToShow,
-  loading, onShiftLeft, onShiftRight, onPlan, onCancel, onOpenExecute, onOpenDeleteConfirm,
+  loading, onShiftLeft, onShiftRight, onAddDay, onRemoveDay, onPlan, onCancel, onOpenExecute, onOpenDeleteConfirm,
 }: PrescriptionSpreadsheetProps) {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editingDose, setEditingDose] = useState('');
+  const [dayMenu, setDayMenu] = useState<DayContextMenuState | null>(null);
 
   const startEdit = (dp: PrescriptionDayPart) => {
     if (!canEdit || !isDoctor) return;
@@ -77,9 +90,55 @@ export default function PrescriptionSpreadsheet({
     await onPlan(dp.id, dose);
   };
 
-  const doctorCancel = async (dp: PrescriptionDayPart) => {
-    if (!canEdit || !isDoctor || !dp.isPlanned || dp.isCompleted) return;
-    await onCancel(dp.id);
+  const canMenu = canEdit && isDoctor;
+
+  const openDayMenu = (e: React.MouseEvent, item: GridItem, date: string, dp: PrescriptionDayPart) => {
+    e.preventDefault();
+    if (!canMenu) return;
+    const cancelEnabled = Boolean(dp.isPlanned && !dp.isCompleted);
+    setDayMenu({
+      clientX: e.clientX,
+      clientY: e.clientY,
+      itemId: item.id,
+      dayId: dp.dayId,
+      cellLabel: `${formatDate(date)} · ${PERIOD_FULL[dp.period] ?? dp.period}`,
+      cancelEnabled,
+      cancelDayPart: dp,
+    });
+  };
+
+  const closeDayMenu = () => setDayMenu(null);
+
+  const dayMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!dayMenu) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (dayMenuRef.current && !dayMenuRef.current.contains(e.target as Node)) closeDayMenu();
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeDayMenu(); };
+    const onScroll = () => closeDayMenu();
+    document.addEventListener('pointerdown', onDocPointerDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDocPointerDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [dayMenu]);
+
+  const handlePlanFromMenu = async () => {
+    const dp = dayMenu?.cancelDayPart;
+    if (dp) await onCancel(dp.id);
+    closeDayMenu();
+  };
+
+  const handleRemoveDayFromMenu = async () => {
+    const itemId = dayMenu?.itemId;
+    const dayId = dayMenu?.dayId;
+    if (itemId && dayId) await onRemoveDay?.(itemId, dayId);
+    closeDayMenu();
   };
 
   return (
@@ -148,7 +207,7 @@ export default function PrescriptionSpreadsheet({
                     </span>
                   </th>
                 ))}
-                {canEdit && isDoctor && <th className="w-10 border border-border" />}
+                {canEdit && isDoctor && <th className="w-16 border border-border" />}
               </tr>
               <tr>
                 <th
@@ -210,12 +269,6 @@ export default function PrescriptionSpreadsheet({
                         if (isNurse && dp.isPlanned) { onOpenExecute(dp, e.currentTarget as HTMLElement); return; }
                       };
 
-                      const onAuxClick = (e: React.MouseEvent) => {
-                        e.preventDefault();
-                        if (!dp || !canEdit) return;
-                        if (isDoctor && dp.isPlanned && !dp.isCompleted) doctorCancel(dp);
-                      };
-
                       return (
                         <td
                           key={`${date}-${period}`}
@@ -229,7 +282,7 @@ export default function PrescriptionSpreadsheet({
                               : null),
                           }}
                           onClick={onClick}
-                          onAuxClick={onAuxClick}
+                          onContextMenu={dp ? (e) => openDayMenu(e, item, date, dp) : undefined}
                         >
                           {isEditing ? (
                             <form onSubmit={e => { e.preventDefault(); if (dp) commitEdit(dp); }}
@@ -268,16 +321,66 @@ export default function PrescriptionSpreadsheet({
                   )}
 
                   {canEdit && isDoctor && (
-                    <td className="w-10 text-center border border-border">
-                      <Button variant="ghost" size="icon-xs" onClick={(e) => onOpenDeleteConfirm(item.id, e.currentTarget as HTMLElement)}>
-                        <Trash2 className="size-3" />
-                      </Button>
+                    <td className="w-16 text-center border border-border">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Додати день"
+                          title="Додати день"
+                          disabled={!onAddDay}
+                          onClick={() => onAddDay?.(item.id)}
+                        >
+                          <Plus className="size-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon-xs" onClick={(e) => onOpenDeleteConfirm(item.id, e.currentTarget as HTMLElement)}>
+                          <Trash2 className="size-3" />
+                        </Button>
+                      </div>
                     </td>
                   )}
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {dayMenu && (
+        <div
+          ref={dayMenuRef}
+          className="fixed z-50"
+          style={{ top: dayMenu.clientY, left: dayMenu.clientX }}
+          role="menu"
+          aria-label="Контекстне меню дня"
+        >
+          <div className="rounded-xl border bg-popover text-popover-foreground shadow-md p-1 min-w-[200px] text-sm">
+            <p className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase">
+              {dayMenu.cellLabel}
+            </p>
+            {dayMenu.cancelEnabled && dayMenu.cancelDayPart && (
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left rounded-md hover:bg-muted"
+                onClick={handlePlanFromMenu}
+              >
+                <X className="size-3.5 text-muted-foreground" />
+                Скасувати дозу
+              </button>
+            )}
+            {dayMenu.dayId && onRemoveDay && (
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left rounded-md hover:bg-muted text-destructive"
+                onClick={handleRemoveDayFromMenu}
+              >
+                <CalendarDays className="size-3.5" />
+                Видалити цей день
+              </button>
+            )}
+          </div>
         </div>
       )}
     </>

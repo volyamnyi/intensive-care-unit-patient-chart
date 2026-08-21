@@ -24,6 +24,10 @@ export const prescriptionApi = {
     client.post<PrescriptionItem>(`/prescriptions/${listId}/items`, data),
   removeItem: (itemId: string) =>
     client.delete(`/prescriptions/items/${itemId}`),
+  addItemDay: (itemId: string) =>
+    client.post<PrescriptionItem>(`/prescriptions/items/${itemId}/days`),
+  removeItemDay: (itemId: string, dayId: string) =>
+    client.delete<void>(`/prescriptions/items/${itemId}/days/${dayId}`),
   planDose: (dayPartId: string, dose: string) =>
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/plan`, { dose }),
   completeDose: (dayPartId: string) =>
