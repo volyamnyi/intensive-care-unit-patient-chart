@@ -13,7 +13,7 @@ test.describe('Nurse — prescription day UI is read-only', () => {
     const row = page.locator('tr').filter({ hasText: 'В ході' }).first();
     await expect(row).toBeVisible({ timeout: 10_000 });
     await row.getByRole('button', { name: 'Відкрити' }).click();
-    await expect(page.getByText('Листки призначень (')).first().toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Листки призначень (').first()).toBeVisible({ timeout: 10_000 });
     const card = page.locator('div.rounded-xl.border', { hasText: 'В ході' }).first();
     await card.getByRole('button', { name: /Листок/ }).first().click();
     await page.waitForURL(/\/prescriptions\/nurse\/[0-9a-f-]{36}$/, { timeout: 15_000 });
