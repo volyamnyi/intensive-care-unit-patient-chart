@@ -41,7 +41,8 @@ test.describe('tablet — prosthetist dashboard', () => {
 
     const activeBox = await active.boundingBox();
     const pausedBox = await paused.boundingBox();
-    expect(activeBox!.y).toBe(pausedBox!.y);
+    // Same grid row: card tops coincide — allow subpixel rounding drift.
+    expect(Math.abs(activeBox!.y - pausedBox!.y)).toBeLessThan(2);
     expect(pausedBox!.x).toBeGreaterThan(activeBox!.x);
   });
 });
