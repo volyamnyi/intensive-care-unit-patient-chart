@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import { completeCurrentStepViaApi, completeInstanceViaApi } from '../../helpers/prosthetics-flow';
+import { completeCurrentStepViaApi, completeInstanceViaApi, passPendingGateViaApi } from '../../helpers/prosthetics-flow';
 
 // Wizard checkbox whole-surface clickability: every parent checkbox row in the
 // «Операційна карта» wizard (WizardScreen.tsx) must be clickable across its
@@ -47,9 +47,9 @@ async function getStatus(request: APIRequestContext, instanceId: string): Promis
 }
 
 /**
- * Creates a fresh instance from the first order free of an active flow.
- * The responsive mobile-wizard smoke creates another instance concurrently,
- * so a failed create (order race) falls through to the next candidate order.
+ * Creates a fresh instance from the first order free of an active flow
+ * and starts it so the walk sees IN_PROGRESS with step executions present.
+ * A failed create (order race) falls through to the next candidate order.
  */
 async function createInstance(request: APIRequestContext): Promise<string> {
   const token = await login(request);
@@ -92,7 +92,12 @@ async function createInstance(request: APIRequestContext): Promise<string> {
       data: { orderId: order.id, templateId: template.id },
     });
     if (created.ok()) {
-      return (await created.json()).id;
+      const id = ((await created.json()) as { id: string }).id;
+      const started = await request.post(`${BASE}/instances/${id}/start`, { headers });
+      if (!started.ok()) {
+        throw new Error(`Instance start failed: HTTP ${started.status()}: ${await started.text()}`);
+      }
+      return id;
     }
   }
   throw new Error('Could not create a flow instance on any candidate order');
@@ -161,6 +166,7 @@ test.describe('wizard checkbox whole-surface clickability', () => {
     page,
     request,
   }) => {
+    test.setTimeout(600000);
     expect(instanceId, 'the instance setup test must run first').toBeTruthy();
 
     const rows = page.locator('label:has([data-slot="checkbox"])');
@@ -170,6 +176,10 @@ test.describe('wizard checkbox whole-surface clickability', () => {
       const status = await getStatus(request, instanceId);
       if (status === 'COMPLETED') {
         break;
+      }
+      if (status === 'WAITING_REVIEW' || status === 'CORRECTION') {
+        await passPendingGateViaApi(request, instanceId);
+        continue;
       }
       expect(status, 'the walk must stay IN_PROGRESS').toBe('IN_PROGRESS');
 

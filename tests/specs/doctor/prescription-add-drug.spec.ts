@@ -63,12 +63,14 @@ test.describe('Medicine add button — in-progress list', () => {
     const add = page.getByRole('button', { name: 'Додати' });
     await expect(add).toBeEnabled({ timeout: 10000 });
 
-    const dialogPromise = page.waitForEvent('dialog', { timeout: 10000 });
+    let dialogMessage = '';
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message();
+      void dialog.dismiss();
+    });
     await add.click();
-    const dialog = await dialogPromise;
-    expect(dialog.message()).toContain('алергія');
-    expect(dialog.message()).toContain('Penicillin');
-    dialog.dismiss();
+    await expect.poll(() => dialogMessage, { timeout: 10000 }).toContain('алергія');
+    expect(dialogMessage).toContain('Penicillin');
   });
 
   test('selecting a catalog suggestion and adding still works', async ({ page }) => {

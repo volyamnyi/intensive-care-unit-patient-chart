@@ -61,9 +61,7 @@ export function buildValues(
  */
 export async function completeInstanceViaApi(request: APIRequestContext, instanceId: string): Promise<void> {
   const prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
-  const adminToken = await login(request, 'prosthetics_admin1', 'doctor123');
   const prosthetistHeaders = { Authorization: `Bearer ${prosthetistToken}` };
-  const adminHeaders = { Authorization: `Bearer ${adminToken}` };
 
   for (let i = 0; i < 30; i++) {
     const instanceRes = await request.get(`${BASE}/instances/${instanceId}`, { headers: prosthetistHeaders });
@@ -82,22 +80,7 @@ export async function completeInstanceViaApi(request: APIRequestContext, instanc
     }
 
     if (instance.status === 'WAITING_REVIEW' || instance.status === 'CORRECTION') {
-      const snapshotRes = await request.get(`${BASE}/instances/${instanceId}/snapshot`, { headers: adminHeaders });
-      const snapshot = await snapshotRes.json();
-      const gate = (snapshot.stages ?? []).find((stage: { gate?: unknown }) => stage.gate)?.gate as
-        | { id: string; criteria?: Array<{ id: string }> }
-        | undefined;
-      if (!gate) {
-        throw new Error(`No quality gate in snapshot for instance ${instanceId}`);
-      }
-      const criteriaIds = (gate.criteria ?? []).map((criterion) => criterion.id);
-      const passRes = await request.post(`${BASE}/instances/${instanceId}/gates/${gate.id}/decision`, {
-        headers: adminHeaders,
-        data: { decision: 'PASS', criteriaConfirmed: criteriaIds, comment: '' },
-      });
-      if (!passRes.ok()) {
-        throw new Error(`Gate PASS failed: HTTP ${passRes.status()}: ${await passRes.text()}`);
-      }
+      await passPendingGateViaApi(request, instanceId);
       continue;
     }
 
@@ -152,6 +135,27 @@ export async function completeCurrentStepViaApi(
   });
   if (!completeRes.ok()) {
     throw new Error(`Step complete failed: HTTP ${completeRes.status()}: ${await completeRes.text()}`);
+  }
+}
+
+export async function passPendingGateViaApi(request: APIRequestContext, instanceId: string): Promise<void> {
+  const adminToken = await login(request, 'prosthetics_admin1', 'doctor123');
+  const headers = { Authorization: `Bearer ${adminToken}` };
+  const snapshotRes = await request.get(`${BASE}/instances/${instanceId}/snapshot`, { headers });
+  const snapshot = await snapshotRes.json();
+  const gate = (snapshot.stages ?? []).find((stage: { gate?: unknown }) => stage.gate)?.gate as
+    | { id: string; criteria?: Array<{ id: string }> }
+    | undefined;
+  if (!gate) {
+    throw new Error(`No quality gate in snapshot for instance ${instanceId}`);
+  }
+  const criteriaIds = (gate.criteria ?? []).map((criterion) => criterion.id);
+  const passRes = await request.post(`${BASE}/instances/${instanceId}/gates/${gate.id}/decision`, {
+    headers,
+    data: { decision: 'PASS', criteriaConfirmed: criteriaIds, comment: '' },
+  });
+  if (!passRes.ok()) {
+    throw new Error(`Gate PASS failed: HTTP ${passRes.status()}: ${await passRes.text()}`);
   }
 }
 

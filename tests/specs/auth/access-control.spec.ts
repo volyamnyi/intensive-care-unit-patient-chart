@@ -15,7 +15,7 @@ test.describe('Access Control', () => {
 
     test('admin can open /admin', async ({ page }) => {
       await page.goto('/admin');
-      await expect(page.getByText('Користувачі системи')).toBeVisible();
+      await expect(page.getByRole('tab', { name: 'Користувачі' })).toBeVisible();
     });
 
     test('admin is redirected from /icu/nurse to /select', async ({ page }) => {
