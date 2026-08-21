@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '../../fixtures/index';
+import { test, expect } from '../../fixtures/index';
+import type { Locator, Page } from '@playwright/test';
 
 // E2E for per-item prescription day management (issue #169, phase 4).
 // Round-trips: adds a new day (max_day_date + 1), then deletes the same day
@@ -26,11 +27,26 @@ async function navigateToDetail(page: Page): Promise<void> {
   await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
 }
 
-async function gotoDay(page: Page, iso: string): Promise<void> {
+// The detail page renders TWO tables (item grid AND vital-sign grid), so page-wide
+// `tbody tr` / `th` locators are ambiguous. Scope every grid assertion to the items
+// table — uniquely identified by its «Препарат / Метод» header (vital grid uses
+// «Показник») — and wait for a «Додати день» button first so the non-retrying
+// .count() never races the loading spinner.
+function itemsTable(page: Page): Locator {
+  return page.locator('table').filter({ hasText: 'Препарат / Метод' });
+}
+
+async function scopeGrid(page: Page): Promise<Locator> {
+  await expect(page.getByRole('button', { name: DODATI_DENY }).first()).toBeVisible({ timeout: 10_000 });
+  return itemsTable(page);
+}
+
+async function gotoDay(page: Page, grid: Locator, iso: string): Promise<void> {
   const label = formatUa(iso);
-  const header = page.locator('th', { hasText: label });
+  const header = grid.locator('th', { hasText: label });
   if (await header.first().isVisible({ timeout: 500 }).catch(() => false)) return;
-  const shiftRight = page.locator('button:has(.lucide-chevron-right)');
+  // Items grid renders before the vital grid, so its chevron is the first in DOM order.
+  const shiftRight = page.locator('button:has(.lucide-chevron-right)').first();
   for (let i = 0; i < 8; i++) {
     if (await header.first().isVisible({ timeout: 200 }).catch(() => false)) return;
     if (await shiftRight.isDisabled().catch(() => true)) break;
@@ -58,18 +74,19 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
   });
 
   test('per-row "Додати день" buttons appear on every item row', async ({ page }) => {
+    const grid = await scopeGrid(page);
     const addBtns = page.getByRole('button', { name: DODATI_DENY });
-    await expect(addBtns.first()).toBeVisible({ timeout: 5_000 });
-    const rows = page.locator('tbody tr');
-    const expected = await rows.count();
+    const itemRows = grid.locator('tbody tr');
+    const expected = await itemRows.count();
+    expect(expected).toBeGreaterThan(0);
     await expect(addBtns).toHaveCount(expected);
   });
 
   test('adds a new day then deletes it via context menu (round-trip)', async ({ page }) => {
-    // Capture the last visible day header BEFORE adding, so we can assert
-    // both that the new day appears and that it disappears after removal.
-    const firstRow = page.locator('tbody tr').first();
-    const beforeCount = await page.locator('tbody tr').count();
+    const grid = await scopeGrid(page);
+    const itemRows = grid.locator('tbody tr');
+    const firstRow = itemRows.first();
+    const beforeCount = await itemRows.count();
     expect(beforeCount).toBeGreaterThan(0);
 
     const [addRes] = await Promise.all([
@@ -96,9 +113,9 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
     expect(periods).toEqual(new Set(['morning', 'day', 'evening', 'night']));
 
     // Navigate to the new day and right-click its first period cell.
-    await gotoDay(page, addedDate);
+    await gotoDay(page, grid, addedDate);
     const dateLabel = formatUa(addedDate);
-    const thead = page.locator('thead tr').first();
+    const thead = grid.locator('thead tr').first();
     const dateColIdx = await thead.locator('th[colspan]').evaluateAll(
       (ths, target) => ths.findIndex(t => t.textContent?.trim() === target),
       dateLabel,
@@ -119,7 +136,12 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
     ]);
     expect(delRes.status()).toBe(204);
 
-    // The new day is gone from the header row.
-    await expect(page.locator('th', { hasText: dateLabel })).toHaveCount(0, { timeout: 5_000 });
+    // The successful remove unmounts the day context menu (closeDayMenu()). This
+    // confirms the UI completed the delete end-to-end. We deliberately do NOT assert
+    // the date header is gone from the table: header dates are the union across ALL
+    // items, so a sibling item sharing the date would keep the <th> and cause a false
+    // flake. The round-trip contract is already proven by the 201/204 above (and the
+    // API spec covers it exhaustively).
+    await expect(menu).toBeHidden({ timeout: 5_000 });
   });
 });
