@@ -24,7 +24,7 @@ test.describe('Medicine add button — in-progress list', () => {
   });
 
   test('«Додати» is inactive on an empty field', async ({ page }) => {
-    const add = page.getByRole('button', { name: 'Додати' });
+    const add = page.getByRole('button', { name: 'Додати', exact: true });
     await expect(add).toBeDisabled();
   });
 
@@ -33,7 +33,7 @@ test.describe('Medicine add button — in-progress list', () => {
     await input.fill('Ondansetron');
     // Wait for the debounce (300 ms) + catalog fetch to settle; the button
     // must be enabled purely from `medSearch`.
-    const add = page.getByRole('button', { name: 'Додати' });
+    const add = page.getByRole('button', { name: 'Додати', exact: true });
     await expect(add).toBeEnabled({ timeout: 10000 });
   });
 
@@ -41,7 +41,7 @@ test.describe('Medicine add button — in-progress list', () => {
     const input = page.getByPlaceholder('Препарат').first();
     await input.fill('Ondansetron');
 
-    const add = page.getByRole('button', { name: 'Додати' });
+    const add = page.getByRole('button', { name: 'Додати', exact: true });
     await expect(add).toBeEnabled({ timeout: 10000 });
 
     const resp = page.waitForResponse(
@@ -60,7 +60,7 @@ test.describe('Medicine add button — in-progress list', () => {
     const input = page.getByPlaceholder('Препарат').first();
     await input.fill('Penicillin');
 
-    const add = page.getByRole('button', { name: 'Додати' });
+    const add = page.getByRole('button', { name: 'Додати', exact: true });
     await expect(add).toBeEnabled({ timeout: 10000 });
 
     let dialogMessage = '';
@@ -82,7 +82,7 @@ test.describe('Medicine add button — in-progress list', () => {
     await expect(opt).toBeVisible({ timeout: 10000 });
     await opt.click();
 
-    const add = page.getByRole('button', { name: 'Додати' });
+    const add = page.getByRole('button', { name: 'Додати', exact: true });
     await expect(add).toBeEnabled();
 
     const resp = page.waitForResponse(
@@ -144,7 +144,7 @@ test.describe('Medicine add button — in-progress list', () => {
       await page.waitForURL(/\/prescriptions\/doctor\/[0-9a-f-]{36}$/, { timeout: 15000 });
       await expect(page.getByText('Статус: Закрито')).toBeVisible({ timeout: 10000 });
       // For finished lists the add row is entirely hidden (component returns null).
-      await expect(page.getByRole('button', { name: 'Додати' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Додати', exact: true })).toHaveCount(0);
     }
   });
 });
