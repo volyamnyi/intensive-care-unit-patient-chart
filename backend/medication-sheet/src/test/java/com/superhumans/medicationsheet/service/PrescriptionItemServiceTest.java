@@ -1,6 +1,7 @@
 package com.superhumans.medicationsheet.service;
 
 import com.superhumans.medicationsheet.entity.*;
+import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -154,6 +155,135 @@ class PrescriptionItemServiceTest {
         assertThat(nightCount).isEqualTo(21);
     }
 
+    // --- addDay ---
+
+    @Test
+    void addDay_createsDayAfterLastExistingWithFourParts() {
+        PrescriptionItemDay first = dayWithDate(LocalDate.of(2026, 1, 1));
+        PrescriptionItemDay last = dayWithDate(LocalDate.of(2026, 1, 2));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(testItem));
+        when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId))
+                .thenReturn(List.of(first, last));
+        when(dayRepository.save(any(PrescriptionItemDay.class))).thenAnswer(inv -> {
+            PrescriptionItemDay d = inv.getArgument(0);
+            d.setId(UUID.randomUUID());
+            return d;
+        });
+        when(partRepository.save(any(PrescriptionDayPart.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PrescriptionItemDay result = service.addDay(itemId);
+
+        assertThat(result.getDayDate()).isEqualTo(LocalDate.of(2026, 1, 3));
+        verify(itemRepository).findByIdForUpdate(itemId);
+        verify(dayRepository).save(any(PrescriptionItemDay.class));
+        verify(partRepository, times(4)).save(partCaptor.capture());
+        List<String> periods = partCaptor.getAllValues().stream().map(PrescriptionDayPart::getPeriod).toList();
+        assertThat(periods).containsExactlyInAnyOrder("morning", "day", "evening", "night");
+        for (PrescriptionDayPart part : partCaptor.getAllValues()) {
+            assertThat(part.getIsPlanned()).isFalse();
+            assertThat(part.getIsPlannedFinished()).isFalse();
+            assertThat(part.getIsCompleted()).isFalse();
+            assertThat(part.getIsCompletedFinished()).isFalse();
+        }
+    }
+
+    @Test
+    void addDay_whenItemHasNoActiveDays_createsForToday() {
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(testItem));
+        when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId)).thenReturn(List.of());
+        when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
+        when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        PrescriptionItemDay result = service.addDay(itemId);
+
+        assertThat(result.getDayDate()).isEqualTo(LocalDate.now());
+    }
+
+    @Test
+    void addDay_throws_whenItemNotFound() {
+        when(itemRepository.findByIdForUpdate(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.addDay(UUID.randomUUID()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void addDay_throws_whenItemDeleted() {
+        testItem.setDeleted(true);
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(testItem));
+
+        assertThatThrownBy(() -> service.addDay(itemId))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    // --- removeDay ---
+
+    @Test
+    void removeDay_softDeletesDay() {
+        PrescriptionItemDay day = dayWithParts(LocalDate.of(2026, 1, 5),
+                buildPart("morning", false, false), buildPart("evening", false, false));
+        when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
+        when(dayRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.removeDay(itemId, day.getId());
+
+        verify(dayRepository).save(argThat(d -> Boolean.TRUE.equals(d.getDeleted())));
+    }
+
+    @Test
+    void removeDay_throws_whenDayHasCompletedPart() {
+        PrescriptionItemDay day = dayWithParts(LocalDate.of(2026, 1, 5),
+                buildPart("morning", true, false), buildPart("evening", false, false));
+        when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
+
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("День містить виконані призначення, видалення неможливе");
+        verify(dayRepository, never()).save(any());
+    }
+
+    @Test
+    void removeDay_throws_whenDayHasCompletedFinishedPart() {
+        PrescriptionItemDay day = dayWithParts(LocalDate.of(2026, 1, 5),
+                buildPart("morning", false, false), buildPart("night", false, true));
+        when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
+
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+                .isInstanceOf(BusinessException.class);
+        verify(dayRepository, never()).save(any());
+    }
+
+    @Test
+    void removeDay_throws_whenDayNotBelongingToItem() {
+        PrescriptionItem otherItem = PrescriptionItem.builder().build();
+        otherItem.setId(UUID.randomUUID());
+        PrescriptionItemDay day = dayWithParts(LocalDate.of(2026, 1, 5), buildPart("morning", false, false));
+        day.setItem(otherItem);
+        when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
+
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void removeDay_throws_whenDayAlreadyDeleted() {
+        PrescriptionItemDay day = dayWithParts(LocalDate.of(2026, 1, 5), buildPart("morning", false, false));
+        day.setDeleted(true);
+        when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
+
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+                .isInstanceOf(NotFoundException.class);
+        verify(dayRepository, never()).save(any());
+    }
+
+    @Test
+    void removeDay_throws_whenDayNotFound() {
+        when(dayRepository.findById(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.removeDay(itemId, UUID.randomUUID()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
     // --- removeItem ---
 
     @Test
@@ -249,11 +379,47 @@ class PrescriptionItemServiceTest {
         PrescriptionItemDay day = PrescriptionItemDay.builder()
                 .item(testItem).dayDate(LocalDate.now()).build();
         day.setId(UUID.randomUUID());
-        when(dayRepository.findByItemIdOrderByDayDateAsc(itemId)).thenReturn(List.of(day));
+        when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId)).thenReturn(List.of(day));
 
         var result = service.getDays(itemId);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getDayDate()).isEqualTo(LocalDate.now());
+    }
+
+    // --- helpers ---
+
+    private PrescriptionItemDay dayWithParts(LocalDate date, PrescriptionDayPart... parts) {
+        PrescriptionItemDay day = PrescriptionItemDay.builder()
+                .item(testItem)
+                .dayDate(date)
+                .build();
+        day.setId(UUID.randomUUID());
+        for (PrescriptionDayPart part : parts) {
+            part.setDay(day);
+        }
+        day.getDayParts().addAll(List.of(parts));
+        return day;
+    }
+
+    private PrescriptionItemDay dayWithDate(LocalDate date) {
+        PrescriptionItemDay day = PrescriptionItemDay.builder()
+                .item(testItem)
+                .dayDate(date)
+                .build();
+        day.setId(UUID.randomUUID());
+        return day;
+    }
+
+    private PrescriptionDayPart buildPart(String period, boolean isCompleted, boolean isCompletedFinished) {
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period(period)
+                .isPlanned(false)
+                .isPlannedFinished(false)
+                .isCompleted(isCompleted)
+                .isCompletedFinished(isCompletedFinished)
+                .build();
+        part.setId(UUID.randomUUID());
+        return part;
     }
 }

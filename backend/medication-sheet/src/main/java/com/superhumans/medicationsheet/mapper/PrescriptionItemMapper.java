@@ -27,10 +27,14 @@ public interface PrescriptionItemMapper {
         List<PrescriptionDayPartNested> result = new ArrayList<>();
         if (entity.getDays() != null) {
             for (PrescriptionItemDay day : entity.getDays()) {
+                if (Boolean.TRUE.equals(day.getDeleted())) {
+                    continue;
+                }
                 if (day.getDayParts() != null) {
                     for (PrescriptionDayPart part : day.getDayParts()) {
                         result.add(PrescriptionDayPartNested.builder()
                                 .id(part.getId())
+                                .dayId(day.getId())
                                 .dayDate(day.getDayDate())
                                 .period(part.getPeriod())
                                 .dose(part.getDose())

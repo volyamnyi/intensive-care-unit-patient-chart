@@ -6,6 +6,8 @@ import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionItem;
 import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
 import com.superhumans.medicationsheet.entity.PrescriptionList;
+import com.superhumans.exception.BusinessException;
+import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionItemDayRepository;
@@ -83,6 +85,75 @@ public class PrescriptionItemService {
     }
 
     @Transactional
+    public PrescriptionItemDay addDay(UUID itemId) {
+        PrescriptionItem item = itemRepository.findByIdForUpdate(itemId)
+                .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
+        if (Boolean.TRUE.equals(item.getDeleted())) {
+            throw new NotFoundException("Item not found: " + itemId);
+        }
+
+        List<PrescriptionItemDay> existingDays = dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
+        LocalDate nextDate = existingDays.stream()
+                .map(PrescriptionItemDay::getDayDate)
+                .max(java.util.Comparator.naturalOrder())
+                .map(d -> d.plusDays(1))
+                .orElse(LocalDate.now());
+
+        PrescriptionItemDay day = createDay(item, nextDate);
+        log.info("Prescription day added: itemId={}, dayDate={}", item.getId(), nextDate);
+        return day;
+    }
+
+    @Transactional
+    public void removeDay(UUID itemId, UUID dayId) {
+        PrescriptionItemDay day = dayRepository.findById(dayId)
+                .orElseThrow(() -> new NotFoundException("Day not found: " + dayId));
+        if (Boolean.TRUE.equals(day.getDeleted())) {
+            throw new NotFoundException("Day not found: " + dayId);
+        }
+        if (day.getItem() == null || !itemId.equals(day.getItem().getId())) {
+            throw new NotFoundException("Day not found: " + dayId);
+        }
+
+        boolean hasExecuted = day.getDayParts() != null && day.getDayParts().stream()
+                .anyMatch(p -> Boolean.TRUE.equals(p.getIsCompleted()) || Boolean.TRUE.equals(p.getIsCompletedFinished()));
+        if (hasExecuted) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "День містить виконані призначення, видалення неможливе");
+        }
+
+        day.setDeleted(true);
+        day.setUpdatedBy(0L);
+        dayRepository.save(day);
+        log.info("Prescription day removed: itemId={}, dayId={}", itemId, dayId);
+    }
+
+    private PrescriptionItemDay createDay(PrescriptionItem item, LocalDate dayDate) {
+        PrescriptionItemDay day = PrescriptionItemDay.builder()
+                .item(item)
+                .dayDate(dayDate)
+                .build();
+        day.setCreatedBy(0L);
+        day.setUpdatedBy(0L);
+        day = dayRepository.save(day);
+
+        for (String period : List.of("morning", "day", "evening", "night")) {
+            PrescriptionDayPart part = PrescriptionDayPart.builder()
+                    .day(day)
+                    .period(period)
+                    .isPlanned(false)
+                    .isPlannedFinished(false)
+                    .isCompleted(false)
+                    .isCompletedFinished(false)
+                    .build();
+            part.setCreatedBy(0L);
+            part.setUpdatedBy(0L);
+            partRepository.save(part);
+        }
+        return day;
+    }
+
+    @Transactional
     public void removeItem(UUID itemId) {
         PrescriptionItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
@@ -134,6 +205,6 @@ public class PrescriptionItemService {
     }
 
     public List<PrescriptionItemDay> getDays(UUID itemId) {
-        return dayRepository.findByItemIdOrderByDayDateAsc(itemId);
+        return dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
     }
 }

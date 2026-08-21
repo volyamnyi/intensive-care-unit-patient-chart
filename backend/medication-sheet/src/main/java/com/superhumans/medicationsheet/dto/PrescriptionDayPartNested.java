@@ -10,6 +10,7 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PrescriptionDayPartNested {
     UUID id;
+    UUID dayId;
     LocalDate dayDate;
     String period;
     String dose;
