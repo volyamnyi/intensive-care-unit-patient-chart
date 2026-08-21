@@ -1,13 +1,18 @@
 package com.superhumans.medicationsheet.controller;
 
+import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.medicationsheet.dto.*;
 import com.superhumans.medicationsheet.entity.*;
 import com.superhumans.medicationsheet.mapper.*;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.AllergyMisDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
+import com.superhumans.exception.BusinessException;
+import com.superhumans.exception.ErrorCode;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.service.*;
 import com.superhumans.service.AuditService;
+import com.superhumans.service.PermissionService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,19 +25,25 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(PrescriptionController.class)
+@EnableTestExceptionHandler
 @AutoConfigureMockMvc(addFilters = false)
 @Import({
+    com.superhumans.config.SecurityConfig.class,
     PrescriptionListMapperImpl.class,
     PrescriptionItemMapperImpl.class,
     PrescriptionDayPartMapperImpl.class,
@@ -80,6 +91,9 @@ class PrescriptionControllerTest {
     @MockitoBean
     private AuditService auditService;
 
+    @MockitoBean(name = "permissionService")
+    private PermissionService permissionService;
+
     private UUID listId;
     private UUID itemId;
     private UUID dayPartId;
@@ -102,6 +116,7 @@ class PrescriptionControllerTest {
         when(jwtTokenProvider.getLoginFromToken(any())).thenReturn(TEST_DOCTOR_LOGIN);
         when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken(any())).thenReturn(TEST_DOCTOR_ID);
+        when(permissionService.has(anyString())).thenReturn(true);
     }
 
     @AfterEach
@@ -198,6 +213,119 @@ class PrescriptionControllerTest {
         mockMvc.perform(delete("/api/prescriptions/items/{itemId}", itemId)
                         .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isNoContent());
+    }
+
+    private PrescriptionItem itemWithDayAndParts(String medicineName) {
+        PrescriptionItem item = PrescriptionItem.builder()
+                .list(testList).medicineName(medicineName).status("Active").build();
+        item.setId(itemId);
+
+        PrescriptionItemDay day = PrescriptionItemDay.builder()
+                .item(item)
+                .dayDate(LocalDate.parse("2026-01-15"))
+                .build();
+        day.setId(UUID.randomUUID());
+
+        for (String period : List.of("morning", "day", "evening", "night")) {
+            PrescriptionDayPart part = PrescriptionDayPart.builder()
+                    .day(day).period(period).dose("50mg")
+                    .isPlanned(true).isPlannedFinished(false)
+                    .isCompleted(false).isCompletedFinished(false)
+                    .build();
+            part.setId(UUID.randomUUID());
+            day.getDayParts().add(part);
+        }
+        item.getDays().add(day);
+        return item;
+    }
+
+    @Test
+    void addDay_returnsCreated_withUpdatedItem() throws Exception {
+        PrescriptionItem item = itemWithDayAndParts("Paracetamol");
+        when(itemService.getListItem(eq(itemId))).thenReturn(item);
+
+        mockMvc.perform(post("/api/prescriptions/items/{itemId}/days", itemId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(itemId.toString()))
+                .andExpect(jsonPath("$.listId").value(listId.toString()))
+                .andExpect(jsonPath("$.medicineName").value("Paracetamol"))
+                .andExpect(jsonPath("$.dayParts").isArray())
+                .andExpect(jsonPath("$.dayParts.length()").value(4))
+                .andExpect(jsonPath("$.dayParts[0].period").value("morning"));
+
+        verify(itemService).addDay(itemId);
+        verify(itemService).getListItem(itemId);
+    }
+
+    @Test
+    void addDay_withHodRole_returnsCreated() throws Exception {
+        PrescriptionItem item = itemWithDayAndParts("Paracetamol");
+        when(itemService.getListItem(eq(itemId))).thenReturn(item);
+
+        mockMvc.perform(post("/api/prescriptions/items/{itemId}/days", itemId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(itemId.toString()));
+    }
+
+    @Test
+    void addDay_itemNotFound_returnsNotFound() throws Exception {
+        when(itemService.addDay(eq(itemId)))
+                .thenThrow(new NotFoundException("Item not found: " + itemId));
+
+        mockMvc.perform(post("/api/prescriptions/items/{itemId}/days", itemId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("Item not found: " + itemId));
+    }
+
+    @Test
+    void removeDay_returnsNoContent() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isNoContent());
+
+        verify(itemService).removeDay(itemId, dayId);
+    }
+
+    @Test
+    void removeDay_withHodRole_returnsNoContent() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isNoContent());
+
+        verify(itemService).removeDay(itemId, dayId);
+    }
+
+    @Test
+    void removeDay_dayNotFound_returnsNotFound() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        doThrow(new NotFoundException("Day not found: " + dayId))
+                .when(itemService).removeDay(eq(itemId), eq(dayId));
+
+        mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("Day not found: " + dayId));
+    }
+
+    @Test
+    void removeDay_withExecutedParts_returnsUnprocessableEntity() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        String ukMsg = "День містить виконані призначення, видалення неможливе";
+        doThrow(new BusinessException(ErrorCode.BUSINESS_RULE, ukMsg))
+                .when(itemService).removeDay(eq(itemId), eq(dayId));
+
+        mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value(ErrorCode.BUSINESS_RULE))
+                .andExpect(jsonPath("$.message").value(ukMsg));
     }
 
     @Test
@@ -432,11 +560,28 @@ class PrescriptionControllerTest {
                 eq("45mg"), eq("nurse2"), eq("nurse123"), eq(false));
     }
 
-    // TODO: Re-enable when SecurityConfig is moved to common module
-    // @Test
-    // void create_withoutAuth_returnsUnauthorized() throws Exception { ... }
+    @Test
+    void addDay_withNurseRole_returnsForbidden() throws Exception {
+        when(permissionService.has(eq("PRESCRIPTION_CREATE"))).thenReturn(false);
+        when(permissionService.has(eq("PRESCRIPTION_EXECUTE"))).thenReturn(true);
 
-    // TODO: Re-enable when SecurityConfig is moved to common module
-    // @Test
-    // void create_withNurseRole_returnsForbidden() throws Exception { ... }
+        mockMvc.perform(post("/api/prescriptions/items/{itemId}/days", itemId)
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isForbidden());
+
+        verify(itemService, never()).addDay(any());
+    }
+
+    @Test
+    void removeDay_withNurseRole_returnsForbidden() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        when(permissionService.has(eq("PRESCRIPTION_CREATE"))).thenReturn(false);
+        when(permissionService.has(eq("PRESCRIPTION_EXECUTE"))).thenReturn(true);
+
+        mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isForbidden());
+
+        verify(itemService, never()).removeDay(any(), any());
+    }
 }

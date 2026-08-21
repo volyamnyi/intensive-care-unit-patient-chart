@@ -207,4 +207,15 @@ public class PrescriptionItemService {
     public List<PrescriptionItemDay> getDays(UUID itemId) {
         return dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
     }
+
+    @Transactional(readOnly = true)
+    public PrescriptionItem getListItem(UUID itemId) {
+        PrescriptionItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
+        if (Boolean.TRUE.equals(item.getDeleted())) {
+            throw new NotFoundException("Item not found: " + itemId);
+        }
+        item.getList();
+        return item;
+    }
 }

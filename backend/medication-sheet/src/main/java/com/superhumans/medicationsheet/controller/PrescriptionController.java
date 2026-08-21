@@ -143,6 +143,34 @@ public class PrescriptionController {
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
+    @PostMapping("/items/{itemId}/days")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Add day to medicine item", description = "Appends the next day (max existing day date + 1) with its 4 day parts to a medicine item. Requires DOCTOR or HEAD_OF_DEPARTMENT role (PRESCRIPTION_CREATE permission).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Day added successfully, updated medicine item returned"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Medicine item not found")
+    })
+    public PrescriptionItemResponse addDay(@PathVariable UUID itemId) {
+        itemService.addDay(itemId);
+        return prescriptionItemMapper.toResponse(itemService.getListItem(itemId));
+    }
+
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
+    @DeleteMapping("/items/{itemId}/days/{dayId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remove day from medicine item", description = "Soft-deletes a single day from a medicine item. Blocked if any day part is completed. Requires DOCTOR or HEAD_OF_DEPARTMENT role (PRESCRIPTION_CREATE permission).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Day removed successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Medicine item or day not found"),
+            @ApiResponse(responseCode = "422", description = "Business rule violated - day contains completed prescriptions")
+    })
+    public void removeDay(@PathVariable UUID itemId, @PathVariable UUID dayId) {
+        itemService.removeDay(itemId, dayId);
+    }
+
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @PutMapping("/day-parts/{dayPartId}/plan")
     @Operation(summary = "Plan dose for day part", description = "Plans a specific dose for a day part. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
