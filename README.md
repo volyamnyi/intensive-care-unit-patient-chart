@@ -373,6 +373,8 @@ java -jar app/target/app-*.jar
 | `GET` | `/api/prescriptions/{listId}/items` | Yes | List prescription items |
 | `POST` | `/api/prescriptions/{listId}/items` | Doctor/HOD | Add medicine item (auto-creates 21-day grid) |
 | `DELETE` | `/api/prescriptions/items/{itemId}` | Doctor/HOD | Remove item |
+| `POST` | `/api/prescriptions/items/{itemId}/days` | Doctor/HOD | Add next day (max day date + 1) with 4 unplanned day parts |
+| `DELETE` | `/api/prescriptions/items/{itemId}/days/{dayId}` | Doctor/HOD | Remove a day (422 if any day part is completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/plan` | Doctor/HOD | Plan dose for day part |
 | `PUT` | `/api/prescriptions/day-parts/{id}/complete` | Nurse/HOD | Complete day part |
 | `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (with optional 2P auth) |

@@ -2,6 +2,8 @@
 
 ## Current Session
 
+**2026-08-21: Per-item prescription day management — Phase 4 E2E + docs (issue #169, PHASE COMPLETE)** — Phase 4 of the 4-phase per-item day feature closes the milestone (#166 backend service `PrescriptionItemService.addDay`/`removeDay` + 422 guard DONE, #167 controller endpoints DONE, #168 frontend UI DONE, **#169 E2E + docs DONE**). **Endpoints** (both `@PreAuthorize PRESCRIPTION_CREATE` — DOCTOR/HOD only, nurses 403): `POST /api/prescriptions/items/{itemId}/days` → 201, adds the next day (max `dayDate` + 1) with 4 unplanned day parts (morning/day/evening/night, one new `dayId`); returns the FULL item (all `dayParts` for all days — controller: `itemMapper.toResponse(itemService.getListItem(itemId))`). `DELETE /api/prescriptions/items/{itemId}/days/{dayId}` → 204; **422 `BUSINESS_RULE`** «День містить виконані призначення, видалення неможливе» if any day part of the day is completed (`PrescriptionItemService.removeDay` guard). **3 new E2E specs — 9 tests** (`--list` green): `tests/specs/doctor/prescription-day-management.spec.ts` (2 tests — patient 1003 / Сидоренко, 5 items: per-row «Додати день» (+) button appears on every row; add-then-remove round-trip via the dose-cell right-click context menu «Видалити цей день»; card navigation via `card.getByRole('button', { name: /Листок/ }).first()` — the card has TWO navigate buttons: the big document-name button + the small ExternalLink «Відкрити»); `tests/specs/nurse/prescription-day-management.spec.ts` (2 tests — «Додати день» not rendered for any row, right-click opens no context menu; nurse gating); `tests/specs/api/prescription-day-access.spec.ts` (5 tests — patient 1001 morfin seed item `40f40760-4807-997e-d706-7293273f0769`: nurse POST 403, nurse DELETE 403, doctor POST 201 with the new day identified via `max(dayDate)` (full-item response) having exactly 4 unplanned parts one `dayId`, doctor DELETE completed-day `138b0217-…` → 422 `BUSINESS_RULE`, doctor DELETE open-day `13e71c36-…` → 204). **Suite totals after Phase 4**: E2E 292 tests / 64 spec files / 11 projects; Vitest 667 tests / 79 files; backend 348 main sources / 115 test files. **Docs**: README.md API table gains both endpoints; AGENTS.md endpoints + counts updated.
+
 **2026-08-20: Wizard checkbox whole-surface clickability** — every parent checkbox row in the «Операційна карта» wizard (`frontend/src/pages/prosthetics/process/WizardScreen.tsx`) is now clickable across its whole surface. **Refactor**: new `CheckboxRow` component — the row itself is `<label htmlFor={id}>` (native label activation covers padding/gap/text; no JS onClick), inner `Label` replaced with `span data-slot="label"` (nested `<label>` invalid; clicking the Base UI checkbox span stays a single toggle — the HTML spec suppresses label activation for interactive content, verified in jsdom's `HTMLLabelElement._activationBehavior`); 3 variants `card`/`muted`/`plain` (plain used by the `ElementField` CHECKBOX branch incl. its `border-destructive ring-1 ring-destructive` error class). All ~70 checkbox rows converted: PPE groups (PpeChecklistGroup + MeasurementForms gloves rows + thermoforming/inner-sleeve PPE), kit-formed, plaster negative/quality/positive, thermoforming latex/thermal + sleeve formed/edges polished, inner-sleeve latex/thermal + formed/edges, inner-fitting nitrile + sleeve/axes, outer-sleeve model-ready, lamination + confirmed, processing + confirmed, assembly/fastening confirmed, final assembly, final-fitting nitrile + fastening/cables, handover nitrile + passive rotation/soft tissues, marking nitrile + final inspection/applied, fitting nitrile + sleeve, prototype-fitting nitrile + tested, ElementField CHECKBOX. `Label htmlFor` remains only for non-checkbox controls (kit inputs, radios, dialogs). Base UI CheckboxRoot verified: the `id` prop lands on the hidden INPUT (label `for` matches), `aria-checked` lives on the `span[role=checkbox]`, span onClick dispatches a PointerEvent click on the input (single toggle). **Vitest**: `WizardScreen.test.tsx` new test «toggles a checkbox from anywhere on its parent row surface» — text click (label activation), row click, control click (single toggle, no double-fire). **E2E**: `tests/specs/prosthetics/wizard-checkbox-surface.spec.ts` (prosthetics-chromium, serial) — creates a fresh instance via API (order-candidate retry loop against the concurrent mobile-wizard-smoke creator), then walks ALL template steps (loop breaks on instance COMPLETED): on every step clicks EACH checkbox row at 5 surface points (4 corners + center, `page.mouse.click` after centering the row clear of the sticky top/bottom bars) asserting `aria-checked` flips exactly once per click; steps without checkbox rows skipped via new `completeCurrentStepViaApi` helper in `tests/helpers/prosthetics-flow.ts` (`buildValues` now exported); afterAll drives the instance to COMPLETED (keeps the "new process" review screen unblocked). Pre-flight green (oxlint 0 errors, tsc clean, build OK).
 
 **2026-08-19: Responsive QA phase (issue #165)** — 2 new Playwright projects + 5 responsive specs (10 mobile + 26 tablet tests); commits `b7ed366` (projects + specs), `e71f5f6` (prosthetics dashboard overflow fix + spec alignment), `f56f448` (strict-mode locators); CI runs `32305140094` (failed: 3 test bugs + 2 REAL responsive bugs) → `32307157147` (failed: 2 strict-mode locators) → `32308478131` all 6 jobs green (E2E 14m6s); issue #165 closed. **Projects**: `responsive-mobile-chromium` (iPhone 13 emulation, chromium, `.auth/doctor.json`, testMatch `mobile-nav`/`touch-targets`/`mobile-wizard-smoke`, `fullyParallel: false`) + `responsive-tablet-chromium` (Desktop Chrome 768×1024 `hasTouch`, testMatch `no-horizontal-scroll`/`tablet-dashboard`, `fullyParallel: false`), both after `prosthetics-chromium`, deps `['setup']`. **Specs** (`tests/specs/responsive/`): mobile-nav (hamburger → sheet → route → auto-close), touch-targets (44px CTAs incl. create-card patient search «Ткачук Андрій Вікторович» — mock MIS has 3 Ткачуків — and episode «Панель пацієнта»), mobile-wizard-smoke (API-created instances auto-start IN_PROGRESS → wizard opens directly on stage 1, no «Розпочати процес» screen; completes stage 1 at 360px via `WizardExecutionPage`; strict-mode: stage texts match both title + step chip → `.first()`), no-horizontal-scroll (docWidth audit at 360+768; offenders inside `overflow-x-auto` ancestors skipped — tables/scroll containers legitimately extend), tablet-dashboard (rail `w-[60px]`→`w-[220px]` expansion polled past the CSS width transition; stat cards «Активні»/«Призупинені» share a row in the 2-col grid). **REAL bugs found + fixed** in `pages/prosthetics/DashboardPage.tsx`: header row `flex-wrap` (5px overflow at 360px) + instances table wrapped in `overflow-x-auto touch-pan-x` (1026px at 768px). Episode page needs the full seed UUID (`a3333333-3333-3333-3333-333333333333` — short form 404s «Епізод не знайдено»). Suite now 268 tests / 59 files / 11 projects.
@@ -228,7 +230,7 @@ The complete development loop:
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | `backend-test-results` (surefire-reports) |
 | `backend-integration` | `mvn test -Pintegration-test` | `backend-integration-results` |
 | `frontend-test` | Vitest + production build | `vitest-coverage` |
-| `e2e-test` | Playwright (59 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
+| `e2e-test` | Playwright (64 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
 | `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
 
 ### Exit criteria
@@ -253,20 +255,20 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (~583 across 69 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (667 tests across 79 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (59 spec files) |
+| `npx playwright test` | Run all E2E tests (64 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
-- **Backend**: 348 main sources / 112 test files across the multi-module reactor (common 119/10, icu-chart 84/62, medication-sheet 61/17, prosthesis-manufacturing 84/22, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 583 Vitest tests across 69 test files (127 TS/TSX sources). Run with `npm t`.
-- **E2E**: 59 Playwright spec files (268 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Backend**: 348 main sources / 115 test files across the multi-module reactor (common 119/10, icu-chart 84/62, medication-sheet 61/20, prosthesis-manufacturing 84/22, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 667 Vitest tests across 79 test files (131 TS/TSX sources). Run with `npm t`.
+- **E2E**: 64 Playwright spec files (292 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -712,18 +714,18 @@ backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire (5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
   src/main/java/       ← 348 Java source files
   src/main/resources/  ← application.yml, data-{core,icu,med,prosth}.sql, PDF template, db/changelog/ (Liquibase)
-  src/test/java/       ← 112 test files
+  src/test/java/       ← 115 test files
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 127 TS/TSX source + 69 test files
+  src/                 ← 131 TS/TSX source + 79 test files
 tests/
   playwright.config.ts ← Playwright config with 11 projects
   package.json         ← Test dependencies
-  specs/               ← 59 spec files
+  specs/               ← 64 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/
