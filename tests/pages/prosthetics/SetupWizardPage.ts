@@ -15,7 +15,6 @@ export class SetupWizardPage {
   readonly patientSearchInput: Locator;
   readonly patientResultsTable: Locator;
   readonly patientNoResultsMessage: Locator;
-  readonly patientEmptyStateMessage: Locator;
   readonly patientApiErrorBanner: Locator;
   
   // Screen 4: Order Selection
@@ -52,7 +51,6 @@ export class SetupWizardPage {
     this.patientSearchInput = page.getByPlaceholder(/Пошук пацієнта за ПІБ або номером координати/);
     this.patientResultsTable = page.getByRole('table');
     this.patientNoResultsMessage = page.getByText(/Пацієнтів не знайдено/);
-    this.patientEmptyStateMessage = page.getByText(/Введіть ім'я або номер для пошуку/);
     this.patientApiErrorBanner = page.getByText(/Помилка пошуку/);
     
     // Screen 4: Order Selection
@@ -145,8 +143,10 @@ export class SetupWizardPage {
     await expect(this.patientNoResultsMessage).toBeVisible({ timeout: 5000 });
   }
 
-  async verifyEmptyStateMessage() {
-    await expect(this.patientEmptyStateMessage).toBeVisible({ timeout: 5000 });
+  async verifyPatientTableVisible() {
+    // The patient list loads from MIS on mount — the results table is the
+    // readiness signal (no more "enter a query" empty state).
+    await expect(this.patientResultsTable).toBeVisible({ timeout: 10000 });
   }
 
   async verifyApiErrorBanner() {

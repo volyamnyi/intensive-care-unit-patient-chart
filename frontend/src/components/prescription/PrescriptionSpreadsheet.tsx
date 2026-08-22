@@ -247,12 +247,27 @@ export default function PrescriptionSpreadsheet({
                     className="sticky left-0 bg-card z-10 p-1 min-w-[180px] border border-border"
                     style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
                   >
-                    <p className="text-sm font-semibold">
-                      {item.medicineName}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {item.medicineMethod || ''}{item.regime ? ` • ${item.regime}` : ''}
-                    </p>
+                    <div className="flex items-start gap-0.5">
+                      {canEdit && isDoctor && (
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Видалити препарат"
+                          title="Видалити препарат"
+                          onClick={(e) => onOpenDeleteConfirm(item.id, e.currentTarget as HTMLElement)}
+                        >
+                          <Trash2 className="size-3" />
+                        </Button>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold">
+                          {item.medicineName}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {item.medicineMethod || ''}{item.regime ? ` • ${item.regime}` : ''}
+                        </p>
+                      </div>
+                    </div>
                   </td>
 
                   {visibleDates.map((date, dateIdx) =>
@@ -322,7 +337,7 @@ export default function PrescriptionSpreadsheet({
 
                   {canEdit && isDoctor && (
                     <td className="w-16 text-center border border-border">
-                      <div className="flex items-center justify-center gap-0.5">
+                      <div className="flex items-center justify-center">
                         <Button
                           variant="ghost"
                           size="icon-xs"
@@ -332,9 +347,6 @@ export default function PrescriptionSpreadsheet({
                           onClick={() => onAddDay?.(item.id)}
                         >
                           <Plus className="size-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon-xs" onClick={(e) => onOpenDeleteConfirm(item.id, e.currentTarget as HTMLElement)}>
-                          <Trash2 className="size-3" />
                         </Button>
                       </div>
                     </td>

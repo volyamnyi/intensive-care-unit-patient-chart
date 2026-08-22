@@ -494,8 +494,8 @@ icu-patient-chart/
 │       ├── services/           # AuthContext
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
-│       └── test/               # Vitest tests (69 files)
-├── tests/                      # Playwright E2E (59 spec files, 11 projects)
+│       └── test/               # Vitest tests (79 files)
+├── tests/                      # Playwright E2E (64 spec files, 11 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -516,7 +516,7 @@ icu-patient-chart/
 | `mvn -pl app spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (112 test files) |
+| `mvn test` | Run unit tests (115 test files) |
 | `mvn test -Pintegration-test` | Run integration tests (79) — requires Docker/PostgreSQL |
 
 #### Frontend
@@ -526,12 +526,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (~583 across 69 files) |
+| `npm t` | Run Vitest tests (667 across 79 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (59 spec files) |
+| `npx playwright test` | Run all E2E tests (64 spec files) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -547,16 +547,16 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (59 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (64 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend tests**: 112 test files across the multi-module reactor — common (10) + icu-chart (62) + medication-sheet (17) + prosthesis-manufacturing (22) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
+- **Backend tests**: 115 test files across the multi-module reactor — common (10) + icu-chart (63) + medication-sheet (17) + prosthesis-manufacturing (24) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 79 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 583 tests (69 files) — includes prosthetics tests
-- **E2E Playwright tests**: 59 spec files (268 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Frontend Vitest tests**: 667 tests (79 files) — includes prosthetics tests
+- **E2E Playwright tests**: 64 spec files (292 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
@@ -582,40 +582,53 @@ chore: maintenance tasks
 
 ### Role Permissions
 
-| Operation | DOCTOR | NURSE | HOD | ADMIN | PROSTHETIST | PROSTHETICS_ADMIN |
-|---|---|---|---|---|---|---|
-| Create episode | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Create clinical day | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Sign off (nurse stage) | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ |
-| Sign off (doctor stage) | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Reopen signed day | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Create prescriptions | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Execute prescriptions | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ |
-| Enter vitals | ✗ | ✓ | ✗ | ✗ | ✗ | ✗ |
-| View patient data | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
-| Create clinical scale (APACHE II/SOFA) | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
-| Create clinical scale (CAM-ICU/Braden/RASS) | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
-| Audit log access | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| AUDITOR read-only view | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| Prosthetics Dashboard (own instances) | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Create prosthetics instance (Wizard) | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Complete wizard steps / upload files | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Pause/Resume instance | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Quality Gate decision (PASS/REWORK/FAIL) | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
-| Create prosthetics templates | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
-| Create prosthetics patients/orders | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+Access is enforced by a **dynamic role-permission matrix** (25 permission codes across 8 categories in `PermissionCatalog`). The table below lists each permission (code and label) and the roles **granted it by default** via `PermissionCatalog.defaultMatrix()`. Administrators can change these grants at runtime through the admin UI («Доступи та ролі»), and the changes take effect immediately.
+
+| Permission (code → label) | DOCTOR | NURSE | HOD | ADMIN | AUDITOR | ADJ. SPECIALIST | PROSTHETIST | PROSTH. ADMIN |
+|---|---|---|---|---|---|---|---|---|
+| `EPISODE_CREATE` — Створення епізоду | ✓ | — | ✓ | — | — | — | — | — |
+| `CLINICAL_DAY_CREATE` — Створення клінічного дня | ✓ | — | ✓ | — | — | — | — | — |
+| `SIGN_NURSE` — Підпис медсестрою | — | ✓ | — | — | — | — | — | — |
+| `SIGN_DOCTOR` — Підпис лікарем | ✓ | — | ✓ | — | — | — | — | — |
+| `REOPEN_DAY` — Перевідкриття дня | — | — | ✓ | — | — | — | — | — |
+| `PRESCRIPTION_CREATE` — Планування призначень | ✓ | — | ✓ | — | — | — | — | — |
+| `PRESCRIPTION_LIST_CREATE` — Створення листка призначень | ✓ | — | ✓ | — | — | — | — | — |
+| `PRESCRIPTION_EXECUTE` — Виконання призначень | — | ✓ | — | — | — | — | — | — |
+| `VITALS_ENTER` — Введення показників | — | ✓ | — | — | — | — | — | — |
+| `PATIENT_VIEW` — Перегляд даних пацієнта | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | — |
+| `SCALE_APACHE_SOFA` — Шкали APACHE II / SOFA | ✓ | — | ✓ | — | — | — | — | — |
+| `SCALE_CAMICU_BRADEN_RASS` — Шкали CAM-ICU / Браден / RASS | ✓ | ✓ | ✓ | — | — | — | — | — |
+| `AUDIT_ACCESS` — Журнал аудиту | — | — | — | ✓ | — | — | — | — |
+| `AUDITOR_VIEW` — Read-only доступ аудитора | — | — | — | — | ✓ | — | — | — |
+| `PROSTHETICS_DASHBOARD` — Дашборд протезування | — | — | — | — | — | — | ✓ | ✓ |
+| `PROSTHETICS_INSTANCE_CREATE` — Створення процесу (Wizard) | — | — | — | — | — | — | ✓ | ✓ |
+| `PROSTHETICS_STEP_COMPLETE` — Виконання кроків / файли | — | — | — | — | — | — | ✓ | ✓ |
+| `PROSTHETICS_PAUSE_RESUME` — Пауза / відновлення | — | — | — | — | — | — | ✓ | ✓ |
+| `PROSTHETICS_GATE_DECISION` — Рішення quality gate | — | — | — | — | — | — | — | ✓ |
+| `PROSTHETICS_TEMPLATE_MANAGE` — Керування шаблонами | — | — | — | — | — | — | — | ✓ |
+| `PROSTHETICS_ORDER_MANAGE` — Пацієнти та замовлення | — | — | — | — | — | — | — | ✓ |
+| `MODULE_ICU_ACCESS` — Модуль: Карта інтенсивної терапії | ✓ | ✓ | ✓ | — | — | — | — | — |
+| `MODULE_MEDICATION_ACCESS` — Модуль: Листок призначень | ✓ | ✓ | ✓ | — | — | — | — | — |
+| `MODULE_PROSTHETICS_ACCESS` — Модуль: Виробництво протезів | — | — | — | — | — | — | ✓ | ✓ |
+| `MODULE_ADMIN_ACCESS` — Модуль: Адміністрування | — | — | — | ✓ | ✓ | — | — | — |
+
+> **Notes**
+> - `HOD` = `HEAD_OF_DEPARTMENT`; `ADJ. SPECIALIST` = `ADJACENT_SPECIALIST`; `PROSTH. ADMIN` = `PROSTHETICS_ADMINISTRATOR`.
+> - Module-visit permissions (`MODULE_*_ACCESS`) control navigation to a sub-app. Access to a module is `role (if clinical core or granted) OR permission` — revoking a module permission never locks a role out of its own module.
+> - A role granted a `MODULE_*_ACCESS` for a clinical module enters via `/icu/doctor` or `/prescriptions/doctor` and can view it read-only; writes still require the specific operation permission.
+> - A granted permission is **additive** to the role's default set — the role-permission matrix is `default-deny`, and presence of a grant row means the role holds that permission.
 
 ---
 
 ## Security
 
-- **Authentication**: JWT Bearer tokens stored in `localStorage`
+- **Authentication**: JWT stored in an **httpOnly cookie** named `jwt`, issued via a `Set-Cookie` header on login (and cleared on logout). The Axios client is configured with `withCredentials: true`, and the JWT filter also accepts a `Bearer` Authorization header. `localStorage` holds only a lightweight session flag (`auth:session`), never the token.
 - **Password Storage**: BCrypt hashing
-- **Authorization**: Spring Security method + URL-based RBAC
-- **CORS**: Restricted to `http://localhost:5173` and `http://localhost:3000`
+- **Authorization**: Spring Security **method + URL-based** enforcement, layered on a **dynamic permission matrix** — precise rules are `@PreAuthorize("@permissionService.has('CODE')")` (so admin edits to role permissions take effect immediately), module-visit gates via `MODULE_*_ACCESS`, and URL ceilings in `ClinicalSecurityRules`
+- **CORS**: REST API allows `*` origin patterns (with credentials); the **WebSocket** endpoint (`WebSocketConfig`) is restricted to `http://localhost:5173` and `http://localhost:3000`
 - **CSRF**: Disabled (stateless API)
-- **Audit**: `AuditService` logs all entity operations
-- **Optimistic Locking**: `@Version` field on all entities prevents concurrent overwrites
+- **Audit**: `AuditService` logs all entity operations (plus non-GET API calls through the `JwtAuthenticationFilter`)
+- **Optimistic Locking**: `@Version` field on all `BaseEntity` subclasses prevents concurrent overwrites
 
 ---
 

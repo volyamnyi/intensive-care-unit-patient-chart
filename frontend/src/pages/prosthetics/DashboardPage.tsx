@@ -119,10 +119,10 @@ export default function DashboardPage() {
   };
 
   const statCards = [
-    { key: 'active', label: 'Активні', value: counts.active, icon: ClipboardCheck },
-    { key: 'paused', label: 'Призупинені', value: counts.paused, icon: PauseCircle },
-    { key: 'completed', label: 'Завершені', value: counts.completed, icon: CheckCircle2 },
-    { key: 'failed', label: 'Провалені', value: counts.failed, icon: XCircle },
+    { key: 'active', label: 'Активні', value: counts.active, icon: ClipboardCheck, color: 'text-sky-500' },
+    { key: 'paused', label: 'Призупинені', value: counts.paused, icon: PauseCircle, color: 'text-yellow-500' },
+    { key: 'completed', label: 'Завершені', value: counts.completed, icon: CheckCircle2, color: 'text-green-600' },
+    { key: 'failed', label: 'Провалені', value: counts.failed, icon: XCircle, color: 'text-red-500' },
   ];
 
   return (
@@ -149,7 +149,7 @@ export default function DashboardPage() {
         {statCards.map((card) => (
           <Card key={card.key}>
             <CardContent className="flex items-center gap-3 py-4">
-              <card.icon className="size-8 text-mint" />
+              <card.icon className={`size-8 ${card.color}`} />
               <div>
                 <div className="font-display text-2xl font-bold leading-none">{card.value}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{card.label}</div>

@@ -246,9 +246,9 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       const stepText = await setupWizardPage.getStepText();
       log(`✓ Step indicator: ${stepText}`);
       
-      // Empty state message should be visible initially
-      await setupWizardPage.verifyEmptyStateMessage();
-      log('✓ Empty state message visible (enter query to search)');
+      // Patient list should load from MIS on mount (table visible, no more empty prompt)
+      await setupWizardPage.verifyPatientTableVisible();
+      log('✓ Patient table visible (list loaded from MIS)');
     });
 
     await test.step('2.3 Search for Patient (Spec 2.3.1)', async () => {
