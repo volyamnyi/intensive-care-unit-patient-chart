@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +43,7 @@ public class ClinicalScaleController {
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/scales")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS')")
     public ResponseEntity<ScaleResultResponse> createScaleResult(
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody ScaleResultCreateRequest request,
@@ -60,6 +62,7 @@ public class ClinicalScaleController {
     }
 
     @PostMapping("/episodes/{episodeId}/scales")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS')")
     public ResponseEntity<ScaleResultResponse> createEpisodeScaleResult(
             @PathVariable UUID episodeId,
             @Valid @RequestBody ScaleResultCreateRequest request,
@@ -72,6 +75,7 @@ public class ClinicalScaleController {
     }
 
     @PostMapping("/episodes/{episodeId}/scales/calculate")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS')")
     public ResponseEntity<ScaleResultResponse> calculateAndSaveScale(
             @PathVariable UUID episodeId,
             @RequestParam(required = false) UUID clinicalDayId,
@@ -87,6 +91,7 @@ public class ClinicalScaleController {
     }
 
     @PatchMapping("/scales/{id}")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS')")
     public ResponseEntity<Void> updateScaleResult(
             @PathVariable UUID id,
             @Valid @RequestBody ScaleResultPatchRequest request,

@@ -305,6 +305,53 @@ class FlowInstanceServiceTest {
                 .hasMessageContaining("required");
     }
 
+    @Test
+    void requireOwner_allowsAssignedOwner() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = ownerInstance(instanceId, 42L);
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+
+        assertThat(service.requireOwner(instanceId, 42L)).isSameAs(instance);
+    }
+
+    @Test
+    void requireOwner_allowsAdminViaAllowAll() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = ownerInstance(instanceId, 42L);
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+
+        assertThat(service.requireOwner(instanceId, 99L, true)).isSameAs(instance);
+    }
+
+    @Test
+    void requireOwner_rejectsNonOwner() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = ownerInstance(instanceId, 42L);
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.requireOwner(instanceId, 99L))
+                .isInstanceOf(com.superhumans.exception.NotFoundException.class);
+    }
+
+    @Test
+    void requireOwner_rejectsUnknownInstance() {
+        UUID instanceId = UUID.randomUUID();
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.requireOwner(instanceId, 42L))
+                .isInstanceOf(com.superhumans.exception.NotFoundException.class);
+    }
+
+    private static FlowInstance ownerInstance(UUID id, long assignedUserId) {
+        FlowInstance instance = FlowInstance.builder()
+                .templateId(UUID.randomUUID())
+                .orderId(UUID.randomUUID())
+                .assignedUserId(assignedUserId)
+                .build();
+        instance.setId(id);
+        return instance;
+    }
+
     private FlowInstance newInstance(FlowInstanceStatus status, String snapshot) {
         FlowInstance instance = FlowInstance.builder()
                 .templateId(UUID.randomUUID())

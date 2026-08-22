@@ -5,6 +5,7 @@ import com.superhumans.service.PdfGeneratorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,7 @@ public class PdfController {
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/pdf")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS','VITALS_ENTER')")
     public ResponseEntity<PdfResponse> generatePdf(
             @PathVariable UUID clinicalDayId,
             Authentication auth) {

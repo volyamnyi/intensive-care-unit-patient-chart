@@ -107,7 +107,8 @@ jobs:
           APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
           APP_DATASOURCE_PROSTH_USERNAME: icu_user
           APP_DATASOURCE_PROSTH_PASSWORD: icu_pass
-      
+          APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
@@ -189,7 +190,8 @@ jobs:
           APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
           APP_DATASOURCE_PROSTH_USERNAME: icu_user
           APP_DATASOURCE_PROSTH_PASSWORD: icu_pass
-      
+          APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
+
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
         if: failure()
@@ -310,7 +312,8 @@ jobs:
           APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
           APP_DATASOURCE_PROSTH_USERNAME: postgres
           APP_DATASOURCE_PROSTH_PASSWORD: admin
-      
+          APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
+
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend

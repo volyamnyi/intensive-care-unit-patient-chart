@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +33,7 @@ public class LabResultController {
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/lab-results")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS','VITALS_ENTER')")
     public ResponseEntity<LabResultResponse> createLabResult(
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody LabResultCreateRequest request,
@@ -42,6 +44,7 @@ public class LabResultController {
     }
 
     @PatchMapping("/lab-results/{id}")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS','VITALS_ENTER')")
     public ResponseEntity<Void> updateLabResult(
             @PathVariable UUID id,
             @Valid @RequestBody LabResultPatchRequest request,

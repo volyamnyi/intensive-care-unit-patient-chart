@@ -146,6 +146,59 @@ class EvidenceFileServiceTest {
         assertThat(result.getId()).isEqualTo(fileId);
     }
 
+    @Test
+    void download_allowsOwner() {
+        FlowInstance instance = newInstance(UUID.randomUUID());
+        StepExecution execution = executionFor(instance, UUID.randomUUID());
+        EvidenceFile evidence = evidenceFor(execution, UUID.randomUUID());
+        when(evidenceFileRepository.findById(evidence.getId())).thenReturn(Optional.of(evidence));
+
+        assertThat(service.download(evidence.getId(), 1L, false)).isSameAs(evidence);
+    }
+
+    @Test
+    void download_allowsAdminViaAllowAll() {
+        FlowInstance instance = newInstance(UUID.randomUUID());
+        StepExecution execution = executionFor(instance, UUID.randomUUID());
+        EvidenceFile evidence = evidenceFor(execution, UUID.randomUUID());
+        when(evidenceFileRepository.findById(evidence.getId())).thenReturn(Optional.of(evidence));
+
+        assertThat(service.download(evidence.getId(), 99L, true)).isSameAs(evidence);
+    }
+
+    @Test
+    void download_rejectsNonOwner() {
+        FlowInstance instance = newInstance(UUID.randomUUID());
+        StepExecution execution = executionFor(instance, UUID.randomUUID());
+        EvidenceFile evidence = evidenceFor(execution, UUID.randomUUID());
+        when(evidenceFileRepository.findById(evidence.getId())).thenReturn(Optional.of(evidence));
+
+        assertThatThrownBy(() -> service.download(evidence.getId(), 99L, false))
+                .isInstanceOf(com.superhumans.exception.NotFoundException.class);
+    }
+
+    @Test
+    void download_rejectsUnknownFile() {
+        UUID fileId = UUID.randomUUID();
+        when(evidenceFileRepository.findById(fileId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.download(fileId, 1L, false))
+                .isInstanceOf(com.superhumans.exception.NotFoundException.class);
+    }
+
+    private EvidenceFile evidenceFor(StepExecution execution, UUID fileId) {
+        EvidenceFile evidence = EvidenceFile.builder()
+                .stepExecution(execution)
+                .fileName("img.png")
+                .mimeType("image/png")
+                .sizeBytes(10L)
+                .checksum("abc")
+                .fileData(new byte[] {1, 2, 3})
+                .build();
+        evidence.setId(fileId);
+        return evidence;
+    }
+
     private FlowInstance newInstance(UUID id) {
         FlowInstance instance = FlowInstance.builder()
                 .templateId(UUID.randomUUID())

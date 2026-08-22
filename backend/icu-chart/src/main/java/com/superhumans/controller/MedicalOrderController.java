@@ -43,6 +43,7 @@ public class MedicalOrderController {
     }
 
     @PatchMapping("/orders/{id}")
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     public ResponseEntity<Void> updateOrder(
             @PathVariable UUID id,
             @Valid @RequestBody MedicalOrderPatchRequest request,

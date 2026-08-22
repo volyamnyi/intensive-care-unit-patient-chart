@@ -38,6 +38,7 @@ public class ClinicalDayController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@permissionService.has('CLINICAL_DAY_CREATE')")
     public ResponseEntity<Void> updateClinicalDay(
             @PathVariable UUID id,
             @Valid @RequestBody ClinicalDayPatchRequest request,
@@ -81,6 +82,7 @@ public class ClinicalDayController {
     }
 
     @PostMapping("/{id}/close-early")
+    @PreAuthorize("@permissionService.has('CLINICAL_DAY_CREATE')")
     public ResponseEntity<Void> closeEarly(
             @PathVariable UUID id,
             @RequestBody CloseEarlyRequest request,

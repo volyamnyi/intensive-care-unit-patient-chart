@@ -63,6 +63,9 @@ public class EvidenceFileService {
     public EvidenceFile download(UUID fileId, Long userId, boolean allowAll) {
         EvidenceFile evidence = evidenceFileRepository.findById(fileId)
                 .orElseThrow(() -> new NotFoundException("Evidence file not found: " + fileId));
+        if (!allowAll && !evidence.getStepExecution().getInstance().getAssignedUserId().equals(userId)) {
+            throw new NotFoundException("Evidence file not found: " + fileId);
+        }
         return evidence;
     }
 

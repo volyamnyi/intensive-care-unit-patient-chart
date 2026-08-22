@@ -1,5 +1,6 @@
 package com.superhumans.entity.core;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -19,6 +20,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     String login;
 
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false)
     String passwordHash;
 

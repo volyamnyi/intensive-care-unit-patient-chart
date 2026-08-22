@@ -813,7 +813,10 @@ public class FlowInstanceService {
     FlowInstance requireOwner(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = instanceRepository.findById(instanceId)
                 .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
-        return instance;
+        if (allowAll || instance.getAssignedUserId().equals(userId)) {
+            return instance;
+        }
+        throw new NotFoundException("Instance not found: " + instanceId);
     }
 
     SnapshotStage findStage(SnapshotTemplate snapshot, UUID stageId) {

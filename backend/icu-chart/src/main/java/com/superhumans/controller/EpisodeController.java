@@ -59,6 +59,7 @@ public class EpisodeController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@permissionService.has('EPISODE_CREATE')")
     public ResponseEntity<Void> updateEpisode(
             @PathVariable UUID id,
             @Valid @RequestBody EpisodePatchRequest request,
@@ -69,6 +70,7 @@ public class EpisodeController {
     }
 
     @PostMapping("/{id}/close")
+    @PreAuthorize("@permissionService.has('EPISODE_CREATE')")
     public ResponseEntity<Void> closeEpisode(
             @PathVariable UUID id,
             @Valid @RequestBody EpisodeCloseRequest request,
@@ -79,6 +81,7 @@ public class EpisodeController {
     }
 
     @PutMapping("/{id}/archive")
+    @PreAuthorize("@permissionService.has('EPISODE_CREATE')")
     public ResponseEntity<Void> archiveEpisode(@PathVariable UUID id) {
         episodeService.archiveEpisode(id);
         return ResponseEntity.noContent().build();

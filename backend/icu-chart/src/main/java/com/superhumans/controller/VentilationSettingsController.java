@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +33,7 @@ public class VentilationSettingsController {
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/ventilation")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS','VITALS_ENTER')")
     public ResponseEntity<VentilationResponse> createVentilationSettings(
             @PathVariable UUID clinicalDayId,
             @Valid @RequestBody VentilationCreateRequest request,
@@ -42,6 +44,7 @@ public class VentilationSettingsController {
     }
 
     @PatchMapping("/ventilation/{id}")
+    @PreAuthorize("@permissionService.hasAny('SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS','VITALS_ENTER')")
     public ResponseEntity<Void> updateVentilationSettings(
             @PathVariable UUID id,
             @Valid @RequestBody VentilationPatchRequest request,
