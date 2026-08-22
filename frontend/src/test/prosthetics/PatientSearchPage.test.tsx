@@ -27,7 +27,6 @@ function mockUseProsthetics(draft = { patientId: null, orderId: null, templateId
 }
 
 function renderPage() {
-  mockUseProsthetics();
   return render(
     <MemoryRouter initialEntries={['/prosthetics/new/select-patient']}>
       <PatientSearchPage />
