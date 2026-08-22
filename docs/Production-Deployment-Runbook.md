@@ -54,7 +54,13 @@ ICU Patient Chart — пошаговий посібник із переведе�
 APP_SEED_DATA_ENABLED=false     # критично для продакшну
 ```
 
-В `application.yml:68-69` стоїть `true` — це dev/default. За замовчуванням у `SeedDataInitializer.java:18` (`matchIfMissing = true`) теж `true`. **Не забудьте перевизначити через змінну оточення в продакшні.**
+В `application.yml:68-69` стоїть `true` — це dev/default. За замовчуванням у `SeedDataInitializer.java:18` (`matchIfMissing = true`) теж `true`. `prod`-профіль (`application.yml:174-176`) **автоматично** ставить `app.seed-data.enabled: false`. **Не забудьте перевизначити через змінну оточення, якщо деплоїте локально.**
+
+**Boot-guard (A2 fix):** `SeedDataGuard` — `@Component`, що виконується перед `SeedDataInitializer` (через `@DependsOn`) і **не запускає застосунок** (`IllegalStateException`), якщо активний профіль `prod` і сід-дані ввімкнено. Це практично виключає випадок «випадково ввімкнули сід у проді».
+
+**Паролі більше не перезаписуються:** у `data-core.sql` обидва `INSERT ... users` використовують `ON CONFLICT (login) DO NOTHING` (а не `DO UPDATE SET password_hash = EXCLUDED.password_hash`), тож рестарт проти наявної БД **ніколи** не відкатить операторський пароль до демо-значення.
+
+> ⚠️ **Обов'язково до go-live:** перший старт (dev, або якщо прод ввімкнув сід один раз) створює `9` демо-користувачів з публічно відомими паролями (`doctor1/doctor123`, `admin/admin123`, …). Після першого старту **замініть або вимкніть** ці облікові записи — тепер жоден рестарт ніколи не поверне паролі, але самі демо-обліковки лишаються робочими, поки ви вручну їх не закриєте.
 
 **2. RBAC seed (`PermissionService.seedIfEmpty`)** — виконується **лише** коли `role_permissions` порожня. На першому старті в продакшні — створює `25` рядків у `permissions` і default-grants з `PermissionCatalog.defaultMatrix()`. Це **бажано** і **коректно** — ви не будете «запускати» RBAC matrix вручну. Перевірте після старту:
 

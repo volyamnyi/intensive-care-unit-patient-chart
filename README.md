@@ -437,6 +437,8 @@ java -jar app/target/app-*.jar
 | `prosthetics_admin1` | `doctor123` | PROSTHETICS_ADMINISTRATOR |
 | *(backend-only)* | — | AUDITOR |
 
+> ⚠️ **Production (A2):** first-boot seeding creates these well-known demo credentials. They must be **rotated or disabled before go-live**. Seeding is disabled under the `prod` profile (`app.seed-data.enabled: false`) and the `SeedDataGuard` boot guard refuses to start if `prod` + seeding are somehow enabled. `data-core.sql` user inserts are `ON CONFLICT (login) DO NOTHING`, so a restart never reverts an operator-rotated password to the demo value.
+
 5 mock patients (from MIS mock):
 
 | Full Name | Card # | Year |

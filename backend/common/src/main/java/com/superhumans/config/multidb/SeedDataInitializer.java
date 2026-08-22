@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(name = "app.seed-data.enabled", havingValue = "true", matchIfMissing = true)
-@DependsOn({"coreLiquibase", "icuLiquibase", "medLiquibase", "prosthLiquibase"})
+@DependsOn({"seedDataGuard", "coreLiquibase", "icuLiquibase", "medLiquibase", "prosthLiquibase"})
 public class SeedDataInitializer implements InitializingBean {
 
     private final DataSource coreDataSource;
