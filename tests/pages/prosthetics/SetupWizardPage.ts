@@ -111,26 +111,19 @@ export class SetupWizardPage {
   async selectPatient(nameOrId: string) {
     await this.patientResultsTable.waitFor({ state: 'visible', timeout: 10000 });
     const rows = this.patientResultsTable.locator('tbody tr');
-    // The table shell renders before the search results load — wait for the first row
-    await rows.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
-    const count = await rows.count();
-    
-    for (let i = 0; i < count; i++) {
-      const row = rows.nth(i);
-      const text = await row.textContent();
-      if (text && (text.includes(nameOrId) || text.toLowerCase().includes(nameOrId.toLowerCase()))) {
-        await row.getByRole('button', { name: /Обрати|Обрано/ }).click();
-        return;
-      }
-    }
-    
-    // Fallback: select first patient
-    if (count > 0) {
+    // The page loads the full patient list on mount AND applies a debounced server
+    // search, so the row set shifts while iterating. Target the matching row
+    // directly (auto-waits for it to be present/visible and stable) instead of
+    // stepping every row with textContent(), which races the re-render.
+    const match = rows.filter({ hasText: nameOrId }).first();
+    try {
+      await expect(match).toBeVisible({ timeout: 15000 });
+    } catch {
+      // Fallback: select the first patient.
       await rows.first().getByRole('button', { name: /Обрати|Обрано/ }).click();
       return;
     }
-    
-    throw new Error(`Patient "${nameOrId}" not found in search results`);
+    await match.getByRole('button', { name: /Обрати|Обрано/ }).click();
   }
 
   async selectFirstPatient() {
