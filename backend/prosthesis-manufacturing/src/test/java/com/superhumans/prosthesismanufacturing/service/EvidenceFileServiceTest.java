@@ -107,7 +107,7 @@ class EvidenceFileServiceTest {
     }
 
     @Test
-    void downloadByAnotherProsthetistIsAllowed() {
+    void downloadByAnotherProsthetist_isDenied() {
         UUID fileId = UUID.randomUUID();
         EvidenceFile evidence = EvidenceFile.builder()
                 .fileName("photo.png")
@@ -121,9 +121,8 @@ class EvidenceFileServiceTest {
         evidence.setStepExecution(executionFor(instance, UUID.randomUUID()));
         when(evidenceFileRepository.findById(fileId)).thenReturn(Optional.of(evidence));
 
-        EvidenceFile result = service.download(fileId, 1L, false);
-
-        assertThat(result.getId()).isEqualTo(fileId);
+        assertThatThrownBy(() -> service.download(fileId, 1L, false))
+                .isInstanceOf(com.superhumans.exception.NotFoundException.class);
     }
 
     @Test
