@@ -58,6 +58,10 @@ class UserControllerTest {
         when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
+        User authenticatedUser = User.builder().login("doctor1").fullName("Doctor One")
+                .role(UserRole.DOCTOR).build();
+        authenticatedUser.setId(1L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(authenticatedUser));
     }
 
     @Test

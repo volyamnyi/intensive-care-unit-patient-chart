@@ -102,10 +102,10 @@ class SecurityTokenIntegrationTest extends AbstractIntegrationTest {
                 .fullName("Test Prosthetist")
                 .role(UserRole.PROSTHETIST)
                 .build();
-        prosthetistUser.setId(21L);
         prosthetistUser.setVersion(0);
-        userRepository.save(prosthetistUser);
-        String prosthetist = jwtTokenProvider.generateToken("prosthetist1", "PROSTHETIST", 21L);
+        prosthetistUser = userRepository.save(prosthetistUser);
+        String prosthetist = jwtTokenProvider.generateToken(
+                "prosthetist1", "PROSTHETIST", prosthetistUser.getId());
 
         ResponseEntity<String> res = restTemplate.exchange("/api/episodes/" + EPISODE_ID,
                 HttpMethod.PATCH, authEntity("{\"version\":0}", prosthetist), String.class);
