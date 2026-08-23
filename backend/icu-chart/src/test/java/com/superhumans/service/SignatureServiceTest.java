@@ -64,7 +64,8 @@ class SignatureServiceTest {
         verify(signatureRepository).save(sigCaptor.capture());
         assertThat(sigCaptor.getValue().getUserId()).isEqualTo(userId);
         assertThat(sigCaptor.getValue().getRole()).isEqualTo("DOCTOR");
-        assertThat(sigCaptor.getValue().getHash()).isEqualTo("hash123");
+        assertThat(sigCaptor.getValue().getHash()).matches("[0-9a-f]{64}");
+        assertThat(sigCaptor.getValue().getHash()).isNotEqualTo("hash123");
         assertThat(sigCaptor.getValue().getStatus()).isEqualTo("ACTIVE");
     }
 
