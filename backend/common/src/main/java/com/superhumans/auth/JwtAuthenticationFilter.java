@@ -16,6 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -31,24 +32,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     JwtTokenProvider jwtTokenProvider;
     AuditLogRepository auditLogRepository;
     AuditService auditService;
-    UserRepository userRepository;
-    TokenRevocationService tokenRevocationService;
+    ObjectProvider<UserRepository> userRepositoryProvider;
+    ObjectProvider<TokenRevocationService> tokenRevocationServiceProvider;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
+        TokenRevocationService tokenRevocationService = tokenRevocationServiceProvider.getIfAvailable();
         if (token != null && jwtTokenProvider.validateToken(token)
-                && !tokenRevocationService.isRevoked(jwtTokenProvider.getJtiFromToken(token))) {
+                && (tokenRevocationService == null
+                || !tokenRevocationService.isRevoked(jwtTokenProvider.getJtiFromToken(token)))) {
             String login = jwtTokenProvider.getLoginFromToken(token);
             String role = jwtTokenProvider.getRoleFromToken(token);
             Long userId = jwtTokenProvider.getUserIdFromToken(token);
-            var currentUser = userId == null ? null : userRepository.findById(userId).orElse(null);
-            if (currentUser == null || Boolean.TRUE.equals(currentUser.getDeleted())
-                    || !currentUser.getRole().name().equals(role)) {
-                filterChain.doFilter(request, response);
-                return;
+            UserRepository userRepository = userRepositoryProvider.getIfAvailable();
+            if (userRepository != null) {
+                var currentUser = userId == null ? null : userRepository.findById(userId).orElse(null);
+                if (currentUser == null || Boolean.TRUE.equals(currentUser.getDeleted())
+                        || !currentUser.getRole().name().equals(role)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
             }
             var auth = new UsernamePasswordAuthenticationToken(
                     login, userId,

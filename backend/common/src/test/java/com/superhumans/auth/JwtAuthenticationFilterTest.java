@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class JwtAuthenticationFilterTest {
@@ -35,9 +36,13 @@ class JwtAuthenticationFilterTest {
         user.setId(11L);
         when(userRepository.findById(11L)).thenReturn(java.util.Optional.of(user));
 
+        ObjectProvider<UserRepository> userRepositoryProvider = mock(ObjectProvider.class);
+        when(userRepositoryProvider.getIfAvailable()).thenReturn(userRepository);
+        ObjectProvider<TokenRevocationService> revocationProvider = mock(ObjectProvider.class);
+        when(revocationProvider.getIfAvailable()).thenReturn(new TokenRevocationService());
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(
                 provider, mock(AuditLogRepository.class), mock(AuditService.class),
-                userRepository, new TokenRevocationService());
+                userRepositoryProvider, revocationProvider);
         String token = provider.generateToken("doctor1", "DOCTOR", 11L);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/test");
         request.addHeader("Authorization", "Bearer " + token);
