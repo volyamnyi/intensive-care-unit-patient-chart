@@ -137,6 +137,7 @@ describe('PrescriptionPage list-create gating', () => {
     weight: 80,
     bloodGroup: 'A',
     rhFactor: '+',
+    departmentId: 2,
     room: '12',
     bed: '3',
   };
