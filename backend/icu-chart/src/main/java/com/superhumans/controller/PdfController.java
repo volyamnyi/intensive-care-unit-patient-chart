@@ -23,12 +23,18 @@ public class PdfController {
 
     @GetMapping("/clinical-days/{clinicalDayId}/pdf")
     public ResponseEntity<PdfResponse> getPdf(@PathVariable UUID clinicalDayId) {
-        return ResponseEntity.ok(pdfGeneratorService.getLatestPdf(clinicalDayId));
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(pdfGeneratorService.getLatestPdf(clinicalDayId));
     }
 
     @GetMapping("/clinical-days/{clinicalDayId}/pdf/status")
     public ResponseEntity<PdfResponse> getPdfStatus(@PathVariable UUID clinicalDayId) {
-        return ResponseEntity.ok(pdfGeneratorService.getLatestPdf(clinicalDayId));
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(pdfGeneratorService.getLatestPdf(clinicalDayId));
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/pdf")
