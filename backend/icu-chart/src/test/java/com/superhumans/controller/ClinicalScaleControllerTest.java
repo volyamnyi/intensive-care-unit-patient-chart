@@ -3,6 +3,7 @@ package com.superhumans.controller;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.dto.ScaleResultResponse;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.service.ClinicalScaleService;
 import com.superhumans.service.ScaleAuthorizationService;
 import com.superhumans.repository.core.AuditLogRepository;
@@ -20,7 +21,10 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -128,5 +132,18 @@ class ClinicalScaleControllerTest {
                         .content("{\"version\":1}")
                         .with(csrf()).with(doctor()))
                 .andExpect(status().isNoContent());
+        verify(clinicalScaleService).updateScaleResult(any(), any(), anyLong(), eq(UserRole.DOCTOR));
+    }
+
+    @Test
+    void roleFromRoleString_unknownRole_failsClosed() {
+        assertThatThrownBy(() -> ClinicalScaleController.roleFromRoleString("BOGUS"))
+                .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void roleFromRoleString_nullRole_failsClosed() {
+        assertThatThrownBy(() -> ClinicalScaleController.roleFromRoleString(null))
+                .isInstanceOf(SecurityException.class);
     }
 }

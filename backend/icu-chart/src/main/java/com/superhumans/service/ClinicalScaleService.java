@@ -5,6 +5,7 @@ import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.icu.entity.*;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
@@ -39,6 +40,7 @@ public class ClinicalScaleService {
     AuditService auditService;
     ScaleResultMapper scaleResultMapper;
     ObjectMapper objectMapper;
+    ScaleAuthorizationService scaleAuthorizationService;
 
     @Transactional(readOnly = true)
     public ScaleResultResponse getScaleResult(UUID id) {
@@ -278,13 +280,16 @@ public class ClinicalScaleService {
     }
 
     @Transactional
-    public ScaleResultResponse updateScaleResult(UUID id, ScaleResultPatchRequest request, Long userId) {
+    public ScaleResultResponse updateScaleResult(
+            UUID id, ScaleResultPatchRequest request, Long userId, UserRole role) {
         ScaleResult result = scaleResultRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Scale result not found: " + id));
 
         if (!result.getVersion().equals(request.getVersion())) {
             throw new VersionConflictException("Scale result was modified by another user");
         }
+        scaleAuthorizationService.assertCanUpdate(result.getScale(), role);
+
         if (result.getClinicalDay() != null) {
             assertNotLocked(result.getClinicalDay());
         }

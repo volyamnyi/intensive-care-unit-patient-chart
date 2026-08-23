@@ -97,8 +97,20 @@ public class ClinicalScaleController {
             @Valid @RequestBody ScaleResultPatchRequest request,
             Authentication auth) {
         Long userId = (Long) auth.getCredentials();
-        clinicalScaleService.updateScaleResult(id, request, userId);
+        UserRole role = extractRole(auth);
+        clinicalScaleService.updateScaleResult(id, request, userId, role);
         return ResponseEntity.noContent().build();
+    }
+
+    static UserRole roleFromRoleString(String roleStr) {
+        if (roleStr == null) {
+            throw new SecurityException("Could not determine role from authentication");
+        }
+        try {
+            return UserRole.valueOf(roleStr);
+        } catch (IllegalArgumentException e) {
+            throw new SecurityException("Unknown role authority: " + roleStr);
+        }
     }
 
     private UserRole extractRole(Authentication auth) {
@@ -107,11 +119,7 @@ public class ClinicalScaleController {
                 .filter(a -> a.startsWith("ROLE_"))
                 .findFirst()
                 .map(a -> a.substring(5))
-                .orElse("NURSE");
-        try {
-            return UserRole.valueOf(roleStr);
-        } catch (IllegalArgumentException e) {
-            return UserRole.NURSE;
-        }
+                .orElse(null);
+        return roleFromRoleString(roleStr);
     }
 }

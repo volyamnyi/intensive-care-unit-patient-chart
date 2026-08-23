@@ -1,6 +1,7 @@
 package com.superhumans.service;
 
 import tools.jackson.databind.ObjectMapper;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
@@ -56,6 +57,9 @@ class ClinicalScaleServiceTest {
 
     @Mock
     private ObjectMapper objectMapper;
+
+    @Mock
+    private ScaleAuthorizationService scaleAuthorizationService;
 
     @InjectMocks
     private ClinicalScaleService clinicalScaleService;
@@ -298,7 +302,7 @@ class ClinicalScaleServiceTest {
         saved.setVersion(1);
         when(scaleResultRepository.save(any(ScaleResult.class))).thenReturn(saved);
 
-        ScaleResultResponse res = clinicalScaleService.updateScaleResult(resultId, req, userId);
+        ScaleResultResponse res = clinicalScaleService.updateScaleResult(resultId, req, userId, UserRole.DOCTOR);
 
         verify(auditService).logUpdate("ScaleResult", resultId, userId, null, "Updated result");
     }
@@ -314,8 +318,57 @@ class ClinicalScaleServiceTest {
 
         when(scaleResultRepository.findById(resultId)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> clinicalScaleService.updateScaleResult(resultId, req, userId))
+        assertThatThrownBy(() -> clinicalScaleService.updateScaleResult(resultId, req, userId, UserRole.NURSE))
                 .isInstanceOf(VersionConflictException.class);
+    }
+
+    @Test
+    void updateScaleResult_delegatesPermissionCheck() {
+        ScaleResult existing = ScaleResult.builder()
+                .result("10")
+                .build();
+        existing.setId(resultId);
+        existing.setEpisodeId(episodeId);
+        existing.setClinicalDay(null);
+        existing.setScale(apacheScale);
+        existing.setVersion(0);
+
+        ScaleResultPatchRequest req = new ScaleResultPatchRequest("20", 0);
+
+        when(scaleResultRepository.findById(resultId)).thenReturn(Optional.of(existing));
+        ScaleResult saved = new ScaleResult();
+        saved.setId(resultId);
+        saved.setEpisodeId(episodeId);
+        saved.setScale(apacheScale);
+        saved.setResult("20");
+        saved.setVersion(1);
+        when(scaleResultRepository.save(any(ScaleResult.class))).thenReturn(saved);
+
+        clinicalScaleService.updateScaleResult(resultId, req, userId, UserRole.DOCTOR);
+
+        verify(scaleAuthorizationService).assertCanUpdate(apacheScale, UserRole.DOCTOR);
+    }
+
+    @Test
+    void updateScaleResult_whenRoleNotPermitted_throwsSecurityException() {
+        ScaleResult existing = ScaleResult.builder()
+                .result("10")
+                .build();
+        existing.setId(resultId);
+        existing.setEpisodeId(episodeId);
+        existing.setClinicalDay(null);
+        existing.setScale(apacheScale);
+        existing.setVersion(0);
+
+        ScaleResultPatchRequest req = new ScaleResultPatchRequest("20", 0);
+
+        when(scaleResultRepository.findById(resultId)).thenReturn(Optional.of(existing));
+        doThrow(new SecurityException("Role NURSE is not allowed to update APACHE II"))
+                .when(scaleAuthorizationService)
+                .assertCanUpdate(any(ClinicalScale.class), any(UserRole.class));
+
+        assertThatThrownBy(() -> clinicalScaleService.updateScaleResult(resultId, req, userId, UserRole.NURSE))
+                .isInstanceOf(SecurityException.class);
     }
 
     @Test
@@ -574,7 +627,7 @@ class ClinicalScaleServiceTest {
         saved.setVersion(1);
         when(scaleResultRepository.save(any(ScaleResult.class))).thenReturn(saved);
 
-        clinicalScaleService.updateScaleResult(resultId, req, userId);
+        clinicalScaleService.updateScaleResult(resultId, req, userId, UserRole.DOCTOR);
 
         verify(scaleResultRepository).save(scaleResultCaptor.capture());
         assertThat(scaleResultCaptor.getValue().getResult()).isEqualTo("20");

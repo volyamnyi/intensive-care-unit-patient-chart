@@ -97,4 +97,48 @@ test.describe('Scales API Access Control', () => {
 
     expect(res.ok()).toBeTruthy();
   });
+
+  test('doctor can update an APACHE II scale result', async ({ request }) => {
+    const doctorToken = await getToken(request, 'doctor1', 'doctor123');
+
+    const created = await request.post(
+      `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
+      {
+        headers: { Authorization: `Bearer ${doctorToken}` },
+        data: { age: 60, temperatureC: 38.0, heartRate: 100 },
+      },
+    );
+    expect(created.ok()).toBeTruthy();
+    const body = await created.json();
+    expect(body).toHaveProperty('id');
+
+    const res = await request.patch(`${API}/scales/${body.id}`, {
+      headers: { Authorization: `Bearer ${doctorToken}` },
+      data: { result: '25', version: body.version },
+    });
+
+    expect(res.status()).toBe(204);
+  });
+
+  test('nurse is blocked from updating an APACHE II scale result', async ({ request }) => {
+    const doctorToken = await getToken(request, 'doctor1', 'doctor123');
+
+    const created = await request.post(
+      `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
+      {
+        headers: { Authorization: `Bearer ${doctorToken}` },
+        data: { age: 60, temperatureC: 38.0, heartRate: 100 },
+      },
+    );
+    expect(created.ok()).toBeTruthy();
+    const body = await created.json();
+
+    const nurseToken = await getToken(request, 'nurse1', 'nurse123');
+    const res = await request.patch(`${API}/scales/${body.id}`, {
+      headers: { Authorization: `Bearer ${nurseToken}` },
+      data: { result: '50', version: body.version },
+    });
+
+    expect(res.status()).toBe(403);
+  });
 });
