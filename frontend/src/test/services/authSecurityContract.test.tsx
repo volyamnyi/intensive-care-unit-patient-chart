@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useEffect } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -147,16 +148,28 @@ describe('PrescriptionPage list-create gating', () => {
       data: { userId: '11', login: 'doctor1', fullName: 'Doc', role: 'DOCTOR', email: '' },
     });
     const { default: PrescriptionPage } = await import('../../pages/prescription/PrescriptionPage');
+
+    // Silent probe that logs the provider in on mount so the page sees the
+    // matrix permissions under test.
+    function AutoLogin() {
+      const { login } = useAuth();
+      useEffect(() => {
+        void login({ login: 'doctor1', password: 'x' });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return null;
+    }
+
     render(
       <MemoryRouter>
-      <ThemeModeProvider>
-        <AuthProvider>
-          <PrescriptionPage />
-        </AuthProvider>
-      </ThemeModeProvider>
-    </MemoryRouter>,
+        <ThemeModeProvider>
+          <AuthProvider>
+            <AutoLogin />
+            <PrescriptionPage />
+          </AuthProvider>
+        </ThemeModeProvider>
+      </MemoryRouter>,
     );
-    await userEvent.click(screen.getByTestId('login-btn'));
     await waitFor(() => expect(mockPatientSearch).toHaveBeenCalled(), { timeout: 3000 });
     await userEvent.click(await screen.findByText('Петренко Андрій'));
     await screen.findByText('Листки призначень');
