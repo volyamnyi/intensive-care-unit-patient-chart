@@ -172,7 +172,8 @@ describe('PrescriptionPage list-create gating', () => {
       </MemoryRouter>,
     );
     await waitFor(() => expect(mockPatientSearch).toHaveBeenCalled(), { timeout: 3000 });
-    await userEvent.click(await screen.findByText('Петренко Андрій'));
+    // Drawer opens via the row's explicit «Відкрити» action button.
+    await userEvent.click(await screen.findByRole('button', { name: 'Відкрити' }));
     await screen.findByText(/Листки призначень/);
   }
 
