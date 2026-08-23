@@ -130,7 +130,7 @@ class PrescriptionExecutionServiceTest {
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
                 TEST_DOSE_NOT_FOUND, UNKNOWN_USER_LOGIN, WRONG_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("РџРѕРјРёР»РєР° Р°РІС‚РµРЅС‚РёС„С–РєР°С†С–С— РґСЂСѓРіРѕС— РѕСЃРѕР±Рё");
+                .hasMessageContaining("Помилка автентифікації другої особи");
     }
 
     @Test
@@ -143,7 +143,7 @@ class PrescriptionExecutionServiceTest {
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
                 TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, WRONG_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("РќРµРІС–СЂРЅРёР№ РїР°СЂРѕР»СЊ");
+                .hasMessageContaining("Невірний пароль");
     }
 
     @Test
@@ -160,7 +160,7 @@ class PrescriptionExecutionServiceTest {
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
                 TEST_DOSE_NOT_FOUND, DOCTOR_LOGIN, DOCTOR_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("СЂРѕР»СЊ РјРµРґСЃРµСЃС‚СЂРё");
+                .hasMessageContaining("роль медсестри");
     }
 
     @Test
@@ -177,6 +177,6 @@ class PrescriptionExecutionServiceTest {
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
                 TEST_DOSE_NOT_FOUND, CURRENT_USER_LOGIN, "pwd"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("РЅРµ РјРѕР¶Рµ Р±СѓС‚Рё С‚С–С”СЋ Р¶");
+                .hasMessageContaining("не може бути тією ж");
     }
 }
