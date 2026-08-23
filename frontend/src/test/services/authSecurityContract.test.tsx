@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../../services/AuthContext';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 
@@ -147,11 +148,13 @@ describe('PrescriptionPage list-create gating', () => {
     });
     const { default: PrescriptionPage } = await import('../../pages/prescription/PrescriptionPage');
     render(
+      <MemoryRouter>
       <ThemeModeProvider>
         <AuthProvider>
           <PrescriptionPage />
         </AuthProvider>
-      </ThemeModeProvider>,
+      </ThemeModeProvider>
+    </MemoryRouter>,
     );
     await userEvent.click(screen.getByTestId('login-btn'));
     await waitFor(() => expect(mockPatientSearch).toHaveBeenCalled(), { timeout: 3000 });
