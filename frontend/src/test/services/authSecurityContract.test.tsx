@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from '../../services/AuthContext';
+import { ThemeModeProvider } from '../../styles/ThemeContext';
 
 // Phase C frontend security contract (issue #172): the browser-side guards and
 // the cookie-based transport are pinned here so regressions fail in
@@ -146,9 +147,11 @@ describe('PrescriptionPage list-create gating', () => {
     });
     const { default: PrescriptionPage } = await import('../../pages/prescription/PrescriptionPage');
     render(
-      <AuthProvider>
-        <PrescriptionPage />
-      </AuthProvider>,
+      <ThemeModeProvider>
+        <AuthProvider>
+          <PrescriptionPage />
+        </AuthProvider>
+      </ThemeModeProvider>,
     );
     await userEvent.click(screen.getByTestId('login-btn'));
     await waitFor(() => expect(mockPatientSearch).toHaveBeenCalled(), { timeout: 3000 });
