@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.superhumans.auth.JwtAuthenticationFilter;
 import com.superhumans.auth.JwtTokenProvider;
+import com.superhumans.repository.core.UserRepository;
 import com.superhumans.controller.TestSecurityHelper;
 import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
@@ -84,6 +85,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private AuditService auditService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean(name = "passiveContributor", reset = MockReset.NONE)
     private SecurityRuleContributor passiveContributor;

@@ -7,6 +7,9 @@ import java.util.Base64;
 import java.util.UUID;
 
 import com.superhumans.auth.JwtTokenProvider;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
+import com.superhumans.repository.core.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -23,9 +26,8 @@ import org.springframework.test.context.jdbc.SqlConfig;
  * <p>SEC-B01..B05 — JWT rejection and cookie parity;
  * SEC-B24 — a PROSTHETIST token can no longer mutate an episode (F6);
  * passwordHash absence — BCrypt hashes are no longer serialized to clients (F4).
- * The minted tokens trust the claims (the {@code JwtAuthenticationFilter} does not
- * hit the DB), so a PROSTHETIST token authenticates as ROLE_PROSTHETIST and is
- * denied precisely by method security.
+ * Minted tokens are backed by matching users in the test database so the filter's
+ * current-role validation is exercised before method security.
  */
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:data-test-core.sql",
      config = @SqlConfig(dataSource = "coreDataSource"))
@@ -37,6 +39,9 @@ class SecurityTokenIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     void secB01_forgedTokenSignedWithAttackerKey_isRejected() {
@@ -91,6 +96,14 @@ class SecurityTokenIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void secB24_prosthetistCannotMutateEpisode_afterF6() {
+        User prosthetistUser = User.builder()
+                .login("prosthetist1")
+                .passwordHash("unused")
+                .fullName("Test Prosthetist")
+                .role(UserRole.PROSTHETIST)
+                .build();
+        prosthetistUser.setId(21L);
+        userRepository.save(prosthetistUser);
         String prosthetist = jwtTokenProvider.generateToken("prosthetist1", "PROSTHETIST", 21L);
 
         ResponseEntity<String> res = restTemplate.exchange("/api/episodes/" + EPISODE_ID,
