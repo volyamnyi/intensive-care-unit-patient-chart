@@ -317,7 +317,7 @@ class PrescriptionControllerTest {
     @Test
     void removeDay_withExecutedParts_returnsUnprocessableEntity() throws Exception {
         UUID dayId = UUID.randomUUID();
-        String ukMsg = "День містить виконані призначення, видалення неможливе";
+        String ukMsg = "Р”РµРЅСЊ РјС–СЃС‚РёС‚СЊ РІРёРєРѕРЅР°РЅС– РїСЂРёР·РЅР°С‡РµРЅРЅСЏ, РІРёРґР°Р»РµРЅРЅСЏ РЅРµРјРѕР¶Р»РёРІРµ";
         doThrow(new BusinessException(ErrorCode.BUSINESS_RULE, ukMsg))
                 .when(itemService).removeDay(eq(itemId), eq(dayId));
 
@@ -403,7 +403,7 @@ class PrescriptionControllerTest {
                 .andExpect(status().isOk());
 
         verify(executionService).execute(eq(dayPartId), eq(TEST_NURSE_ID), eq("user"),
-                eq(TEST_ACTUAL_DOSE), eq(TEST_NURSE_LOGIN), eq(TEST_SECOND_PERSON_PASSWORD), eq(false));
+                eq(TEST_ACTUAL_DOSE), eq(TEST_NURSE_LOGIN), eq(TEST_SECOND_PERSON_PASSWORD));
     }
 
     @Test
@@ -557,7 +557,7 @@ class PrescriptionControllerTest {
                 .andExpect(status().isOk());
 
         verify(executionService).execute(eq(dayPartId), eq(4L), eq("user"),
-                eq("45mg"), eq("nurse2"), eq("nurse123"), eq(false));
+                eq("45mg"), eq("nurse2"), eq("nurse123"));
     }
 
     @Test

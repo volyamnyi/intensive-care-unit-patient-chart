@@ -31,41 +31,40 @@ public class PrescriptionExecutionService {
     PasswordEncoder passwordEncoder;
 
     @Transactional
-    public PrescriptionExecution execute(UUID dayPartId, Long currentUserId, String currentUserLogin, String actualDose, String secondPersonLogin, String secondPersonPassword, boolean requires2pAuth) {
+    public PrescriptionExecution execute(UUID dayPartId, Long currentUserId, String currentUserLogin, String actualDose, String secondPersonLogin, String secondPersonPassword) {
         PrescriptionDayPart part = partRepository.findById(dayPartId)
                 .orElseThrow(() -> new NotFoundException("Day part not found: " + dayPartId));
 
         UUID firstPersonUuid = UUID.nameUUIDFromBytes(currentUserLogin.getBytes());
-        UUID secondPersonUuid = null;
         String nurseName = currentUserLogin;
 
-        if (requires2pAuth) {
-            // Authenticate second person
-            User secondPerson = userRepository.findByLogin(secondPersonLogin)
-                    .orElseThrow(() -> new IllegalArgumentException("Помилка автентифікації другої особи"));
+        // Server-owned policy: every dose execution requires two-person
+        // authentication with a different nurse's credentials. The client can
+        // never opt out of the second-nurse check (audit finding A12).
+        User secondPerson = userRepository.findByLogin(secondPersonLogin)
+                .orElseThrow(() -> new IllegalArgumentException("Помилка автентифікації другої особи"));
 
-            if (!passwordEncoder.matches(secondPersonPassword, secondPerson.getPasswordHash())) {
-                throw new IllegalArgumentException("Невірний пароль другої особи");
-            }
-
-            if (secondPerson.getRole() != UserRole.NURSE) {
-                throw new IllegalArgumentException("Друга особа повинна мати роль медсестри");
-            }
-
-            if (secondPerson.getId().equals(currentUserId)) {
-                throw new IllegalArgumentException("Друга особа не може бути тією ж, що виконує призначення");
-            }
-
-            secondPersonUuid = UUID.nameUUIDFromBytes(secondPersonLogin.getBytes());
-            nurseName = currentUserLogin + "/2P:" + secondPersonLogin;
+        if (!passwordEncoder.matches(secondPersonPassword == null ? "" : secondPersonPassword, secondPerson.getPasswordHash())) {
+            throw new IllegalArgumentException("Невірний пароль другої особи");
         }
+
+        if (secondPerson.getRole() != UserRole.NURSE) {
+            throw new IllegalArgumentException("Друга особа повинна мати роль медсестри");
+        }
+
+        if (secondPerson.getId().equals(currentUserId)) {
+            throw new IllegalArgumentException("Друга особа не може бути тією ж, що виконує призначення");
+        }
+
+        UUID secondPersonUuid = UUID.nameUUIDFromBytes(secondPersonLogin.getBytes());
+        nurseName = currentUserLogin + "/2P:" + secondPersonLogin;
 
         PrescriptionExecution exec = PrescriptionExecution.builder()
                 .dayPart(part)
                 .executedAt(LocalDateTime.now())
                 .actualDose(actualDose)
                 .status("Completed")
-                .requires2pAuth(requires2pAuth)
+                .requires2pAuth(true)
                 .secondPersonId(secondPersonUuid)
                 .build();
         exec.setCreatedBy(currentUserId);

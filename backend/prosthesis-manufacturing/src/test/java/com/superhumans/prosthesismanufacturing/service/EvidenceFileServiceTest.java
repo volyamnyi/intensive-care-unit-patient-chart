@@ -92,18 +92,77 @@ class EvidenceFileServiceTest {
             saved.setId(UUID.randomUUID());
             return saved;
         });
-        MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png",
-                new byte[]{1, 2, 3});
+        MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png", pngBytes());
 
         var response = service.upload(instanceId, executionId, file, 1L);
 
         ArgumentCaptor<EvidenceFile> captor = ArgumentCaptor.forClass(EvidenceFile.class);
         verify(evidenceFileRepository).save(captor.capture());
         assertThat(captor.getValue().getMimeType()).isEqualTo("image/png");
-        assertThat(captor.getValue().getSizeBytes()).isEqualTo(3);
-        assertThat(captor.getValue().getChecksum()).isNotBlank();
+        assertThat(captor.getValue().getSizeBytes()).isEqualTo((long) pngBytes().length);
+        assertThat(captor.getValue().getChecksum()).hasSize(64).matches("[0-9a-f]{64}");
         assertThat(response.getChecksum()).isEqualTo(captor.getValue().getChecksum());
         verify(auditService).logAction(any(), any(), any(), any());
+    }
+
+    @Test
+    void uploadRejectsSvgFiles() {
+        UUID instanceId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        MockMultipartFile file = new MockMultipartFile("file", "payload.svg",
+                "image/svg+xml", "<svg xmlns='http://www.w3.org/2000/svg'/>".getBytes());
+
+        assertThatThrownBy(() -> service.upload(instanceId, executionId, file, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("SVG");
+        verify(evidenceFileRepository, never()).save(any());
+    }
+
+    @Test
+    void uploadRejectsContentThatDoesNotMatchDeclaredType() {
+        UUID instanceId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        StepExecution execution = executionFor(instance, executionId);
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
+        MockMultipartFile file = new MockMultipartFile("file", "evil.png",
+                "image/png", "<script>alert(1)</script>".getBytes());
+
+        assertThatThrownBy(() -> service.upload(instanceId, executionId, file, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("does not match its declared type");
+        verify(evidenceFileRepository, never()).save(any());
+    }
+
+    @Test
+    void uploadSanitizesFileNameForContentDisposition() {
+        UUID instanceId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        StepExecution execution = executionFor(instance, executionId);
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
+        when(evidenceFileRepository.save(any())).thenAnswer(invocation -> {
+            EvidenceFile saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        MockMultipartFile file = new MockMultipartFile("file", "ph\u0007oto\"x\r\n.png",
+                "image/png", pngBytes());
+
+        service.upload(instanceId, executionId, file, 1L);
+
+        ArgumentCaptor<EvidenceFile> captor = ArgumentCaptor.forClass(EvidenceFile.class);
+        verify(evidenceFileRepository).save(captor.capture());
+        assertThat(captor.getValue().getFileName())
+                .doesNotContain("\"").doesNotContain("\r").doesNotContain("\n");
+    }
+
+    private byte[] pngBytes() {
+        return new byte[]{(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3};
     }
 
     @Test

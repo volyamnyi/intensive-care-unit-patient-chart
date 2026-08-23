@@ -46,13 +46,15 @@ public class EvidenceFileService {
             throw new BadRequestException("Execution does not belong to this instance");
         }
         String mimeType = resolveMimeType(file);
+        byte[] data = toBytes(file);
+        validateContentMatchesType(data, mimeType);
         EvidenceFile evidence = EvidenceFile.builder()
                 .stepExecution(execution)
-                .fileName(file.getOriginalFilename())
+                .fileName(sanitizeFileName(file.getOriginalFilename()))
                 .mimeType(mimeType)
                 .sizeBytes(file.getSize())
-                .checksum(checksum(file))
-                .fileData(toBytes(file))
+                .checksum(checksum(data))
+                .fileData(data)
                 .build();
         evidenceFileRepository.save(evidence);
         auditService.logAction("EvidenceFile", evidence.getId(), "UPLOAD", userId);
@@ -71,11 +73,17 @@ public class EvidenceFileService {
 
     private String resolveMimeType(MultipartFile file) {
         String contentType = file.getContentType();
+        if (contentType != null && contentType.toLowerCase(Locale.ROOT).contains("svg")) {
+            throw new BadRequestException("SVG files are not allowed");
+        }
+        String name = file.getOriginalFilename();
+        if (name != null && name.toLowerCase(Locale.ROOT).endsWith(".svg")) {
+            throw new BadRequestException("SVG files are not allowed");
+        }
         if (contentType != null && (contentType.startsWith("image/")
                 || "application/pdf".equals(contentType))) {
             return contentType.toLowerCase(Locale.ROOT);
         }
-        String name = file.getOriginalFilename();
         if (name != null) {
             String ext = name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
             return switch (ext) {
@@ -99,10 +107,45 @@ public class EvidenceFileService {
         }
     }
 
-    private String checksum(MultipartFile file) {
+    /** Magic-byte sniffing: the declared type must match the actual content. */
+    private void validateContentMatchesType(byte[] data, String mimeType) {
+        if (!contentMatches(data, mimeType)) {
+            throw new BadRequestException("File content does not match its declared type");
+        }
+    }
+
+    private boolean contentMatches(byte[] data, String mimeType) {
+        return switch (mimeType) {
+            case "image/jpeg" -> startsWith(data, new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF});
+            case "image/png" -> startsWith(data, new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+            case "image/gif" -> startsWith(data, new byte[]{'G', 'I', 'F', '8'});
+            case "image/webp" -> data.length >= 12 && data[0] == 'R' && data[1] == 'I'
+                    && data[2] == 'F' && data[3] == 'F' && data[8] == 'W' && data[9] == 'E'
+                    && data[10] == 'B' && data[11] == 'P';
+            case "image/bmp" -> startsWith(data, new byte[]{'B', 'M'});
+            case "application/pdf" -> startsWith(data, new byte[]{'%', 'P', 'D', 'F'});
+            default -> false;
+        };
+    }
+
+    private boolean startsWith(byte[] data, byte[] prefix) {
+        if (data.length < prefix.length) return false;
+        for (int i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) return false;
+        }
+        return true;
+    }
+
+    private String sanitizeFileName(String name) {
+        if (name == null || name.isBlank()) return "evidence";
+        String cleaned = name.replaceAll("[\\r\\n\"\\\\/]", "_").trim();
+        return cleaned.isBlank() ? "evidence" : cleaned;
+    }
+
+    private String checksum(byte[] data) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("MD5");
-            return HexFormat.of().formatHex(digest.digest(file.getBytes()));
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(data));
         } catch (Exception e) {
             throw new BadRequestException("File checksum could not be computed");
         }

@@ -51,6 +51,13 @@ public class UserController {
         return ResponseEntity.ok(userRepository.findByRole(UserRole.NURSE));
     }
 
+    /**
+     * MIS user profile by numeric id. Deliberately readable by clinical core
+     * roles (the URL ceiling in {@code ClinicalSecurityRules.USERS_READ_SPEL}
+     * already excludes AUDITOR/PROSTHETIST): colleague lookup by id is intended
+     * directory behavior asserted by E2E (users.spec.ts). Audit finding S1
+     * resolved as documented-intended, no further scoping applied.
+     */
     @GetMapping("/{id}")
     public ResponseEntity<UserMisDTO> getMisUser(@PathVariable Long id) {
         return misService.getUser(id)

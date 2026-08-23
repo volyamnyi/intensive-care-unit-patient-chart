@@ -91,7 +91,7 @@ class PrescriptionExecutionServiceTest {
 
         PrescriptionExecution result = service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, true);
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD);
 
         verify(executionRepository).save(execCaptor.capture());
         PrescriptionExecution exec = execCaptor.getValue();
@@ -116,7 +116,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 UUID.randomUUID(), CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, true))
+                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Day part not found");
     }
@@ -128,9 +128,9 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, UNKNOWN_USER_LOGIN, WRONG_PASSWORD, true))
+                TEST_DOSE_NOT_FOUND, UNKNOWN_USER_LOGIN, WRONG_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Помилка автентифікації другої особи");
+                .hasMessageContaining("РџРѕРјРёР»РєР° Р°РІС‚РµРЅС‚РёС„С–РєР°С†С–С— РґСЂСѓРіРѕС— РѕСЃРѕР±Рё");
     }
 
     @Test
@@ -141,9 +141,9 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, WRONG_PASSWORD, true))
+                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, WRONG_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Невірний пароль");
+                .hasMessageContaining("РќРµРІС–СЂРЅРёР№ РїР°СЂРѕР»СЊ");
     }
 
     @Test
@@ -158,9 +158,9 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, DOCTOR_LOGIN, DOCTOR_PASSWORD, true))
+                TEST_DOSE_NOT_FOUND, DOCTOR_LOGIN, DOCTOR_PASSWORD))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("роль медсестри");
+                .hasMessageContaining("СЂРѕР»СЊ РјРµРґСЃРµСЃС‚СЂРё");
     }
 
     @Test
@@ -175,8 +175,8 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, CURRENT_USER_LOGIN, "pwd", true))
+                TEST_DOSE_NOT_FOUND, CURRENT_USER_LOGIN, "pwd"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("не може бути тією ж");
+                .hasMessageContaining("РЅРµ РјРѕР¶Рµ Р±СѓС‚Рё С‚С–С”СЋ Р¶");
     }
 }

@@ -16,6 +16,7 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,19 +47,21 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/role")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<User> updateRole(@PathVariable Long id, @RequestBody Map<String, String> body,
                                             Authentication auth) {
-        String newRole = body.get("role");
+        UserRole newRole = parseRole(body == null ? null : body.get("role"));
         return userRepository.findById(id).map(user -> {
-            user.setRole(UserRole.valueOf(newRole));
+            user.setRole(newRole);
             user.setUpdatedBy(getUserId(auth));
             userRepository.save(user);
-            auditService.logAction("User", null, "ADMIN_UPDATE_ROLE:" + newRole, getUserId(auth));
+            auditService.logAction("User", null, "ADMIN_UPDATE_ROLE:" + newRole.name(), getUserId(auth));
             return ResponseEntity.ok(user);
         }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication auth) {
         Long currentUserId = getUserId(auth);
         if (currentUserId.equals(id)) {
@@ -102,10 +105,11 @@ public class AdminController {
 
     /** Grant or revoke a permission for a role (RBAC matrix editing). */
     @PutMapping("/permissions")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
     public PermissionMatrixResponse updatePermissionMatrix(
             @Valid @RequestBody RolePermissionUpdateRequest request,
             Authentication auth) {
-        UserRole role = UserRole.valueOf(request.getRole());
+        UserRole role = parseRole(request.getRole());
         if (!PermissionCatalog.allCodes().contains(request.getPermissionCode())) {
             throw new BadRequestException("Невідомий код права: " + request.getPermissionCode());
         }
@@ -135,5 +139,16 @@ public class AdminController {
             return uid;
         }
         return 0L;
+    }
+
+    private UserRole parseRole(String value) {
+        if (value == null || value.isBlank()) {
+            throw new BadRequestException("Роль обов'язкова");
+        }
+        try {
+            return UserRole.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Невідома роль: " + value);
+        }
     }
 }

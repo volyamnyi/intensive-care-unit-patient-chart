@@ -226,7 +226,8 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
         PrescriptionExecuteRequest execReq = new PrescriptionExecuteRequest();
         execReq.setActualDose("30mg");
-        execReq.setRequires2pAuth(false);
+        execReq.setSecondPersonLogin("nurse2");
+        execReq.setSecondPersonPassword("nurse123");
 
         var res = restTemplate.exchange(
                 "/api/prescriptions/day-parts/{dayPartId}/execute", HttpMethod.POST,
@@ -240,7 +241,8 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
     void executeDose_asDoctor_returnsForbidden() {
         PrescriptionExecuteRequest req = new PrescriptionExecuteRequest();
         req.setActualDose("25mg");
-        req.setRequires2pAuth(false);
+        req.setSecondPersonLogin("nurse2");
+        req.setSecondPersonPassword("nurse123");
 
         var res = restTemplate.exchange(
                 "/api/prescriptions/day-parts/{dayPartId}/execute", HttpMethod.POST,
