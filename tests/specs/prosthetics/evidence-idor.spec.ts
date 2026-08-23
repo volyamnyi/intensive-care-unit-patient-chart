@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
+import { completeInstanceViaApi } from '../../helpers/prosthetics-flow';
 
 // Phase C cross-prosthetist IDOR mirror of the Phase A F2 fix (issue #172),
 // run in the serial prosthetics-chromium project. Prosthetist1 creates and
@@ -30,19 +31,29 @@ test('prosthetist2 cannot download prosthetist1 evidence (404)', async ({ reques
   const p1 = await login(request, 'prosthetist1');
   const p1Headers = { Authorization: `Bearer ${p1}` };
 
-  // Create + start an instance owned by prosthetist1 (reuses the free-order
-  // candidate pattern from wizard-checkbox-surface).
+  // Create + start an instance owned by prosthetist1 while RESERVING the
+  // PR-2026-0001 fixture for prosthetics-e2e.spec (it needs that order
+  // untouched). Whatever we take is driven to COMPLETED afterwards so later
+  // serial specs find their fixtures free again.
   const orders = (await (
     await request.get(`${BASE}/orders`, { headers: p1Headers })
-  ).json()) as Array<{ id: string; status?: string }>;
+  ).json()) as Array<{ id: string; orderNumber: string }>;
   const templates = (await (
     await request.get(`${BASE}/templates`, { headers: p1Headers })
   ).json()) as Array<{ id: string; status: string }>;
+  const instances = (await (
+    await request.get(`${BASE}/instances`, { headers: p1Headers })
+  ).json()) as Array<{ id: string; status: string; orderId: string }>;
   const template = templates.find((t) => t.status === 'ACTIVE');
   if (!template) throw new Error('No ACTIVE flow template found');
+  const activeOrderIds = new Set(
+    instances.filter((i) => i.status !== 'COMPLETED').map((i) => i.orderId),
+  );
 
   let instanceId: string | null = null;
   for (const order of orders) {
+    if (order.orderNumber === 'PR-2026-0001') continue;
+    if (activeOrderIds.has(order.id)) continue;
     const created = await request.post(`${BASE}/instances`, {
       headers: p1Headers,
       data: { orderId: order.id, templateId: template.id },
@@ -52,45 +63,51 @@ test('prosthetist2 cannot download prosthetist1 evidence (404)', async ({ reques
       break;
     }
   }
-  if (!instanceId) throw new Error('Could not create a flow instance for prosthetist1');
+  if (!instanceId) throw new Error('Could not create a disposable flow instance for prosthetist1');
 
-  const started = await request.post(`${BASE}/instances/${instanceId}/start`, {
-    headers: p1Headers,
-  });
-  expect(started.ok()).toBeTruthy();
+  try {
+    const started = await request.post(`${BASE}/instances/${instanceId}/start`, {
+      headers: p1Headers,
+    });
+    expect(started.ok()).toBeTruthy();
 
-  const executions = (await (
-    await request.get(`${BASE}/instances/${instanceId}/step-executions`, { headers: p1Headers })
-  ).json()) as Array<{ id: string; status: string }>;
-  const activeExecution = executions.find((e) => e.status === 'IN_PROGRESS') ?? executions[0];
-  if (!activeExecution) throw new Error('No step execution available for evidence upload');
+    const executions = (await (
+      await request.get(`${BASE}/instances/${instanceId}/step-executions`, { headers: p1Headers })
+    ).json()) as Array<{ id: string; status: string }>;
+    const activeExecution =
+      executions.find((e) => e.status === 'IN_PROGRESS') ?? executions[0];
+    if (!activeExecution) throw new Error('No step execution available for evidence upload');
 
-  const uploaded = await request.post(`${BASE}/instances/${instanceId}/evidence`, {
-    headers: p1Headers,
-    multipart: {
-      executionId: activeExecution.id,
-      file: {
-        name: 'idor-probe.png',
-        mimeType: 'image/png',
-        buffer: PNG_BYTES,
+    const uploaded = await request.post(`${BASE}/instances/${instanceId}/evidence`, {
+      headers: p1Headers,
+      multipart: {
+        executionId: activeExecution.id,
+        file: {
+          name: 'idor-probe.png',
+          mimeType: 'image/png',
+          buffer: PNG_BYTES,
+        },
       },
-    },
-  });
-  expect(uploaded.status()).toBe(201);
-  const fileId = ((await uploaded.json()) as { id: string }).id;
+    });
+    expect(uploaded.status()).toBe(201);
+    const fileId = ((await uploaded.json()) as { id: string }).id;
 
-  // Owner reads it back fine…
-  const ownerView = await request.get(
-    `${BASE}/instances/${instanceId}/evidence/${fileId}`,
-    { headers: p1Headers },
-  );
-  expect(ownerView.status()).toBe(200);
+    // Owner reads it back fine…
+    const ownerView = await request.get(
+      `${BASE}/instances/${instanceId}/evidence/${fileId}`,
+      { headers: p1Headers },
+    );
+    expect(ownerView.status()).toBe(200);
 
-  // …while prosthetist2 gets the ownership-preserving 404.
-  const p2 = await login(request, 'prosthetist2');
-  const outsiderView = await request.get(
-    `${BASE}/instances/${instanceId}/evidence/${fileId}`,
-    { headers: { Authorization: `Bearer ${p2}` } },
-  );
-  expect(outsiderView.status()).toBe(404);
+    // …while prosthetist2 gets the ownership-preserving 404.
+    const p2 = await login(request, 'prosthetist2');
+    const outsiderView = await request.get(
+      `${BASE}/instances/${instanceId}/evidence/${fileId}`,
+      { headers: { Authorization: `Bearer ${p2}` } },
+    );
+    expect(outsiderView.status()).toBe(404);
+  } finally {
+    // Free the fixture for downstream serial specs.
+    await completeInstanceViaApi(request, instanceId);
+  }
 });
