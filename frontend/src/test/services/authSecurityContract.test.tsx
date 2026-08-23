@@ -173,7 +173,7 @@ describe('PrescriptionPage list-create gating', () => {
     );
     await waitFor(() => expect(mockPatientSearch).toHaveBeenCalled(), { timeout: 3000 });
     await userEvent.click(await screen.findByText('Петренко Андрій'));
-    await screen.findByText('Листки призначень');
+    await screen.findByText(/Листки призначень/);
   }
 
   it('renders «Створити листок» with PRESCRIPTION_LIST_CREATE', async () => {
