@@ -168,6 +168,88 @@ test.describe('Role & permission management', () => {
     }
   });
 
+  test('UI matrix editor cycle on a non-MODULE code persists and flips enforcement', async ({ page, request }) => {
+    const nurseHeaders = await login(request, NURSE);
+    // Valid hourly body — validation precedes method security. Each call uses a
+    // distinct hour so successful writes never collide with the unique
+    // (clinical_day_id, record_hour) constraint.
+    let postVitalsCall = 0;
+    const postVitals = async () => {
+      const res = request.post(
+        '/api/clinical-days/b3333333-3333-3333-3333-333333333333/hourly-records',
+        {
+          headers: nurseHeaders,
+          data: {
+            recordTime: new Date(Date.now() + postVitalsCall * 3600_000)
+              .toISOString()
+              .slice(0, 19),
+            temperature: 36.6,
+            heartRate: 80,
+          },
+        },
+      );
+      postVitalsCall += 1;
+      return res;
+    };
+
+    // Baseline: NURSE holds VITALS_ENTER by default → write succeeds (201).
+    expect((await postVitals()).status()).toBe(201);
+
+    // Drive the UI matrix editor: uncheck «Введення показників — Медсестра» and save.
+    await page.goto('/admin');
+    await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
+    const row = page.getByRole('checkbox', { name: 'Введення показників — Медсестра', exact: true });
+    await expect(row).toBeChecked({ timeout: 10000 });
+    await row.uncheck();
+    await page.getByRole('button', { name: 'Зберегти зміни' }).click();
+    await expect(page.getByText(/Збережено змін/)).toBeVisible({ timeout: 10000 });
+
+    // Reload proves persistence through the matrix table itself.
+    await page.reload();
+    await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Введення показників — Медсестра', exact: true }))
+      .not.toBeChecked({ timeout: 10000 });
+
+    // Enforcement flipped immediately for the same nurse credentials.
+    expect((await postVitals()).status()).toBe(403);
+
+    // Re-check via the UI, save, enforcement restored.
+    await row.check();
+    await page.getByRole('button', { name: 'Зберегти зміни' }).click();
+    await expect(page.getByText(/Збережено змін/)).toBeVisible({ timeout: 10000 });
+    expect((await postVitals()).status()).toBe(201);
+
+    // The audit trail shows both sides of the cycle.
+    await page.getByRole('tab', { name: 'Журнал аудиту' }).click();
+    await expect(page.getByText(/PERMISSION_REVOKE/).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/PERMISSION_GRANT/).first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('doctor with prosthetics module access is denied instance creation (read-only split)', async ({ request }) => {
+    const adminHeaders = await login(request, ADMIN);
+    await setDoctorModuleAccess(request, adminHeaders, true);
+    try {
+      const doctorHeaders = await login(request, { login: 'doctor1', password: 'doctor123' });
+
+      // Read surface stays open…
+      const list = await request.get('/api/prosthesis-manufacturing/instances', { headers: doctorHeaders });
+      expect(list.ok()).toBeTruthy();
+
+      // …while the write path is denied even with a fully valid body
+      // (seeded order ПВ-26-0413 + ACTIVE template TP-UL-01).
+      const created = await request.post('/api/prosthesis-manufacturing/instances', {
+        headers: doctorHeaders,
+        data: {
+          orderId: '20000000-0000-4000-8000-000000000001',
+          templateId: 'c0000001-0000-0000-0000-000000000001',
+        },
+      });
+      expect(created.status()).toBe(403);
+    } finally {
+      await setDoctorModuleAccess(request, adminHeaders, false);
+    }
+  });
+
   test.afterEach(async ({ request }) => {
     // Restore the default matrix even if the test failed mid-way
     const adminHeaders = await login(request, ADMIN);

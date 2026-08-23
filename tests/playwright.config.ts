@@ -31,7 +31,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
       },
-      testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts', '**/auth/access-control.spec.ts'],
+      testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts', '**/auth/access-control.spec.ts', '**/auth/role-redirects.spec.ts'],
     },
     {
       name: 'api-error-mode-chromium',
