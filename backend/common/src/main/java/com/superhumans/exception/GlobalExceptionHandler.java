@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
         }
         log.error("Unexpected data access error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                new ErrorResponse(ErrorCode.INTERNAL_ERROR, ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.", UUID.randomUUID().toString()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -117,6 +117,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRuntime(RuntimeException ex) {
         log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                new ErrorResponse(ErrorCode.INTERNAL_ERROR, ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.", UUID.randomUUID().toString()));
     }
 }

@@ -92,6 +92,7 @@ app:
 springdoc:
   api-docs:
     path: /api-docs
+    enabled: true
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
@@ -177,3 +178,22 @@ server:
 app:
   seed-data:
     enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.superhumans: INFO
+    org.springframework: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate.orm.jdbc.extract: OFF
+    org.springframework.mail: WARN
+    org.eclipse.angus.mail: WARN
+    jakarta.mail: WARN
+
+server:
+  ssl:
+    enabled: true

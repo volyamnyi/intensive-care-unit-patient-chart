@@ -32,6 +32,8 @@ public class SecurityConfig {
     final List<SecurityRuleContributor> ruleContributors;
     @Value("${server.ssl.enabled:false}")
     boolean sslEnabled;
+    @Value("${springdoc.api-docs.enabled:true}")
+    boolean apiDocsEnabled;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -54,8 +56,10 @@ public class SecurityConfig {
                     }))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/api/auth/**").permitAll()
-                            .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll();
+                    auth.requestMatchers("/api/auth/**").permitAll();
+                    if (apiDocsEnabled) {
+                        auth.requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll();
+                    }
                     ruleContributors.forEach(contributor -> contributor.contribute(auth));
                     auth.anyRequest().authenticated();
                 })
