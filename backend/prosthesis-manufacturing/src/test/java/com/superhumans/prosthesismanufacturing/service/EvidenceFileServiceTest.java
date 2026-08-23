@@ -110,7 +110,9 @@ class EvidenceFileServiceTest {
         UUID instanceId = UUID.randomUUID();
         UUID executionId = UUID.randomUUID();
         FlowInstance instance = newInstance(instanceId);
+        StepExecution execution = executionFor(instance, executionId);
         when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
         MockMultipartFile file = new MockMultipartFile("file", "payload.svg",
                 "image/svg+xml", "<svg xmlns='http://www.w3.org/2000/svg'/>".getBytes());
 
