@@ -21,7 +21,9 @@ import org.springframework.http.HttpStatus;
  * <p>Every assertion crosses the real HTTP filter chain against the seeded
  * matrix, proving that the role ceilings and the dynamic permission matrix
  * agree. Matrix mutations in the dynamic-immediacy and prescription-split
- * tests are always restored in {@code finally}.
+ * tests are always restored in {@code finally}. Note: doctors hold scale
+ * codes rather than {@code VITALS_ENTER}, so their ward-wide write path in
+ * the horizontal pins is a clinical note, not an hourly record.
  */
 class ClinicalRbacIntegrationTest extends AbstractIntegrationTest {
 
