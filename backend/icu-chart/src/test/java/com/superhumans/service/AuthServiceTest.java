@@ -96,7 +96,7 @@ class AuthServiceTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getBody()).isNull();
-        verify(passwordEncoder).matches("pass", anyString());
+        verify(passwordEncoder).matches(eq("pass"), anyString());
     }
 
     @Test
