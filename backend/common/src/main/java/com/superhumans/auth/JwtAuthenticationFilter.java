@@ -4,6 +4,7 @@ import lombok.experimental.FieldDefaults;
 
 import com.superhumans.entity.core.AuditLog;
 import com.superhumans.repository.core.AuditLogRepository;
+import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.AuditService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -30,16 +31,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     JwtTokenProvider jwtTokenProvider;
     AuditLogRepository auditLogRepository;
     AuditService auditService;
+    UserRepository userRepository;
+    TokenRevocationService tokenRevocationService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
-        if (token != null && jwtTokenProvider.validateToken(token)) {
+        if (token != null && jwtTokenProvider.validateToken(token)
+                && !tokenRevocationService.isRevoked(jwtTokenProvider.getJtiFromToken(token))) {
             String login = jwtTokenProvider.getLoginFromToken(token);
             String role = jwtTokenProvider.getRoleFromToken(token);
             Long userId = jwtTokenProvider.getUserIdFromToken(token);
+            var currentUser = userId == null ? null : userRepository.findById(userId).orElse(null);
+            if (currentUser == null || Boolean.TRUE.equals(currentUser.getDeleted())
+                    || !currentUser.getRole().name().equals(role)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             var auth = new UsernamePasswordAuthenticationToken(
                     login, userId,
                     List.of(new SimpleGrantedAuthority("ROLE_" + role)));

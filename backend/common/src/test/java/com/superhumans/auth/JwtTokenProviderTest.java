@@ -28,6 +28,8 @@ class JwtTokenProviderTest {
         assertThat(provider.getLoginFromToken(token)).isEqualTo("doctor1");
         assertThat(provider.getRoleFromToken(token)).isEqualTo("DOCTOR");
         assertThat(provider.getUserIdFromToken(token)).isEqualTo(11L);
+        assertThat(provider.getJtiFromToken(token)).isNotBlank();
+        assertThat(provider.getExpirationFromToken(token)).isNotNull();
     }
 
     @Test

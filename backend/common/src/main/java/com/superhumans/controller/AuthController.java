@@ -1,6 +1,7 @@
 package com.superhumans.controller;
 
 import com.superhumans.auth.JwtTokenProvider;
+import com.superhumans.auth.TokenRevocationService;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.service.AuthService;
@@ -23,6 +24,7 @@ public class AuthController {
 
     AuthService authService;
     JwtTokenProvider jwtTokenProvider;
+    TokenRevocationService tokenRevocationService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req, HttpServletRequest request) {
@@ -50,6 +52,11 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest request) {
+        String token = resolveToken(request);
+        if (token != null && jwtTokenProvider.validateToken(token)) {
+            tokenRevocationService.revoke(jwtTokenProvider.getJtiFromToken(token),
+                    jwtTokenProvider.getExpirationFromToken(token).toInstant());
+        }
         if (authentication != null && authentication.getCredentials() instanceof Long userId) {
             String role = authentication.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
@@ -66,5 +73,16 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
                 .build();
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String bearer = request.getHeader("Authorization");
+        if (bearer != null && bearer.startsWith("Bearer ")) return bearer.substring(7);
+        if (request.getCookies() != null) {
+            for (var cookie : request.getCookies()) {
+                if ("jwt".equals(cookie.getName())) return cookie.getValue();
+            }
+        }
+        return null;
     }
 }
