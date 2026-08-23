@@ -19,9 +19,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -94,6 +96,7 @@ class AuthServiceTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getBody()).isNull();
+        verify(passwordEncoder).matches("pass", anyString());
     }
 
     @Test
@@ -129,6 +132,24 @@ class AuthServiceTest {
         authService.login(req, "10.0.0.1");
 
         verify(auditService).logAuth(eq("LOGIN_FAILED"), isNull(), isNull(), eq("10.0.0.1"), any());
+    }
+
+    @Test
+    void login_afterFiveFailures_returnsTooManyRequestsAndAuditsBlock() {
+        LoginRequest req = new LoginRequest("unknown", "pass");
+        when(userRepository.findByLogin("unknown")).thenReturn(Optional.empty());
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(authService.login(req, "10.0.0.99").getStatusCode())
+                    .isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        ResponseEntity<LoginResponse> response = authService.login(req, "10.0.0.99");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        verify(auditService).logAuth(eq("LOGIN_BLOCKED"), isNull(), isNull(),
+                eq("10.0.0.99"), any());
+        verify(userRepository, times(5)).findByLogin("unknown");
     }
 
     @Test
