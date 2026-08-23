@@ -270,8 +270,11 @@ class ClinicalRbacIntegrationTest extends AbstractIntegrationTest {
     void wardWideAccess_isIntentional_doctor2WritesDoctor1OpenDay() {
         String doctor2 = loginAs("doctor2", "doctor123");
 
-        var res = restTemplate.exchange("/api/clinical-days/{id}/hourly-records", HttpMethod.POST,
-                authEntity(hourlyBody(15), doctor2), String.class, OPEN_DAY_DOCTOR1);
+        // Doctors hold SCALE_APACHE_SOFA/CAM-ICU_BRADEN_RASS (not VITALS_ENTER),
+        // so their ward-wide write path is a clinical note on the open day.
+        var res = restTemplate.exchange("/api/clinical-days/{id}/notes", HttpMethod.POST,
+                authEntity("{\"noteType\":\"exam\",\"text\":\"ward-wide\"}", doctor2),
+                String.class, OPEN_DAY_DOCTOR1);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }

@@ -22,7 +22,7 @@ import org.springframework.http.HttpStatus;
  * <p>Each mutating scenario owns a distinct seeded day so JUnit method order
  * never changes outcomes: b1111112 (signed, read-only asserts), b4444444
  * (reopen flow), b2222222 (full sign+PDF flow), b3333333 (failed-sign +
- * hourly writes).
+ * hourly writes), b1111111 (inline sign flow for the note boundary pin).
  */
 class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
 
@@ -34,6 +34,8 @@ class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
             UUID.fromString("b2222222-2222-2222-2222-222222222222");
     private static final UUID OPEN_DAY_HOURLY_WRITES =
             UUID.fromString("b3333333-3333-3333-3333-333333333333");
+    private static final UUID OPEN_DAY_SIGN_FLOW =
+            UUID.fromString("b1111111-1111-1111-1111-111111111111");
     private static final UUID EPISODE_ID =
             UUID.fromString("a1111111-1111-1111-1111-111111111111");
 
@@ -62,19 +64,28 @@ class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void nurseSignedDay_blocksNoteCreate_422() {
-        var res = restTemplate.exchange("/api/clinical-days/{id}/notes", HttpMethod.POST,
-                authEntity("{\"noteType\":\"exam\",\"text\":\"pin\"}", getDoctorToken()),
-                String.class, NURSE_SIGNED_DAY_MELNYK);
+    void doubleNurseSign_throws422() {
+        var res = restTemplate.exchange("/api/clinical-days/{id}/sign/nurse", HttpMethod.POST,
+                authEntity(new SignRequest(13L, "pin"), getNurseToken()), Void.class,
+                NURSE_SIGNED_DAY_MELNYK);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Test
-    void doubleNurseSign_throws422() {
-        var res = restTemplate.exchange("/api/clinical-days/{id}/sign/nurse", HttpMethod.POST,
+    void doctorSignedDay_blocksNoteCreate_422() {
+        // Notes stay writable on NURSE_SIGNED days by design (doctors document
+        // before their sign-off); the hard boundary is DOCTOR_SIGNED.
+        restTemplate.exchange("/api/clinical-days/{id}/sign/nurse", HttpMethod.POST,
                 authEntity(new SignRequest(13L, "pin"), getNurseToken()), Void.class,
-                NURSE_SIGNED_DAY_MELNYK);
+                OPEN_DAY_SIGN_FLOW);
+        restTemplate.exchange("/api/clinical-days/{id}/sign/doctor", HttpMethod.POST,
+                authEntity(new SignRequest(15L, "pin"), getHodToken()), Void.class,
+                OPEN_DAY_SIGN_FLOW);
+
+        var res = restTemplate.exchange("/api/clinical-days/{id}/notes", HttpMethod.POST,
+                authEntity("{\"noteType\":\"exam\",\"text\":\"pin\"}", getDoctorToken()),
+                String.class, OPEN_DAY_SIGN_FLOW);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
@@ -129,7 +140,7 @@ class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void duplicateRecordHour_returns409() {
+    void duplicateRecordHour_returnsDuplicateError() {
         String body = "{\"recordTime\":\"" + LocalDate.now().atTime(9, 30)
                 + "\",\"temperature\":36.6}";
         var first = restTemplate.exchange("/api/clinical-days/{id}/hourly-records",
@@ -140,7 +151,10 @@ class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
                 OPEN_DAY_HOURLY_WRITES);
 
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        // DuplicateHourlyRecordException (extends BusinessException) carries the
+        // DUPLICATE_HOURLY_RECORD code; the advice layer surfaces it as 422.
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(second.getBody()).contains("DUPLICATE_HOURLY_RECORD");
     }
 
     // ---- Login abuse characterization ----
@@ -158,7 +172,11 @@ class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
                 authGet(auditor), String.class);
 
         assertThat(audit.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(audit.getBody()).contains("sec-probe-");
+        // Audit rows record the action + IP, not the attempted login string.
+        // Exactly the probes from this class fail login: 25 here, plus up to 6
+        // from rateLimiter_locksAfterFiveFailures_sameLogin if it ran first.
+        assertThat(audit.getBody()).contains("\"action\":\"LOGIN_FAILED\"");
+        assertThat(audit.getBody()).containsPattern("\"totalElements\":(2[5-9]|3[01])");
     }
 
     @Test
