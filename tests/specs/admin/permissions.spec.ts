@@ -83,12 +83,29 @@ test.describe('Role & permission management', () => {
     const adminHeaders = await login(request, ADMIN);
     const nurseHeaders = await login(request, NURSE);
 
+    // Retry-safe cleanup: an ACTIVE episode for the patient (left by any
+    // earlier attempt) makes every create 422 EpisodeAlreadyActive regardless
+    // of the matrix. Close leftovers before and after the grant.
+    const closeActiveEpisodes = async () => {
+      const list = await request.get('/api/episodes?patientId=1&status=ACTIVE', {
+        headers: adminHeaders,
+      });
+      if (!list.ok()) return;
+      for (const ep of (await list.json()) as Array<{ id: string; version: number }>) {
+        await request.post(`/api/episodes/${ep.id}/close`, {
+          headers: adminHeaders,
+          data: { dischargeDate: new Date().toISOString().slice(0, 19), version: ep.version },
+        });
+      }
+    };
+    await closeActiveEpisodes();
+
     // Ensure a clean baseline (idempotent)
     await setNurseEpisodeCreate(request, adminHeaders, false);
 
     // Valid request body: argument validation runs before method security, so an
     // invalid body would yield 400 (validation) instead of 403 (denied).
-    const createBody = { patientId: 1, admissionDate: '2026-08-07T10:00:00' };
+    const createBody = { patientId: 1, admissionDate: new Date().toISOString().slice(0, 19) };
 
     // Baseline: nurse is blocked by the matrix
     const before = await request.post('/api/episodes', { headers: nurseHeaders, data: createBody });
@@ -100,6 +117,7 @@ test.describe('Role & permission management', () => {
     // The request now passes security end to end
     const granted = await request.post('/api/episodes', { headers: nurseHeaders, data: createBody });
     expect(granted.status()).toBe(201);
+    await closeActiveEpisodes();
 
     // Revoke again → blocked
     await setNurseEpisodeCreate(request, adminHeaders, false);
@@ -170,24 +188,39 @@ test.describe('Role & permission management', () => {
 
   test('UI matrix editor cycle on a non-MODULE code persists and flips enforcement', async ({ page, request }) => {
     const nurseHeaders = await login(request, NURSE);
+    const doctorHeaders = await login(request, { login: 'doctor1', password: 'doctor123' });
+
+    // Private clinical day (created by DOCTOR under the Kovalenko episode) so
+    // parallel projects writing hourly records on shared seed days can never
+    // collide with this test's duplicate-hour-sensitive writes.
+    const dayStart = new Date(Date.now() - 3600_000);
+    const dayEnd = new Date(Date.now() + 23 * 3600_000);
+    const createdDay = await request.post('/api/clinical-days', {
+      headers: doctorHeaders,
+      data: {
+        episodeId: 'a2222222-2222-2222-2222-222222222222',
+        startDateTime: dayStart.toISOString().slice(0, 19),
+        endDateTime: dayEnd.toISOString().slice(0, 19),
+      },
+    });
+    expect(createdDay.status()).toBe(201);
+    const dayId = ((await createdDay.json()) as { id: string }).id;
+
     // Valid hourly body — validation precedes method security. Each call uses a
     // distinct hour so successful writes never collide with the unique
     // (clinical_day_id, record_hour) constraint.
     let postVitalsCall = 0;
     const postVitals = async () => {
-      const res = request.post(
-        '/api/clinical-days/b3333333-3333-3333-3333-333333333333/hourly-records',
-        {
-          headers: nurseHeaders,
-          data: {
-            recordTime: new Date(Date.now() + postVitalsCall * 3600_000)
-              .toISOString()
-              .slice(0, 19),
-            temperature: 36.6,
-            heartRate: 80,
-          },
+      const res = request.post(`/api/clinical-days/${dayId}/hourly-records`, {
+        headers: nurseHeaders,
+        data: {
+          recordTime: new Date(dayStart.getTime() + postVitalsCall * 3600_000)
+            .toISOString()
+            .slice(0, 19),
+          temperature: 36.6,
+          heartRate: 80,
         },
-      );
+      });
       postVitalsCall += 1;
       return res;
     };
