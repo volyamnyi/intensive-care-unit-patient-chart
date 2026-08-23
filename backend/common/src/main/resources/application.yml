@@ -170,7 +170,7 @@ springdoc:
 
 server:
   ssl:
-    enabled: false
+    enabled: true
     key-store: classpath:keystore.p12
     key-store-password: ${SSL_KEYSTORE_PASSWORD}
     key-store-type: PKCS12
@@ -193,7 +193,3 @@ logging:
     org.springframework.mail: WARN
     org.eclipse.angus.mail: WARN
     jakarta.mail: WARN
-
-server:
-  ssl:
-    enabled: true
