@@ -103,6 +103,7 @@ class SecurityTokenIntegrationTest extends AbstractIntegrationTest {
                 .role(UserRole.PROSTHETIST)
                 .build();
         prosthetistUser.setId(21L);
+        prosthetistUser.setVersion(0);
         userRepository.save(prosthetistUser);
         String prosthetist = jwtTokenProvider.generateToken("prosthetist1", "PROSTHETIST", 21L);
 
