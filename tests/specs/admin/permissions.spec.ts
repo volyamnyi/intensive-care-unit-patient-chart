@@ -215,26 +215,37 @@ test.describe('Role & permission management', () => {
     // Baseline: NURSE holds SCALE_CAMICU_BRADEN_RASS / VITALS_ENTER by default.
     expect((await postNote()).status()).toBe(201);
 
-    // Drive the UI matrix editor: uncheck «Введення показників — Медсестра» and save.
+    // Drive the UI matrix editor: revoke ALL THREE nurse-held codes that gate
+    // note creation (hasAny SCALE_APACHE_SOFA / SCALE_CAMICU_BRADEN_RASS /
+    // VITALS_ENTER) and save.
     await page.goto('/admin');
     await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
-    const row = page.getByRole('checkbox', { name: 'Введення показників — Медсестра', exact: true });
-    await expect(row).toBeChecked({ timeout: 10000 });
-    await row.uncheck();
+    const rows = [
+      page.getByRole('checkbox', { name: 'Введення показників — Медсестра', exact: true }),
+      page.getByRole('checkbox', { name: 'Шкали APACHE II / SOFA — Медсестра', exact: true }),
+      page.getByRole('checkbox', { name: 'Шкали CAM-ICU / Браден / RASS — Медсестра', exact: true }),
+    ];
+    for (const row of rows) {
+      await expect(row).toBeChecked({ timeout: 10000 });
+      await row.uncheck();
+    }
     await page.getByRole('button', { name: 'Зберегти зміни' }).click();
     await expect(page.getByText(/Збережено змін/)).toBeVisible({ timeout: 10000 });
 
     // Reload proves persistence through the matrix table itself.
     await page.reload();
     await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
-    await expect(page.getByRole('checkbox', { name: 'Введення показників — Медсестра', exact: true }))
-      .not.toBeChecked({ timeout: 10000 });
+    for (const row of rows) {
+      await expect(row).not.toBeChecked({ timeout: 10000 });
+    }
 
     // Enforcement flipped immediately for the same nurse credentials.
     expect((await postNote()).status()).toBe(403);
 
     // Re-check via the UI, save, enforcement restored.
-    await row.check();
+    for (const row of rows) {
+      await row.check();
+    }
     await page.getByRole('button', { name: 'Зберегти зміни' }).click();
     await expect(page.getByText(/Збережено змін/)).toBeVisible({ timeout: 10000 });
     expect((await postNote()).status()).toBe(201);
@@ -274,6 +285,9 @@ test.describe('Role & permission management', () => {
     // Restore the default matrix even if the test failed mid-way
     const adminHeaders = await login(request, ADMIN);
     await setNurseEpisodeCreate(request, adminHeaders, false);
+    for (const code of ['VITALS_ENTER','SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS']) {
+      await request.put('/api/admin/permissions', { headers: adminHeaders, data: { role: 'NURSE', permissionCode: code, granted: true } });
+    }
     await setAdminModuleAccess(request, adminHeaders, 'MODULE_ICU_ACCESS', false);
     await setAdminModuleAccess(request, adminHeaders, 'MODULE_MEDICATION_ACCESS', false);
   });
