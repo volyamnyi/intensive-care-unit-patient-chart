@@ -51,7 +51,7 @@ class MisWireMockIntegrationTest {
         client = new MisApiClient(
                 new org.springframework.web.client.RestTemplate(),
                 new tools.jackson.databind.ObjectMapper());
-        setField(client, "misBaseUrl", wireMockServer.baseUrl() + "/api/run");
+        setField(client, "misBaseUrl", wireMockServer.baseUrl());
         setField(client, "installationGuid", "test-installation-guid");
         setField(client, "login", "integration");
 
