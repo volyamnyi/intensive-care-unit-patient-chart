@@ -166,9 +166,11 @@ class MisParityTest {
         for (String name : List.of("orderCategories", "noteTypes", "consciousness")) {
             List<DictionaryItemDTO> fromWiremock = wiremock.getDictionary(name);
             List<DictionaryItemDTO> fromMock = mock.getDictionary(name);
+            // DictionaryItemDTO has no equals override — compare field-wise.
             assertThat(fromWiremock)
                     .as("dictionary '%s' must be identical across implementations", name)
-                    .containsExactlyElementsOf(fromMock);
+                    .usingRecursiveComparison()
+                    .isEqualTo(fromMock);
         }
     }
 
