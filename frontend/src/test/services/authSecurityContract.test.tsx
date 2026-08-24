@@ -123,6 +123,13 @@ describe('localStorage credential contract', () => {
 });
 
 describe('PrescriptionPage list-create gating', () => {
+  // MedicineSearchInput registers 150ms blur timers; let them fire while the
+  // jsdom window still exists so they don't escape as unhandled errors after
+  // the environment is torn down.
+  afterEach(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  });
+
   const fullPatient = {
     id: 1001,
     fullName: 'Петренко Андрій',
