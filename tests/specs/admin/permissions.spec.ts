@@ -238,15 +238,15 @@ test.describe('Role & permission management', () => {
     // …and confirm enforcement flipped immediately for the same credentials.
     expect((await postNote()).status()).toBe(403);
 
-    // Re-grant and confirm recovery.
-    for (const code of CODES) {
-      await setNurseCode(code, true);
-    }
+    // Re-grant the default-held code and confirm recovery.
+    await setNurseCode('VITALS_ENTER', true);
     expect((await postNote()).status()).toBe(201);
 
-    // The audit trail shows both sides of the cycle in the admin UI tab.
+    // The audit trail shows both sides of the cycle in the admin UI tab
+    // (the table renders only after «Переглянути»).
     await page.goto('/admin');
     await page.getByRole('tab', { name: 'Журнал аудиту' }).click();
+    await page.getByRole('button', { name: 'Переглянути' }).click();
     await expect(page.getByText(/PERMISSION_REVOKE/).first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/PERMISSION_GRANT/).first()).toBeVisible({ timeout: 15000 });
   });
@@ -275,12 +275,29 @@ test.describe('Role & permission management', () => {
     }
   });
 
+  const setNurseCode = async (request: APIRequestContext, adminHeaders: Record<string, string>, code: string, granted: boolean) => {
+    const res = await request.put('/api/admin/permissions', {
+      headers: adminHeaders,
+      data: { role: 'NURSE', permissionCode: code, granted },
+    });
+    expect(res.ok()).toBeTruthy();
+  };
+
   test.afterEach(async ({ request }) => {
-    // Restore the default matrix even if the test failed mid-way
+    // Restore the DEFAULT matrix even if a test failed mid-way
+    // (VITALS_ENTER + SCALE_CAMICU_BRADEN_RASS are default nurse grants;
+    // EPISODE_CREATE / SCALE_APACHE_SOFA / MODULE_* are not).
     const adminHeaders = await login(request, ADMIN);
     await setNurseEpisodeCreate(request, adminHeaders, false);
-    for (const code of ['VITALS_ENTER','SCALE_APACHE_SOFA','SCALE_CAMICU_BRADEN_RASS']) {
-      await request.put('/api/admin/permissions', { headers: adminHeaders, data: { role: 'NURSE', permissionCode: code, granted: true } });
+    for (const [code, granted] of [
+      ['VITALS_ENTER', true],
+      ['SCALE_CAMICU_BRADEN_RASS', true],
+      ['SCALE_APACHE_SOFA', false],
+    ] as Array<[string, boolean]>) {
+      await request.put('/api/admin/permissions', {
+        headers: adminHeaders,
+        data: { role: 'NURSE', permissionCode: code, granted },
+      });
     }
     await setAdminModuleAccess(request, adminHeaders, 'MODULE_ICU_ACCESS', false);
     await setAdminModuleAccess(request, adminHeaders, 'MODULE_MEDICATION_ACCESS', false);
