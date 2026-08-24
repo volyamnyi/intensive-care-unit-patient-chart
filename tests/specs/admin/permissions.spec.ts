@@ -85,15 +85,18 @@ test.describe('Role & permission management', () => {
 
     // Retry-safe cleanup: an ACTIVE episode for the patient (left by any
     // earlier attempt) makes every create 422 EpisodeAlreadyActive regardless
-    // of the matrix. Close leftovers before and after the grant.
+    // of the matrix. Close leftovers before and after the grant. Uses DOCTOR
+    // credentials — /api/episodes reads are clinical-core-gated and admins
+    // hold neither the role nor MODULE_ICU_ACCESS by default.
+    const doctorHeaders = await login(request, { login: 'doctor1', password: 'doctor123' });
     const closeActiveEpisodes = async () => {
       const list = await request.get('/api/episodes?patientId=1&status=ACTIVE', {
-        headers: adminHeaders,
+        headers: doctorHeaders,
       });
       if (!list.ok()) return;
       for (const ep of (await list.json()) as Array<{ id: string; version: number }>) {
         await request.post(`/api/episodes/${ep.id}/close`, {
-          headers: adminHeaders,
+          headers: doctorHeaders,
           data: { dischargeDate: new Date().toISOString().slice(0, 19), version: ep.version },
         });
       }
