@@ -28,7 +28,8 @@ import java.util.List;
     "app.scheduling.signing-window-enabled=false",
     "server.ssl.enabled=false",
     "app.mis.wiremock-enabled=true",
-    "app.mis.embedded-wiremock-enabled=true"
+    "app.mis.embedded-wiremock-enabled=true",
+    "app.mis.wiremock-port=0"
 })
 @AutoConfigureTestRestTemplate
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test-core.sql",

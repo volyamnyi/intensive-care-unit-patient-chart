@@ -21,7 +21,8 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = {
         "server.ssl.enabled=false",
         "app.seed-data.enabled=false",
-        "app.jwt.secret=cHJvZC10ZXN0LXNlY3JldC12YWx1ZS1mb3Itc3dhZ2dlci1nYXRlLTAwMDAwMDA"
+        "app.jwt.secret=cHJvZC10ZXN0LXNlY3JldC12YWx1ZS1mb3Itc3dhZ2dlci1nYXRlLTAwMDAwMDA",
+        "app.mis.embedded-wiremock-enabled=false"
 })
 @ActiveProfiles("prod")
 class ProdSwaggerGatingIntegrationTest extends AbstractIntegrationTest {

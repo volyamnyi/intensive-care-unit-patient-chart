@@ -30,7 +30,9 @@ import org.springframework.test.context.jdbc.SqlConfig;
     "app.scheduling.signing-window-start=0",
     "app.scheduling.signing-window-end=23",
     "app.scheduling.signing-window-enabled=false",
-    "server.ssl.enabled=false"
+    "server.ssl.enabled=false",
+    "app.mis.wiremock-enabled=true",
+    "app.mis.embedded-wiremock-enabled=false"
 })
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:data-test-core.sql",
      config = @SqlConfig(dataSource = "coreDataSource"))
