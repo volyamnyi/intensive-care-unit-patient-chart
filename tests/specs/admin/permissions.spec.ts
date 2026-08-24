@@ -116,7 +116,13 @@ test.describe('Role & permission management', () => {
 
     // The request now passes security end to end
     const granted = await request.post('/api/episodes', { headers: nurseHeaders, data: createBody });
-    expect(granted.status()).toBe(201);
+    if (granted.status() !== 201) {
+      if (granted.status() !== 201) {
+      throw new Error(
+        'episode create returned ' + granted.status() + ': ' + (await granted.text()),
+      );
+    }
+    }
     await closeActiveEpisodes();
 
     // Revoke again → blocked
@@ -188,45 +194,23 @@ test.describe('Role & permission management', () => {
 
   test('UI matrix editor cycle on a non-MODULE code persists and flips enforcement', async ({ page, request }) => {
     const nurseHeaders = await login(request, NURSE);
-    const doctorHeaders = await login(request, { login: 'doctor1', password: 'doctor123' });
 
-    // Private clinical day (created by DOCTOR under the Kovalenko episode) so
-    // parallel projects writing hourly records on shared seed days can never
-    // collide with this test's duplicate-hour-sensitive writes.
-    const dayStart = new Date(Date.now() - 3600_000);
-    const dayEnd = new Date(Date.now() + 23 * 3600_000);
-    const createdDay = await request.post('/api/clinical-days', {
-      headers: doctorHeaders,
-      data: {
-        episodeId: 'a2222222-2222-2222-2222-222222222222',
-        startDateTime: dayStart.toISOString().slice(0, 19),
-        endDateTime: dayEnd.toISOString().slice(0, 19),
-      },
-    });
-    expect(createdDay.status()).toBe(201);
-    const dayId = ((await createdDay.json()) as { id: string }).id;
-
-    // Valid hourly body — validation precedes method security. Each call uses a
-    // distinct hour so successful writes never collide with the unique
-    // (clinical_day_id, record_hour) constraint.
-    let postVitalsCall = 0;
-    const postVitals = async () => {
-      const res = request.post(`/api/clinical-days/${dayId}/hourly-records`, {
+    // Enforcement probe: clinical-note creation on the seeded OPEN day.
+    // Notes carry no uniqueness constraints and stay writable on
+    // NURSE_SIGNED days, so parallel projects writing hourly records on
+    // shared days can never collide with this probe. The gate family is the
+    // same: hasAny(SCALE_*, VITALS_ENTER).
+    let noteSeq = 0;
+    const postNote = async () => {
+      const res = request.post('/api/clinical-days/b3333333-3333-3333-3333-333333333333/notes', {
         headers: nurseHeaders,
-        data: {
-          recordTime: new Date(dayStart.getTime() + postVitalsCall * 3600_000)
-            .toISOString()
-            .slice(0, 19),
-          temperature: 36.6,
-          heartRate: 80,
-        },
+        data: { noteType: 'rbac-cycle', text: `probe-${Date.now()}-${noteSeq++}` },
       });
-      postVitalsCall += 1;
       return res;
     };
 
-    // Baseline: NURSE holds VITALS_ENTER by default → write succeeds (201).
-    expect((await postVitals()).status()).toBe(201);
+    // Baseline: NURSE holds SCALE_CAMICU_BRADEN_RASS / VITALS_ENTER by default.
+    expect((await postNote()).status()).toBe(201);
 
     // Drive the UI matrix editor: uncheck «Введення показників — Медсестра» and save.
     await page.goto('/admin');
@@ -244,13 +228,13 @@ test.describe('Role & permission management', () => {
       .not.toBeChecked({ timeout: 10000 });
 
     // Enforcement flipped immediately for the same nurse credentials.
-    expect((await postVitals()).status()).toBe(403);
+    expect((await postNote()).status()).toBe(403);
 
     // Re-check via the UI, save, enforcement restored.
     await row.check();
     await page.getByRole('button', { name: 'Зберегти зміни' }).click();
     await expect(page.getByText(/Збережено змін/)).toBeVisible({ timeout: 10000 });
-    expect((await postVitals()).status()).toBe(201);
+    expect((await postNote()).status()).toBe(201);
 
     // The audit trail shows both sides of the cycle.
     await page.getByRole('tab', { name: 'Журнал аудиту' }).click();
