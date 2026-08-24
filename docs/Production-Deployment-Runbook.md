@@ -136,7 +136,8 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_DATASOURCE_ICU_URL/USERNAME/PASSWORD` | … `my_fullstack_icu` | |
 | `APP_DATASOURCE_MED_URL/USERNAME/PASSWORD` | … `my_fullstack_med` | |
 | `APP_DATASOURCE_PROSTH_URL/USERNAME/PASSWORD` | … `my_fullstack_prosth` | |
-| `APP_JWT_SECRET` | `openssl rand -base64 64` | Замінити дев-секрет з `application.yml:43` |
+| `APP_JWT_SECRET` | `openssl rand -base64 64` | Замінити дев-секрет з `application.yml:43`; `JwtSecretGuard` падає на старті в `prod`, якщо стоїть дев-дефолт (A1) |
+| `APP_CORS_ALLOWED_ORIGINS` | `https://<домен>` (кома-список) | Точний allowlist для credentialed CORS; дефолт — лише localhost (#184/F5) |
 | `APP_SEED_DATA_ENABLED` | **`false`** | Критично — інакше демо-дані |
 | `APP_MIS_MOCK_ENABLED` | `false` | Не MockMisServiceImpl |
 | `APP_MIS_WIREMOCK_ENABLED` | `true` | WireMockMisServiceImpl (див. 1.5) |

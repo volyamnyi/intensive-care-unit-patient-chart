@@ -158,7 +158,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 - `/prosthetics/*` → Prosthetics manufacturing
 - `/admin/*` → Admin
 
-- JWT auth stored in `localStorage`.
+- JWT auth delivered via an **httpOnly `jwt` cookie** (SameSite=Lax) set on login and cleared on logout; axios uses `withCredentials: true` with no Authorization header. `localStorage` holds only a lightweight `auth:session` flag - never the token.
 - Backend port: **8085** (`application.yml`).
 - **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (15 SQL changesets total: core 4, icu 6, med 1, prosth 4 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`):
 
@@ -234,7 +234,7 @@ The complete development loop:
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | `backend-test-results` (surefire-reports) |
 | `backend-integration` | `mvn test -Pintegration-test` | `backend-integration-results` |
 | `frontend-test` | Vitest + production build | `vitest-coverage` |
-| `e2e-test` | Playwright (64 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
+| `e2e-test` | Playwright (67 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
 | `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
 
 ### Exit criteria
@@ -259,20 +259,20 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (667 tests across 79 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (674 tests across 80 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (64 spec files) |
+| `npx playwright test` | Run all E2E tests (67 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
 - **Backend**: 348 main sources / 115 test files across the multi-module reactor (common 119/10, icu-chart 84/62, medication-sheet 61/20, prosthesis-manufacturing 84/22, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 667 Vitest tests across 79 test files (131 TS/TSX sources). Run with `npm t`.
-- **E2E**: 64 Playwright spec files (292 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Frontend**: 674 Vitest tests across 80 test files (131 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **E2E**: 67 Playwright spec files (304 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -373,7 +373,7 @@ AuditLog (standalone, no BaseEntity)
 
 | Enum | Values |
 |---|---|
-| `UserRole` | DOCTOR, NURSE, HEAD_OF_DEPARTMENT, ADMINISTRATOR, AUDITOR, PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
+| `UserRole` | DOCTOR, NURSE, HEAD_OF_DEPARTMENT, ADMINISTRATOR, AUDITOR, ADJACENT_SPECIALIST, PROSTHETIST, PROSTHETICS_ADMINISTRATOR |
 | `EpisodeStatus` | DRAFT, ACTIVE, COMPLETED, ARCHIVED |
 | `ClinicalDayStatus` | OPEN, NURSE_SIGNED, DOCTOR_SIGNED, CLOSED, REOPENED |
 | `MedicalOrderStatus` | DRAFT, ACTIVE, COMPLETED, CANCELLED |
@@ -579,7 +579,7 @@ All endpoints prefixed with `/api`.
 
 ### Auth (`frontend/src/services/AuthContext.tsx`)
 - `AuthProvider` with user/token state, login/logout, role checking
-- Token persisted in `localStorage`
+- Session flag persisted in `localStorage` (`auth:session`; the JWT itself lives in the httpOnly cookie)
 - Guards in `App.tsx` via `Guard` component and `LoginRoute`/`RoleRedirect`
 
 ## DTOs
