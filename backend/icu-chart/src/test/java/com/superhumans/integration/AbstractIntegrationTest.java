@@ -2,6 +2,7 @@ package com.superhumans.integration;
 
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
+import com.superhumans.mis.MisService;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
 import java.util.List;
@@ -38,6 +40,10 @@ import java.util.List;
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-prescription.sql",
      config = @SqlConfig(dataSource = "medDataSource", separator = "GO"))
 public abstract class AbstractIntegrationTest {
+
+    /** Stub MisService — prevents context failure when no external MIS server is running. */
+    @MockitoBean
+    protected MisService misService;
 
     @LocalServerPort
     protected int port;
