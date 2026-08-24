@@ -19,7 +19,7 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.mis.wiremock-enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "app.mis.wiremock-enabled", havingValue = "true", matchIfMissing = false)
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class WireMockMisServiceImpl implements MisService {
 

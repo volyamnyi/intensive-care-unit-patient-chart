@@ -72,8 +72,11 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
 
   mis:
-    mock-enabled: true
-    wiremock-enabled: false
+    mock-enabled: false
+    wiremock-enabled: true
+    embedded-wiremock-enabled: true
+    wiremock-port: 9090
+    wiremock-url: ${APP_MIS_WIREMOCK_URL:http://localhost:9090}
 
   api:
     title: ICU Patient Chart API
@@ -178,6 +181,10 @@ server:
 app:
   seed-data:
     enabled: false
+
+  mis:
+    embedded-wiremock-enabled: false
+    wiremock-url: ${APP_MIS_WIREMOCK_URL:http://localhost:9090}
 
 logging:
   level:
