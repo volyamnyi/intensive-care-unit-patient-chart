@@ -25,6 +25,8 @@ import java.util.List;
     "app.scheduling.signing-window-end=23",
     "app.scheduling.signing-window-enabled=false",
     "server.ssl.enabled=false",
+    "app.mis.mock-enabled=true",
+    "app.mis.wiremock-enabled=false",
     "app.mis.embedded-wiremock-enabled=false"
 })
 @AutoConfigureTestRestTemplate
