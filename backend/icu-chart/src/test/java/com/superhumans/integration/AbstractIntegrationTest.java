@@ -81,15 +81,23 @@ public abstract class AbstractIntegrationTest {
     }
 
     /** Lenient MIS stubs so controllers return proper responses without an external server. */
+    @SuppressWarnings("unchecked")
     void stubMisServiceDefaults() {
+        var allPatients = List.of(
+                PatientDTO.builder().id(1001L).fullName("Петренко Іван Сергійович")
+                        .birthDate(LocalDate.of(1978, 3, 15)).sexCode("MAL").build(),
+                PatientDTO.builder().id(1002L).fullName("Коваленко Олена Вікторівна")
+                        .birthDate(LocalDate.of(1985, 11, 22)).sexCode("FEM").build(),
+                PatientDTO.builder().id(1003L).fullName("Сидоренко Василь Петрович")
+                        .birthDate(LocalDate.of(1962, 7, 8)).sexCode("MAL").build());
         org.mockito.Mockito.lenient().when(misService.searchPatients(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(List.of(
-                        PatientDTO.builder().id(1001L).fullName("Петренко Іван Сергійович")
-                                .birthDate(LocalDate.of(1978, 3, 15)).sexCode("MAL").build(),
-                        PatientDTO.builder().id(1002L).fullName("Коваленко Олена Вікторівна")
-                                .birthDate(LocalDate.of(1985, 11, 22)).sexCode("FEM").build(),
-                        PatientDTO.builder().id(1003L).fullName("Сидоренко Василь Петрович")
-                                .birthDate(LocalDate.of(1962, 7, 8)).sexCode("MAL").build()));
+                .thenAnswer(inv -> {
+                    String query = inv.getArgument(0);
+                    if (query == null || query.isBlank()) return allPatients;
+                    return allPatients.stream()
+                            .filter(p -> p.getFullName().toLowerCase().contains(query.toLowerCase()))
+                            .toList();
+                });
         org.mockito.Mockito.lenient().when(misService.getPatient(1001L))
                 .thenReturn(Optional.of(PatientDTO.builder().id(1001L)
                         .fullName("Петренко Іван Сергійович")

@@ -1,12 +1,30 @@
 package com.superhumans.integration;
 
 import com.superhumans.mis.dto.UserMisDTO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 class MisUserIntegrationTest extends AbstractIntegrationTest {
+
+    @BeforeEach
+    void setUpMisStubs() {
+        when(misService.getUser(11L)).thenReturn(Optional.of(UserMisDTO.builder()
+                .id(11L).login("doctor1").fullName("Олександр Мельник")
+                .specialityCode("101").build()));
+        when(misService.getUser(13L)).thenReturn(Optional.of(UserMisDTO.builder()
+                .id(13L).login("nurse1").fullName("Олена Ткаченко")
+                .specialityCode("201").build()));
+        when(misService.getUser(15L)).thenReturn(Optional.of(UserMisDTO.builder()
+                .id(15L).login("head1").fullName("Василь Гончарук")
+                .specialityCode("301").build()));
+        when(misService.getUser(9999L)).thenReturn(Optional.empty());
+    }
 
     @Test
     void getUser_returnsDoctorUser() {
