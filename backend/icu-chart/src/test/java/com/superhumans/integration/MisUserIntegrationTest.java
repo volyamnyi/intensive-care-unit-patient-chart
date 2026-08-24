@@ -1,9 +1,11 @@
 package com.superhumans.integration;
 
+import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.UserMisDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.*;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.Optional;
 
@@ -11,6 +13,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 class MisUserIntegrationTest extends AbstractIntegrationTest {
+
+    @MockitoBean
+    MisService misService;
 
     @BeforeEach
     void setUpMisStubs() {

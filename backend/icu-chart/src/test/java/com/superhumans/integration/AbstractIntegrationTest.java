@@ -2,10 +2,6 @@ package com.superhumans.integration;
 
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
-import com.superhumans.mis.MisService;
-import com.superhumans.mis.dto.PatientDTO;
-import com.superhumans.mis.dto.UserMisDTO;
-import com.superhumans.mis.dto.DepartmentDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,13 +12,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
-
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 
 
@@ -46,10 +38,6 @@ import java.util.Optional;
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-prescription.sql",
      config = @SqlConfig(dataSource = "medDataSource", separator = "GO"))
 public abstract class AbstractIntegrationTest {
-
-    /** Stub MisService — tests needing specific MIS data can override via Mockito.when. */
-    @MockitoBean
-    protected MisService misService;
 
     @LocalServerPort
     protected int port;
@@ -77,47 +65,6 @@ public abstract class AbstractIntegrationTest {
         nurseToken = null;
         hodToken = null;
         adminToken = null;
-        stubMisServiceDefaults();
-    }
-
-    /** Lenient MIS stubs so controllers return proper responses without an external server. */
-    @SuppressWarnings("unchecked")
-    void stubMisServiceDefaults() {
-        var allPatients = List.of(
-                PatientDTO.builder().id(1001L).fullName("Петренко Іван Сергійович")
-                        .birthDate(LocalDate.of(1978, 3, 15)).sexCode("MAL").build(),
-                PatientDTO.builder().id(1002L).fullName("Коваленко Олена Вікторівна")
-                        .birthDate(LocalDate.of(1985, 11, 22)).sexCode("FEM").build(),
-                PatientDTO.builder().id(1003L).fullName("Сидоренко Василь Петрович")
-                        .birthDate(LocalDate.of(1962, 7, 8)).sexCode("MAL").build());
-        org.mockito.Mockito.lenient().when(misService.searchPatients(org.mockito.ArgumentMatchers.any()))
-                .thenAnswer(inv -> {
-                    String query = inv.getArgument(0);
-                    if (query == null || query.isBlank()) return allPatients;
-                    return allPatients.stream()
-                            .filter(p -> p.getFullName().toLowerCase().contains(query.toLowerCase()))
-                            .toList();
-                });
-        org.mockito.Mockito.lenient().when(misService.getPatient(1001L))
-                .thenReturn(Optional.of(PatientDTO.builder().id(1001L)
-                        .fullName("Петренко Іван Сергійович")
-                        .birthDate(LocalDate.of(1978, 3, 15)).sexCode("MAL").build()));
-        org.mockito.Mockito.lenient().when(misService.getUser(org.mockito.ArgumentMatchers.any()))
-                .thenAnswer(inv -> Optional.of(UserMisDTO.builder()
-                        .id((Long) inv.getArgument(0))
-                        .login("doctor" + inv.getArgument(0))
-                        .fullName("Тестовий користувач")
-                        .specialityCode("101").build()));
-        org.mockito.Mockito.lenient().when(misService.getDepartmentUsers(org.mockito.ArgumentMatchers.any()))
-                .thenAnswer(inv -> List.of(
-                        UserMisDTO.builder().id(11L).login("doctor1").fullName("Олександр Мельник")
-                                .departmentId((Long) inv.getArgument(0)).build(),
-                        UserMisDTO.builder().id(13L).login("nurse1").fullName("Олена Ткаченко")
-                                .departmentId((Long) inv.getArgument(0)).build()));
-        org.mockito.Mockito.lenient().when(misService.getDepartments())
-                .thenReturn(List.of(
-                        DepartmentDTO.builder().id(1L).name("Відділення анестезіології та інтенсивної терапії").code("VAIT").build(),
-                        DepartmentDTO.builder().id(2L).name("Хірургічне відділення").code("SURG").build()));
     }
 
     protected String loginAs(String login, String password) {
