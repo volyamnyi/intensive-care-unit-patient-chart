@@ -233,7 +233,7 @@ class MisParityTest {
                 MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/patient_allergy.json"));
         org.mockito.Mockito.when(mockClient.callMethod(
                 org.mockito.ArgumentMatchers.eq("spzIBPatientAllergy"),
-                any(), any()))
+                org.mockito.ArgumentMatchers.any(MisApiClient.Param[].class)))
                 .thenReturn(allergyFixture);
 
         WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(mockClient,
