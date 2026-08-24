@@ -8,13 +8,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * MIS implementation wiring: mutual-exclusion fail-fast validation.
+ * MIS implementation wiring: WireMock is the single active implementation.
  * <p>
- * Ensures that exactly one of {@code app.mis.mock-enabled} or
- * {@code app.mis.wiremock-enabled} is active at startup. Both {@code true}
- * would produce an ambiguous {@code MisService} bean; both {@code false}
- * leaves the application without patient/user data. Also validates that
- * embedded WireMock is only enabled alongside the WireMock implementation.
+ * Validates that {@code app.mis.wiremock-enabled} is active at startup
+ * and that embedded WireMock is only enabled alongside the WireMock
+ * implementation.
  */
 @Slf4j
 @Configuration
@@ -26,48 +24,36 @@ public class MisServiceConfig {
     }
 
     @Bean
-    public MisMutualExclusionGuard misMutualExclusionGuard(
-            @Value("${app.mis.mock-enabled:false}") boolean mockEnabled,
+    public MisWireMockEnabledGuard misWireMockEnabledGuard(
             @Value("${app.mis.wiremock-enabled:true}") boolean wiremockEnabled,
             @Value("${app.mis.embedded-wiremock-enabled:false}") boolean embeddedWiremockEnabled) {
-        return new MisMutualExclusionGuard(mockEnabled, wiremockEnabled, embeddedWiremockEnabled);
+        return new MisWireMockEnabledGuard(wiremockEnabled, embeddedWiremockEnabled);
     }
 
-    /** Fail-fast guard: refuses startup on invalid MIS flag combinations. */
+    /** Fail-fast guard: refuses startup when MIS is not properly configured. */
     @Slf4j
-    public static class MisMutualExclusionGuard implements InitializingBean {
+    public static class MisWireMockEnabledGuard implements InitializingBean {
 
-        private final boolean mockEnabled;
         private final boolean wiremockEnabled;
         private final boolean embeddedWiremockEnabled;
 
-        MisMutualExclusionGuard(boolean mockEnabled, boolean wiremockEnabled,
-                                boolean embeddedWiremockEnabled) {
-            this.mockEnabled = mockEnabled;
+        MisWireMockEnabledGuard(boolean wiremockEnabled, boolean embeddedWiremockEnabled) {
             this.wiremockEnabled = wiremockEnabled;
             this.embeddedWiremockEnabled = embeddedWiremockEnabled;
         }
 
         @Override
         public void afterPropertiesSet() {
-            if (mockEnabled && wiremockEnabled) {
+            if (!wiremockEnabled) {
                 throw new IllegalStateException(
-                        "Обидві реалізації MIS увімкнені одночасно (app.mis.mock-enabled=true "
-                                + "та app.mis.wiremock-enabled=true). Оберіть одну.");
+                        "MIS не увімкнена (app.mis.wiremock-enabled=false). "
+                                + "WireMock — єдина реалізація, увімкніть її.");
             }
-            if (!mockEnabled && !wiremockEnabled) {
-                throw new IllegalStateException(
-                        "Жодна реалізація MIS не увімкнена (app.mis.mock-enabled=false "
-                                + "та app.mis.wiremock-enabled=false). Увімкніть одну.");
+            if (embeddedWiremockEnabled) {
+                log.info("MIS implementation: WireMock (embedded server)");
+            } else {
+                log.info("MIS implementation: WireMock (external server)");
             }
-            if (embeddedWiremockEnabled && !wiremockEnabled) {
-                throw new IllegalStateException(
-                        "app.mis.embedded-wiremock-enabled=true вимагає "
-                                + "app.mis.wiremock-enabled=true.");
-            }
-            log.info("MIS implementation: {}{}",
-                    mockEnabled ? "Mock" : "WireMock",
-                    embeddedWiremockEnabled ? " (embedded server)" : "");
         }
     }
 }

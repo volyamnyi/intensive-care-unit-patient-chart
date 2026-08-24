@@ -123,7 +123,7 @@
 └──────────────┘                      └──────┬───────┘               └────────────┘
                                              │
                                      ┌───────┴───────┐
-                                     │  MockMisService│
+                                     │  WireMockMisService│
                                      │  (or real MIS) │
                                      └───────────────┘
 ```
@@ -225,7 +225,8 @@ app:
     secret: <base64-secret>
     expiration-ms: 86400000
   mis:
-    mock-enabled: true
+    wiremock-enabled: true
+    embedded-wiremock-enabled: true
 ```
 
 Every datasource can be overridden with environment variables: `APP_DATASOURCE_<CORE|ICU|MED|PROSTH>_<URL|USERNAME|PASSWORD>`. Schema is managed per DB by Liquibase (`db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml`).

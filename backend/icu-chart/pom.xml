@@ -41,24 +41,8 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.itextpdf</groupId>
-            <artifactId>itext-core</artifactId>
-            <version>${itext.version}</version>
-            <type>pom</type>
-        </dependency>
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
             <groupId>com.superhumans</groupId>
             <artifactId>medication-sheet</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.superhumans</groupId>
-            <artifactId>prosthesis-manufacturing</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

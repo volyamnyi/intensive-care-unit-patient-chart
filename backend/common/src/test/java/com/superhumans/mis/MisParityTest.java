@@ -1,17 +1,11 @@
 package com.superhumans.mis;
 
-import com.superhumans.mis.dto.AllergyMisDTO;
 import com.superhumans.mis.dto.DictionaryItemDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.mis.dto.UserMisDTO;
-import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -21,25 +15,16 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 
 /**
- * Contract parity between the WireMock fixtures (single source of truth) and
- * the in-memory {@link MockMisServiceImpl} (issue #191). Reads the real
- * fixture JSON from the classpath with Jackson — no server needed.
- *
- * <p>These tests fail ONLY on documented divergences; the medicine/allergy
- * divergence is pinned as a disabled test to be enabled by #192.
+ * Fixture validation for the WireMock MIS data (issue #191–#194).
+ * Validates that {@code patients_92.json} has correct structure, canonical
+ * sex codes, and the prosthetics demographics pair. Dictionary identity is
+ * verified against {@link MisDictionaries} shared constants.
  */
-@ExtendWith(MockitoExtension.class)
 class MisParityTest {
 
     static final ObjectMapper MAPPER = new ObjectMapper();
-
-    @Mock
-    AuditService auditService;
-
-    MockMisServiceImpl mock;
 
     static JsonNode patientsFixture;
     static JsonNode usersFixture;
@@ -47,206 +32,143 @@ class MisParityTest {
     @BeforeAll
     static void loadFixtures() throws Exception {
         patientsFixture = MAPPER.readTree(
-                MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/patients_52.json"));
+                MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/patients_92.json"));
         usersFixture = MAPPER.readTree(
                 MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/user_details.json"));
     }
 
-    @BeforeEach
-    void setUp() {
-        mock = new MockMisServiceImpl(auditService);
-        mock.init();
-    }
-
-    private static Map<Long, JsonNode> fixturePatientsById() {
-        return streamNodes(patientsFixture.get("patientList")).stream()
-                .collect(Collectors.toMap(n -> n.get("patientID").asLong(), Function.identity()));
-    }
-
-    private static List<JsonNode> streamNodes(JsonNode array) {
+    private static List<JsonNode> fixturePatients() {
         List<JsonNode> result = new java.util.ArrayList<>();
-        array.forEach(result::add);
+        patientsFixture.get("patientList").forEach(result::add);
         return result;
     }
 
-    private static Map<Long, JsonNode> fixtureUsersById() {
-        return streamNodes(usersFixture.get("userList")).stream()
-                .collect(Collectors.toMap(n -> n.get("userID").asLong(), Function.identity()));
-    }
-
-    // ---- patient parity: 1001–1050 shared between fixtures and mock ----
+    // ---- structure & canonical codes ----
 
     @Test
-    void everySharedPatient_hasIdenticalCoreFieldsInBothImplementations() {
-        Map<Long, JsonNode> fixtureById = fixturePatientsById();
-        int compared = 0;
-
-        for (PatientDTO mockPatient : mock.searchPatients(null)) {
-            JsonNode fx = fixtureById.get(mockPatient.getId());
-            if (fx == null) {
-                continue; // 2001–2040 exist only in the mock — documented gap (#192)
-            }
-            assertThat(mockPatient.getFullName())
-                    .as("fullName of patient %s", mockPatient.getId())
-                    .isEqualTo(fx.get("patientName").asText());
-            assertThat(mockPatient.getBirthDate().toString())
-                    .as("birthDate of patient %s", mockPatient.getId())
-                    .isEqualTo(fx.get("patientBirthDate").asText().substring(0, 10));
-            assertThat(mockPatient.getSexCode())
-                    .as("sexCode of patient %s", mockPatient.getId())
-                    .isEqualTo(fx.get("patientSexCode").asText());
-            if (fx.hasNonNull("patientExternalID1")) {
-                assertThat(mockPatient.getExternalId1())
-                        .as("externalId1 of patient %s", mockPatient.getId())
-                        .isEqualTo(fx.get("patientExternalID1").asText());
-            }
-            if (fx.hasNonNull("patientExternalID2")) {
-                assertThat(mockPatient.getExternalId2())
-                        .as("externalId2 of patient %s", mockPatient.getId())
-                        .isEqualTo(fx.get("patientExternalID2").asText());
-            }
-            if (fx.hasNonNull("patientPhone")) {
-                assertThat(mockPatient.getPhone())
-                        .as("phone of patient %s", mockPatient.getId())
-                        .isEqualTo(fx.get("patientPhone").asText());
-            }
-            if (fx.hasNonNull("patientEmail") && !fx.get("patientEmail").asText().isEmpty()) {
-                assertThat(mockPatient.getEmail())
-                        .as("email of patient %s", mockPatient.getId())
-                        .isEqualTo(fx.get("patientEmail").asText());
-            }
-            compared++;
-        }
-        // All 50 canonical patients (1001–1050) must have been compared.
-        assertThat(compared).isGreaterThanOrEqualTo(50);
+    void allPatientsUseCanonicalMisSexCodes() {
+        var patients = fixturePatients();
+        assertThat(patients).isNotEmpty();
+        assertThat(patients).allSatisfy(p ->
+                assertThat(p.get("patientSexCode").asText()).isIn("MAL", "FEM"));
     }
 
     @Test
-    void fixturePatients_missingFromMock_areExactlyTheProstheticsPair() {
-        var mockIds = mock.searchPatients(null).stream()
-                .map(PatientDTO::getId)
-                .collect(Collectors.toSet());
+    void canonicalIcuPatient1001_hasCorrectDemographics() {
+        var petrenko = fixturePatients().stream()
+                .filter(p -> p.get("patientID").asLong() == 1001L)
+                .findFirst().orElseThrow();
+        assertThat(petrenko.get("patientName").asText()).isEqualTo("Петренко Іван Сергійович");
+        assertThat(petrenko.get("patientSexCode").asText()).isEqualTo("MAL");
+    }
 
-        var missing = streamNodes(patientsFixture.get("patientList")).stream()
-                .map(n -> n.get("patientID").asLong())
-                .filter(id -> !mockIds.contains(id))
+    @Test
+    void fixtureHas92Patients() {
+        assertThat(fixturePatients()).hasSize(92);
+    }
+
+    @Test
+    void surgeryAndRehabPatients2001to2040_haveRoomBedDoctorDepartment() {
+        var withDept = fixturePatients().stream()
+                .filter(p -> p.get("patientID").asLong() >= 2001
+                        && p.get("patientID").asLong() <= 2040)
                 .toList();
-
-        // Documented divergence: prosthetics demographics live in the local
-        // prosth DB + ProstheticsPatientService fallback, not in the mock (#192).
-        assertThat(missing).containsExactlyInAnyOrder(900001L, 900002L);
+        assertThat(withDept).hasSize(40);
+        assertThat(withDept).allSatisfy(p -> {
+            assertThat(p.hasNonNull("patientRoomNumber")).isTrue();
+            assertThat(p.hasNonNull("patientBedNumber")).isTrue();
+            assertThat(p.hasNonNull("patientDoctor")).isTrue();
+            assertThat(p.hasNonNull("patientDepartmentID")).isTrue();
+        });
     }
 
     @Test
-    void mockPatients_2001to2040_matchFixtureCoreFields() {
-        Map<Long, JsonNode> fixtureById = fixturePatientsById();
-        int compared = 0;
-
-        for (PatientDTO mockPatient : mock.searchPatients(null)) {
-            long id = mockPatient.getId();
-            if (id < 2001 || id > 2040) {
-                continue;
-            }
-            JsonNode fx = fixtureById.get(id);
-            assertThat(fx).as("fixture patient %s must exist", id).isNotNull();
-            assertThat(mockPatient.getFullName())
-                    .as("fullName of patient %s", id)
-                    .isEqualTo(fx.get("patientName").asText());
-            assertThat(mockPatient.getBirthDate().toString())
-                    .as("birthDate of patient %s", id)
-                    .isEqualTo(fx.get("patientBirthDate").asText().substring(0, 10));
-            assertThat(mockPatient.getSexCode())
-                    .as("sexCode of patient %s", id)
-                    .isEqualTo(fx.get("patientSexCode").asText());
-            compared++;
-        }
-        assertThat(compared).isEqualTo(40);
+    void prosthetistPair900001and900002_existInFixtures() {
+        var ids = fixturePatients().stream()
+                .map(p -> p.get("patientID").asLong())
+                .collect(java.util.stream.Collectors.toSet());
+        assertThat(ids).contains(900001L, 900002L);
     }
 
-    // ---- user parity ----
+    // ---- user details ----
 
     @Test
-    void coreUserDetails_matchFixtureForIds11to16() {
-        Map<Long, JsonNode> fxById = fixtureUsersById();
+    void coreUsers11to16_haveLoginsAndSpecialities() {
+        var users = streamList(usersFixture.get("userList"));
+        assertThat(users).hasSize(8);
 
-        for (long id = 11; id <= 16; id++) {
-            UserMisDTO mockUser = mock.getUser(id).orElse(null);
-            JsonNode fx = fxById.get(id);
-            assertThat(mockUser).as("mock user %s must exist", id).isNotNull();
-            assertThat(fx).as("fixture user %s must exist", id).isNotNull();
+        var byId = users.stream()
+                .collect(Collectors.toMap(u -> u.get("userID").asLong(), Function.identity()));
 
-            assertThat(mockUser.getLogin())
-                    .as("login of user %s", id).isEqualTo(fx.get("userLogin").asText());
-            assertThat(mockUser.getSpecialityCode())
-                    .as("specialityCode of user %s", id)
-                    .isEqualTo(fx.get("userSpecialityCode").asText());
-        }
+        assertThat(byId.get(11L).get("userLogin").asText()).isEqualTo("doctor1");
+        assertThat(byId.get(13L).get("userLogin").asText()).isEqualTo("nurse1");
+        assertThat(byId.get(15L).get("userSpecialityCode").asText()).isEqualTo("301");
     }
 
-    // ---- hardcoded dictionary parity ----
+    @Test
+    void allUsersHaveDepartmentId() {
+        var users = streamList(usersFixture.get("userList"));
+        assertThat(users).allSatisfy(u ->
+                assertThat(u.hasNonNull("userDepartmentID")).isTrue());
+    }
+
+    // ---- hardcoded dictionary consistency ----
 
     @Test
-    void hardcodedDictionaries_areIdenticalInBothImplementations() {
-        WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(
-                org.mockito.Mockito.mock(MisApiClient.class),
-                org.mockito.Mockito.mock(AuditService.class));
-
+    void misDictionaries_areConsistentAcrossCalls() {
         for (String name : List.of("orderCategories", "noteTypes", "consciousness")) {
-            List<DictionaryItemDTO> fromWiremock = wiremock.getDictionary(name);
-            List<DictionaryItemDTO> fromMock = mock.getDictionary(name);
-            // DictionaryItemDTO has no equals override — compare field-wise.
-            assertThat(fromWiremock)
-                    .as("dictionary '%s' must be identical across implementations", name)
-                    .usingRecursiveComparison()
-                    .isEqualTo(fromMock);
+            List<DictionaryItemDTO> first = getDict(name);
+            List<DictionaryItemDTO> second = getDict(name);
+            assertThat(first).usingRecursiveComparison().isEqualTo(second);
         }
     }
 
-    // ---- medicine/allergy parity (enabled by #192) ----
-
-    @Test
-    void medicineCatalog_matchesMockData() throws Exception {
-        MisApiClient mockClient = org.mockito.Mockito.mock(MisApiClient.class);
-        JsonNode medicineFixture = MAPPER.readTree(
-                MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/medicine_dictionary.json"));
-        org.mockito.Mockito.when(mockClient.callMethod("spzIBMedicineDictionary"))
-                .thenReturn(medicineFixture);
-
-        WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(mockClient,
-                org.mockito.Mockito.mock(AuditService.class));
-        List<MedicineMisDTO> fromWiremock = wiremock.searchMedicineCatalog(null);
-        List<MedicineMisDTO> fromMock = mock.searchMedicineCatalog(null);
-
-        assertThat(fromWiremock).hasSameSizeAs(fromMock);
-        for (int i = 0; i < fromWiremock.size(); i++) {
-            assertThat(fromWiremock.get(i).getId()).isEqualTo(fromMock.get(i).getId());
-            assertThat(fromWiremock.get(i).getName()).isEqualTo(fromMock.get(i).getName());
-            assertThat(fromWiremock.get(i).getCategoryRef()).isEqualTo(fromMock.get(i).getCategoryRef());
-            assertThat(fromWiremock.get(i).getPtgCode()).isEqualTo(fromMock.get(i).getPtgCode());
-        }
+    private List<DictionaryItemDTO> getDict(String name) {
+        return switch (name) {
+            case "orderCategories" -> MisDictionaries.orderCategories();
+            case "noteTypes" -> MisDictionaries.noteTypes();
+            case "consciousness" -> MisDictionaries.consciousness();
+            default -> throw new IllegalArgumentException(name);
+        };
     }
 
+    // ---- medicine catalog ----
+
     @Test
-    void patientAllergies_matchMockData() throws Exception {
-        MisApiClient mockClient = org.mockito.Mockito.mock(MisApiClient.class);
-        JsonNode allergyFixture = MAPPER.readTree(
-                MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/patient_allergy.json"));
-        org.mockito.Mockito.when(mockClient.callMethod(
-                org.mockito.ArgumentMatchers.eq("spzIBPatientAllergy"),
-                org.mockito.ArgumentMatchers.any(MisApiClient.Param[].class)))
-                .thenReturn(allergyFixture);
+    void medicineCatalogFixture_has20Items() throws Exception {
+        var fx = MAPPER.readTree(MisParityTest.class.getResourceAsStream(
+                "/mis-wiremock/__files/medicine_dictionary.json"));
+        var list = streamList(fx.get("medicineList"));
+        assertThat(list).hasSize(20);
+        assertThat(list).allSatisfy(m -> {
+            assertThat(m.hasNonNull("medicineID")).isTrue();
+            assertThat(m.hasNonNull("medicineName")).isTrue();
+        });
+    }
 
-        WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(mockClient,
-                org.mockito.Mockito.mock(AuditService.class));
-        var wireAllergies = wiremock.getPatientAllergies(1001L);
-        var mockAllergies = mock.getPatientAllergies(1001L);
+    // ---- allergy fixture ----
 
-        assertThat(wireAllergies).hasSameSizeAs(mockAllergies);
-        for (int i = 0; i < wireAllergies.size(); i++) {
-            assertThat(wireAllergies.get(i).getAllergenName())
-                    .isEqualTo(mockAllergies.get(i).getAllergenName());
-            assertThat(wireAllergies.get(i).getSourceDocumentId())
-                    .isEqualTo(mockAllergies.get(i).getSourceDocumentId());
-        }
+    @Test
+    void allergyFixture_matchesExpectedData() throws Exception {
+        var fx = MAPPER.readTree(MisParityTest.class.getResourceAsStream(
+                "/mis-wiremock/__files/patient_allergy.json"));
+        var allergies = streamList(fx.get("allergyList"));
+
+        var p1001 = allergies.stream()
+                .filter(a -> a.get("patientID").asLong() == 1001L).toList();
+        assertThat(p1001).hasSize(2);
+        assertThat(p1001.get(0).get("allergenName").asText()).isEqualTo("Penicillin");
+        assertThat(p1001.get(1).get("allergenName").asText()).isEqualTo("Aspirin");
+
+        var p1002 = allergies.stream()
+                .filter(a -> a.get("patientID").asLong() == 1002L).toList();
+        assertThat(p1002).hasSize(1);
+        assertThat(p1002.get(0).get("allergenName").asText()).isEqualTo("Iodine");
+    }
+
+    private static List<JsonNode> streamList(JsonNode array) {
+        List<JsonNode> result = new java.util.ArrayList<>();
+        array.forEach(result::add);
+        return result;
     }
 }

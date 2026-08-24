@@ -1,6 +1,6 @@
 # MIS Integration Audit — дві реалізації `MisService` (issue #191)
 
-**Дата:** 2026-08-24 · **Фаза:** 1 (аудит + parity-тести + unit-покриття) · **Поведінка рантайму не змінена**
+**Дата:** 2026-08-24 · **Статус:** ЗАВЕРШЕНО (фази #191–#194). WireMockMisServiceImpl — єдина реалізація MisService.
 
 `MisService` має дві реалізації: `MockMisServiceImpl` (in-memory, дефолт у dev/CI через
 `app.mis.mock-enabled: true`) та `WireMockMisServiceImpl` (HTTP → WireMock-фікстури,
@@ -48,9 +48,9 @@
 | `patient_schedule.json` | getHospitalization hit / empty / exception-fallback | — |
 | medicine/allergies | — (WireMock повертає порожньо) | `@Disabled` parity до #192 |
 
-## Наступні фази
+## Фази виконання
 
 - **#192** — закрити розриви: медицина/алергії у WireMock, departmentId-фільтр, getUser-запит,
   розширити patients_52.json або звузити mock.
-- **#193** — зробити WireMock дефолтом; fail-fast при обох прапорцях; прибрати matchIfMissing.
-- **#194** — видалити Mock разом із legacy-даними 2001–2040.
+- **#193** — ✅ WireMock дефолт; fail-fast; embedded-режим; matchIfMissing=false.
+- **#194** — ✅ MockMisServiceImpl видалено; тести мігровано; pom-гігієна виконана.

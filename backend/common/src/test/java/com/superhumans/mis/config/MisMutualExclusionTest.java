@@ -7,10 +7,8 @@ import org.springframework.web.client.RestTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Mutual-exclusion fail-fast validation for MIS implementations (#193).
- * Each scenario boots a minimal context with only the relevant properties
- * and asserts the outcome: exactly one implementation bean, or a clear
- * startup failure when both/neither are enabled.
+ * Fail-fast validation for MIS configuration (#193/#194).
+ * WireMock must be enabled; embedded mode requires wiremock.
  */
 class MisMutualExclusionTest {
 
@@ -18,8 +16,8 @@ class MisMutualExclusionTest {
             .withUserConfiguration(MisServiceConfig.class);
 
     @Test
-    void mockOnly_bootSuccessfully() {
-        runner.withPropertyValues("app.mis.mock-enabled=true", "app.mis.wiremock-enabled=false")
+    void wiremockEnabled_bootsSuccessfully() {
+        runner.withPropertyValues("app.mis.wiremock-enabled=true")
                 .run(context -> {
                     assertThat(context).hasSingleBean(RestTemplate.class);
                     assertThat(context.getStartupFailure()).isNull();
@@ -27,33 +25,14 @@ class MisMutualExclusionTest {
     }
 
     @Test
-    void wiremockOnly_bootsSuccessfully() {
-        runner.withPropertyValues(
-                        "app.mis.mock-enabled=false",
-                        "app.mis.wiremock-enabled=true",
-                        "app.mis.embedded-wiremock-enabled=false")
-                .run(context -> {
-                    assertThat(context).hasSingleBean(RestTemplate.class);
-                    assertThat(context.getStartupFailure()).isNull();
-                });
-    }
-
-    @Test
-    void bothTrue_contextFails() {
-        runner.withPropertyValues("app.mis.mock-enabled=true", "app.mis.wiremock-enabled=true")
+    void wiremockDisabled_contextFails() {
+        runner.withPropertyValues("app.mis.wiremock-enabled=false")
                 .run(context -> assertThat(context.getStartupFailure()).isNotNull());
     }
 
     @Test
-    void bothFalse_contextFails() {
-        runner.withPropertyValues("app.mis.mock-enabled=false", "app.mis.wiremock-enabled=false")
-                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
-    }
-
-    @Test
-    void embeddedWireMock_withoutWireMock_contextFails() {
+    void embeddedWithoutWiremock_contextFails() {
         runner.withPropertyValues(
-                        "app.mis.mock-enabled=true",
                         "app.mis.wiremock-enabled=false",
                         "app.mis.embedded-wiremock-enabled=true")
                 .run(context -> assertThat(context.getStartupFailure()).isNotNull());
