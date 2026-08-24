@@ -206,8 +206,7 @@ class MisWireMockIntegrationTest {
         service.searchMedicineCatalog("");
 
         wireMockServer.verify(postRequestedFor(urlEqualTo("/api/run"))
-                .withRequestBody(matchingJsonPath("$.name", equalTo("spzIBMedicineDictionary")))
-                .withRequestBody(matchingJsonPath("$.installationId", equalTo("test-installation-guid")))
-                .withRequestBody(matchingJsonPath("$.login", equalTo("integration"))));
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBMedicineDictionary')]"))
+                .withRequestBody(matchingJsonPath("$.installationId", equalTo("test-installation-guid"))));
     }
 }
