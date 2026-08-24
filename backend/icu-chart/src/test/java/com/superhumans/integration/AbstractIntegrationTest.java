@@ -24,7 +24,8 @@ import java.util.List;
     "app.scheduling.signing-window-start=0",
     "app.scheduling.signing-window-end=23",
     "app.scheduling.signing-window-enabled=false",
-    "server.ssl.enabled=false"
+    "server.ssl.enabled=false",
+    "app.mis.embedded-wiremock-enabled=false"
 })
 @AutoConfigureTestRestTemplate
 @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS, scripts = "classpath:data-test-core.sql",

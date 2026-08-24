@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MisMutualExclusionTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withUserConfiguration(MisServiceConfig.class);
+            .withUserConfiguration(MisServiceConfig.class, MisServiceConfig.MisMutualExclusionGuard.class);
 
     @Test
     void mockOnly_bootSuccessfully() {
