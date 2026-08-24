@@ -30,7 +30,23 @@ class MisWireMockIntegrationTest {
     static void startWireMock() {
         wireMockServer = new WireMockServer(WireMockConfiguration.options().dynamicPort());
         wireMockServer.start();
-        configureFor(wireMockServer.port());
+
+        // Register all stubs from the real fixture files
+        wireMockServer.stubFor(post(urlEqualTo("/api/run"))
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBPatientSearch')]"))
+                .willReturn(okJson(readFixture("patients_52.json"))));
+        wireMockServer.stubFor(post(urlEqualTo("/api/run"))
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBMedicineDictionary')]"))
+                .willReturn(okJson(readFixture("medicine_dictionary.json"))));
+        wireMockServer.stubFor(post(urlEqualTo("/api/run"))
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBPatientAllergy')]"))
+                .willReturn(okJson(readFixture("patient_allergy.json"))));
+        wireMockServer.stubFor(post(urlEqualTo("/api/run"))
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBUserDetails')]"))
+                .willReturn(okJson(readFixture("user_details.json"))));
+        wireMockServer.stubFor(post(urlEqualTo("/api/run"))
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBCompanyDetails')]"))
+                .willReturn(okJson(readFixture("company_details.json"))));
 
         client = new MisApiClient(
                 new org.springframework.web.client.RestTemplate(),
@@ -41,23 +57,6 @@ class MisWireMockIntegrationTest {
 
         service = new WireMockMisServiceImpl(client,
                 org.mockito.Mockito.mock(AuditService.class));
-
-        // Register all stubs from the real fixture files
-        stubFor(post(urlEqualTo("/api/run"))
-                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBPatientSearch')]"))
-                .willReturn(okJson(readFixture("patients_52.json"))));
-        stubFor(post(urlEqualTo("/api/run"))
-                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBMedicineDictionary')]"))
-                .willReturn(okJson(readFixture("medicine_dictionary.json"))));
-        stubFor(post(urlEqualTo("/api/run"))
-                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBPatientAllergy')]"))
-                .willReturn(okJson(readFixture("patient_allergy.json"))));
-        stubFor(post(urlEqualTo("/api/run"))
-                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBUserDetails')]"))
-                .willReturn(okJson(readFixture("user_details.json"))));
-        stubFor(post(urlEqualTo("/api/run"))
-                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBCompanyDetails')]"))
-                .willReturn(okJson(readFixture("company_details.json"))));
     }
 
     @AfterAll
@@ -206,7 +205,7 @@ class MisWireMockIntegrationTest {
     void misApiClient_requestBody_containsNameAndInstallationId() {
         service.searchMedicineCatalog("");
 
-        verify(postRequestedFor(urlEqualTo("/api/run"))
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/api/run"))
                 .withRequestBody(matchingJsonPath("$.name", equalTo("spzIBMedicineDictionary")))
                 .withRequestBody(matchingJsonPath("$.installationId", equalTo("test-installation-guid")))
                 .withRequestBody(matchingJsonPath("$.login", equalTo("integration"))));

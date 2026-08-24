@@ -209,7 +209,9 @@ public class WireMockMisServiceImpl implements MisService {
                 new MisApiClient.Param("PatientID", String.valueOf(patientId))
         );
         auditService.logAction("MIS", null, "GET_ALLERGIES", getUserId());
-        return parseAllergyList(response);
+        return parseAllergyList(response).stream()
+                .filter(a -> a.getPatientId() != null && a.getPatientId().equals(patientId))
+                .collect(Collectors.toList());
     }
 
     @Override

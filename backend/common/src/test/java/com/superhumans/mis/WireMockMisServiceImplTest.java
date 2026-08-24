@@ -72,10 +72,10 @@ class WireMockMisServiceImplTest {
               {"userID":11,"userLogin":"doctor1","userName":"Олександр Мельник",
                "userShortName":"О.Мельник","userSpecialityCode":"101",
                "userSpecialityName":"Лікар-анестезіолог","userEmail":"m@h.ua",
-               "userPhone":"380501111111"},
+               "userPhone":"380501111111","userDepartmentID":1},
               {"userID":13,"userLogin":"nurse1","userName":"Олена Ткаченко",
                "userShortName":"О.Ткаченко","userSpecialityCode":"201",
-               "userSpecialityName":"Медсестра ВАІТ"}
+               "userSpecialityName":"Медсестра ВАІТ","userDepartmentID":1}
             ]}
             """;
 
