@@ -141,7 +141,10 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
   // MAIN E2E TEST: Complete workflow verification against specification
   // ================================================================
   test('Complete specification verification: All phases (1-6) with full validation', async ({ page, request }) => {
-    test.setTimeout(300000);
+    // The full six-phase walkthrough (with per-step screenshots) sits close to
+    // five minutes on CI runners; the Phase C suite additions shifted queue
+    // timing past the old budget. Ten minutes covers worst-case variance.
+    test.setTimeout(600000);
     consoleErrors = [];
     networkErrors = [];
     setupPageMonitoring(page, consoleErrors, networkErrors);
