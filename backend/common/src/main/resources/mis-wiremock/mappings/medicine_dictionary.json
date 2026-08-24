@@ -1,0 +1,15 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "url": "/api/run",
+    "bodyPatterns": [
+      { "matchesJsonPath": "$[?(@.name == 'spzIBMedicineDictionary')]" }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "medicine_dictionary.json",
+    "headers": { "Content-Type": "application/json" }
+  }
+}

@@ -15,4 +15,5 @@ public class UserMisDTO {
     String specialityName;
     String email;
     String phone;
+    Long departmentId;
 }

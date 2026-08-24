@@ -1,12 +1,13 @@
 package com.superhumans.mis;
 
+import com.superhumans.mis.dto.AllergyMisDTO;
 import com.superhumans.mis.dto.DictionaryItemDTO;
+import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.mis.dto.UserMisDTO;
 import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -20,6 +21,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Contract parity between the WireMock fixtures (single source of truth) and
@@ -135,6 +137,32 @@ class MisParityTest {
         assertThat(missing).containsExactlyInAnyOrder(900001L, 900002L);
     }
 
+    @Test
+    void mockPatients_2001to2040_matchFixtureCoreFields() {
+        Map<Long, JsonNode> fixtureById = fixturePatientsById();
+        int compared = 0;
+
+        for (PatientDTO mockPatient : mock.searchPatients(null)) {
+            long id = mockPatient.getId();
+            if (id < 2001 || id > 2040) {
+                continue;
+            }
+            JsonNode fx = fixtureById.get(id);
+            assertThat(fx).as("fixture patient %s must exist", id).isNotNull();
+            assertThat(mockPatient.getFullName())
+                    .as("fullName of patient %s", id)
+                    .isEqualTo(fx.get("patientName").asText());
+            assertThat(mockPatient.getBirthDate().toString())
+                    .as("birthDate of patient %s", id)
+                    .isEqualTo(fx.get("patientBirthDate").asText().substring(0, 10));
+            assertThat(mockPatient.getSexCode())
+                    .as("sexCode of patient %s", id)
+                    .isEqualTo(fx.get("patientSexCode").asText());
+            compared++;
+        }
+        assertThat(compared).isEqualTo(40);
+    }
+
     // ---- user parity ----
 
     @Test
@@ -174,31 +202,51 @@ class MisParityTest {
         }
     }
 
-    // ---- documented divergences (enabled by #192) ----
+    // ---- medicine/allergy parity (enabled by #192) ----
 
     @Test
-    @Disabled("Known divergence (#192): searchMedicineCatalog returns List.of() under "
-            + "WireMock while Mock serves an in-memory catalog. Enable when #192 closes "
-            + "the medicine-catalog gap.")
-    void medicineCatalog_parity_placeholderUntil192() {
-        WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(
-                org.mockito.Mockito.mock(MisApiClient.class),
+    void medicineCatalog_matchesMockData() throws Exception {
+        MisApiClient mockClient = org.mockito.Mockito.mock(MisApiClient.class);
+        JsonNode medicineFixture = MAPPER.readTree(
+                MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/medicine_dictionary.json"));
+        org.mockito.Mockito.when(mockClient.callMethod("spzIBMedicineDictionary"))
+                .thenReturn(medicineFixture);
+
+        WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(mockClient,
                 org.mockito.Mockito.mock(AuditService.class));
-        assertThat(wiremock.searchMedicineCatalog(null))
-                .as("#192 will close this gap")
-                .isNotEmpty();
+        List<MedicineMisDTO> fromWiremock = wiremock.searchMedicineCatalog(null);
+        List<MedicineMisDTO> fromMock = mock.searchMedicineCatalog(null);
+
+        assertThat(fromWiremock).hasSameSizeAs(fromMock);
+        for (int i = 0; i < fromWiremock.size(); i++) {
+            assertThat(fromWiremock.get(i).getId()).isEqualTo(fromMock.get(i).getId());
+            assertThat(fromWiremock.get(i).getName()).isEqualTo(fromMock.get(i).getName());
+            assertThat(fromWiremock.get(i).getCategoryRef()).isEqualTo(fromMock.get(i).getCategoryRef());
+            assertThat(fromWiremock.get(i).getPtgCode()).isEqualTo(fromMock.get(i).getPtgCode());
+        }
     }
 
     @Test
-    @Disabled("Known divergence (#192): getPatientAllergies returns List.of() under "
-            + "WireMock while Mock serves Penicillin/Aspirin/Iodine data. Enable when "
-            + "#192 closes the allergy gap.")
-    void patientAllergies_parity_placeholderUntil192() {
-        WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(
-                org.mockito.Mockito.mock(MisApiClient.class),
+    void patientAllergies_matchMockData() throws Exception {
+        MisApiClient mockClient = org.mockito.Mockito.mock(MisApiClient.class);
+        JsonNode allergyFixture = MAPPER.readTree(
+                MisParityTest.class.getResourceAsStream("/mis-wiremock/__files/patient_allergy.json"));
+        org.mockito.Mockito.when(mockClient.callMethod(
+                org.mockito.ArgumentMatchers.eq("spzIBPatientAllergy"),
+                any(), any()))
+                .thenReturn(allergyFixture);
+
+        WireMockMisServiceImpl wiremock = new WireMockMisServiceImpl(mockClient,
                 org.mockito.Mockito.mock(AuditService.class));
-        assertThat(wiremock.getPatientAllergies(1001L))
-                .as("#192 will close this gap")
-                .isNotEmpty();
+        var wireAllergies = wiremock.getPatientAllergies(1001L);
+        var mockAllergies = mock.getPatientAllergies(1001L);
+
+        assertThat(wireAllergies).hasSameSizeAs(mockAllergies);
+        for (int i = 0; i < wireAllergies.size(); i++) {
+            assertThat(wireAllergies.get(i).getAllergenName())
+                    .isEqualTo(mockAllergies.get(i).getAllergenName());
+            assertThat(wireAllergies.get(i).getSourceDocumentId())
+                    .isEqualTo(mockAllergies.get(i).getSourceDocumentId());
+        }
     }
 }

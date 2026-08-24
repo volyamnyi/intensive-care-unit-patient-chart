@@ -1,0 +1,7 @@
+{
+  "allergyList": [
+    { "patientID": 1001, "allergenName": "Penicillin", "sourceDocumentId": 100 },
+    { "patientID": 1001, "allergenName": "Aspirin", "sourceDocumentId": 101 },
+    { "patientID": 1002, "allergenName": "Iodine", "sourceDocumentId": 200 }
+  ]
+}

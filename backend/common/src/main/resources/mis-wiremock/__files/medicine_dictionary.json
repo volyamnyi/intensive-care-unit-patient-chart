@@ -1,0 +1,24 @@
+{
+  "medicineList": [
+    { "medicineID": 1, "medicineName": "Paracetamol", "medicineCategoryRef": 1, "medicinePtgCode": "1" },
+    { "medicineID": 2, "medicineName": "Ibuprofen", "medicineCategoryRef": 1, "medicinePtgCode": "2" },
+    { "medicineID": 3, "medicineName": "Morphine", "medicineCategoryRef": 14, "medicinePtgCode": "4" },
+    { "medicineID": 4, "medicineName": "Fentanyl", "medicineCategoryRef": 14, "medicinePtgCode": "4" },
+    { "medicineID": 5, "medicineName": "Ceftriaxone", "medicineCategoryRef": 2, "medicinePtgCode": "6" },
+    { "medicineID": 6, "medicineName": "Metronidazole", "medicineCategoryRef": 2, "medicinePtgCode": "2,3" },
+    { "medicineID": 7, "medicineName": "Omeprazole", "medicineCategoryRef": 3, "medicinePtgCode": "1" },
+    { "medicineID": 8, "medicineName": "Heparin", "medicineCategoryRef": 5, "medicinePtgCode": "5" },
+    { "medicineID": 9, "medicineName": "Norepinephrine", "medicineCategoryRef": 13, "medicinePtgCode": "3" },
+    { "medicineID": 10, "medicineName": "Dopamine", "medicineCategoryRef": 13, "medicinePtgCode": "3" },
+    { "medicineID": 11, "medicineName": "NaCl 0.9%", "medicineCategoryRef": 8, "medicinePtgCode": null },
+    { "medicineID": 12, "medicineName": "Glucose 5%", "medicineCategoryRef": 8, "medicinePtgCode": null },
+    { "medicineID": 13, "medicineName": "Midazolam", "medicineCategoryRef": 14, "medicinePtgCode": "4" },
+    { "medicineID": 14, "medicineName": "Propofol", "medicineCategoryRef": 14, "medicinePtgCode": "4" },
+    { "medicineID": 15, "medicineName": "Dexamethasone", "medicineCategoryRef": 1, "medicinePtgCode": "1" },
+    { "medicineID": 16, "medicineName": "Insulin", "medicineCategoryRef": 6, "medicinePtgCode": null },
+    { "medicineID": 17, "medicineName": "Amlodipine", "medicineCategoryRef": 7, "medicinePtgCode": "2" },
+    { "medicineID": 18, "medicineName": "Metoclopramide", "medicineCategoryRef": 4, "medicinePtgCode": "1" },
+    { "medicineID": 19, "medicineName": "Ondansetron", "medicineCategoryRef": 4, "medicinePtgCode": "2" },
+    { "medicineID": 20, "medicineName": "Pantoprazole", "medicineCategoryRef": 3, "medicinePtgCode": "1" }
+  ]
+}

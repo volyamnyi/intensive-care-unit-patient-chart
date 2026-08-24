@@ -104,7 +104,14 @@ public class WireMockMisServiceImpl implements MisService {
         checkErrors();
         JsonNode response = misApiClient.callMethod("spzIBUserDetails");
         auditService.logAction("MIS", null, "GET_DEPARTMENT_USERS", getUserId());
-        return parseUserList(response);
+        List<UserMisDTO> all = parseUserList(response);
+        if (departmentId == null) {
+            return all;
+        }
+        return all.stream()
+                .filter(u -> u.getDepartmentId() != null
+                        && u.getDepartmentId().equals(departmentId))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -177,16 +184,32 @@ public class WireMockMisServiceImpl implements MisService {
 
     @Override
     public List<MedicineMisDTO> searchMedicineCatalog(String keyword) {
-        log.info("MEDICINE_CATALOG search via MIS not available with WireMock. Use MockMIS mode.");
+        checkErrors();
+        JsonNode response = misApiClient.callMethod("spzIBMedicineDictionary");
         auditService.logAction("MIS", null, "SEARCH_MEDICINE_CATALOG", getUserId());
-        return List.of();
+        List<MedicineMisDTO> catalog = parseMedicineList(response);
+        if (keyword == null || keyword.isBlank()) {
+            return catalog;
+        }
+        String lower = keyword.toLowerCase();
+        return catalog.stream()
+                .filter(m -> m.getName() != null
+                        && m.getName().toLowerCase().contains(lower))
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<AllergyMisDTO> getPatientAllergies(Long patientId) {
-        log.info("ALLERGY lookup via MIS not available with WireMock. Use MockMIS mode.");
+        checkErrors();
+        if (patientId == null) {
+            return List.of();
+        }
+        JsonNode response = misApiClient.callMethod(
+                "spzIBPatientAllergy",
+                new MisApiClient.Param("PatientID", String.valueOf(patientId))
+        );
         auditService.logAction("MIS", null, "GET_ALLERGIES", getUserId());
-        return List.of();
+        return parseAllergyList(response);
     }
 
     @Override
@@ -379,6 +402,42 @@ public class WireMockMisServiceImpl implements MisService {
         return LocalDateTime.parse(normalized, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
 
+    private List<MedicineMisDTO> parseMedicineList(JsonNode response) {
+        JsonNode list = response.get("medicineList");
+        if (list == null || !list.isArray()) {
+            return List.of();
+        }
+        List<MedicineMisDTO> result = new ArrayList<>();
+        for (JsonNode node : list) {
+            result.add(new MedicineMisDTO(
+                    node.has("medicineID") ? node.get("medicineID").asLong() : null,
+                    node.has("medicineName") ? node.get("medicineName").asText() : null,
+                    node.has("medicineCategoryRef") && !node.get("medicineCategoryRef").isNull()
+                            ? node.get("medicineCategoryRef").asInt() : null,
+                    node.has("medicinePtgCode") && !node.get("medicinePtgCode").isNull()
+                            ? node.get("medicinePtgCode").asText() : null
+            ));
+        }
+        return result;
+    }
+
+    private List<AllergyMisDTO> parseAllergyList(JsonNode response) {
+        JsonNode list = response.get("allergyList");
+        if (list == null || !list.isArray()) {
+            return List.of();
+        }
+        List<AllergyMisDTO> result = new ArrayList<>();
+        for (JsonNode node : list) {
+            result.add(new AllergyMisDTO(
+                    node.has("patientID") ? node.get("patientID").asLong() : null,
+                    node.has("allergenName") ? node.get("allergenName").asText() : null,
+                    node.has("sourceDocumentId") && !node.get("sourceDocumentId").isNull()
+                            ? node.get("sourceDocumentId").asInt() : null
+            ));
+        }
+        return result;
+    }
+
     private List<PatientDTO> parsePatientList(JsonNode response) {
         JsonNode patientList = response.get("patientList");
         if (patientList == null || !patientList.isArray()) {
@@ -423,6 +482,8 @@ public class WireMockMisServiceImpl implements MisService {
                     .specialityName(node.has("userSpecialityName") ? node.get("userSpecialityName").asText() : null)
                     .email(node.has("userEmail") ? node.get("userEmail").asText() : null)
                     .phone(node.has("userPhone") ? node.get("userPhone").asText() : null)
+                    .departmentId(node.has("userDepartmentID") && !node.get("userDepartmentID").isNull()
+                            ? node.get("userDepartmentID").asLong() : null)
                     .build();
             result.add(user);
         }
@@ -437,7 +498,10 @@ public class WireMockMisServiceImpl implements MisService {
         List<DepartmentDTO> result = new ArrayList<>();
         for (JsonNode node : companyList) {
             DepartmentDTO dept = DepartmentDTO.builder()
-                    .id(node.has("companyGUID") ? (long) node.get("companyGUID").asText().hashCode() : null)
+                    .id(node.has("companyID") && !node.get("companyID").isNull()
+                            ? node.get("companyID").asLong()
+                            : node.has("companyGUID")
+                                    ? (long) node.get("companyGUID").asText().hashCode() : null)
                     .name(node.has("companyName") ? node.get("companyName").asText() : null)
                     .code(node.has("companyShortName") ? node.get("companyShortName").asText() : null)
                     .address(node.has("companyAddress") ? node.get("companyAddress").asText() : null)
