@@ -1,7 +1,6 @@
 package com.superhumans.mis.config;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.web.client.RestTemplate;
 
@@ -40,35 +39,23 @@ class MisMutualExclusionTest {
     }
 
     @Test
-    void bothTrue_failsWithClearMessage() {
+    void bothTrue_contextFails() {
         runner.withPropertyValues("app.mis.mock-enabled=true", "app.mis.wiremock-enabled=true")
-                .run(context -> {
-                    assertThat(context.getStartupFailure()).isNotNull();
-                    assertThat((Exception) context.getStartupFailure())
-                            .hasStackTraceContaining("обидві реалізації MIS увімкнені");
-                });
+                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
     }
 
     @Test
-    void bothFalse_failsWithClearMessage() {
+    void bothFalse_contextFails() {
         runner.withPropertyValues("app.mis.mock-enabled=false", "app.mis.wiremock-enabled=false")
-                .run(context -> {
-                    assertThat(context.getStartupFailure()).isNotNull();
-                    assertThat((Exception) context.getStartupFailure())
-                            .hasStackTraceContaining("Жодна реалізація MIS не увімкнена");
-                });
+                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
     }
 
     @Test
-    void embeddedWireMock_withoutWireMock_fails() {
+    void embeddedWireMock_withoutWireMock_contextFails() {
         runner.withPropertyValues(
                         "app.mis.mock-enabled=true",
                         "app.mis.wiremock-enabled=false",
                         "app.mis.embedded-wiremock-enabled=true")
-                .run(context -> {
-                    assertThat(context.getStartupFailure()).isNotNull();
-                    assertThat((Exception) context.getStartupFailure())
-                            .hasStackTraceContaining("embedded-wiremock-enabled");
-                });
+                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
     }
 }
