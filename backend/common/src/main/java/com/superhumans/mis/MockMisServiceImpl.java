@@ -22,13 +22,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 public class MockMisServiceImpl implements MisService {
 
     final AuditService auditService;
-
-    boolean simulateErrors = false;
-    String errorMode = "none";
+    final MisErrorSimulator errorSimulator = new MisErrorSimulator();
 
     public void setErrorMode(String mode) {
-        this.errorMode = mode;
-        this.simulateErrors = !"none".equals(mode);
+        errorSimulator.setErrorMode(mode);
     }
 
     final Map<Long, PatientDTO> patients = new LinkedHashMap<>();
@@ -481,21 +478,7 @@ public class MockMisServiceImpl implements MisService {
     }
 
     void checkErrors() {
-        if (simulateErrors) {
-            switch (errorMode) {
-                case "timeout":
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    throw new RuntimeException("MIS timeout");
-                case "not_found":
-                    throw new RuntimeException("Resource not found in MIS");
-                case "unavailable":
-                    throw new RuntimeException("MIS service unavailable");
-            }
-        }
+        errorSimulator.checkErrors();
     }
 
     @Override
@@ -576,24 +559,9 @@ public class MockMisServiceImpl implements MisService {
         checkErrors();
         auditService.logAction("MIS", null, "GET_DICTIONARY", getCurrentUserId());
         return switch (dictionaryName) {
-            case "orderCategories" -> List.of(
-                    new DictionaryItemDTO("MEDICATION", "Медикаменти"),
-                    new DictionaryItemDTO("INFUSION", "Інфузії"),
-                    new DictionaryItemDTO("LAB", "Аналізи"),
-                    new DictionaryItemDTO("PROCEDURE", "Маніпуляції"),
-                    new DictionaryItemDTO("VENTILATION", "ШВЛ"),
-                    new DictionaryItemDTO("NUTRITION", "Харчування"),
-                    new DictionaryItemDTO("OTHER", "Інші"));
-            case "noteTypes" -> List.of(
-                    new DictionaryItemDTO("DOCTOR_NOTE", "Лікарський запис"),
-                    new DictionaryItemDTO("NURSE_NOTE", "Сестринський запис"),
-                    new DictionaryItemDTO("SHIFT_REPORT", "Звіт за зміну"));
-            case "consciousness" -> List.of(
-                    new DictionaryItemDTO("CLEAR", "Ясна"),
-                    new DictionaryItemDTO("STUPOR", "Ступор"),
-                    new DictionaryItemDTO("SOPOR", "Сопор"),
-                    new DictionaryItemDTO("COMA", "Кома"),
-                    new DictionaryItemDTO("SEDATED", "Седація"));
+            case "orderCategories" -> MisDictionaries.orderCategories();
+            case "noteTypes" -> MisDictionaries.noteTypes();
+            case "consciousness" -> MisDictionaries.consciousness();
             default -> List.of();
         };
     }
