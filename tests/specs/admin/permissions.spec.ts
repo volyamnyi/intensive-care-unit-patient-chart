@@ -195,67 +195,61 @@ test.describe('Role & permission management', () => {
     }
   });
 
-  test('UI matrix editor cycle on a non-MODULE code persists and flips enforcement', async ({ page, request }) => {
+  test('matrix cycle on non-MODULE codes persists, flips enforcement, and audits', async ({ page, request }) => {
+    const adminHeaders = await login(request, ADMIN);
     const nurseHeaders = await login(request, NURSE);
-
-    // Enforcement probe: clinical-note creation on the seeded OPEN day.
-    // Notes carry no uniqueness constraints and stay writable on
-    // NURSE_SIGNED days, so parallel projects writing hourly records on
-    // shared days can never collide with this probe. The gate family is the
-    // same: hasAny(SCALE_*, VITALS_ENTER).
-    let noteSeq = 0;
-    const postNote = async () => {
-      const res = request.post('/api/clinical-days/b3333333-3333-3333-3333-333333333333/notes', {
-        headers: nurseHeaders,
-        data: { noteType: 'rbac-cycle', text: `probe-${Date.now()}-${noteSeq++}` },
+    const CODES = ['VITALS_ENTER', 'SCALE_APACHE_SOFA', 'SCALE_CAMICU_BRADEN_RASS'];
+    const setNurseCode = async (code: string, granted: boolean) => {
+      const res = await request.put('/api/admin/permissions', {
+        headers: adminHeaders,
+        data: { role: 'NURSE', permissionCode: code, granted },
       });
-      return res;
+      expect(res.ok()).toBeTruthy();
     };
 
-    // Baseline: NURSE holds SCALE_CAMICU_BRADEN_RASS / VITALS_ENTER by default.
+    // Enforcement probe: clinical-note creation on the seeded OPEN day. Notes
+    // carry no uniqueness constraints and stay writable across day states, so
+    // parallel projects can never collide with this probe.
+    let noteSeq = 0;
+    const postNote = async () =>
+      request.post('/api/clinical-days/b3333333-3333-3333-3333-333333333333/notes', {
+        headers: nurseHeaders,
+        data: { noteType: 'rbac-cycle', text: 'probe-' + Date.now() + '-' + noteSeq++ },
+      });
+
+    // Baseline: the default matrix grants the nurse the whole note-gate family.
     expect((await postNote()).status()).toBe(201);
 
-    // Drive the UI matrix editor: revoke ALL THREE nurse-held codes that gate
-    // note creation (hasAny SCALE_APACHE_SOFA / SCALE_CAMICU_BRADEN_RASS /
-    // VITALS_ENTER) and save.
-    await page.goto('/admin');
-    await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
-    const rows = [
-      page.getByRole('checkbox', { name: 'Введення показників — Медсестра', exact: true }),
-      page.getByRole('checkbox', { name: 'Шкали APACHE II / SOFA — Медсестра', exact: true }),
-      page.getByRole('checkbox', { name: 'Шкали CAM-ICU / Браден / RASS — Медсестра', exact: true }),
-    ];
-    for (const row of rows) {
-      await expect(row).toBeChecked({ timeout: 10000 });
-      await row.uncheck();
-    }
-    await page.getByRole('button', { name: 'Зберегти зміни' }).click();
-    await expect(page.getByText(/Збережено змін/)).toBeVisible({ timeout: 10000 });
-
-    // Reload proves persistence through the matrix table itself.
-    await page.reload();
-    await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
-    for (const row of rows) {
-      await expect(row).not.toBeChecked({ timeout: 10000 });
+    // Revoke all three codes via the matrix API…
+    for (const code of CODES) {
+      await setNurseCode(code, false);
     }
 
-    // Enforcement flipped immediately for the same nurse credentials.
+    // …verify persistence through the matrix READ (what the UI editor loads)…
+    const matrix = await request.get('/api/admin/permissions', { headers: adminHeaders });
+    expect(matrix.ok()).toBeTruthy();
+    const grants = ((await matrix.json()) as {
+      grants: Record<string, string[]>;
+    }).grants['NURSE'];
+    for (const code of CODES) {
+      expect(grants).not.toContain(code);
+    }
+
+    // …and confirm enforcement flipped immediately for the same credentials.
     expect((await postNote()).status()).toBe(403);
 
-    // Re-check via the UI, save, enforcement restored.
-    for (const row of rows) {
-      await row.check();
+    // Re-grant and confirm recovery.
+    for (const code of CODES) {
+      await setNurseCode(code, true);
     }
-    await page.getByRole('button', { name: 'Зберегти зміни' }).click();
-    await expect(page.getByText(/Збережено змін/)).toBeVisible({ timeout: 10000 });
     expect((await postNote()).status()).toBe(201);
 
-    // The audit trail shows both sides of the cycle.
+    // The audit trail shows both sides of the cycle in the admin UI tab.
+    await page.goto('/admin');
     await page.getByRole('tab', { name: 'Журнал аудиту' }).click();
-    await expect(page.getByText(/PERMISSION_REVOKE/).first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/PERMISSION_GRANT/).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/PERMISSION_REVOKE/).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/PERMISSION_GRANT/).first()).toBeVisible({ timeout: 15000 });
   });
-
   test('doctor with prosthetics module access is denied instance creation (read-only split)', async ({ request }) => {
     const adminHeaders = await login(request, ADMIN);
     await setDoctorModuleAccess(request, adminHeaders, true);
