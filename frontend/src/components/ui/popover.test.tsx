@@ -5,6 +5,8 @@ import {
   Popover,
   PopoverContent,
   PopoverDescription,
+  PopoverPortal,
+  PopoverPositioner,
   PopoverTitle,
   PopoverTrigger,
 } from './popover';
@@ -13,10 +15,14 @@ function renderPopover() {
   return render(
     <Popover>
       <PopoverTrigger>Open popover</PopoverTrigger>
-      <PopoverContent>
-        <PopoverTitle>Popover title</PopoverTitle>
-        <PopoverDescription>Popover description</PopoverDescription>
-      </PopoverContent>
+      <PopoverPortal>
+        <PopoverPositioner align="start">
+          <PopoverContent>
+            <PopoverTitle>Popover title</PopoverTitle>
+            <PopoverDescription>Popover description</PopoverDescription>
+          </PopoverContent>
+        </PopoverPositioner>
+      </PopoverPortal>
     </Popover>,
   );
 }
@@ -51,6 +57,7 @@ describe('Popover', () => {
     const user = userEvent.setup();
     renderPopover();
     await user.click(screen.getByRole('button', { name: 'Open popover' }));
+    expect(await screen.findByText('Popover title')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByText('Popover title')).not.toBeInTheDocument());
   });
@@ -58,17 +65,25 @@ describe('Popover', () => {
   it('is controlled via the open prop', async () => {
     const { rerender } = render(
       <Popover open>
-        <PopoverContent>
-          <PopoverTitle>Always open</PopoverTitle>
-        </PopoverContent>
+        <PopoverPortal>
+          <PopoverPositioner align="start">
+            <PopoverContent>
+              <PopoverTitle>Always open</PopoverTitle>
+            </PopoverContent>
+          </PopoverPositioner>
+        </PopoverPortal>
       </Popover>,
     );
     expect(await screen.findByText('Always open')).toBeInTheDocument();
     rerender(
       <Popover open={false}>
-        <PopoverContent>
-          <PopoverTitle>Always open</PopoverTitle>
-        </PopoverContent>
+        <PopoverPortal>
+          <PopoverPositioner align="start">
+            <PopoverContent>
+              <PopoverTitle>Always open</PopoverTitle>
+            </PopoverContent>
+          </PopoverPositioner>
+        </PopoverPortal>
       </Popover>,
     );
     await waitFor(() => expect(screen.queryByText('Always open')).not.toBeInTheDocument());
