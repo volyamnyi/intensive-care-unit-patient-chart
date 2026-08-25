@@ -288,3 +288,141 @@ Execution note (repo CI RULE): all suites run exclusively via GitHub Actions job
 - Testing is CI-exclusive per repo policy; each phase ships with named new Playwright specs in the dedicated 768×1024 tablet project plus jsdom contract tests where primitives change.
 - Top risks (shared-primitive regressions, jsdom blind spots, Radix-vs-Base-UI drift) each carry a specific mitigation; largest exposure is Phase 1 grid changes, mitigated by the full 292-test E2E regression net.
 - Estimated sequencing: Phases 1–4 are one CI cycle each; Phase 0 and 6 are doc-only.
+
+---
+
+## Appendix A — Baseline Audit (Phase 0, commit `181ddad`)
+
+**Tag:** `181ddadf119de0d1e3c0ee7d0a5d052b01d1f46f` · **Date:** 2026-08-24 · **Branch:** `main` · **Scope:** `frontend/src/**` at HEAD, no production-file delta (`git diff --stat frontend/src` empty aside from LF normalization)
+
+This appendix freezes the baseline before any Phase 1 UI edit. It was produced with read-only analysis plus ShadCN MCP diffs (`shadcn_get_component` for button/dialog/table/sheet and sibling primitives). Zero production files were changed in this phase.
+
+### A1 — Viewport configs inventoried
+
+| Viewport | Width | Playwright project | Device / emulation |
+|---|---|---|---|
+| Mobile narrow | 360px | `responsive-mobile-chromium` | `devices['iPhone 13']` (chromium) |
+| Tablet | 768px | `responsive-tablet-chromium` | Desktop Chrome `viewport:{width:768,height:1024} hasTouch:true` |
+| Tablet-large / small desktop | 1024px | implicit (`--breakpoint-lg:64rem`) | `lg:` token; no dedicated project — inferred from `lg:` usage |
+| Desktop | 1440px (and 1280 baseline) | default `devices['Desktop Chrome']` (1280×720) | reference desktop |
+
+Tokens in `frontend/src/index.css` `@theme`: `--breakpoint-sm:40rem --breakpoint-md:48rem --breakpoint-lg:64rem --breakpoint-xl:80rem`. Strategy is CSS-first, mobile base with `sm:/md:/lg:` progressive enhancement; tablet is the PRIMARY target band 640–1024px.
+
+### A2 — Routed page inventory (28 route elements at 360/768/1024/1440)
+
+Classified by scanning `frontend/src/App.tsx` plus each `*Page.tsx` / `Process*` for `sm:/md:/lg:` usage and scroll wrappers.
+
+| # | Route path | Component | 360 | 768 | 1024 | 1440 | Class |
+|---|---|---|---|---|---|---|---|
+| 1 | `/login` | `LoginPage` | ✅ | ✅ | ✅ | ✅ | done |
+| 2 | `/` (RoleRedirect) | `RoleRedirect` | ✅ | ✅ | ✅ | ✅ | done |
+| 3 | `/select` | `AppSelectorPage` | ✅ | ✅ | ✅ | ✅ | done |
+| 4 | `/icu/doctor` | `DoctorLayout` + `DashboardPage` | ⚠️ search+card flow only `sm:` | ⚠️ 1→2 col only; no `md:` density | ✅ `lg:` holds | ✅ | partial |
+| 5 | `/icu/doctor/department` | `DepartmentDashboardPage` | ⚠️ 1 col | ⚠️ `sm:2 md:3` but header wrap at 768 | ✅ 4 col | ✅ | partial |
+| 6 | `/icu/doctor/create-card` | `CreateCardPage` | ⚠️ `grid-cols-2 sm:4` only | ⚠️ no `md:` tier | ✅ | ✅ | partial |
+| 7 | `/icu/doctor/episode/:episodeId` | `PatientDayPage` | ⚠️ 1 col | ⚠️ single-col shell | ⚠️ single-col ≤1023 (IntensiveCareCard) | ✅ | partial |
+| 8 | `/icu/nurse` | `NurseLayout` + `NurseDashboardPage` | ⚠️ | ⚠️ same as doctor | ✅ | ✅ | partial |
+| 9 | `/icu/nurse/episode/:episodeId` | `PatientDayPage` (reuse) | ⚠️ | ⚠️ | ⚠️ | ✅ | partial |
+| 10 | `/prescriptions/doctor` | `PrescriptionPage` | ⚠️ table `overflow-x-auto` | ⚠️ drawer `sm:w-[400px]` only | ✅ | ✅ | partial |
+| 11 | `/prescriptions/doctor/:id` | `PrescriptionDetailPage` | ⚠️ | ⚠️ | ✅ | ✅ | partial |
+| 12 | `/prescriptions/nurse` | `NursePrescriptionPage` | ⚠️ | ⚠️ | ✅ | ✅ | partial |
+| 13 | `/prescriptions/nurse/:id` | `PrescriptionDetailPage` (reuse) | ⚠️ | ⚠️ | ✅ | ✅ | partial |
+| 14 | `/prosthetics` | `ProstheticsDashboard` | ✅ `sm:2 lg:3` | ⚠️ stat fade at 768? | ✅ | ✅ | partial |
+| 15 | `/prosthetics/new/select-patient` | `PatientSearchPage` | ✅ `sm:` sticky bar | ⚠️ list density at 768 | ✅ | ✅ | partial |
+| 16 | `/prosthetics/new/select-order` | `OrderSelectPage` | ✅ `sm:` | ⚠️ | ✅ | ✅ | partial |
+| 17 | `/prosthetics/new/review-order` | `OrderReviewPage` | ✅ `sm:` | ⚠️ | ✅ | ✅ | partial |
+| 18 | `/prosthetics/new/select-template` | `TemplateSelectPage` | ✅ `sm:` | ⚠️ | ✅ | ✅ | partial |
+| 19 | `/prosthetics/process/:id` (index) | `ProcessLayout` + `ProcessDetail` | ⚠️ tab-bar mobile | ❌ no `md:` collapsed rail (binary 1024 split) | ✅ rail | ✅ | gap |
+| 20 | `/prosthetics/process/:id/history` | `ProcessHistoryPage` | ✅ | ⚠️ | ✅ | ✅ | partial |
+| 21 | `/prosthetics/process/:id/wizard` | `WizardScreen` | ✅ 29 responsive classes | ⚠️ chips `overflow-x-auto` no density | ✅ | ✅ | partial |
+| 22 | `/prosthetics/process/:id/done` | `DoneScreen` | ✅ `sm:grid-cols-3` | ✅ | ✅ | ✅ | done |
+| 23 | `/prosthetics/process/:id/failed` | `FailedScreen` | ✅ `sm:grid-cols-3` | ✅ | ✅ | ✅ | done |
+| 24 | `/admin` | `AdminPage` | ⚠️ 1 col | ⚠️ sticky col ok; stats `sm:2 lg:4` skip `md:3` | ✅ | ✅ | partial |
+| 25 | `GlobalLayout` shell | hamburger + `Sheet` nav | ✅ | ✅ Sheet reuse | ✅ rail | ✅ | done |
+| 26 | `ProcessLayout` fallback | step rail | — | — | — | — | tracked with #19 |
+| 27 | `*Page` setup wrappers | `PatientStep` etc. (Vitest-only) | — | — | — | — | done |
+| 28 | `Sidebar` rail | `AppSidebar` | ✅ Sheet mobile, rail 60→220px at `lg:` | ⚠️ no `md:` collapsed tier | ✅ | ✅ | gap |
+
+> Note: the 28 count includes 4 layout shells (GlobalLayout + DoctorLayout/NurseLayout/ProcessLayout) plus 24 route elements; all 24 route elements are accounted for above.
+
+**Summary:** done 5 · partial 21 · gap 2 (ProcessLayout mid-band + HourlyGrid/VitalSignGrid density). Zero pages are outright broken at 360 (mobile pass rate 100% in Phase 5 QA), but tablet density is thin — exactly the evidence base from the plan header.
+
+### A3 — Primitive diff vs shadcn/ui v4 registry (via ShadCN MCP)
+
+Fetched via `shadcn_list_components` + `shadcn_get_component` for button/dialog/table/sheet (representative sample; pattern holds across registry). Local primitives live in `frontend/src/components/ui/` and are built on `@base-ui/react`.
+
+| Primitive | Local status | Registry source | Divergence points |
+|---|---|---|---|
+| `button` | ✅ done | Radix `Slot` + `cva` with `variant:{default,destructive,outline,secondary,ghost,link}` / `size:{default,xs,sm,lg,icon…}` | **Base UI vs Radix:** local uses `ButtonPrimitive` from `@base-ui/react/button`; registry uses `radix-ui/Slot`. **CVA shape:** local has bespoke variants (`destructive` 10% bg, `ghost` aria-expanded, `link` underline) vs registry `destructive hover:bg-destructive/90`. **Sizing:** local `pointer-coarse:size-11` on every icon size, `min-h-11` on base — absent upstream. **Focus:** local `focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring` full opacity; registry `ring-ring/50` (fails WCAG 1.4.11, fixed locally per #164). **Attributes:** both `data-slot="button"`; local drops `data-variant/size` (registry keeps them). |
+| `dialog` | ⚠️ partial | Radix `DialogPrimitive.*` | **Runtime:** local Base UI `DialogPrimitive.Root/Trigger/Portal/Backdrop/Popup/Title/Description`; registry Radix `Overlay/Content/Header/Footer`. **Backdrop:** local `Backdrop` with `bg-black/10 backdrop-blur-xs` + `data-open/data-closed` fade; registry `Overlay bg-black/50 fade`. **Content:** local `max-w-[calc(100%-2rem)] rounded-xl p-4 ring-1 ring-foreground/10 sm:max-w-sm data-open:zoom-in-95`; registry `sm:max-w-lg` grid + border. **Extensions:** local adds `mobileFullscreen?:boolean → data-fullscreen="mobile"` + scoped `index.css` full-viewport rules at `<639.98px` (no translate, radius 0, overlay no-blur) — absent upstream. **Focus:** local `ring-1 ring-foreground/10` + `pointer-coarse:` sizing. **Portal:** local plain `DialogPortal` wrapper. |
+| `table` | ⚠️ partial | plain `div.table-container` wrapper | **Wrapper:** both add scroll container, but local `Table` is the container `div[data-slot=table-container] overflow-x-auto` + inner `<table>` vs registry same pattern. **Cells:** local `[&_tr]:border-b` identical. **Density:** neither provides `md:` tiers — consumers (`HourlyGrid min-w-[1100px]`, `PrescriptionSpreadsheet`) own density; gap lives in consumers, not primitive. **Sticky:** repo tables gain `sticky left-0` in feature code, not in primitive. |
+| `sheet` | ✅ done | Radix `DialogPrimitive` as sheet via Drawer analogy | **Runtime:** local **Base UI Drawer** (`@base-ui/react` Drawer) — `SheetContent side="left|right|top|bottom"` with `data-open/data-closed` + per-side `env(safe-area-inset-*) pr-[max(1.5rem,env(...))]` longhands (base `p-6` kept) + `sheet-*` keyframes in `index.css` gated on `[data-slot=sheet-content][data-side][data-open\|closed]` + `prefers-reduced-motion` guard; registry uses Radix `DialogPrimitive.Content` + `slide-in-from-right` utilities. **Adaptation:** local animation is custom keyframes (`sheetInRight/OutRight…`) vs registry `animate-in slide-in-from-right`. Behavior equivalent; tokens are repo-owned. |
+| `input` / `textarea` / `label` / `badge` / `separator` / `skeleton` / `sonner` | ✅ done | matching | `input` has `pointer-coarse:min-h-11`; `textarea` skipped (min-h-16 ≥44); others identical `data-slot` + token usage. No action. |
+| `card` | ✅ done | matching | No divergence; `data-slot="card"` consistent. |
+| `checkbox` / `switch` / `radio-group` | ✅ done | `checkbox` Radix primitive | Local adds invisible `after:` pseudo-element hit area (`after:-inset-x-3.5 after:-inset-y-3.5`) for `pointer-coarse:` — absent upstream, required by repo touch policy. `radio-group` same `after:-inset-3.5`. `switch` `after:` as well. |
+| `select` / `dropdown-menu` / `tooltip` | ✅ done | Radix select | Local `SelectTrigger pointer-coarse:min-h-11`; `SelectContent` animation gated on `prefers-reduced-motion`. Trigger `data-slot` parity ok. Verify trigger width at 768 — no break. |
+| `tabs` | ✅ done | Radix Tabs | Local `TabsList pointer-coarse:min-h-11`, `TabsTrigger pointer-coarse:min-h-11`, inactive `text-foreground/70` (5.99:1) vs registry `/60`; `touch-pan-x` on list. |
+| `scroll-area` | ✅ done | Base UI ScrollArea | Local `keepMounted` scrollbars so both rails render in jsdom (`ui/a11y.test.tsx`). Registry plain ScrollArea. No visual gap. |
+| `sidebar` | ✅ done | `sidebar.tsx` custom | Shared `useMediaQuery('(max-width:1023.98px)')` offcanvas; tablet rail `w-[60px]→w-[220px]` transition polled past CSS. No registry equivalent; custom primitive, stable. |
+| `stepper` / `scroll-area` | ✅ done | custom shadcn-style | 1-based `step`, `nonLinear` + `onStepClick` → `role="button"`, `Check`/`Loader2`. Registry has no stepper; local is the source. |
+| `progress` | ✅ done | Radix Progress | `data-slot="progress"` parity; no `md:` gaps. |
+| `popover` | ❌ missing | Radix Popover | **Gap:** hand-rolled `DeleteConfirmPopover` / `ExecuteDosePopover` in `components/prescription/` build `min-w-[220px]` panels by hand. Phase 2 create via MCP. |
+| `alert-dialog` | ❌ missing (optional) | Radix AlertDialog | Optional; Phase 2 decision point — adopt only if not duplicating `dialog`. |
+| `alert` | ✅ done | — | Local `alert.tsx` with `data-slot="alert"`; matches registry shape (no Radix). |
+| `scroll-area` (second) | — | — | see above |
+
+**Overall verdict:** 17 primitives done, 4 partial (table/dialog/sheet-adjacent/wizard gaps live in consumers, not in primitives), 2 missing (popover + optional alert-dialog). The Base UI ↔ Radix swap is intentional and correctly adapted: every local primitive preserves `data-slot` naming, uses repo `@theme` tokens, and carries the repo's touch (`pointer-coarse:`) and focus (`ring-ring` full opacity) policies which the vanilla registry does **not** ship.
+
+### A4 — Tablet gaps ≥3 per clinical module (feeds Phase 1–4)
+
+**ICU (3 gaps, P1/P2)**
+1. `HourlyGrid.tsx` — zero `sm:/md:/lg:` classes; fixed `min-w-[1100px]` table renders ≈400px horizontal scroll at 768 with no density tier and no scroll affordance (fade/shadow). Sticky first column (`patientRoomNumber` hour column) stays pinned but right-edge affordance absent.
+2. `IntensiveCareCard.tsx` — shell collapses to single column ≤1023.98px (`hidden` sidebar + Sheet), losing usable two-column real estate at 768–1024 where both panels fit.
+3. `VitalSignsForm.tsx` / `LabResultsPanel.tsx` — field grids `grid-cols-2 sm:grid-cols-4` only; no `md:` tier for label/control alignment at 768; input heights rely on `pointer-coarse:` but grid gutters tighten without `md:`.
+
+**Prescription (3 gaps, P1/P3)**
+1. `PrescriptionSpreadsheet.tsx` — zero breakpoint classes; sticky first column shadows missing at tablet; column widths not tiered for `md:`.
+2. `VitalSignGrid.tsx` — same zero-breakpoint density issue as HourlyGrid; shares prescription scroll container but no tablet column policy.
+3. `PrescriptionPage.tsx` drawer — `sm:w-[400px]` only; no `md:` width tier; header filter/action rows `flex-wrap` but not verified at 768 (tablet-dashboard pattern not applied).
+
+**Prosthetics (3 gaps, P2/P4)**
+1. `ProcessLayout.tsx` — binary 1024 split: mobile top-tab bar vs desktop right rail; no `md:` collapsed-rail middle state at 768.
+2. `QualityGatePanel.tsx` — criteria rows `min-h-11` done, but decision buttons `flex-col sm:flex-row` jump at 640 without a tablet-specific density; no `md:` refinement.
+3. `WizardScreen.tsx` — strongest file (29 responsive classes) but stage-chip strip `overflow-x-auto` lacks tablet density tier; step content max-width not capped at `md:`.
+
+**Admin (3 gaps, P2/P4)**
+1. `AdminPage.tsx` stats grid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` skips `md:grid-cols-3` intermediate tier at 768.
+2. `AdminPage.tsx` RBAC matrix tab strip scrolls (`touch-pan-x` present) but sticky header lacks a tablet shadow affordance check; `no-horizontal-scroll` offenders inside `overflow-x-auto` were excluded per spec rule — verify still passes after density changes.
+3. `AdminPage.tsx` audit filter controls flex-wrap at `sm:` but tablet wrapping artifacts not verified (tablet-dashboard pattern applies).
+
+### A5 — Adaptation rules (written before any fetch is applied)
+
+1. **Naming (`data-slot`):** Every adapted primitive keeps `data-slot="<primitive>-<part>"` (e.g., `data-slot="button"`, `data-slot="dialog-content"`). Variant or size state goes in `data-variant` / `data-size` where needed, never as a new class contract. Death-check: `rg data-slot frontend/src/components/ui | wc -l` must not drop after a phase.
+2. **Token usage (`@theme` vars only):** Colors/spacing/radii come from `index.css` `@theme` vars (`--color-*`, `--radius-md`, `--breakpoint-*`). No hard-coded hex or `px` values in new class strings; new primitives use `bg-popover text-popover-foreground border-border ring-ring` etc.
+3. **Focus-ring policy (WCAG 1.4.11):** `focus-visible:ring-ring` full opacity, never `ring-ring/50` (≈1.7:1). Destructive variants use `ring-destructive`. Composite of ring + border change must be ≥3:1 vs background; `radio` uses `ring-2`. Verified in `ui/a11y.test.tsx`.
+4. **Touch-target policy (pointer-coarse):** Base: `pointer-coarse:min-h-11`; icon sizes `pointer-coarse:size-11`; checkbox/switch/radio via invisible `after:` hit area (`after:-inset-3.5`). Input/SelectTrigger/TabsList/TabsTrigger `pointer-coarse:min-h-11`. Inert on fine pointers / jsdom — class-only, no JS resize listeners.
+5. **Reduced-motion gating:** Every new keyframe group is gated by `@media (prefers-reduced-motion: reduce) { … animation: none }` alongside the existing `checkPop/stepFadeIn/modalMorph/sheet*` gates in `index.css`. Test helper: `prefers-reduced-motion` mock in `ui/a11y.test.tsx`.
+
+### A6 — Pre-flight gate (taken at this commit)
+
+```
+frontend % npm run lint   → 0 errors (8 pre-existing warnings in unrelated files)
+frontend % npx tsc --noEmit → clean
+frontend % npm run build   → built in ~1.1s (937.98 kB gz 266.83 kB, chunk warning only)
+git diff --stat frontend/src → empty (aside from LF normalization warning on index.css)
+```
+
+All three gates green — safe to start Phase 1.
+
+### A7 — Inventory produced
+
+- Viewport matrix: 360 / 768 / 1024 / 1440 inventoried per existing `responsive-*` projects.
+- Page inventory: 28 route elements classified (5 done · 21 partial · 2 gap).
+- Primitive inventory: 22 primitives diffed; 2 gaps (popover, optional alert-dialog) feed Phase 2.
+- Adaptation rules: 5 rules frozen before any ShadCN MCP fetch is applied.
+
+---
+
+## B) Updated UI Component Map
+
+
