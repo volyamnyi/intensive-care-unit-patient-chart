@@ -1,7 +1,12 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverPortal,
+  PopoverPositioner,
+} from '@/components/ui/popover';
 import type { PrescriptionDayPart } from '../../types/medication';
 
 const PERIOD_FULL: Record<string, string> = {
@@ -37,18 +42,15 @@ export default function ExecuteDosePopover({
   return (
     <>
       {Boolean(execAnchor) && !show2fa && (
-        <PopoverPrimitive.Root
+        <Popover
           open
           onOpenChange={(_open: boolean) => {
             if (!_open) onCloseExecute();
           }}
         >
-          <PopoverPrimitive.Portal>
-            <PopoverPrimitive.Positioner anchor={execAnchor ?? undefined} align="start" sideOffset={4}>
-              <PopoverPrimitive.Popup
-                data-slot="popover-content"
-                className="z-50 flex min-w-[260px] flex-col gap-1.5 rounded-xl border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"
-              >
+          <PopoverPortal>
+            <PopoverPositioner anchor={execAnchor ?? undefined} align="start" sideOffset={4}>
+              <PopoverContent className="z-50 flex min-w-[260px] flex-col gap-1.5 rounded-xl p-2">
                 <p className="text-sm font-medium">
                   {execDp ? `${PERIOD_FULL[execDp.period]}: ${execDp.dose ?? '—'}` : 'Виконання дози'}
                 </p>
@@ -60,10 +62,10 @@ export default function ExecuteDosePopover({
                     disabled={!execDose.trim()}
                     onClick={onProceedTo2fa}>Продовжити</Button>
                 </div>
-              </PopoverPrimitive.Popup>
-            </PopoverPrimitive.Positioner>
-          </PopoverPrimitive.Portal>
-        </PopoverPrimitive.Root>
+              </PopoverContent>
+            </PopoverPositioner>
+          </PopoverPortal>
+        </Popover>
       )}
 
       <Dialog open={show2fa} onOpenChange={(open) => { if (!executing && !open) onShow2faChange(false); }}>

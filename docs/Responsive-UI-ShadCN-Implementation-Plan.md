@@ -93,6 +93,8 @@
 
 **Test strategy:** Vitest unit tests for the new primitive (open/close/a11y roles); existing prescription E2E suites as regression net; `format-check` enforces boundary rules automatically.
 
+**Outcome (done — #176, CI green):** M1 shipped — `ui/popover.tsx` created (Base UI, `data-slot`, repo `ring-1 ring-foreground/10` policy) and both prescription popovers migrated onto `Root+Portal+Positioner(anchor)+Popup`; `popover.test.tsx` + `popoverPrimitive.test.tsx` green. M2 — alert-dialog **skipped** (see component-map decision: `ui/dialog.tsx` + `ui/popover.tsx` already cover destructive confirms; a fourth overlay primitive would be net-negative duplication). M3 — backport pass: `popover-content` (plus the previously un-gated `dropdown-menu-content`/`dropdown-menu-sub-content`/`tooltip-content`) added to the `prefers-reduced-motion` animation gate in `index.css`; consumers now route through the `ui/` layer so the `@base-ui/react` import stays inside `components/ui` (oxlint boundary intact).
+
 ---
 
 ## Phase 3 — Forms & Dialogs Adaptive Layout
@@ -366,12 +368,12 @@ Fetched via `shadcn_list_components` + `shadcn_get_component` for button/dialog/
 | `sidebar` | ✅ done | `sidebar.tsx` custom | Shared `useMediaQuery('(max-width:1023.98px)')` offcanvas; tablet rail `w-[60px]→w-[220px]` transition polled past CSS. No registry equivalent; custom primitive, stable. |
 | `stepper` / `scroll-area` | ✅ done | custom shadcn-style | 1-based `step`, `nonLinear` + `onStepClick` → `role="button"`, `Check`/`Loader2`. Registry has no stepper; local is the source. |
 | `progress` | ✅ done | Radix Progress | `data-slot="progress"` parity; no `md:` gaps. |
-| `popover` | ❌ missing | Radix Popover | **Gap:** hand-rolled `DeleteConfirmPopover` / `ExecuteDosePopover` in `components/prescription/` build `min-w-[220px]` panels by hand. Phase 2 create via MCP. |
-| `alert-dialog` | ❌ missing (optional) | Radix AlertDialog | Optional; Phase 2 decision point — adopt only if not duplicating `dialog`. |
+| `popover` | ✅ done (Phase 2 / #176) | Base UI Popover | **Created** `components/ui/popover.tsx` (Base UI `Root/Trigger/Portal/Positioner/Popup/Title/Description`, `data-slot="popover-content"`, `ring-1 ring-foreground/10` + reduced-motion gate, content-sized — no fixed `w-72`). `DeleteConfirmPopover` + `ExecuteDosePopover` (dose-entry half) migrated from hand-rolled `getBoundingClientRect` overlays onto `Root+Portal+Positioner(anchor)+Popup`; consumers import the `ui/` layer (base-UI import stays inside `components/ui`). `popover.test.tsx` render suite (open/close/Esc/`role=dialog`/`aria-expanded`/controlled) + `popoverPrimitive.test.tsx` contract. |
+| `alert-dialog` | ⏭️ skipped (decision) | Radix AlertDialog | **Decision (M2):** do NOT add `ui/alert-dialog.tsx`. The destructive-confirm use case is already covered by `ui/dialog.tsx` (which ships `mobileFullscreen`) as used by `ExecuteDosePopover` 2FA and the cancel/prosthetics-delconfirm dialogs, and by `ui/popover.tsx` for the inline delete-confirm (`DeleteConfirmPopover`). A Base UI `AlertDialog` would duplicate `dialog` semantics (same `role=alertdialog` surface, same focus trap, same `pointer-coarse:`/`ring-ring` policies) with zero new capability — net-negative duplication. Revisit only if an app-wide blocking-confirm pattern emerges that neither supports. |
 | `alert` | ✅ done | — | Local `alert.tsx` with `data-slot="alert"`; matches registry shape (no Radix). |
 | `scroll-area` (second) | — | — | see above |
 
-**Overall verdict:** 17 primitives done, 4 partial (table/dialog/sheet-adjacent/wizard gaps live in consumers, not in primitives), 2 missing (popover + optional alert-dialog). The Base UI ↔ Radix swap is intentional and correctly adapted: every local primitive preserves `data-slot` naming, uses repo `@theme` tokens, and carries the repo's touch (`pointer-coarse:`) and focus (`ring-ring` full opacity) policies which the vanilla registry does **not** ship.
+**Overall verdict:** 18 primitives done (popover created Phase 2 / #176; alert-dialog deliberately skipped — see decision above), 4 partial (table/dialog/sheet-adjacent/wizard gaps live in consumers, not in primitives). The Base UI ↔ Radix swap is intentional and correctly adapted: every local primitive preserves `data-slot` naming, uses repo `@theme` tokens, and carries the repo's touch (`pointer-coarse:`) and focus (`ring-ring` full opacity) policies which the vanilla registry does **not** ship.
 
 ### A4 — Tablet gaps ≥3 per clinical module (feeds Phase 1–4)
 
