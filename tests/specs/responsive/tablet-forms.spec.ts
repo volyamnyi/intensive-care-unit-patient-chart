@@ -77,13 +77,16 @@ test.describe('Tablet forms & dialogs at 768', () => {
     await page.goto(EPISODE_URL);
     await page.waitForLoadState('networkidle');
 
-    // b3333333 is OPEN → the entry form renders unlocked
-    const hourInput = page.getByPlaceholder('Година');
+    // b3333333 is OPEN → the entry form renders unlocked. Scope inside the
+    // PatientStatePanel card — other sidebar panels (labs) have their own
+    // «Година» input.
+    const panel = page.locator('div.rounded-xl', { has: page.getByLabel('Свідомість') });
+    const hourInput = panel.getByPlaceholder('Година');
     await expect(hourInput).toBeVisible({ timeout: 10000 });
 
-    const consciousness = page.getByLabel('Свідомість');
-    const skin = page.getByLabel('Шкіра');
-    const edema = page.getByLabel('Набряки');
+    const consciousness = panel.getByLabel('Свідомість');
+    const skin = panel.getByLabel('Шкіра');
+    const edema = panel.getByLabel('Набряки');
     await expect(consciousness).toBeVisible();
     await expect(skin).toBeVisible();
     await expect(edema).toBeVisible();
