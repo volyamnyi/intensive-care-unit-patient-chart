@@ -119,12 +119,14 @@ export default function VitalSignGrid({
           <p className="text-muted-foreground font-mulish">Немає даних життєвих показників</p>
         </div>
       ) : (
-        <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm">
-          <table className="border-collapse" style={{ minWidth: 200 + visibleDays.length * 300 }}>
+        <div className="relative overflow-auto rounded-xl border border-border bg-card shadow-sm">
+          {/* Tablet scroll affordance: right-edge gradient fade */}
+          <div aria-hidden className="pointer-events-none sticky right-0 top-0 z-[5] float-right h-full w-8 bg-gradient-to-l from-border/40 to-transparent" />
+          <table className="border-collapse md:table-fixed" style={{ minWidth: 200 + visibleDays.length * 300 }}>
             <thead>
               <tr>
                 <th
-                  className="sticky left-0 z-[2] min-w-[180px] border-b border-l border-r border-border bg-card p-[6px_8px] text-left"
+                  className="sticky left-0 z-[2] min-w-[180px] md:min-w-[140px] border-b border-l border-r border-border bg-card p-[6px_8px] text-left shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                   style={{ borderRight: '2px solid #94a3b8', borderBottom: '2px solid #94a3b8' }}
                 >
                   <span className="text-xs font-bold font-rubik">Показник</span>
@@ -163,7 +165,7 @@ export default function VitalSignGrid({
               {VITAL_PARAMS.map(param => (
                 <tr key={param.key}>
                   <td
-                    className="sticky left-0 z-[1] min-w-[180px] border border-border bg-card p-[4px_8px]"
+                    className="sticky left-0 z-[1] min-w-[180px] md:min-w-[140px] border border-border bg-card p-[4px_8px] shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                     style={{ borderRight: '2px solid #94a3b8' }}
                   >
                     <span className="text-sm font-semibold font-rubik">{param.label}</span>

@@ -146,7 +146,7 @@ export default function HourlyGridDialog({
         initialFocus={handleInitialFocus}
         finalFocus={finalFocusRef ?? undefined}
         style={{ inset: 0, translate: 'none', transformOrigin: origin }}
-        className="grid w-full max-w-none grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 rounded-none bg-card p-0 ring-0 sm:max-w-none print:hidden"
+        className="grid w-full max-w-none grid-rows-[auto_auto_minmax(0,1fr)_auto] gap-0 rounded-none bg-card p-0 ring-0 sm:max-w-[95vw] md:max-w-[92vw] print:hidden"
       >
         <DialogTitle className="sr-only">{`Погодинна карта — ${patientName}`}</DialogTitle>
 

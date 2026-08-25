@@ -301,7 +301,7 @@ const TherapyCell = memo(function TherapyCell({
   return (
     <TableCell
       onClick={handleClick}
-      className={cn('p-1 text-center', bgClass, isMobile && 'min-h-[44px]')}
+      className={cn('p-1 md:p-0.5 text-center', bgClass, isMobile && 'min-h-[44px]')}
       style={{ minWidth: 44, cursor: clickable ? 'pointer' : 'default' }}
     >
       {isExecuting ? <Loader2 className="inline size-3 animate-spin" /> : (
@@ -526,14 +526,16 @@ export default function HourlyGrid({
 
   return (
     <Root className={cn('min-w-0', isMobile ? 'w-full' : 'flex-1', sticky && 'h-full min-h-0')}>
-      <div className={cn('overflow-hidden rounded-xl border border-border bg-card', sticky && 'flex h-full flex-col')}>
+      <div className={cn('relative overflow-hidden rounded-xl border border-border bg-card', sticky && 'flex h-full flex-col')}>
         {toolbar}
         <div className={sticky ? 'flex h-full min-h-0' : ''}>
           <div ref={scrollRef} className={sticky ? 'flex-1 min-h-0 overflow-auto scroll-pt-12' : 'overflow-x-auto touch-pan-x'}>
+          {/* Tablet/desktop scroll affordance: right-edge gradient fade */}
+          <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-[5] hidden w-8 bg-gradient-to-l from-border/40 to-transparent md:block" />
           <GridTable sticky={sticky}>
             <TableHeader>
               <TableRow className={cn('bg-muted', stickyRowClass)}>
-                <TableHead className={cn('font-bold min-w-[130px] border-r border-border', stickyCornerClass)}>
+                <TableHead className={cn('font-bold min-w-[130px] md:min-w-[100px] border-r border-border', stickyCornerClass)}>
                   {onHeaderDoubleClick ? (
                     <TooltipProvider>
                       <Tooltip>
@@ -560,7 +562,7 @@ export default function HourlyGrid({
                   key={h}
                   data-hour-col={h}
                   className={cn(
-                    'text-center font-bold text-xs p-1 border-r border-border last:border-r-0',
+                    'text-center font-bold text-xs p-1 md:p-0.5 border-r border-border last:border-r-0',
                     h === realClockHour && 'shadow-[inset_0_-2px_0_0_var(--color-primary)]',
                   )}
                 >

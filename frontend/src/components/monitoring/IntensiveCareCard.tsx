@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Maximize2, PanelRightOpen, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { SidebarProvider } from '../ui/Sidebar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -444,7 +443,7 @@ export default function IntensiveCareCard({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="lg:hidden"
+                  className="md:hidden"
                   onClick={() => setSidebarOpen(true)}
                   aria-label="Панель пацієнта"
                 >
@@ -514,13 +513,13 @@ export default function IntensiveCareCard({
   return (
     <>
       <SidebarProvider defaultWidth={300} minWidth={200} maxWidth={600}>
-      <div className={cn('flex items-start relative', isMobile ? 'flex-col' : 'flex-row')}>
+      <div className="flex items-start relative flex-col md:flex-row">
         <HourlyGrid
           {...gridProps}
           toolbar={gridToolbar}
           onHeaderDoubleClick={() => setGridExpanded(true)}
         />
-        <div className={cn(isMobile && 'hidden')}>
+        <div className="hidden md:block">
           {sidebarContent}
         </div>
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>

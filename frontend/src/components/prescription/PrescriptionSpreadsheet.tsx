@@ -181,12 +181,14 @@ export default function PrescriptionSpreadsheet({
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-auto">
-          <table className="w-full border-collapse" style={{ minWidth: 200 + visibleDates.length * 300 }}>
+        <div className="relative rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-auto">
+          {/* Tablet scroll affordance: right-edge gradient fade */}
+          <div aria-hidden className="pointer-events-none sticky right-0 top-0 z-[5] float-right h-full w-8 bg-gradient-to-l from-border/40 to-transparent" />
+          <table className="w-full border-collapse md:table-fixed" style={{ minWidth: 200 + visibleDates.length * 300 }}>
             <thead>
               <tr>
                 <th
-                  className="sticky left-0 bg-card z-20 min-w-[180px] p-1.5 border border-border text-left"
+                  className="sticky left-0 bg-card z-20 min-w-[180px] md:min-w-[140px] p-1.5 md:p-1 border border-border text-left shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                   style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
                 >
                   <span className="text-[10px] font-bold">Препарат / Метод</span>
@@ -211,7 +213,7 @@ export default function PrescriptionSpreadsheet({
               </tr>
               <tr>
                 <th
-                  className="sticky left-0 bg-card z-20 border border-border"
+                  className="sticky left-0 bg-card z-20 border border-border md:min-w-[140px] shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                   style={{ borderRightWidth: 2, borderRightColor: '#94a3b8', borderBottomWidth: 2, borderBottomColor: '#94a3b8' }}
                 />
                 {visibleDates.map((date, dateIdx) =>
@@ -244,7 +246,7 @@ export default function PrescriptionSpreadsheet({
               {gridItems.map(item => (
                 <tr key={item.id}>
                   <td
-                    className="sticky left-0 bg-card z-10 p-1 min-w-[180px] border border-border"
+                    className="sticky left-0 bg-card z-10 p-1 min-w-[180px] md:min-w-[140px] border border-border shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                     style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
                   >
                     <div className="flex items-start gap-0.5">

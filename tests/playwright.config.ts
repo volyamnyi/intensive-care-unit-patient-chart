@@ -127,6 +127,7 @@ export default defineConfig({
       testMatch: [
         '**/responsive/no-horizontal-scroll.spec.ts',
         '**/responsive/tablet-dashboard.spec.ts',
+        '**/responsive/tablet-clinical-grids.spec.ts',
       ],
       fullyParallel: false,
     },
