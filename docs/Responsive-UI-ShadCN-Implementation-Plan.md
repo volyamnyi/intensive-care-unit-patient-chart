@@ -122,6 +122,8 @@
 
 **Test strategy:** extend `ui/a11y.test.tsx` if dialog defaults change; Playwright `responsive-tablet-chromium` spec `tablet-forms.spec.ts` (scale form opens, inputs reachable, save works at 768); existing role projects cover sign/save flows.
 
+**Outcome (done — #177):** M1 verification — `ApacheIiForm` (sm:2/md:3/lg:4), `BradenForm` (sm:2/md:3) and the `RassSelector` trigger already carried full tier ladders + `pointer-coarse:min-h-11` (no change needed); **`SofaForm` was the one gap** — its 13-field grid gained `sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`. M2 — `VitalSignsForm` grid `sm:grid-cols-4` → explicit `sm:grid-cols-3 md:grid-cols-4` + textarea `md:min-h-[72px]`; `PatientStatePanel`'s six select fields wrapped in a `grid grid-cols-1 md:grid-cols-2` pair-up grid with `pointer-coarse:min-h-11` on all controls and `md:min-h-[72px]` on the notes textarea; `MedicalNotesPanel` outer fragment became `grid grid-cols-1 gap-2 lg:grid-cols-2` (editor | list side-by-side ≥1024px, stacked below; list wrapped in `flex flex-col`). M3 — `DialogContent` base policy is now `sm:max-w-sm md:max-w-md` (384 → **448px** ≥768), single-sourced in `ui/dialog.tsx`; narrow consumers keep their intentional caps through `cn()`/tailwind-merge (`max-w-xs` on the dose-execution popovers survives as an unconflicting class — documented exception); `ui/sheet.tsx` unchanged — the right-side patient sidebar sheet is capped by its consumer (`w-full p-0 sm:max-w-sm` = 384px @768), verified. Tests: `src/test/responsive/tabletForms.test.tsx` (9 raw-source contracts), `components/ui/dialog.test.tsx` (7 jsdom tests: closed/open/labelled dialog/classes/`data-fullscreen`/Escape/controlled), E2E `tests/specs/responsive/tablet-forms.spec.ts` (4 serial tests on episode `a3333333`, whose only day `b3333333` stays OPEN across the suite — inline sidebar visible + sheet trigger hidden, SOFA form 3-column tier with real row-alignment boxes + calculate round-trip, patient-state 2-column pairing, delete-dialog width in (384, 450]); testMatch extended in `responsive-tablet-chromium`. Note: `VitalSignsForm` currently has no production importer (test-only) — kept for upcoming reuse.
+
 ---
 
 ## Phase 4 — Prosthetics & Admin Tablet Pass
@@ -229,8 +231,8 @@ Consumers then delete local markup (`DeleteConfirmPopover.tsx` lines building `m
 | select / dropdown-menu / tooltip | ✅ done | verify trigger width at 768 | backport check |
 | tabs | ✅ done (scrollable list) | verify at 768 in admin | backport check |
 | table | ⚠️ partial | wrapper ok; density tiers live in consumers | Phase 1 recipe source |
-| dialog | ⚠️ partial | tablet max-width policy missing | Phase 3 consolidation |
-| sheet | ✅ done (safe-area) | verify width at 768 | Phase 3 verification |
+| dialog | ✅ done (`sm:max-w-sm md:max-w-md` policy) | none | — |
+| sheet | ✅ done (safe-area; right side capped by consumers `sm:max-w-sm`) | none | — |
 | stepper / scroll-area | ✅ done | none | none |
 | sidebar | ✅ done (rail↔sheet) | mid-band behavior Phase 4 | — |
 | progress | ✅ done | none | none |

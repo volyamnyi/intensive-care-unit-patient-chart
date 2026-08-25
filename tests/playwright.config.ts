@@ -128,6 +128,7 @@ export default defineConfig({
         '**/responsive/no-horizontal-scroll.spec.ts',
         '**/responsive/tablet-dashboard.spec.ts',
         '**/responsive/tablet-clinical-grids.spec.ts',
+        '**/responsive/tablet-forms.spec.ts',
       ],
       fullyParallel: false,
     },

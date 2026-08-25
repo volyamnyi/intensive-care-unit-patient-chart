@@ -72,7 +72,7 @@ export default function PatientStatePanel({
     <div className="mb-1">
       <p className="mb-0.5 text-xs font-medium text-muted-foreground font-mulish">{label}</p>
       <Select value={value} onValueChange={(v: string | null) => { if (v !== null) onChange(v); }}>
-        <SelectTrigger aria-label={label} className="h-7 w-full">
+        <SelectTrigger aria-label={label} className="h-7 w-full pointer-coarse:min-h-11">
           <SelectValue placeholder={label} />
         </SelectTrigger>
         <SelectContent>
@@ -89,18 +89,20 @@ export default function PatientStatePanel({
       {!isLocked && (
         <div className="mb-3 rounded-xl border bg-card p-3 text-card-foreground shadow-sm">
           <Input type="number" placeholder="Година" value={form.recordHour}
-            onChange={(e) => setForm((prev) => ({ ...prev, recordHour: Number(e.target.value) }))} className="mb-1 h-7" />
-          <SelectField label={'Свідомість'} options={CONSCIOUSNESS} value={form.consciousness} onChange={(v) => set('consciousness', v)} />
-          <SelectField label={'Шкіра'} options={SKIN} value={form.skin} onChange={(v) => set('skin', v)} />
-          <SelectField label={'Набряки'} options={EDEMA} value={form.edema} onChange={(v) => set('edema', v)} />
-          <SelectField label={'Слизові'} options={MUCOSA} value={form.mucousMembranes} onChange={(v) => set('mucousMembranes', v)} />
-          <SelectField label={'Периферійний кровообіг'} options={CIRCULATION} value={form.peripheralCirculation} onChange={(v) => set('peripheralCirculation', v)} />
-          <SelectField label={'Перистальтика'} options={BOWEL} value={form.bowelSounds} onChange={(v) => set('bowelSounds', v)} />
+            onChange={(e) => setForm((prev) => ({ ...prev, recordHour: Number(e.target.value) }))} className="mb-1 h-7 pointer-coarse:min-h-11" />
+          <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2">
+            <SelectField label={'Свідомість'} options={CONSCIOUSNESS} value={form.consciousness} onChange={(v) => set('consciousness', v)} />
+            <SelectField label={'Шкіра'} options={SKIN} value={form.skin} onChange={(v) => set('skin', v)} />
+            <SelectField label={'Набряки'} options={EDEMA} value={form.edema} onChange={(v) => set('edema', v)} />
+            <SelectField label={'Слизові'} options={MUCOSA} value={form.mucousMembranes} onChange={(v) => set('mucousMembranes', v)} />
+            <SelectField label={'Периферійний кровообіг'} options={CIRCULATION} value={form.peripheralCirculation} onChange={(v) => set('peripheralCirculation', v)} />
+            <SelectField label={'Перистальтика'} options={BOWEL} value={form.bowelSounds} onChange={(v) => set('bowelSounds', v)} />
+          </div>
           <Input placeholder={'Загальний стан'} value={form.generalCondition}
-            onChange={(e) => setForm((prev) => ({ ...prev, generalCondition: e.target.value }))} className="mb-1 h-7" />
+            onChange={(e) => setForm((prev) => ({ ...prev, generalCondition: e.target.value }))} className="mb-1 h-7 pointer-coarse:min-h-11" />
           <textarea placeholder={'Примітки'} value={form.additionalNotes}
             onChange={(e) => setForm((prev) => ({ ...prev, additionalNotes: e.target.value }))}
-            className="mb-1 h-7 w-full min-h-[2.5rem] rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring md:text-sm dark:bg-input/30"
+            className="mb-1 h-7 w-full min-h-[2.5rem] md:min-h-[72px] rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring md:text-sm dark:bg-input/30"
             rows={2}
           />
           <div className="flex flex-row gap-1 items-center">

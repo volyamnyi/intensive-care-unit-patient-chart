@@ -49,7 +49,7 @@ export default function SofaForm({ onCalculate, disabled }: SofaFormProps) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs font-semibold mb-1">SOFA — параметри</p>
-      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         <Input placeholder="PaO₂ (mmHg)" value={paO2} onChange={e => setPaO2(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
         <Input placeholder="FiO₂ (%)" value={fio2} onChange={e => setFio2(e.target.value)} className="h-7 text-xs pointer-coarse:min-h-11" disabled={disabled} />
         <Select value={onVentilator} onValueChange={v => setOnVentilator(v ?? '')} disabled={disabled}>

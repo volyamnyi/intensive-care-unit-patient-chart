@@ -60,7 +60,7 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
       {title && (
         <h3 className="font-rubik text-base font-semibold mb-1.5">{title}</h3>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
         <div>
           <label htmlFor="systolicBP" className="text-sm text-muted-foreground mb-1 block">АТ сист. (мм рт.ст.)</label>
           <Input id="systolicBP" type="number" value={values.systolicBP ?? ''}
@@ -186,7 +186,7 @@ export default function VitalSignsForm({ values, onChange, onSave, saving, title
       <div className="col-span-full mt-2">
         <label htmlFor="notes" className="text-sm text-muted-foreground mb-1 block">Примітки</label>
         <textarea id="notes"
-          className="flex min-h-[60px] w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80"
+          className="flex min-h-[60px] md:min-h-[72px] w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80"
           value={values.notes ?? ''}
           onChange={(e) => onChange(setStr(values, 'notes', e.target.value))}
           disabled={disabled}
