@@ -1,5 +1,4 @@
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
-import type { MouseEvent } from 'react';
 import { Button } from '@/components/ui/button';
 
 export interface DeleteConfirmPopoverProps {
@@ -17,13 +16,12 @@ export default function DeleteConfirmPopover({
   return (
     <PopoverPrimitive.Root
       open
-      onOpenChange={(_open, _eventDetails) => {
-        if (!_open) onCloseDeleteConfirm();
+      onOpenChange={(open: boolean) => {
+        if (!open) onCloseDeleteConfirm();
       }}
-      anchor={deleteAnchor}
     >
       <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Positioner align="start" sideOffset={4}>
+        <PopoverPrimitive.Positioner anchor={deleteAnchor} align="start" sideOffset={4}>
           <PopoverPrimitive.Popup
             data-slot="popover-content"
             className="z-50 rounded-xl border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md min-w-[220px] outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"

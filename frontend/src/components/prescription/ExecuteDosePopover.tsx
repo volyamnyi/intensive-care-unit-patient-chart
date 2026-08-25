@@ -39,13 +39,12 @@ export default function ExecuteDosePopover({
       {Boolean(execAnchor) && !show2fa && (
         <PopoverPrimitive.Root
           open
-          onOpenChange={(_open, _eventDetails) => {
+          onOpenChange={(_open: boolean) => {
             if (!_open) onCloseExecute();
           }}
-          anchor={execAnchor ?? undefined}
         >
           <PopoverPrimitive.Portal>
-            <PopoverPrimitive.Positioner align="start" sideOffset={4}>
+            <PopoverPrimitive.Positioner anchor={execAnchor ?? undefined} align="start" sideOffset={4}>
               <PopoverPrimitive.Popup
                 data-slot="popover-content"
                 className="z-50 flex min-w-[260px] flex-col gap-1.5 rounded-xl border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"
@@ -54,7 +53,7 @@ export default function ExecuteDosePopover({
                   {execDp ? `${PERIOD_FULL[execDp.period]}: ${execDp.dose ?? '—'}` : 'Виконання дози'}
                 </p>
                 <Input placeholder="Фактична доза" value={execDose}
-                  onChange={(e: MouseEvent<HTMLInputElement>) => onExecDoseChange((e.target as HTMLInputElement).value)} autoFocus />
+                  onChange={e => onExecDoseChange(e.target.value)} autoFocus />
                 <div className="flex justify-end gap-1">
                   <Button size="sm" variant="outline" onClick={onCloseExecute}>Скасувати</Button>
                   <Button size="sm" variant="default"
