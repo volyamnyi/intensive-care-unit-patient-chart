@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 import type { PrescriptionDayPart } from '../../types/medication';
 
 const PERIOD_FULL: Record<string, string> = {
@@ -36,27 +37,34 @@ export default function ExecuteDosePopover({
   return (
     <>
       {Boolean(execAnchor) && !show2fa && (
-        <div
-          className="fixed z-50"
-          style={{
-            top: execAnchor ? execAnchor.getBoundingClientRect().bottom + 4 : 0,
-            left: execAnchor ? execAnchor.getBoundingClientRect().left : 0,
+        <PopoverPrimitive.Root
+          open
+          onOpenChange={(_open, _eventDetails) => {
+            if (!_open) onCloseExecute();
           }}
+          anchor={execAnchor ?? undefined}
         >
-          <div className="rounded-xl border bg-popover text-popover-foreground shadow-md p-2 min-w-[260px] flex flex-col gap-1.5">
-            <p className="text-sm font-medium">
-              {execDp ? `${PERIOD_FULL[execDp.period]}: ${execDp.dose ?? '—'}` : 'Виконання дози'}
-            </p>
-            <Input placeholder="Фактична доза" value={execDose}
-              onChange={e => onExecDoseChange(e.target.value)} autoFocus />
-            <div className="flex gap-1 justify-end">
-              <Button size="sm" variant="outline" onClick={onCloseExecute}>Скасувати</Button>
-              <Button size="sm" variant="default"
-                disabled={!execDose.trim()}
-                onClick={onProceedTo2fa}>Продовжити</Button>
-            </div>
-          </div>
-        </div>
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Positioner align="start" sideOffset={4}>
+              <PopoverPrimitive.Popup
+                data-slot="popover-content"
+                className="z-50 flex min-w-[260px] flex-col gap-1.5 rounded-xl border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"
+              >
+                <p className="text-sm font-medium">
+                  {execDp ? `${PERIOD_FULL[execDp.period]}: ${execDp.dose ?? '—'}` : 'Виконання дози'}
+                </p>
+                <Input placeholder="Фактична доза" value={execDose}
+                  onChange={(e: MouseEvent<HTMLInputElement>) => onExecDoseChange((e.target as HTMLInputElement).value)} autoFocus />
+                <div className="flex justify-end gap-1">
+                  <Button size="sm" variant="outline" onClick={onCloseExecute}>Скасувати</Button>
+                  <Button size="sm" variant="default"
+                    disabled={!execDose.trim()}
+                    onClick={onProceedTo2fa}>Продовжити</Button>
+                </div>
+              </PopoverPrimitive.Popup>
+            </PopoverPrimitive.Positioner>
+          </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
       )}
 
       <Dialog open={show2fa} onOpenChange={(open) => { if (!executing && !open) onShow2faChange(false); }}>
@@ -66,7 +74,7 @@ export default function ExecuteDosePopover({
             Для виконання призначення необхідне підтвердження іншою медсестрою.
             Увійдіть під обліковим записом другої особи.
           </DialogDescription>
-          <div className="flex flex-col gap-1.5 mt-1">
+          <div className="mt-1 flex flex-col gap-1.5">
             <Input placeholder="Логін другої особи" value={secondPersonLogin}
               onChange={e => onSecondPersonLoginChange(e.target.value)}
               disabled={executing} autoFocus />

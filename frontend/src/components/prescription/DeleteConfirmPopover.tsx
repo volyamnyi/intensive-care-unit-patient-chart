@@ -1,3 +1,5 @@
+import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
+import type { MouseEvent } from 'react';
 import { Button } from '@/components/ui/button';
 
 export interface DeleteConfirmPopoverProps {
@@ -13,23 +15,30 @@ export default function DeleteConfirmPopover({
   if (!deleteAnchor) return null;
 
   return (
-    <div
-      className="fixed z-50"
-      style={{
-        top: deleteAnchor.getBoundingClientRect().bottom + 4,
-        left: deleteAnchor.getBoundingClientRect().left,
+    <PopoverPrimitive.Root
+      open
+      onOpenChange={(_open, _eventDetails) => {
+        if (!_open) onCloseDeleteConfirm();
       }}
+      anchor={deleteAnchor}
     >
-      <div className="rounded-xl border bg-popover text-popover-foreground shadow-md p-2 min-w-[220px]">
-        <p className="text-sm mb-1.5">
-          Видалити препарат? Дані про дози будуть втрачені.
-        </p>
-        <div className="flex gap-1 justify-end">
-          <Button size="sm" variant="outline" onClick={onCloseDeleteConfirm} disabled={deleting}>Скасувати</Button>
-          <Button size="sm" variant="destructive"
-            disabled={deleting} onClick={onConfirmDelete}>Видалити</Button>
-        </div>
-      </div>
-    </div>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Positioner align="start" sideOffset={4}>
+          <PopoverPrimitive.Popup
+            data-slot="popover-content"
+            className="z-50 rounded-xl border border-border bg-popover p-2 text-sm text-popover-foreground shadow-md min-w-[220px] outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0"
+          >
+            <p className="mb-1.5">
+              Видалити препарат? Дані про дози будуть втрачені.
+            </p>
+            <div className="flex justify-end gap-1">
+              <Button size="sm" variant="outline" onClick={onCloseDeleteConfirm} disabled={deleting}>Скасувати</Button>
+              <Button size="sm" variant="destructive"
+                disabled={deleting} onClick={onConfirmDelete}>Видалити</Button>
+            </div>
+          </PopoverPrimitive.Popup>
+        </PopoverPrimitive.Positioner>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   );
 }
