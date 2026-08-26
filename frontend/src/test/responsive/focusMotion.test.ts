@@ -1,4 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+/** index.css ?raw comes back empty through the Vitest CSS pipeline — read it. */
+function readIndexCss(): string {
+  return readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8');
+}
 
 /**
  * Phase 5 (#179) audit contracts: full-opacity focus rings on every ui
@@ -58,24 +65,21 @@ describe('Focus-ring policy — full-opacity ring-ring (Phase 5)', () => {
 });
 
 describe('Reduced-motion gate covers Phases 1–4 animations', () => {
-  it('every audited animation token sits inside the media gates', async () => {
-    const src = await import('../../index.css?raw');
-    const s = (src as { default: string }).default;
+  it('every audited animation token sits inside the media gates', () => {
+    const s = readIndexCss();
     for (const token of REDUCED_MOTION_TOKENS) {
       expect(s, `missing reduced-motion token: ${token}`).toContain(token);
     }
   });
 
-  it('declares at least three prefers-reduced-motion gates', async () => {
-    const src = await import('../../index.css?raw');
-    const s = (src as { default: string }).default;
+  it('declares at least three prefers-reduced-motion gates', () => {
+    const s = readIndexCss();
     const count = s.match(/@media \(prefers-reduced-motion: reduce\)/g)?.length ?? 0;
     expect(count).toBeGreaterThanOrEqual(3);
   });
 
-  it('gates the animation tokens rather than only defining them', async () => {
-    const src = await import('../../index.css?raw');
-    const s = (src as { default: string }).default;
+  it('gates the animation tokens rather than only defining them', () => {
+    const s = readIndexCss();
     // Each gated block ends with "animation: none" — require at least one per
     // media section by counting occurrences.
     const noneCount = s.match(/animation:\s*none/g)?.length ?? 0;
