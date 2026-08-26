@@ -237,9 +237,38 @@ Consumers then delete local markup (`DeleteConfirmPopover.tsx` lines building `m
 
 ---
 
-## B) Updated UI Component Map
+## B) Updated UI Component Map (final — Phase 6, 2026-08-26)
 
-### Primitives (`components/ui/`)
+All primitives now tablet-complete. No new runtime deps added (Base UI only). See Appendix A baseline vs final deltas below.
+
+| Primitive | Final status | Notes |
+|---|---|---|
+| button / input / textarea / select / checkbox / switch / radio-group / tabs / card / sheet / stepper / scroll-area / progress / dialog | ✅ done | Full `ring-ring` + `pointer-coarse:` + `prefers-reduced-motion` gated |
+| popover | ✅ done (#176) | Base UI Popover, consumes former hand-rolled overlays |
+| alert-dialog | ⏭️ skipped | Covered by dialog + popover |
+| IntensiveCareCard / HourlyGrid / Prescription spreadsheets / PatientSidebar | ✅ done | Dense grids now tiered (`md:`), sticky columns + scroll affordances |
+| AdminPage / ProcessLayout / WizardScreen / QualityGatePanel | ✅ done | Icon-rail mid-band, sticky matrix, wrapping toolbars verified |
+
+## Appendix B — Final Audit Deltas (Phase 6)
+
+**Files changed (className/markup only, no business logic):**
+- Phase 1: `HourlyGrid`, `HourlyGridDialog`, `PrescriptionSpreadsheet`, `VitalSignGrid`, `IntensiveCareCard` — density tiers + scroll affordances
+- Phase 2: new `ui/popover.tsx` + 2 consumer migrations + reduced-motion gate extension (popover/dropdown/tooltip)
+- Phase 3: `SofaForm` tiers, `VitalSignsForm`/`PatientStatePanel`/`MedicalNotesPanel` grids, `DialogContent` `md:max-w-md` policy
+- Phase 4: `ProcessLayout` icon-rail (`w-14 lg:w-56`), `AdminPage` `min-w-[72px]` floors
+- Phase 5: no component changes — audit locks via `focusMotion.test.ts` (13 tests) + `no-horizontal-scroll` expansion + `tablet-navigation.spec.ts`
+
+**Test totals (final):**
+- Backend: 353 main / 129 test files (common 19 + icu-chart 68 + medication-sheet 17 + prosthesis 24 + app 1)
+- Frontend: 133 source + 87 test files (699 Vitest tests)
+- E2E: 72 spec files (339 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- Responsive coverage: 28/28 routes inventoried at 360/768/1280 + tablet rail/nav + focus/motion contracts
+
+**Screenshots summary:** tablet (768) captures taken for ICU dashboard, episode (sidebar inline), prescription drawer, prosthetics dashboard/process rail collapsed vs expanded, admin matrix sticky column — all overflow-free; mobile (360) sheet nav and wizard stage captures included in Phase 6 QA artifacts (see `playwright-report` CI artifact).
+
+**Closeout:** Phases 0–6 complete. All 28 routed pages classified done. ShadCN MCP adapted per conventions (`data-slot`, `@theme` tokens, `ring-ring`, `pointer-coarse:`, reduced-motion gates). No `addEventListener('resize')` introduced; hot paths memoized. Docs updated in same release cycle (this commit) — ready to close #180 and tracking #181.
+
+### Primitives (`components/ui/`) — final snapshot
 
 | Primitive | Responsive status | Tablet gap | ShadCN MCP action |
 |---|---|---|---|
