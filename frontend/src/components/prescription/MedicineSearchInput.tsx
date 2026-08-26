@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,10 @@ export default function MedicineSearchInput({
   const [newRegime, setNewRegime] = useState('');
   const [addingDrug, setAddingDrug] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+  }, []);
 
   const handleMedSearch = useCallback(async (q: string) => {
     setMedSearch(q);
@@ -112,7 +116,10 @@ export default function MedicineSearchInput({
             handleMedSearch(e.target.value);
           }}
           onFocus={() => { if (medOptions.length > 0) setShowSuggestions(true); }}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+          onBlur={() => {
+            if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+            blurTimerRef.current = setTimeout(() => setShowSuggestions(false), 150);
+          }}
         />
         {showSuggestions && (
           <div className="absolute top-full left-0 right-0 z-50 mt-0.5 rounded-lg border bg-popover text-popover-foreground shadow-md max-h-48 overflow-y-auto">
