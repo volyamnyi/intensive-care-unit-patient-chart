@@ -131,6 +131,7 @@ export default defineConfig({
         '**/responsive/tablet-forms.spec.ts',
         '**/responsive/tablet-admin.spec.ts',
         '**/responsive/tablet-prosthetics.spec.ts',
+        '**/responsive/tablet-navigation.spec.ts',
       ],
       fullyParallel: false,
     },

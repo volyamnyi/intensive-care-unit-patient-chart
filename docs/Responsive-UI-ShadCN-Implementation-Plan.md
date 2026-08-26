@@ -178,6 +178,22 @@
 
 **Test strategy:** this phase *is* test expansion; run full matrix (all 11 projects) once before closeout commit.
 
+**Focus-ring audit (2026-08-26).** Repo-wide grep for `ring-ring/<opacity>` returns a single hit — the explanatory comment in `index.css` (#137 rationale); **zero live opacity-modified focus rings remain**. `ring-destructive` is present in `button`, `input`, `textarea`, `select`, `checkbox`, `radio-group`, `switch`. Locked by `src/test/responsive/focusMotion.test.ts` (8 primitives × full-opacity contract + destructive variant).
+
+**Reduced-motion coverage.** Three `@media (prefers-reduced-motion: reduce)` gates in `index.css` disable every animation introduced in Phases 1–4:
+
+| Gate | Tokens disabled |
+|---|---|
+| Wizard/check animations | `.check-pop`, `.step-fade-in` |
+| Fullscreen grid morph (#136) | `[data-slot="dialog-content"][data-fullscreen]` (`modalMorphIn/Out`) |
+| Global primitive gate | `sheet-content`/`sheet-overlay`, `.fade-in-up`, `.fade-in`, `.slide-in-left`, `.scale-in`, `.pulse`, `.skeleton`, `stepper-loading`, `dialog-content`, `dialog-overlay`, `select-content`, `dropdown-menu-content`, `dropdown-menu-sub-content`, `tooltip-content`, `popover-content` |
+
+Contract-tested in `focusMotion.test.ts` (every token present, ≥3 gates declared, each gate ends in `animation: none`). Tailwind's default `animate-spin` loaders are intentionally exempt (state communication, not decorative motion).
+
+**Performance spot-check.** Zero `addEventListener('resize')` in `frontend/src` — the only "resize" hits are the `col-resize` cursor classes of the Sidebar drag handle (mouse events, not window listeners). Hot-path renders stay memoized (`AppNavList` items #164, `AdminPage.matrixCategories`). CSS-first rule intact.
+
+**Outcome (done — #179):** M1 scroll audit extended — `no-horizontal-scroll.spec.ts` now covers **nurse** surfaces (`/icu/nurse`, `/icu/nurse/episode/a3333333…`, `/prescriptions/nurse`) under the nurse storageState, the **HOD** department dashboard under the hod storageState, and the prosthetist `/prosthetics/new/select-template` (patient+order draft seeded) — +5 routes × 3 viewports = 15 audited combinations on top of the existing ones. New `tests/specs/responsive/tablet-navigation.spec.ts` (3 serial tests @768, doctor state): rail toggle round-trip (≤64px → ≥200px → ≤64px past the width transition, «Навігація» header label hidden↔visible, expanded link resolvable by name, hamburger stays mobile-only), breadcrumb containment on the episode route («Пацієнти»/«День», `overflow-x-auto touch-pan-x` class contract, document never overflows), and a hamburger-free nav path (collapsed-rail icon click lands on `/prescriptions/doctor` via the title-attribute accessible name; deep-route breadcrumb «Пацієнти» links back) — **all three assert zero `console.error`** via page-level collectors. tablet testMatch extended.
+
 ---
 
 ## Phase 6 — Docs & Closeout

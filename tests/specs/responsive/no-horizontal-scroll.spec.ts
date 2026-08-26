@@ -21,6 +21,15 @@ const DOCTOR_ROUTES = [
 
 const PROSTHETIST_ROUTES = ['/prosthetics', '/prosthetics/new/select-patient'];
 
+// Phase 5 (#179): every clinical route is audited — nurse surfaces included.
+const NURSE_ROUTES = [
+  '/icu/nurse',
+  '/icu/nurse/episode/a3333333-3333-3333-3333-333333333333',
+  '/prescriptions/nurse',
+];
+
+const HOD_ROUTES = ['/icu/doctor/department'];
+
 // OrderReviewPage redirects to select-order when the draft is empty; seed the
 // draft so the real review layout (order details + sticky CTA) gets audited.
 const SEED_PATIENT_ID = '900002';
@@ -137,6 +146,43 @@ for (const viewport of VIEWPORTS) {
         );
         await assertNoHorizontalScroll(page, '/prosthetics/new/select-order');
       });
+      test('prosthetist: /prosthetics/new/select-template (with order draft)', async ({ page }) => {
+        await page.addInitScript(
+          ([patientId, orderId]) => {
+            window.localStorage.setItem(
+              'prosthetics:draft',
+              JSON.stringify({
+                patientId,
+                orderId,
+                templateId: null,
+                instanceId: null,
+              }),
+            );
+          },
+          [SEED_PATIENT_ID, SEED_ORDER_ID],
+        );
+        await assertNoHorizontalScroll(page, '/prosthetics/new/select-template');
+      });
+    });
+
+    test.describe('nurse', () => {
+      test.use({ storageState: '.auth/nurse.json' });
+
+      for (const route of NURSE_ROUTES) {
+        test(`nurse: ${route}`, async ({ page }) => {
+          await assertNoHorizontalScroll(page, route);
+        });
+      }
+    });
+
+    test.describe('hod', () => {
+      test.use({ storageState: '.auth/hod.json' });
+
+      for (const route of HOD_ROUTES) {
+        test(`hod: ${route}`, async ({ page }) => {
+          await assertNoHorizontalScroll(page, route);
+        });
+      }
     });
 
     test.describe('admin', () => {
