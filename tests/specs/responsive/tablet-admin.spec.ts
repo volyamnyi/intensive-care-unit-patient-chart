@@ -16,13 +16,16 @@ test.describe('Tablet admin at 768', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
-    // Inactive tab panels stay mounted (hidden), so scope through the ACTIVE
-    // tabpanel — otherwise the audit table's own scroll container collides.
-    const panel = page.getByRole('tabpanel');
-    const stickyHead = panel.locator('th', { hasText: 'Операція' }).first();
+    const stickyHead = page.locator('th', { hasText: 'Операція' }).first();
     await expect(stickyHead).toBeVisible({ timeout: 10000 });
 
-    const wrapper = panel.locator('div.overflow-x-auto');
+    // Each matrix <Table> nests TWO overflow-x-auto containers (the consumer
+    // wrapper + the shadcn Table's internal container); both hold the sticky
+    // header, so pick the innermost — it is the element that really scrolls.
+    const wrapper = page
+      .locator('div.overflow-x-auto')
+      .filter({ has: page.locator('th', { hasText: 'Операція' }) })
+      .last();
     await expect(wrapper).toBeVisible();
 
     const before = (await stickyHead.boundingBox())!.x;
