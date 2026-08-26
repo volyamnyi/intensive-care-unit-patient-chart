@@ -119,6 +119,24 @@ for (const viewport of VIEWPORTS) {
         );
         await assertNoHorizontalScroll(page, '/prosthetics/new/review-order');
       });
+
+      test('prosthetist: /prosthetics/new/select-order (with patient draft)', async ({ page }) => {
+        await page.addInitScript(
+          (patientId) => {
+            window.localStorage.setItem(
+              'prosthetics:draft',
+              JSON.stringify({
+                patientId,
+                orderId: null,
+                templateId: null,
+                instanceId: null,
+              }),
+            );
+          },
+          SEED_PATIENT_ID,
+        );
+        await assertNoHorizontalScroll(page, '/prosthetics/new/select-order');
+      });
     });
 
     test.describe('admin', () => {

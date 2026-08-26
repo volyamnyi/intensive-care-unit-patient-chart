@@ -51,8 +51,9 @@ export default function ProcessLayout() {
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <Outlet />
       </main>
-      <nav className="flex w-56 flex-col gap-1 overflow-y-auto border-l bg-muted/30 p-3">
-        <div className="mb-4 text-sm text-muted-foreground">
+      {/* Tablet band (640–1023px) shows a collapsed icon rail; labels return ≥1024px */}
+      <nav className="flex w-14 shrink-0 flex-col gap-1 overflow-y-auto border-l bg-muted/30 p-2 lg:w-56 lg:p-3">
+        <div className="mb-4 hidden text-sm text-muted-foreground lg:block">
           Процес #{id}
         </div>
         {items.map((item) => (
@@ -61,15 +62,16 @@ export default function ProcessLayout() {
             to={item.url}
             end
             className={({ isActive }) =>
-              `flex min-h-11 sm:min-h-0 items-center gap-2 rounded-md px-3 py-2 text-sm ${
+              cn(
+                'flex min-h-11 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm sm:min-h-0 lg:justify-start',
                 isActive
                   ? 'bg-mint/10 text-mint font-medium'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-              }`
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              )
             }
           >
             <item.icon className="size-4" />
-            <span>{item.title}</span>
+            <span className="hidden lg:inline">{item.title}</span>
           </NavLink>
         ))}
       </nav>

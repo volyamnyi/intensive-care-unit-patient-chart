@@ -150,6 +150,8 @@
 
 **Test strategy:** extend `tests/specs/responsive/no-horizontal-scroll.spec.ts` route list; new `tablet-admin.spec.ts` (matrix scroll + save at 768); prosthetics project runs wizard/gate flows unchanged.
 
+**Outcome (done — #178):** M1 AdminPage — verified already compliant (stats `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`, matrix sticky first column inside `overflow-x-auto touch-pan-x`, TabsList scroller with `touch-pan-x` from ui/tabs); added a `min-w-[72px]` floor on role-column headers so the 8 checkbox columns keep usable width at 768. M2 ProcessLayout — desktop branch now collapses to an **icon rail in the tablet band**: nav `w-14 shrink-0 … lg:w-56 lg:p-3`, labels `hidden lg:inline`, «Процес #id» header `hidden … lg:block`, links center icons below `lg` (CSS-first; the `<640px` top-tab bar is untouched). M3 QualityGatePanel + wizard — verification only: decision buttons already transition `flex-col → sm:flex-row sm:flex-wrap` with `w-full sm:w-auto`, criteria rows carry `min-h-11`, SetupSteps hides inactive labels below `md`, WizardScreen keeps wrapping toolbars + `overflow-x-auto` chip strips (no change needed). Tests: `src/test/responsive/tabletPhase4.test.tsx` (5 raw contracts), new E2E `tests/specs/responsive/tablet-admin.spec.ts` (3 serial tests with ADMINISTRATOR storageState at 768: sticky-column pinning under forced scrollLeft=400, toggle→dirty→save→revoke→save round-trip restoring shared RBAC state, stats cards pairing into 2 columns) and `tests/specs/responsive/tablet-prosthetics.spec.ts` (3 serial tests with PROSTHETIST storageState: dashboard overflow-free, process rail ≤80px wide with hidden labels but icon navigation to `/history`, wizard opens overflow-free; API-created instance completed in afterAll per mobile-wizard-smoke pattern); `no-horizontal-scroll.spec.ts` gained `/prosthetics/new/select-order` (patient-draft seeded). Tablet testMatch extended.
+
 ---
 
 ## Phase 5 — Accessibility, Touch & Regression Expansion
@@ -234,7 +236,7 @@ Consumers then delete local markup (`DeleteConfirmPopover.tsx` lines building `m
 | dialog | ✅ done (`sm:max-w-sm md:max-w-md` policy) | none | — |
 | sheet | ✅ done (safe-area; right side capped by consumers `sm:max-w-sm`) | none | — |
 | stepper / scroll-area | ✅ done | none | none |
-| sidebar | ✅ done (rail↔sheet) | mid-band behavior Phase 4 | — |
+| sidebar | ✅ done (rail↔sheet; ProcessLayout icon-rail mid-band #178) | none | — |
 | progress | ✅ done | none | none |
 | **popover** | ❌ missing (hand-rolled in prescription/) | — | **Phase 2 create via MCP** |
 | **alert-dialog** | ❌ missing (optional) | — | Phase 2 decision |

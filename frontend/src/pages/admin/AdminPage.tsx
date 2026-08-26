@@ -305,7 +305,7 @@ export default function AdminPage() {
                         <TableRow>
                           <TableHead className="sticky left-0 z-10 min-w-[260px] bg-card">Операція</TableHead>
                           {matrix.roles.map((role) => (
-                            <TableHead key={role} className="text-center">
+                            <TableHead key={role} className="min-w-[72px] text-center">
                               {ROLE_LABELS[role] ?? role}
                             </TableHead>
                           ))}

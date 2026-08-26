@@ -129,6 +129,8 @@ export default defineConfig({
         '**/responsive/tablet-dashboard.spec.ts',
         '**/responsive/tablet-clinical-grids.spec.ts',
         '**/responsive/tablet-forms.spec.ts',
+        '**/responsive/tablet-admin.spec.ts',
+        '**/responsive/tablet-prosthetics.spec.ts',
       ],
       fullyParallel: false,
     },
