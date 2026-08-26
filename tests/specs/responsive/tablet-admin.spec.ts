@@ -16,10 +16,13 @@ test.describe('Tablet admin at 768', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
-    const stickyHead = page.locator('th', { hasText: 'Операція' }).first();
+    // Inactive tab panels stay mounted (hidden), so scope through the ACTIVE
+    // tabpanel — otherwise the audit table's own scroll container collides.
+    const panel = page.getByRole('tabpanel');
+    const stickyHead = panel.locator('th', { hasText: 'Операція' }).first();
     await expect(stickyHead).toBeVisible({ timeout: 10000 });
 
-    const wrapper = page.locator('div.overflow-x-auto', { has: stickyHead });
+    const wrapper = panel.locator('div.overflow-x-auto');
     await expect(wrapper).toBeVisible();
 
     const before = (await stickyHead.boundingBox())!.x;
@@ -42,10 +45,11 @@ test.describe('Tablet admin at 768', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByRole('tab', { name: 'Доступи та ролі' }).click();
-    const firstCheckbox = page.getByRole('checkbox').first();
+    const panel = page.getByRole('tabpanel');
+    const firstCheckbox = panel.getByRole('checkbox').first();
     await expect(firstCheckbox).toBeVisible({ timeout: 10000 });
 
-    const saveButton = page.getByRole('button', { name: 'Зберегти зміни' });
+    const saveButton = panel.getByRole('button', { name: 'Зберегти зміни' });
     await expect(saveButton).toBeDisabled();
 
     // Grant → dirty badge + enabled CTA
@@ -70,7 +74,7 @@ test.describe('Tablet admin at 768', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByRole('tab', { name: 'Статистика' }).click();
-    const cards = page.locator('.grid > .rounded-xl');
+    const cards = page.getByRole('tabpanel').locator('.grid > .rounded-xl');
     await expect(cards.first()).toBeVisible({ timeout: 10000 });
 
     // sm:grid-cols-2 applies at 768 → the first two cards share row 1
