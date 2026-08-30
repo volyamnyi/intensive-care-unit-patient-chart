@@ -117,12 +117,25 @@ class TpLl02ValidationUnitTest {
 
     @Test
     void numericRange_outOfBoundsFails() {
-        SnapshotStep step = measurementStep();
+        // For MEASUREMENT numeric range is not validated — use CHECKLIST to test range
+        SnapshotStep step = SnapshotStep.builder()
+                .id(UUID.randomUUID())
+                .name("Контроль числового поля")
+                .stepType("CHECKLIST")
+                .mandatory(true)
+                .elements(List.of(
+                        SnapshotElement.builder()
+                                .id(UUID.fromString("f0000999-0000-0000-0000-000000000999"))
+                                .label("Довжина кукси, см")
+                                .elementType("NUMERIC_INPUT")
+                                .required(true)
+                                .unit("см")
+                                .minValue(new BigDecimal("0"))
+                                .maxValue(new BigDecimal("200"))
+                                .build()))
+                .build();
         String values = """
-                {"f0000200-0000-0000-0000-000000000200": "300",
-                 "f0000201-0000-0000-0000-000000000201": "24",
-                 "f0000202-0000-0000-0000-000000000202": "20",
-                 "f0000204-0000-0000-0000-000000000204": true}
+                {"f0000999-0000-0000-0000-000000000999": "300"}
                 """;
         assertThatThrownBy(() -> service.validateValues(values, step))
                 .isInstanceOf(com.superhumans.exception.BadRequestException.class)
@@ -131,13 +144,24 @@ class TpLl02ValidationUnitTest {
 
     @Test
     void numericRange_withinBoundsPasses() {
-        SnapshotStep step = measurementStep();
+        SnapshotStep step = SnapshotStep.builder()
+                .id(UUID.randomUUID())
+                .name("Контроль числового поля")
+                .stepType("CHECKLIST")
+                .mandatory(true)
+                .elements(List.of(
+                        SnapshotElement.builder()
+                                .id(UUID.fromString("f0000999-0000-0000-0000-000000000999"))
+                                .label("Довжина кукси, см")
+                                .elementType("NUMERIC_INPUT")
+                                .required(true)
+                                .unit("см")
+                                .minValue(new BigDecimal("0"))
+                                .maxValue(new BigDecimal("200"))
+                                .build()))
+                .build();
         String values = """
-                {"f0000200-0000-0000-0000-000000000200": "18",
-                 "f0000201-0000-0000-0000-000000000201": "24",
-                 "f0000202-0000-0000-0000-000000000202": "20",
-                 "f0000203-0000-0000-0000-000000000203": "15",
-                 "f0000204-0000-0000-0000-000000000204": true}
+                {"f0000999-0000-0000-0000-000000000999": "150"}
                 """;
         assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
     }
