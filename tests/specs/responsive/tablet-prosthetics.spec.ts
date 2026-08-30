@@ -45,13 +45,17 @@ async function createInstance(request: APIRequestContext): Promise<string> {
       .filter((i) => ACTIVE_DUPLICATE_STATUSES.includes(i.status))
       .map((i) => i.orderId),
   );
-  const template = templates.find((t) => t.status === 'ACTIVE');
+  // TP-LL-02 is also ACTIVE since Фаза 1 — ensure tablet smoke still uses TP-UL-01
+  const template =
+    (templates as Array<{ id: string; status: string; prosthesisType: string; name?: string }>).find(
+      (t) => (t as any).name === 'TP-UL-01' && t.status === 'ACTIVE',
+    ) ?? templates.find((t) => t.status === 'ACTIVE');
   if (!template) {
     throw new Error('No ACTIVE flow template found');
   }
 
   const order =
-    orders.find((o) => o.prosthesisType === template.prosthesisType && !activeOrderIds.has(o.id)) ??
+    orders.find((o) => o.prosthesisType === (template as any).prosthesisType && !activeOrderIds.has(o.id)) ??
     orders.find((o) => !activeOrderIds.has(o.id));
   if (!order) {
     throw new Error('No order free of an active flow instance');

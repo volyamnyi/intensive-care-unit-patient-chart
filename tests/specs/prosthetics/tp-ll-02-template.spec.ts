@@ -128,37 +128,50 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     const tp = templates.find((t: any) => t.name === 'TP-LL-02');
     const templateId = tp.id;
 
-    // Try to create instance; if duplicate active exists, use replacement flow via API helper (fail then replacement) or create new order
+    // Try to create instance; if duplicate active exists, find another free order or fail the blocker
     let createRes = await request.post(`${PROSTH}/instances`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
       data: { orderId, templateId },
     });
 
     if (createRes.status() === 400) {
-      const body = await createRes.json().catch(() => ({}));
-      // If duplicate active instance, create a fresh order via admin
-      if (String(body.message || body.code || '').includes('active instance') || (await createRes.text()).includes('active instance')) {
-        const orderRes = await request.post(`${PROSTH}/orders`, {
-          headers: { Authorization: `Bearer ${adminToken}` },
-          data: {
-            patientId: '900002',
-            orderNumber: `PR-TP-LL-02-${Date.now()}`,
-            prosthesisType: 'Протез гомілки тест',
-            productType: 'LOWER_LIMB',
-            amputationLevel: 'Гомілка, с/3',
-            limbSide: 'LEFT',
-            doctorName: 'Тест Лікар',
-            prescriptionDate: '2026-08-30',
-            materials: '[]',
-          },
-        });
-        expect(orderRes.ok()).toBeTruthy();
-        const newOrder = await orderRes.json();
-        orderId = newOrder.id;
-        createRes = await request.post(`${PROSTH}/instances`, {
+      const text = await createRes.text().catch(() => '');
+      if (text.includes('active instance')) {
+        // Find a free order (any not in active set) — fallback to UPPER_LIMB order if LOWER is blocked
+        const instancesRes = await request.get(`${PROSTH}/instances`, {
           headers: { Authorization: `Bearer ${prosthetistToken}` },
-          data: { orderId, templateId },
         });
+        const instances = (await instancesRes.json()) as Array<{ orderId: string; status: string }>;
+        const activeOrderIds = new Set(
+          instances
+            .filter((i) => ['NEW', 'IN_PROGRESS', 'PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL', 'WAITING_REVIEW', 'CORRECTION'].includes(i.status))
+            .map((i) => i.orderId),
+        );
+        const ordersRes = await request.get(`${PROSTH}/orders`, {
+          headers: { Authorization: `Bearer ${prosthetistToken}` },
+        });
+        const orders = (await ordersRes.json()) as Array<{ id: string }>;
+        const freeOrder = orders.find((o) => !activeOrderIds.has(o.id));
+        if (freeOrder) {
+          orderId = freeOrder.id;
+          createRes = await request.post(`${PROSTH}/instances`, {
+            headers: { Authorization: `Bearer ${prosthetistToken}` },
+            data: { orderId, templateId },
+          });
+        } else {
+          // Last resort: fail the blocking instance and retry
+          const blocker = instances.find((i) => i.orderId === orderId && ['NEW', 'IN_PROGRESS', 'PAUSED'].includes(i.status));
+          if (blocker) {
+            await request.post(`${PROSTH}/instances/${(blocker as any).id}/fail`, {
+              headers: { Authorization: `Bearer ${prosthetistToken}` },
+              data: { category: 'test_cleanup', description: 'cleanup blocker for tp-ll-02' },
+            });
+            createRes = await request.post(`${PROSTH}/instances`, {
+              headers: { Authorization: `Bearer ${prosthetistToken}` },
+              data: { orderId, templateId },
+            });
+          }
+        }
       }
     }
 
