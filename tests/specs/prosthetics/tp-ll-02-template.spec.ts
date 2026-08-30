@@ -181,21 +181,24 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     expect(instance.status).toBe('NEW');
     expect(instance.templateId).toBe(templateId);
     expect(instance.orderId).toBe(orderId);
-    expect(instance.templateSnapshot).toBeTruthy();
 
-    // Snapshot must contain 10 stages
-    const snapshot = typeof instance.templateSnapshot === 'string' ? JSON.parse(instance.templateSnapshot) : instance.templateSnapshot;
-    // If snapshot is not returned in create response, fetch it via /snapshot
+    // Snapshot may be in create response or via dedicated endpoint — fetch to verify
+    let snapshot: any = instance.templateSnapshot;
+    if (typeof snapshot === 'string') {
+      try {
+        snapshot = JSON.parse(snapshot);
+      } catch {
+        snapshot = null;
+      }
+    }
     if (!snapshot || !snapshot.stages) {
       const snapRes = await request.get(`${PROSTH}/instances/${instance.id}/snapshot`, {
         headers: { Authorization: `Bearer ${prosthetistToken}` },
       });
       expect(snapRes.ok()).toBeTruthy();
-      const snap = await snapRes.json();
-      expect(snap.stages).toHaveLength(10);
-    } else {
-      expect(snapshot.stages).toHaveLength(10);
+      snapshot = await snapRes.json();
     }
+    expect(snapshot.stages).toHaveLength(10);
 
     // Start must transition to IN_PROGRESS with first step
     const startRes = await request.post(`${PROSTH}/instances/${instance.id}/start`, {
