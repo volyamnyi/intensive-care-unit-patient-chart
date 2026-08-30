@@ -70,7 +70,11 @@ async function createInstance(request: APIRequestContext): Promise<string> {
       .filter((i) => ACTIVE_DUPLICATE_STATUSES.includes(i.status))
       .map((i) => i.orderId),
   );
-  const template = templates.find((t) => t.status === 'ACTIVE');
+  // Prefer TP-UL-01 to keep legacy walk stable after TP-LL-02 ACTIVE was added (Фаза 1)
+  const template =
+    (templates as Array<{ id: string; status: string; prosthesisType: string; name?: string }>).find(
+      (t) => (t as any).name === 'TP-UL-01' && t.status === 'ACTIVE',
+    ) ?? templates.find((t) => t.status === 'ACTIVE');
   if (!template) {
     throw new Error('No ACTIVE flow template found');
   }
@@ -81,9 +85,33 @@ async function createInstance(request: APIRequestContext): Promise<string> {
     ),
     ...orders.filter((o) => !activeOrderIds.has(o.id)),
   ];
-  const uniqueCandidates = [...new Map(candidates.map((o) => [o.id, o])).values()];
+  let uniqueCandidates = [...new Map(candidates.map((o) => [o.id, o])).values()];
   if (uniqueCandidates.length === 0) {
-    throw new Error('No order free of an active flow instance');
+    // Both seed orders are blocked (e.g., by TP-LL-02 leftovers) — free the oldest active instance
+    const blocker = instances
+      .filter((i) => ACTIVE_DUPLICATE_STATUSES.includes(i.status))
+      .sort((a, b) => (a as any).createdAt?.localeCompare((b as any).createdAt ?? '') ?? 0)[0];
+    if (blocker) {
+      await request.post(`${BASE}/instances/${blocker.id}/fail`, {
+        headers,
+        data: { category: 'test_cleanup', description: 'wizard surface: free order' },
+      });
+      const refreshedInstances = (await (await request.get(`${BASE}/instances`, { headers })).json()) as Array<{
+        id: string;
+        status: string;
+        orderId: string;
+      }>;
+      const refreshedActive = new Set(
+        refreshedInstances.filter((i) => ACTIVE_DUPLICATE_STATUSES.includes(i.status)).map((i) => i.orderId),
+      );
+      uniqueCandidates = [
+        ...orders.filter((o) => o.prosthesisType === (template as any).prosthesisType && !refreshedActive.has(o.id)),
+        ...orders.filter((o) => !refreshedActive.has(o.id)),
+      ].filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i);
+    }
+    if (uniqueCandidates.length === 0) {
+      throw new Error('No order free of an active flow instance (even after cleanup)');
+    }
   }
 
   for (const order of uniqueCandidates) {

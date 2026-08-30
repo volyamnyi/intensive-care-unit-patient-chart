@@ -85,9 +85,11 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
       expect(stage.qualityGate).toBeFalsy();
     }
 
-    // Conditional insert step must be mandatory false
-    const insertStage = detail.stages.find((s: any) => s.name.includes('пом\'якшуючого'));
-    const insertStep = insertStage.steps.find((st: any) => st.name.includes('пом\'якшуючого вкладиша'));
+    // Conditional insert step must be mandatory false — search by unique substring without apostrophe
+    const insertStage = detail.stages.find((s: any) => s.name.includes('вкладиша'));
+    expect(insertStage, 'Stage with вкладиша must exist').toBeTruthy();
+    const insertStep = insertStage.steps.find((st: any) => st.name.includes('вкладиша'));
+    expect(insertStep, 'Step with вкладиша must exist').toBeTruthy();
     expect(insertStep.mandatory).toBe(false);
     expect(insertStep.elements.some((e: any) => e.label.includes('Візуальний контроль чистоти пом'))).toBeTruthy();
     // Its elements must be required false
@@ -128,7 +130,7 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     const tp = templates.find((t: any) => t.name === 'TP-LL-02');
     const templateId = tp.id;
 
-    // Try to create instance; if duplicate active exists, find another free order or fail the blocker
+    // Try to create instance; if duplicate active exists, fail the blocker for the same order and retry (do not steal UPPER order)
     let createRes = await request.post(`${PROSTH}/instances`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
       data: { orderId, templateId },
@@ -137,35 +139,34 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     if (createRes.status() === 400) {
       const text = await createRes.text().catch(() => '');
       if (text.includes('active instance')) {
-        // Find a free order (any not in active set) — fallback to UPPER_LIMB order if LOWER is blocked
+        // First, try to fail the active instance that blocks this specific order
         const instancesRes = await request.get(`${PROSTH}/instances`, {
           headers: { Authorization: `Bearer ${prosthetistToken}` },
         });
-        const instances = (await instancesRes.json()) as Array<{ orderId: string; status: string }>;
-        const activeOrderIds = new Set(
-          instances
-            .filter((i) => ['NEW', 'IN_PROGRESS', 'PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL', 'WAITING_REVIEW', 'CORRECTION'].includes(i.status))
-            .map((i) => i.orderId),
-        );
-        const ordersRes = await request.get(`${PROSTH}/orders`, {
-          headers: { Authorization: `Bearer ${prosthetistToken}` },
-        });
-        const orders = (await ordersRes.json()) as Array<{ id: string }>;
-        const freeOrder = orders.find((o) => !activeOrderIds.has(o.id));
-        if (freeOrder) {
-          orderId = freeOrder.id;
+        const instances = (await instancesRes.json()) as Array<{ id: string; orderId: string; status: string }>;
+        const blocker = instances.find((i) => i.orderId === orderId && ['NEW', 'IN_PROGRESS', 'PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL'].includes(i.status));
+        if (blocker) {
+          await request.post(`${PROSTH}/instances/${blocker.id}/fail`, {
+            headers: { Authorization: `Bearer ${prosthetistToken}` },
+            data: { category: 'test_cleanup', description: 'cleanup blocker for tp-ll-02' },
+          });
           createRes = await request.post(`${PROSTH}/instances`, {
             headers: { Authorization: `Bearer ${prosthetistToken}` },
             data: { orderId, templateId },
           });
-        } else {
-          // Last resort: fail the blocking instance and retry
-          const blocker = instances.find((i) => i.orderId === orderId && ['NEW', 'IN_PROGRESS', 'PAUSED'].includes(i.status));
-          if (blocker) {
-            await request.post(`${PROSTH}/instances/${(blocker as any).id}/fail`, {
-              headers: { Authorization: `Bearer ${prosthetistToken}` },
-              data: { category: 'test_cleanup', description: 'cleanup blocker for tp-ll-02' },
-            });
+        }
+        // If still blocked (no blocker found for this order but still 400), try any free LOWER order as fallback, never steal UPPER blindly
+        if (createRes.status() === 400) {
+          const ordersRes = await request.get(`${PROSTH}/orders`, {
+            headers: { Authorization: `Bearer ${prosthetistToken}` },
+          });
+          const orders = (await ordersRes.json()) as Array<{ id: string; productType: string }>;
+          const activeOrderIds = new Set(
+            instances.filter((i) => ['NEW', 'IN_PROGRESS', 'PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL'].includes(i.status)).map((i) => i.orderId),
+          );
+          const freeLower = orders.find((o) => o.productType === 'LOWER_LIMB' && !activeOrderIds.has(o.id));
+          if (freeLower) {
+            orderId = freeLower.id;
             createRes = await request.post(`${PROSTH}/instances`, {
               headers: { Authorization: `Bearer ${prosthetistToken}` },
               data: { orderId, templateId },

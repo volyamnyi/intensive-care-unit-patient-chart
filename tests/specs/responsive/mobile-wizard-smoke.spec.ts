@@ -62,11 +62,39 @@ async function createInstance(request: APIRequestContext): Promise<string> {
     throw new Error('No ACTIVE flow template found');
   }
 
-  const order =
+  let order =
     orders.find((o) => o.prosthesisType === (template as any).prosthesisType && !activeOrderIds.has(o.id)) ??
     orders.find((o) => !activeOrderIds.has(o.id));
   if (!order) {
-    throw new Error('No order free of an active flow instance');
+    // Both seed orders are blocked (e.g., by TP-LL-02 leftovers) — fail the oldest blocker and retry
+    const blocker = instances
+      .filter((i) => ACTIVE_DUPLICATE_STATUSES.includes(i.status))
+      .sort((a, b) => (a as any).createdAt?.localeCompare((b as any).createdAt ?? '') ?? 0)[0];
+    if (blocker) {
+      await request.post(`${BASE}/instances/${blocker.id}/fail`, {
+        headers,
+        data: { category: 'test_cleanup', description: 'responsive smoke: free order' },
+      });
+      // Recompute free order after failing blocker
+      const refreshedOrders = (await (await request.get(`${BASE}/orders`, { headers })).json()) as Array<{
+        id: string;
+        prosthesisType: string;
+      }>;
+      const refreshedInstances = (await (await request.get(`${BASE}/instances`, { headers })).json()) as Array<{
+        id: string;
+        status: string;
+        orderId: string;
+      }>;
+      const refreshedActive = new Set(
+        refreshedInstances.filter((i) => ACTIVE_DUPLICATE_STATUSES.includes(i.status)).map((i) => i.orderId),
+      );
+      order =
+        refreshedOrders.find((o) => o.prosthesisType === (template as any).prosthesisType && !refreshedActive.has(o.id)) ??
+        refreshedOrders.find((o) => !refreshedActive.has(o.id));
+    }
+    if (!order) {
+      throw new Error('No order free of an active flow instance (even after cleanup)');
+    }
   }
 
   const created = await request.post(`${BASE}/instances`, {
