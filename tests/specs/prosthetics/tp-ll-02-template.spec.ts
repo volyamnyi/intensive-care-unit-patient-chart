@@ -32,7 +32,8 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     expect(tp, 'TP-LL-02 must be present in ACTIVE LOWER_LIMB list').toBeTruthy();
     expect(tp.productType).toBe('LOWER_LIMB');
     expect(tp.amputationLevel).toBe('generic_lower_limb');
-    expect(tp.limbSide).toBe('BOTH');
+    // limbSide is NULL (generic, matches any) — backend stores NULL for BOTH
+    expect(tp.limbSide == null || tp.limbSide === 'BOTH').toBeTruthy();
     expect(tp.status).toBe('ACTIVE');
     expect(tp.estimatedDurationMin).toBe(540);
     // at least 10 stages expected (v2: 10 in instance)
@@ -199,7 +200,7 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     });
   });
 
-  test('Template snapshot roundtrip preserves estimatedDurationMin and BOTH', async ({ request }) => {
+  test('Template snapshot roundtrip preserves estimatedDurationMin and generic level', async ({ request }) => {
     const res = await request.get(`${PROSTH}/templates?productType=LOWER_LIMB&status=ACTIVE`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
     });
@@ -210,7 +211,7 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     });
     const detail = await detailRes.json();
     expect(detail.estimatedDurationMin).toBe(540);
-    expect(detail.limbSide).toBe('BOTH');
+    expect(detail.limbSide == null || detail.limbSide === 'BOTH').toBeTruthy();
     expect(detail.amputationLevel).toBe('generic_lower_limb');
   });
 });

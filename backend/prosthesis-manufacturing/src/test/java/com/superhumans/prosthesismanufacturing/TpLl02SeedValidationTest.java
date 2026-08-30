@@ -20,9 +20,9 @@ class TpLl02SeedValidationTest {
 
         assertThat(sql).contains("'TP-LL-02'");
         assertThat(sql).contains("'generic_lower_limb'");
-        assertThat(sql).contains("'BOTH'");
         assertThat(sql).contains("'ACTIVE', 540");
         assertThat(sql).contains("'c0000003-0000-0000-0000-000000000003'");
+        assertThat(sql).contains("'LOWER_LIMB', 'generic_lower_limb', NULL, 'ACTIVE'");
     }
 
     @Test

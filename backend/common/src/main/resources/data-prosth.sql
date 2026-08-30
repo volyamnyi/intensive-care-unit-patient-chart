@@ -177,7 +177,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- TP-LL-02 — Етапи технологічного процесу нижніх кінцівок (без Quality Gate)
 INSERT INTO prosthetics_flow_templates (id, created_at, created_by, updated_at, updated_by, version, name, description, template_version, product_type, amputation_level, limb_side, status, estimated_duration_min)
 VALUES
-    ('c0000003-0000-0000-0000-000000000003', NOW(), 18, NOW(), 18, 0, 'TP-LL-02', 'Етапи технологічного процесу нижніх кінцівок', 1, 'LOWER_LIMB', 'generic_lower_limb', 'BOTH', 'ACTIVE', 540)
+    ('c0000003-0000-0000-0000-000000000003', NOW(), 18, NOW(), 18, 0, 'TP-LL-02', 'Етапи технологічного процесу нижніх кінцівок', 1, 'LOWER_LIMB', 'generic_lower_limb', NULL, 'ACTIVE', 540)
 ON CONFLICT (id) DO UPDATE SET description = EXCLUDED.description;
 
 INSERT INTO prosthetics_template_stages (id, template_id, order_index, name, type, can_skip, requires_approval)
