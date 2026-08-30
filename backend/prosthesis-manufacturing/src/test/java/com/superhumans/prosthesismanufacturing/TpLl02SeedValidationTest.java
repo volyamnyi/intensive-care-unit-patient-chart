@@ -87,16 +87,15 @@ class TpLl02SeedValidationTest {
         String sql = sqlText();
 
         // After removal, TP-LL-02 must not have quality_gates / rework_loops entries
-        // The generic tables still exist, but no insert for c0000003 should reference them
-        // We check that no gate insert references the new template's stages
-        assertThat(sql).doesNotContain("d0000012-0000-0000-0000-000000000012', '");
-        // More precise: ensure no INSERT INTO prosthetics_quality_gates for TP-LL-02
-        // Since we only inserted stages/steps/elements, the file should not contain a gate for c0000003
-        // Count occurrences of TP-LL-02 template id should be only in stages, not in gates
         long gateInserts = sql.lines()
                 .filter(l -> l.contains("prosthetics_quality_gates") && l.contains("c0000003"))
                 .count();
         assertThat(gateInserts).isZero();
+
+        long reworkInserts = sql.lines()
+                .filter(l -> l.contains("prosthetics_rework_loops") && l.contains("c0000003"))
+                .count();
+        assertThat(reworkInserts).isZero();
     }
 
     @Test
