@@ -6,6 +6,7 @@ import com.superhumans.prosthesismanufacturing.dto.FlowTemplateResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.TemplatePatchRequest;
 import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
+import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.QualityGate;
 import com.superhumans.prosthesismanufacturing.entity.ReworkLoop;
@@ -65,14 +66,41 @@ public class FlowTemplateService {
                 .filter(t -> status == null || t.getStatus() == status)
                 .filter(t -> !StringUtils.hasText(productType)
                         || ProductType.valueOf(productType).equals(t.getProductType()))
-                .filter(t -> !StringUtils.hasText(amputationLevel)
-                        || amputationLevel.equalsIgnoreCase(t.getAmputationLevel()))
-                .filter(t -> !StringUtils.hasText(limbSide)
-                        || limbSide.equalsIgnoreCase(String.valueOf(t.getLimbSide())))
+                .filter(t -> isAmputationLevelMatch(amputationLevel, t.getAmputationLevel()))
+                .filter(t -> isLimbSideMatch(limbSide, t.getLimbSide()))
                 .sorted(Comparator.comparing(FlowTemplate::getName)
                         .thenComparing(FlowTemplate::getTemplateVersion, Comparator.reverseOrder()))
                 .map(templateMapper::toResponse)
                 .toList();
+    }
+
+    private boolean isAmputationLevelMatch(String query, String templateValue) {
+        if (!StringUtils.hasText(query)) {
+            return true;
+        }
+        if ("generic_lower_limb".equalsIgnoreCase(query) || "BOTH".equalsIgnoreCase(query)) {
+            return true;
+        }
+        if (!StringUtils.hasText(templateValue)) {
+            return true;
+        }
+        if ("generic_lower_limb".equalsIgnoreCase(templateValue)) {
+            return true;
+        }
+        return query.equalsIgnoreCase(templateValue);
+    }
+
+    private boolean isLimbSideMatch(String query, LimbSide templateValue) {
+        if (!StringUtils.hasText(query)) {
+            return true;
+        }
+        if ("BOTH".equalsIgnoreCase(query)) {
+            return true;
+        }
+        if (templateValue == null) {
+            return true;
+        }
+        return query.equalsIgnoreCase(String.valueOf(templateValue));
     }
 
     @Transactional(readOnly = true)

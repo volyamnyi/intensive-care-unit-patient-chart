@@ -51,18 +51,30 @@ export function ProstheticsProvider({ children }: { children: ReactNode }) {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    // Try sessionStorage first (survives F5), then localStorage (survives tab close), then initial
+    const tryParse = (raw: string | null) => {
+      if (!raw) return null;
       try {
-        setDraft(JSON.parse(saved));
+        return JSON.parse(raw) as ProstheticsDraft;
       } catch {
-        sessionStorage.removeItem(STORAGE_KEY);
+        return null;
       }
+    };
+    const fromSession = tryParse(sessionStorage.getItem(STORAGE_KEY));
+    const fromLocal = tryParse(localStorage.getItem(STORAGE_KEY));
+    const restored = fromSession ?? fromLocal;
+    if (restored) {
+      setDraft(restored);
+      // Ensure both storages are in sync
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
     }
   }, []);
 
   const persist = (updated: ProstheticsDraft) => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    const raw = JSON.stringify(updated);
+    sessionStorage.setItem(STORAGE_KEY, raw);
+    localStorage.setItem(STORAGE_KEY, raw);
   };
 
   const setDraftField = useCallback(
@@ -79,6 +91,7 @@ export function ProstheticsProvider({ children }: { children: ReactNode }) {
   const resetDraft = useCallback(() => {
     setDraft(initialDraft);
     sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const loadOrders = useCallback(async () => {
