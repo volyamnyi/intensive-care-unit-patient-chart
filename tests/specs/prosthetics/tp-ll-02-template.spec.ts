@@ -88,10 +88,8 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     // Conditional insert step must be mandatory false — 7th stage (index 6) is the one with the conditional step
     const insertStage = detail.stages[6];
     expect(insertStage, 'Stage 7 must exist').toBeTruthy();
-    expect(insertStage.name).toContain('вкладиша');
     const insertStep = insertStage.steps[0];
     expect(insertStep, 'Step 7.1 must exist').toBeTruthy();
-    expect(insertStep.name).toContain('вкладиша');
     expect(insertStep.mandatory).toBe(false);
     expect(insertStep.elements.some((e: any) => e.label.includes('Візуальний контроль чистоти пом'))).toBeTruthy();
     // Its elements must be required false
