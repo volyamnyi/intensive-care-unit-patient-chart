@@ -85,12 +85,12 @@ class TpLl02RbacReplacementIntegrationTest {
         instanceService.fail(instanceId, "material_defect", "Гільза тріснула", null, PROSTHETIST_A);
 
         var original = instanceService.get(instanceId, PROSTHETIST_A, false);
-        assertThat(original.getStatus()).isEqualTo(FlowInstanceStatus.FAILED);
+        assertThat(original.getStatus()).isEqualTo(FlowInstanceStatus.FAILED.name());
 
         var replacement = instanceService.replacement(instanceId, PROSTHETIST_A);
 
         assertThat(replacement.getId()).isNotEqualTo(instanceId);
-        assertThat(replacement.getStatus()).isEqualTo(FlowInstanceStatus.NEW);
+        assertThat(replacement.getStatus()).isEqualTo(FlowInstanceStatus.NEW.name());
         assertThat(replacement.getTemplateId()).isEqualTo(templateId);
         assertThat(replacement.getOrderId()).isEqualTo(original.getOrderId());
     }

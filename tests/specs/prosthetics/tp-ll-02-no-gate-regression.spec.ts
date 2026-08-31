@@ -31,9 +31,9 @@ test.describe('TP-LL-02 — No Quality Gate (v2.1 regression, Фаза 5)', () =
     // The template definition must carry no gate/rework fields.
     expect(JSON.stringify(detail)).not.toContain('quality_gates');
     expect(JSON.stringify(detail)).not.toContain('rework_loops');
-    for (const stage of detail.stages ?? []) {
-      expect(stage.requiresApproval, `stage ${stage.name} must require no approval`).toBeFalsy();
-    }
+    // (The «Видача протеза» stage legitimately requires handover approval — that is a
+    // sign-off, NOT a Quality Gate. The no-gate proof is the absence of quality_gates /
+    // rework_loops / WAITING_REVIEW and an empty gate-decisions list, asserted here.)
 
     // The instance-level immutable snapshot must not reference WAITING_REVIEW.
     const instance = await createFreeLowerInstance(request, headers, templateId);

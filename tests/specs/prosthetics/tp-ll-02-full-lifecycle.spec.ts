@@ -47,14 +47,14 @@ test.describe('TP-LL-02 — Full Lifecycle (Фаза 5)', () => {
     // Admin (AUDIT_ACCESS) can read the instance / step audit trails.
     const instanceAudit = await (await request.get(`${API}/audit?entity=FlowInstance&entityId=${instanceId}`, {
       headers: headersFor(adminToken),
-    }).json()) as any;
+    })).json() as any;
     const instanceActions = instanceAudit.content.map((e: any) => e.action);
     expect(instanceActions).toContain('CREATE');
     expect(instanceActions).toContain('START');
 
     const stepAudit = await (await request.get(`${API}/audit?entity=StepExecution&entityId=${lastStep.id}`, {
       headers: headersFor(adminToken),
-    }).json()) as any;
+    })).json() as any;
     expect(stepAudit.content.map((e: any) => e.action)).toContain('COMPLETE');
   });
 });
