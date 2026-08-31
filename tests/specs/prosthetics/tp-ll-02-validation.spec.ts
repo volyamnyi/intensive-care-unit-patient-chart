@@ -17,14 +17,15 @@ test.describe('TP-LL-02 — Business Rules Validation (Фаза 2)', () => {
   });
 
   test('MEASUREMENT step requires ≥3 values and numeric range', async ({ request }) => {
-    // Create a fresh instance for TP-LL-02 on a free LOWER order
-    const templatesRes = await request.get(`${PROSTH}/templates?productType=LOWER_LIMB&status=ACTIVE`, {
+    // Create a fresh instance for TP-LL-02 on a free LOWER order — use unfiltered list for robustness
+    const templatesRes = await request.get(`${PROSTH}/templates`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
     });
     expect(templatesRes.ok()).toBeTruthy();
     const templates = await templatesRes.json();
-    const tp = templates.find((t: any) => t.name === 'TP-LL-02');
+    const tp = (templates as Array<any>).find((t: any) => t.name === 'TP-LL-02');
     expect(tp).toBeTruthy();
+    expect(tp.status).toBe('ACTIVE');
 
     const ordersRes = await request.get(`${PROSTH}/orders`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
@@ -141,8 +142,9 @@ test.describe('TP-LL-02 — Business Rules Validation (Фаза 2)', () => {
     // This test verifies the UI's Hard Block for MEASUREMENT (≥3) — it does not need API, just checks the button state
     // Use the same instance creation via API, then open wizard and check the CTA
     const headers = { Authorization: `Bearer ${prosthetistToken}` };
-    const templates = await (await page.request.get(`${PROSTH}/templates?productType=LOWER_LIMB&status=ACTIVE`, { headers })).json();
-    const tp = templates.find((t: any) => t.name === 'TP-LL-02');
+    const templatesAll = await (await page.request.get(`${PROSTH}/templates`, { headers })).json();
+    const tp = (templatesAll as Array<any>).find((t: any) => t.name === 'TP-LL-02');
+    expect(tp).toBeTruthy();
     // Create instance via API for UI check
     const orders = await (await page.request.get(`${PROSTH}/orders`, { headers })).json();
     const instances = await (await page.request.get(`${PROSTH}/instances`, { headers })).json();

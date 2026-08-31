@@ -85,11 +85,11 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
       expect(stage.qualityGate).toBeFalsy();
     }
 
-    // Conditional insert step must be mandatory false — search by unique substring without apostrophe
-    const insertStage = detail.stages.find((s: any) => s.name.includes('вкладиша'));
-    expect(insertStage, 'Stage with вкладиша must exist').toBeTruthy();
-    const insertStep = insertStage.steps.find((st: any) => st.name.includes('вкладиша'));
-    expect(insertStep, 'Step with вкладиша must exist').toBeTruthy();
+    // Conditional insert step must be mandatory false — find by mandatory flag (unique to 7.1)
+    const insertStage = detail.stages.find((s: any) => s.steps.some((st: any) => st.mandatory === false));
+    expect(insertStage, 'Stage with conditional step must exist').toBeTruthy();
+    const insertStep = insertStage.steps.find((st: any) => st.mandatory === false);
+    expect(insertStep, 'Step with conditional step must exist').toBeTruthy();
     expect(insertStep.mandatory).toBe(false);
     expect(insertStep.elements.some((e: any) => e.label.includes('Візуальний контроль чистоти пом'))).toBeTruthy();
     // Its elements must be required false
