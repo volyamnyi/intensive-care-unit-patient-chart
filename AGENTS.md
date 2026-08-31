@@ -1,5 +1,7 @@
 # ICU Patient Chart — AI Agent Guide
 
+**2026-08-31: TP-LL-02 Finalization & QA Phase 5 (issue #199, in CI)** — PDF/audit/RBAC + full E2E + no-gate regression for the lower-limb TP-LL-02 template. Backend: `ProstheticsPdfServiceTest` +2 (final report `ЗВІТ ПРО ВИКОНАННЯ`, failure report `ЗВІТ ПРО НЕВИКОНАННЯ` with failReason/category); `AuditServiceTest` (8 tests — CREATE/START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL/REPLACEMENT write AuditLog with entity/entityId/action/userId); `TpLl02PdfIntegrationTest` (2, via `instanceService.generateReport()`); `TpLl02RbacReplacementIntegrationTest` (3 — owner-vs-NotFound, allowAll, replacement FAILED→NEW same snapshot / non-failed→400). E2E (4 new specs, serial `prosthetics-chromium`, shared `tests/helpers/tp-ll-02-flow.ts`): `full-lifecycle` (NEW→COMPLETED→PDF→admin audit), `failure-replacement` (fail material_defect→failure PDF→replacement NEW→COMPLETED), `rbac` (401 invalid token, nurse 403 create/audit, admin 403 instance + 200 audit, foreign prosthetist 404 vs PROSTHETICS_ADMINISTRATOR 200), `no-gate-regression` (snapshot/gate-decisions empty, TP-UL-01 linear regression). Wait: CI run green → close #199.
+
 ## Current Session
 
 **2026-08-26: Responsive/ShadCN Phase 6 — Docs & Closeout (issues #180, #181, CLOSED, CI GREEN)** — docs-only: README counts updated (backend 353/129, frontend 133/87, E2E 72 specs/339 tests), AGENTS Project Files counts synced, plan doc Appendix B final audit deltas + screenshots summary appended (files changed per phase, final test totals, 28/28 routes coverage, no new runtime deps, `addEventListener('resize')` zero). Roll-out checklist per plan §D executed (pre-flight lint/tsc/build green, className/markup-only diffs, Conventional Commits, CI gate: run [32977464321](https://github.com/volyamnyi/intensive-care-unit-patient-chart/actions/runs/32977464321) all 6 jobs green). Issues #180 and tracking #181 closed.
@@ -246,7 +248,7 @@ The complete development loop:
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | `backend-test-results` (surefire-reports) |
 | `backend-integration` | `mvn test -Pintegration-test` | `backend-integration-results` |
 | `frontend-test` | Vitest + production build | `vitest-coverage` |
-| `e2e-test` | Playwright (67 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
+| `e2e-test` | Playwright (80 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
 | `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
 
 ### Exit criteria
@@ -271,20 +273,20 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (674 tests across 80 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (699 tests across 87 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (67 spec files) |
+| `npx playwright test` | Run all E2E tests (80 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
-- **Backend**: 348 main sources / 115 test files across the multi-module reactor (common 119/10, icu-chart 84/62, medication-sheet 61/20, prosthesis-manufacturing 84/22, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 674 Vitest tests across 80 test files (131 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 67 Playwright spec files (304 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Backend**: 353 main sources / 137 test files across the multi-module reactor (common 119/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 84/32, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 699 Vitest tests across 87 test files (133 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **E2E**: 80 Playwright spec files (360 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -730,7 +732,7 @@ backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire (5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
   src/main/java/       ← 353 Java source files
   src/main/resources/  ← application.yml, data-{core,icu,med,prosth}.sql, PDF template, db/changelog/ (Liquibase)
-  src/test/java/       ← 129 test files
+  src/test/java/       ← 137 test files
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
@@ -741,7 +743,7 @@ frontend/
 tests/
   playwright.config.ts ← Playwright config with 11 projects
   package.json         ← Test dependencies
-  specs/               ← 72 spec files
+  specs/               ← 80 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/
