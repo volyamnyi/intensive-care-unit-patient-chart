@@ -467,4 +467,73 @@ describe('WizardScreen', () => {
       expect(checkbox).toHaveAttribute('aria-checked', 'true');
     });
   });
+
+  it('shows conditional skip CTA only for TP-LL-02 insert step (7.1) and completes with empty values', async () => {
+    const conditionalSnapshot: SnapshotTemplate = {
+      ...baseSnapshot(),
+      stages: [
+        {
+          id: 'stage-soft',
+          name: 'Виготовлення пом\'якшуючого вкладиша та постійної гільзи',
+          stageType: 'TECHNICAL',
+          canSkip: false,
+          requiresApproval: false,
+          gate: null,
+          steps: [
+            {
+              id: 'e0000029-0000-0000-0000-000000000029',
+              name: 'Виготовлення пом\'якшуючого вкладиша',
+              stepType: 'CHECKLIST',
+              mandatory: false,
+              allowBackward: true,
+              autoStartTimer: false,
+              normDurationMin: 20,
+              elements: [
+                { id: 'f-soft-1', elementType: 'CHECKBOX', label: 'Візуальний контроль вкладиша', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                { id: 'f-soft-2', elementType: 'CHECKBOX', label: 'Тактильний контроль вкладиша', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+              ],
+            },
+            {
+              id: 'e0000030-0000-0000-0000-000000000030',
+              name: 'Виготовлення постійної гільзи',
+              stepType: 'CHECKLIST',
+              mandatory: true,
+              allowBackward: true,
+              autoStartTimer: false,
+              normDurationMin: 30,
+              elements: [
+                { id: 'f-perm-1', elementType: 'CHECKBOX', label: 'Візуальний контроль гільзи', required: true, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    flowInstanceApiMock.getById.mockResolvedValue({
+      data: inProgressInstance({ currentStageId: 'stage-soft', currentStepId: 'e0000029-0000-0000-0000-000000000029', currentExecutionId: 'exec-soft' }),
+    });
+    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: conditionalSnapshot });
+    flowInstanceApiMock.completeStep.mockResolvedValue({ data: inProgressInstance({ currentStepId: 'e0000030-0000-0000-0000-000000000030' }) });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Пом'якшуючий вкладиш не потрібен/ })).toBeInTheDocument();
+    });
+    const skipBtn = screen.getByRole('button', { name: /Пом'якшуючий вкладиш не потрібен/ });
+    expect(skipBtn).toBeInTheDocument();
+    fireEvent.click(skipBtn);
+    await waitFor(() => {
+      expect(flowInstanceApiMock.completeStep).toHaveBeenCalledWith('inst-1', 'exec-soft', expect.objectContaining({ values: '{}' }));
+    });
+
+    // On non-conditional step, the skip CTA must not appear
+    flowInstanceApiMock.getById.mockResolvedValue({
+      data: inProgressInstance({ currentStageId: 'stage-soft', currentStepId: 'e0000030-0000-0000-0000-000000000030', currentExecutionId: 'exec-soft-2' }),
+    });
+    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: conditionalSnapshot });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText(/Виготовлення постійної гільзи/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /Пом'якшуючий вкладиш не потрібен/ })).not.toBeInTheDocument();
+  });
 });

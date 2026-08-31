@@ -1555,9 +1555,13 @@ export default function WizardScreen() {
     msg,
   }));
 
-  const completeStep = async () => {
+  const completeStep = async (overrideValues?: Record<string, unknown>) => {
     setTouched(true);
-    if (blocked) {
+    const payload = overrideValues ?? values;
+    // For non-conditional steps, validate; for conditional (mandatory false) allow empty
+    const effectiveInvalid = overrideValues ? {} : invalid;
+    const isBlocked = Object.keys(effectiveInvalid).length > 0;
+    if (isBlocked) {
       toast.error("Заповніть усі обов'язкові поля кроку.");
       return;
     }
@@ -1568,7 +1572,7 @@ export default function WizardScreen() {
     setSubmitting(true);
     try {
       const res = await flowInstanceApi.completeStep(instance.id, instance.currentExecutionId, {
-        values: JSON.stringify(values),
+        values: JSON.stringify(payload),
       });
       toast.success(step ? `Крок "${step.name}" завершено` : 'Крок завершено');
       applyInstance(res.data);
@@ -1578,6 +1582,11 @@ export default function WizardScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const skipConditionalInsert = async () => {
+    // For TP-LL-02 step 7.1 (mandatory false) — complete with empty values
+    await completeStep({});
   };
 
   const saveDraft = async () => {
@@ -2013,6 +2022,16 @@ export default function WizardScreen() {
         <Button variant="ghost" className="min-h-11" onClick={() => navigate('/prosthetics')}>
           <Home className="size-4" /> До головного меню
         </Button>
+        {step?.id === 'e0000029-0000-0000-0000-000000000029' && (
+          <Button
+            variant="secondary"
+            className="min-h-11 w-full sm:w-auto"
+            disabled={submitting}
+            onClick={() => void skipConditionalInsert()}
+          >
+            Пом&apos;якшуючий вкладиш не потрібен
+          </Button>
+        )}
         <Button
           className="ml-auto min-h-11 w-full bg-accent text-accent-foreground shadow-sm hover:bg-accent/90 hover:shadow-md sm:w-auto"
           disabled={(touched && blocked) || submitting}
