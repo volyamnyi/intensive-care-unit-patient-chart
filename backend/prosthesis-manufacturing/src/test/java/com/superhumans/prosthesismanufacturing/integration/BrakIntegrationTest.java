@@ -23,15 +23,27 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.superhumans.prosthesismanufacturing.entity.ElementType;
+import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
+import com.superhumans.prosthesismanufacturing.entity.LimbSide;
+import com.superhumans.prosthesismanufacturing.entity.ProductType;
+import com.superhumans.prosthesismanufacturing.entity.StageType;
+import com.superhumans.prosthesismanufacturing.entity.StepType;
+import com.superhumans.prosthesismanufacturing.entity.TemplateStage;
+import com.superhumans.prosthesismanufacturing.entity.TemplateStep;
+import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
+import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.orm.jpa.EntityManagerFactoryUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Integration tests for Brak branching — API → Service → Repository → DB.
  * Covers 12 scenarios from Issue #208 + RBAC/transaction checks.
  */
-@SpringBootTest(properties = "app.mis.embedded-wiremock-enabled=false")
+@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.mis.embedded-wiremock-enabled=false"})
 @Transactional("prosthTransactionManager")
 class BrakIntegrationTest {
 
@@ -55,11 +67,17 @@ class BrakIntegrationTest {
     @Autowired private StepExecutionRepository executionRepository;
     @Autowired private BrakEventRepository brakEventRepository;
     @Autowired private TemplateSnapshotParser snapshotParser;
+    @Autowired private com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository templateRepository;
+    @Autowired @Qualifier("prosthEntityManagerFactory") private EntityManagerFactory emf;
 
+    private TestEm em;
     private UUID orderId;
+    private UUID templateId;
 
     @BeforeEach
     void setUpOrder() {
+        em = new TestEm(EntityManagerFactoryUtils.getTransactionalEntityManager(emf));
+        templateId = ensureFixedTemplate();
         ProstheticsPatient patient = patientRepository.save(ProstheticsPatient.builder()
                 .pib("Інтеграційний Пацієнт " + UUID.randomUUID().toString().substring(0, 6))
                 .birthDate(LocalDate.of(1990, 1, 1))
@@ -73,6 +91,67 @@ class BrakIntegrationTest {
                 .status(com.superhumans.prosthesismanufacturing.entity.OrderStatus.NEW)
                 .build());
         orderId = order.getId();
+    }
+
+    private UUID ensureFixedTemplate() {
+        var existing = templateRepository.findById(TEMPLATE_TP_LL_02);
+        if (existing.isPresent()) return TEMPLATE_TP_LL_02;
+        FlowTemplate tpl = FlowTemplate.builder()
+                .name("TP-LL-02-BRAK-TEST")
+                .description("TP-LL-02 for brak integration")
+                .templateVersion(1)
+                .productType(ProductType.LOWER_LIMB)
+                .amputationLevel("generic_lower_limb")
+                .limbSide(LimbSide.LEFT)
+                .status(TemplateStatus.ACTIVE)
+                .estimatedDurationMin(540)
+                .build();
+        tpl.setId(TEMPLATE_TP_LL_02);
+        em.persistAndFlush(tpl);
+        createStage(STAGE_D12, tpl, 0, "Виготовлення гіпсового негатива", "e0000020-0000-0000-0000-000000000020");
+        createStage(STAGE_D13, tpl, 1, "Виготовлення гіпсової моделі кукси", "e0000022-0000-0000-0000-000000000022");
+        createStage(STAGE_D14, tpl, 2, "Виготовлення тренувальної гільзи", "e0000024-0000-0000-0000-000000000024");
+        createStage(STAGE_D15, tpl, 3, "Примірка тренувальної гільзи", UUID.randomUUID().toString());
+        createStage(STAGE_D16, tpl, 4, "Складання тренувального протеза", UUID.randomUUID().toString());
+        TemplateStage s17 = createStage(STAGE_D17, tpl, 5, "Примірювання та коректування тренувального протеза", STEP_E0028.toString());
+        // ensure snapshot will be used
+        return TEMPLATE_TP_LL_02;
+    }
+
+    private TemplateStage createStage(UUID stageId, FlowTemplate tpl, int orderIdx, String name, String stepIdStr) {
+        TemplateStage stage = TemplateStage.builder()
+                .template(tpl)
+                .orderIndex(orderIdx)
+                .name(name)
+                .type(StageType.TECHNICAL)
+                .canSkip(false)
+                .requiresApproval(false)
+                .build();
+        stage.setId(stageId);
+        em.persistAndFlush(stage);
+        TemplateStep step = TemplateStep.builder()
+                .stage(stage)
+                .orderIndex(0)
+                .name(name + " — крок")
+                .stepType(StepType.CHECKLIST)
+                .mandatory(true)
+                .allowBackward(true)
+                .autoStartTimer(false)
+                .normDurationMin(15)
+                .build();
+        step.setId(UUID.fromString(stepIdStr));
+        em.persistAndFlush(step);
+        // single required checkbox element for each step
+        var el = com.superhumans.prosthesismanufacturing.entity.TemplateElement.builder()
+                .step(step)
+                .orderIndex(0)
+                .elementType(ElementType.CHECKBOX)
+                .label("Підтвердити " + name)
+                .required(true)
+                .build();
+        el.setId(UUID.randomUUID());
+        em.persistAndFlush(el);
+        return stage;
     }
 
     private UUID createInstanceAtBrak() {
