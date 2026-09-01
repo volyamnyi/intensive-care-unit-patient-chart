@@ -3,9 +3,11 @@ package com.superhumans.prosthesismanufacturing.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.BrakCreateRequest;
+import com.superhumans.service.AuditService;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
@@ -15,12 +17,15 @@ import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
+import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
+import com.superhumans.prosthesismanufacturing.entity.PauseCategory;
 import com.superhumans.prosthesismanufacturing.service.BrakService;
 import com.superhumans.prosthesismanufacturing.service.FlowInstanceService;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.superhumans.prosthesismanufacturing.entity.ElementType;
@@ -41,7 +46,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Integration tests for Brak branching — API → Service → Repository → DB.
- * Covers 12 scenarios from Issue #208 + RBAC/transaction checks.
+ * Covers 12 scenarios from Issue #208 + RBAC/transaction checks, plus the
+ * Issue #210 edge cases (double-brak on a BRANCHED original, 1000-char note
+ * boundary, rejected brak on a PAUSED instance, recursive branch on a new
+ * branch, and the three audit records written by a single brak).
  */
 @SpringBootTest(properties = {"app.seed-data.enabled=false", "app.mis.embedded-wiremock-enabled=false"})
 @Transactional("prosthTransactionManager")
@@ -61,6 +69,7 @@ class BrakIntegrationTest {
 
     @Autowired private FlowInstanceService instanceService;
     @Autowired private BrakService brakService;
+    @Autowired private AuditService auditService;
     @Autowired private ProstheticsPatientRepository patientRepository;
     @Autowired private ProstheticsOrderRepository orderRepository;
     @Autowired private FlowInstanceRepository instanceRepository;
@@ -158,7 +167,11 @@ class BrakIntegrationTest {
         var instance = instanceService.create(new InstanceCreateRequest(orderId, TEMPLATE_TP_LL_02), PROSTHETIST);
         UUID instanceId = instance.getId();
         instanceService.start(instanceId, PROSTHETIST);
-        // advance until e0000028
+        advanceUntilBrakStep(instanceId);
+        return instanceId;
+    }
+
+    private void advanceUntilBrakStep(UUID instanceId) {
         for (int i = 0; i < 15; i++) {
             var current = instanceService.get(instanceId, PROSTHETIST, false);
             if (STEP_E0028.equals(current.getCurrentStepId())) {
@@ -181,7 +194,6 @@ class BrakIntegrationTest {
         if (!STEP_E0028.equals(finalInst.getCurrentStepId())) {
             throw new IllegalStateException("Did not reach e0000028, got " + finalInst.getCurrentStepId() + " stage " + finalInst.getCurrentStageId());
         }
-        return instanceId;
     }
 
     private String buildValues(TemplateSnapshotParser.SnapshotStep step) {
@@ -384,5 +396,80 @@ class BrakIntegrationTest {
         UUID instanceId = createInstanceAtBrak();
         assertThatThrownBy(() -> brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(UUID.randomUUID(), false, false, null), PROSTHETIST))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    // ---- Issue #210 edge cases ----
+
+    @Test
+    void reject_doubleBrak_originalAlreadyBranched() {
+        UUID instanceId = createInstanceAtBrak();
+        long beforeEvents = brakEventRepository.count();
+        brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST);
+        var original = instanceService.get(instanceId, PROSTHETIST, false);
+        assertThat(original.getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED.name());
+        // a second brak on the same (now BRANCHED) original must be rejected
+        assertThatThrownBy(() -> brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D13, false, false, null), PROSTHETIST))
+                .isInstanceOf(BadRequestException.class);
+        assertThat(brakEventRepository.count()).isEqualTo(beforeEvents);
+    }
+
+    @Test
+    void noteBoundary_1000CharsAccepted() {
+        UUID instanceId = createInstanceAtBrak();
+        String maxNote = "брак ".repeat(200); // exactly 1000 chars
+        assertThat(maxNote).hasSize(1000);
+        var branch = brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, false, false, maxNote), PROSTHETIST);
+        assertThat(branch.getNewInstanceId()).isNotNull();
+        var events = brakService.listBrakEvents(instanceId, PROSTHETIST, false);
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).getNote()).isEqualTo(maxNote);
+    }
+
+    @Test
+    void reject_pausedInstance() {
+        UUID instanceId = createInstanceAtBrak();
+        instanceService.pause(instanceId, PauseRequest.builder().category(PauseCategory.PATIENT).build(), PROSTHETIST);
+        assertThat(instanceService.get(instanceId, PROSTHETIST, false).getStatus())
+                .isEqualTo(FlowInstanceStatus.PAUSED.name());
+        assertThatThrownBy(() -> brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Брак можливий");
+    }
+
+    @Test
+    void recursiveBranch_brakOnNewBranch() {
+        UUID instanceId = createInstanceAtBrak();
+        var branch1 = brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D14, false, false, null), PROSTHETIST);
+        UUID branch1Id = branch1.getNewInstanceId();
+        assertThat(instanceService.get(instanceId, PROSTHETIST, false).getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED.name());
+        // advance the new branch (starts at D14) back to the brak point, then brak again → grandchild
+        advanceUntilBrakStep(branch1Id);
+        var branch2 = brakService.createBrakAndBranch(branch1Id, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST);
+        assertThat(branch2.getBrakEventId()).isNotNull();
+        UUID branch2Id = branch2.getNewInstanceId();
+        assertThat(branch2Id).isNotEqualTo(branch1Id);
+        assertThat(instanceService.get(branch1Id, PROSTHETIST, false).getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED.name());
+        var grandchild = instanceRepository.findById(branch2Id).orElseThrow();
+        assertThat(grandchild.getStatus()).isEqualTo(FlowInstanceStatus.IN_PROGRESS);
+        assertThat(grandchild.getParentInstanceId()).isEqualTo(branch1Id);
+        assertThat(grandchild.getCurrentStageId()).isEqualTo(STAGE_D12);
+        // original still BRANCHED, history of each branch preserved
+        assertThat(instanceService.get(instanceId, PROSTHETIST, false).getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED.name());
+        assertThat(executionRepository.findByInstanceId(branch2Id)).hasSize(1);
+    }
+
+    @Test
+    void audit_threeRecordsWritten() {
+        UUID instanceId = createInstanceAtBrak();
+        var branch = brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, true, false, "audit test note"), PROSTHETIST);
+        UUID eventId = branch.getBrakEventId();
+        UUID newId = branch.getNewInstanceId();
+        Pageable page = Pageable.ofSize(20);
+        var brakLogs = auditService.getAuditLogs(null, "BrakEvent", eventId, null, null, null, page);
+        assertThat(brakLogs.getContent()).extracting(AuditLogResponse::getAction).contains("CREATE");
+        var branchLogs = auditService.getAuditLogs(null, "FlowInstance", instanceId, null, null, null, page);
+        assertThat(branchLogs.getContent()).extracting(AuditLogResponse::getAction).contains("BRANCH");
+        var createBranchLogs = auditService.getAuditLogs(null, "FlowInstance", newId, null, null, null, page);
+        assertThat(createBranchLogs.getContent()).extracting(AuditLogResponse::getAction).contains("CREATE_BRANCH");
     }
 }
