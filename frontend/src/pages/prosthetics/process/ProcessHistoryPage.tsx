@@ -18,13 +18,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { flowInstanceApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
 import type {
+  BrakEvent,
   FlowInstance,
   GateDecisionResponse,
   SnapshotTemplate,
   StepExecution,
 } from '@/prosthetics/types';
 
-type HistoryEventKind = 'created' | 'start' | 'step' | 'gate' | 'pause' | 'resume' | 'end';
+type HistoryEventKind = 'created' | 'start' | 'step' | 'gate' | 'pause' | 'resume' | 'brak' | 'end';
 
 interface HistoryEvent {
   id: string;
@@ -42,10 +43,12 @@ const KIND_LABELS: Record<string, string> = {
   gate: 'Контрольна точка',
   pause: 'Пауза',
   resume: 'Відновлення',
+  brak: 'Брак',
   end: 'Завершення',
 };
 
 function eventIcon(kind: HistoryEventKind, detail?: string) {
+  if (kind === 'brak') return <XCircle className="size-4" />;
   if (kind === 'created' || kind === 'start' || kind === 'resume') {
     return <Play className="size-4" />;
   }
@@ -67,6 +70,7 @@ function eventIcon(kind: HistoryEventKind, detail?: string) {
 }
 
 function eventColor(kind: HistoryEventKind, detail?: string) {
+  if (kind === 'brak') return 'bg-destructive/10 text-destructive border-destructive/40';
   if (kind === 'step' && detail === 'COMPLETED') return 'bg-success/10 text-success border-success/40';
   if (kind === 'gate' && detail === 'PASS') return 'bg-success/10 text-success border-success/40';
   if (kind === 'gate' && detail === 'REWORK') return 'bg-accent/10 text-accent border-accent/40';
@@ -91,6 +95,7 @@ function buildEvents(
   executions: StepExecution[],
   decisions: GateDecisionResponse[],
   stepNames: Map<string, string>,
+  brakEvents: BrakEvent[] = [],
 ): HistoryEvent[] {
   const events: HistoryEvent[] = [
     {
@@ -151,6 +156,19 @@ function buildEvents(
       timestamp: decision.decidedAt,
     });
   }
+  for (const brak of brakEvents) {
+    const parts: string[] = [];
+    if (brak.softTissueMisalignment) parts.push('м’які тканини');
+    if (brak.painDiscomfort) parts.push('біль/дискомфорт');
+    events.push({
+      id: `brak-${brak.id}`,
+      kind: 'brak',
+      title: `Брак: ${parts.length ? parts.join(', ') : 'примітка'}`,
+      description: `${brak.note ?? ''}${brak.returnStageName ? ` → ${brak.returnStageName}` : ''}${brak.newInstanceId ? ` (гілка ${brak.newInstanceId.slice(0, 8)})` : ''}`.trim() || undefined,
+      detail: 'BRAK',
+      timestamp: brak.createdAt ?? instance.createdAt,
+    });
+  }
   if (instance.pausedAt) {
     events.push({
       id: 'pause',
@@ -188,6 +206,7 @@ const FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'Всі події' },
   { value: 'step', label: 'Кроки' },
   { value: 'gate', label: 'Контрольні точки' },
+  { value: 'brak', label: 'Брак' },
   { value: 'pause', label: 'Паузи / відновлення' },
   { value: 'end', label: 'Завершення' },
 ];
@@ -199,6 +218,7 @@ export default function ProcessHistoryPage() {
   const [snapshot, setSnapshot] = useState<SnapshotTemplate | null>(null);
   const [executions, setExecutions] = useState<StepExecution[]>([]);
   const [decisions, setDecisions] = useState<GateDecisionResponse[]>([]);
+  const [brakEvents, setBrakEvents] = useState<BrakEvent[]>([]);
   const [filter, setFilter] = useState<string | null>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -220,6 +240,12 @@ export default function ProcessHistoryPage() {
         setSnapshot(snapRes.data);
         setExecutions(execRes.data);
         setDecisions(decRes.data);
+        try {
+          const brakRes = await flowInstanceApi.getBrakEvents(id);
+          setBrakEvents(brakRes.data);
+        } catch {
+          setBrakEvents([]);
+        }
       } catch (err) {
         setError(getErrorMessage(err, 'Не вдалося завантажити історію процесу'));
       } finally {
@@ -231,8 +257,8 @@ export default function ProcessHistoryPage() {
 
   const events = useMemo(() => {
     if (!instance || !snapshot) return [];
-    return buildEvents(instance, executions, decisions, toStepMap(snapshot));
-  }, [instance, snapshot, executions, decisions]);
+    return buildEvents(instance, executions, decisions, toStepMap(snapshot), brakEvents);
+  }, [instance, snapshot, executions, decisions, brakEvents]);
 
   const visible = useMemo(
     () => {
