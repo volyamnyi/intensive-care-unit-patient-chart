@@ -87,6 +87,9 @@ public class BrakService {
         if (note != null && note.isEmpty()) {
             note = null;
         }
+        if (note != null && note.length() > 1000) {
+            throw new BadRequestException("Note must not exceed 1000 characters");
+        }
 
         LocalDateTime now = LocalDateTime.now();
 
