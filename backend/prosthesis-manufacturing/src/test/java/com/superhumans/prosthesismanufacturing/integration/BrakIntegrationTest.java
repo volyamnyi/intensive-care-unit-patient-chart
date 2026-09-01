@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Integration tests for Brak branching — API → Service → Repository → DB.
  * Covers 12 scenarios from Issue #208 + RBAC/transaction checks.
  */
-@SpringBootTest(properties = "app.seed-data.enabled=false")
+@SpringBootTest(properties = "app.mis.embedded-wiremock-enabled=false")
 @Transactional("prosthTransactionManager")
 class BrakIntegrationTest {
 
