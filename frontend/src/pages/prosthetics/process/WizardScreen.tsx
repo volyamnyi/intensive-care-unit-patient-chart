@@ -47,6 +47,7 @@ import { QualityGatePanel } from '@/components/prosthetics/QualityGatePanel';
 import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
 import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
 import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
+import { ALLOWED_RETURN_STAGE_IDS, ALLOWED_RETURN_STAGE_LABELS } from '@/prosthetics/types';
 import type {
   FlowInstance,
   GateDecision,
@@ -1334,6 +1335,12 @@ export default function WizardScreen() {
   const [failCategory, setFailCategory] = useState('');
   const [failDescription, setFailDescription] = useState('');
   const [failFiles, setFailFiles] = useState<string[]>([]);
+  const [brakOpen, setBrakOpen] = useState(false);
+  const [brakReturnOpen, setBrakReturnOpen] = useState(false);
+  const [brakSoftTissue, setBrakSoftTissue] = useState(false);
+  const [brakPain, setBrakPain] = useState(false);
+  const [brakNote, setBrakNote] = useState('');
+  const [brakReturnStageId, setBrakReturnStageId] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [orderInfo, setOrderInfo] = useState<{ orderNumber: string; patientPib: string } | null>(null);
@@ -1514,6 +1521,10 @@ export default function WizardScreen() {
     : isLastStepOfStage && nextStageHasGate
       ? 'Контроль якості →'
       : 'Готово →';
+  const isBrakStep =
+    instance?.status === 'IN_PROGRESS' &&
+    instance?.currentStageId === 'd0000017-0000-0000-0000-000000000017' &&
+    instance?.currentStepId === 'e0000028-0000-0000-0000-000000000028';
 
   useEffect(() => {
     const current = step?.id ?? null;
@@ -1686,6 +1697,32 @@ export default function WizardScreen() {
       navigate(`/prosthetics/process/${instance.id}/failed`, { replace: true });
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося позначити процес як провалений'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const confirmBrak = async () => {
+    if (!instance || !brakReturnStageId) {
+      toast.error('Оберіть етап для повернення');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await flowInstanceApi.brak(instance.id, {
+        returnStageId: brakReturnStageId,
+        softTissueMisalignment: brakSoftTissue,
+        painDiscomfort: brakPain,
+        note: brakNote.trim() ? brakNote.trim() : null,
+      });
+      toast.success(
+        `Створено нову гілку з етапу "${ALLOWED_RETURN_STAGE_LABELS[res.data.returnStageId] ?? res.data.returnStageId}"`,
+      );
+      setBrakOpen(false);
+      setBrakReturnOpen(false);
+      navigate(`/prosthetics/process/${res.data.newInstanceId}/wizard`, { replace: true });
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося створити гілку'));
     } finally {
       setSubmitting(false);
     }
@@ -1997,6 +2034,11 @@ export default function WizardScreen() {
         <Button variant="ghost" className="min-h-11 text-destructive hover:bg-destructive/10" onClick={() => setFailOpen(true)}>
           <XCircle className="size-4" /> Позначити процес як провалений
         </Button>
+        {isBrakStep && (
+          <Button variant="destructive" className="min-h-11" data-testid="brak-button" onClick={() => setBrakOpen(true)}>
+            <XCircle className="size-4" /> Брак
+          </Button>
+        )}
         <Button variant="ghost" className="min-h-11" onClick={() => navigate('/prosthetics')}>
           <Home className="size-4" /> До головного меню
         </Button>
@@ -2041,6 +2083,73 @@ export default function WizardScreen() {
             </Button>
             <Button disabled={submitting} onClick={() => void confirmPause()}>
               Призупинити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={brakOpen} onOpenChange={setBrakOpen}>
+        <DialogContent mobileFullscreen>
+          <DialogHeader>
+            <DialogTitle>Брак</DialogTitle>
+            <DialogDescription>Якість посадки кукси в тренувальній гільзі:</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <CheckboxRow id="brak-soft-tissue" checked={brakSoftTissue} onChange={setBrakSoftTissue} variant="plain">
+              Неправильне розташування м’яких тканин у гільзі
+            </CheckboxRow>
+            <CheckboxRow id="brak-pain" checked={brakPain} onChange={setBrakPain} variant="plain">
+              Наявні больові відчуття і дискомфорт при посадці
+            </CheckboxRow>
+            <div className="space-y-2">
+              <Label htmlFor="brak-note" className="text-sm">
+                Примітка
+              </Label>
+              <Textarea id="brak-note" rows={3} maxLength={1000} placeholder="Введіть примітку..." value={brakNote} onChange={(e) => setBrakNote(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBrakOpen(false)}>
+              Скасувати
+            </Button>
+            <Button
+              disabled={submitting}
+              onClick={() => {
+                setBrakOpen(false);
+                setBrakReturnOpen(true);
+              }}
+            >
+              Підтвердити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={brakReturnOpen} onOpenChange={setBrakReturnOpen}>
+        <DialogContent mobileFullscreen>
+          <DialogHeader>
+            <DialogTitle>Повернутись на етап:</DialogTitle>
+          </DialogHeader>
+          <RadioGroup value={brakReturnStageId} onValueChange={(v) => setBrakReturnStageId(v as string)} className="gap-3">
+            {ALLOWED_RETURN_STAGE_IDS.map((stageId) => (
+              <div key={stageId} className="flex items-center gap-2">
+                <RadioGroupItem value={stageId} id={`brak-return-${stageId}`} />
+                <Label htmlFor={`brak-return-${stageId}`}>{ALLOWED_RETURN_STAGE_LABELS[stageId]}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBrakReturnOpen(false);
+                setBrakOpen(true);
+              }}
+            >
+              Назад
+            </Button>
+            <Button disabled={submitting || !brakReturnStageId} onClick={() => void confirmBrak()}>
+              Створити гілку
             </Button>
           </DialogFooter>
         </DialogContent>
