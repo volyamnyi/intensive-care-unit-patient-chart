@@ -134,3 +134,39 @@ export async function completeToCompleted(request: APIRequestContext, headers, i
   }
   throw new Error(`Instance ${instanceId} did not reach COMPLETED in ${max} steps`);
 }
+
+/**
+ * Complete steps until the instance's CURRENT step is the target step (not the
+ * next one). Stops on the target without advancing past it.
+ */
+export async function completeToStep(request: APIRequestContext, headers, instanceId: string, targetStepId: string, max = 30) {
+  for (let i = 0; i < max; i++) {
+    const inst = (await (await request.get(`${PROSTH}/instances/${instanceId}`, { headers })).json()) as any;
+    if (inst.currentStepId === targetStepId) return inst;
+    const status = inst.status;
+    if (status !== 'IN_PROGRESS') throw new Error(`Instance ${instanceId} in ${status}, expected IN_PROGRESS at step ${targetStepId}`);
+    if (status === 'FAILED' || status === 'FAILED_QC' || status === 'COMPLETED' || status === 'BRANCHED') throw new Error(`Instance ${instanceId} in ${status} before reaching ${targetStepId}`);
+    await completeOneStep(request, headers, instanceId);
+  }
+  throw new Error(`Instance ${instanceId} did not reach step ${targetStepId} in ${max} completions`);
+}
+
+/** Create a brak on the instance via API. Throws if the response is not 2xx. */
+export async function createBrakViaApi(
+  request: APIRequestContext,
+  headers,
+  instanceId: string,
+  args: { returnStageId: string; softTissueMisalignment?: boolean; painDiscomfort?: boolean; note?: string | null },
+) {
+  const res = await request.post(`${PROSTH}/instances/${instanceId}/brak`, {
+    headers,
+    data: {
+      returnStageId: args.returnStageId,
+      softTissueMisalignment: args.softTissueMisalignment ?? false,
+      painDiscomfort: args.painDiscomfort ?? false,
+      note: args.note ?? null,
+    },
+  });
+  expect(res.ok(), `POST brak returned ${res.status()}: ${await res.text()}`).toBeTruthy();
+  return res.json();
+}
