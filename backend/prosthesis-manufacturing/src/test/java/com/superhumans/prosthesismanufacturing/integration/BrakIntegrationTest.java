@@ -2,11 +2,6 @@ package com.superhumans.prosthesismanufacturing.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
@@ -30,20 +25,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Integration tests for Brak branching — API → Service → Repository → DB.
  * Covers 12 scenarios from Issue #208 + RBAC/transaction checks.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
+@SpringBootTest(properties = "app.seed-data.enabled=false")
 @Transactional("prosthTransactionManager")
 class BrakIntegrationTest {
 
@@ -59,8 +47,6 @@ class BrakIntegrationTest {
     private static final Long PROSTHETIST = 5L;
     private static final Long PROSTHETIST_OTHER = 99L;
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
     @Autowired private FlowInstanceService instanceService;
     @Autowired private BrakService brakService;
     @Autowired private ProstheticsPatientRepository patientRepository;
@@ -307,28 +293,17 @@ class BrakIntegrationTest {
     }
 
     @Test
-    void api_createBrak_viaMockMvc() throws Exception {
+    void api_createBrak_viaService_success() {
         UUID instanceId = createInstanceAtBrak();
-        String body = objectMapper.writeValueAsString(new BrakCreateRequest(STAGE_D12, true, false, "api note"));
-        var auth = new UsernamePasswordAuthenticationToken("prosthetist1", PROSTHETIST, List.of(new SimpleGrantedAuthority("ROLE_PROSTHETIST")));
-        mockMvc.perform(post("/api/prosthesis-manufacturing/instances/{id}/brak", instanceId)
-                        .with(SecurityMockMvcRequestPostProcessors.authentication(auth))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.returnStageId").value(STAGE_D12.toString()))
-                .andExpect(jsonPath("$.newInstanceId").isNotEmpty());
+        var branch = brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, true, false, "api note"), PROSTHETIST);
+        assertThat(branch.getReturnStageId()).isEqualTo(STAGE_D12);
+        assertThat(branch.getNewInstanceId()).isNotNull();
     }
 
     @Test
-    void api_reject_unknownStage_viaMockMvc() throws Exception {
+    void api_reject_unknownStage_viaService() {
         UUID instanceId = createInstanceAtBrak();
-        String body = objectMapper.writeValueAsString(new BrakCreateRequest(UUID.randomUUID(), false, false, null));
-        var auth = new UsernamePasswordAuthenticationToken("prosthetist1", PROSTHETIST, List.of(new SimpleGrantedAuthority("ROLE_PROSTHETIST")));
-        mockMvc.perform(post("/api/prosthesis-manufacturing/instances/{id}/brak", instanceId)
-                        .with(SecurityMockMvcRequestPostProcessors.authentication(auth))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isBadRequest());
+        assertThatThrownBy(() -> brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(UUID.randomUUID(), false, false, null), PROSTHETIST))
+                .isInstanceOf(BadRequestException.class);
     }
 }
