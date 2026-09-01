@@ -1353,7 +1353,7 @@ export default function WizardScreen() {
       if (next.status === 'COMPLETED') {
         toast.success('Процес успішно завершено');
         navigate(`/prosthetics/process/${next.id}/done`, { replace: true });
-      } else if (next.status === 'FAILED' || next.status === 'FAILED_QC') {
+      } else if (next.status === 'FAILED' || next.status === 'FAILED_QC' || next.status === 'BRANCHED') {
         navigate(`/prosthetics/process/${next.id}/failed`, { replace: true });
       }
     },
@@ -1760,7 +1760,7 @@ export default function WizardScreen() {
     );
   }
 
-  if (instance.status === 'FAILED' || instance.status === 'FAILED_QC') {
+  if (instance.status === 'FAILED' || instance.status === 'FAILED_QC' || instance.status === 'BRANCHED') {
     return (
       <div className="py-16 text-center">
         <h1 className="font-display text-xl font-semibold">Процес зупинено (брак)</h1>

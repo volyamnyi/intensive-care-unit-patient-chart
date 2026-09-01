@@ -7,6 +7,7 @@ import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.service.EvidenceFileService;
+import com.superhumans.prosthesismanufacturing.service.BrakService;
 import com.superhumans.prosthesismanufacturing.service.FlowInstanceService;
 import com.superhumans.prosthesismanufacturing.service.QualityGateService;
 import com.superhumans.repository.core.AuditLogRepository;
@@ -52,6 +53,8 @@ class FlowInstanceControllerTest {
     QualityGateService gateService;
     @MockitoBean
     EvidenceFileService evidenceFileService;
+    @MockitoBean
+    BrakService brakService;
     @MockitoBean
     JwtTokenProvider jwtTokenProvider;
     @MockitoBean

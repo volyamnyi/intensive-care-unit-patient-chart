@@ -24,6 +24,7 @@ const STATUS_LABELS: Record<FlowInstanceStatus, { label: string; variant: 'defau
   FAILED_QC: { label: 'Не пройшов QA', variant: 'destructive' },
   COMPLETED: { label: 'Завершено', variant: 'default' },
   FAILED: { label: 'Завершено з помилкою', variant: 'destructive' },
+  BRANCHED: { label: 'Розгалужено', variant: 'outline' },
 };
 
 const STATUS_FILTERS: { value: FlowInstanceStatus; label: string }[] = [
@@ -35,7 +36,7 @@ const STATUS_FILTERS: { value: FlowInstanceStatus; label: string }[] = [
 
 const ACTIVE_STATUSES: FlowInstanceStatus[] = ['NEW', 'IN_PROGRESS', 'WAITING_REVIEW', 'CORRECTION'];
 const PAUSED_STATUSES: FlowInstanceStatus[] = ['PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL'];
-const FAILED_STATUSES: FlowInstanceStatus[] = ['FAILED', 'FAILED_QC'];
+const FAILED_STATUSES: FlowInstanceStatus[] = ['FAILED', 'FAILED_QC', 'BRANCHED'];
 
 function matchesFilter(instance: FlowInstance, filter: FlowInstanceStatus | 'all'): boolean {
   if (filter === 'all') return true;
@@ -111,7 +112,7 @@ export default function DashboardPage() {
   const openInstance = (instance: FlowInstance) => {
     if (instance.status === 'COMPLETED') {
       navigate(`/prosthetics/process/${instance.id}/done`);
-    } else if (instance.status === 'FAILED' || instance.status === 'FAILED_QC') {
+    } else if (instance.status === 'FAILED' || instance.status === 'FAILED_QC' || instance.status === 'BRANCHED') {
       navigate(`/prosthetics/process/${instance.id}/failed`);
     } else {
       navigate(`/prosthetics/process/${instance.id}/wizard`);
