@@ -36,6 +36,7 @@ public class FlowInstanceResponse {
     Integer branchSequence;
     UUID originStageId;
     UUID originStepId;
+    Boolean hasBrakEvent;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
     /** Values captured in previously-completed steps, keyed by stepId.
