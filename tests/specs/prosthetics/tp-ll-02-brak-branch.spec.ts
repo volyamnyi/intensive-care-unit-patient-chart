@@ -72,12 +72,25 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     return dialog;
   }
 
-  /** Open the return-stage dialog and select a stage by its human label. */
+  /**
+   * Open the return-stage dialog, select a stage by its human label and confirm.
+   * Waits for the wizard to actually navigate to the new branch (the URL's
+   * instance id changes) and returns that new branch id.
+   */
   async function selectReturnStage(page: any, label: string) {
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading', { name: 'Повернутись на етап:' })).toBeVisible();
     await dialog.getByLabel(label).first().check();
-    await dialog.getByRole('button', { name: 'Створити гілку' }).click();
+    await dialog.getByRole('button', { name: 'Створити гілка' }).click();
+    await page.waitForFunction(
+      (oldId) => {
+        const m = location.pathname.match(/process\/([0-9a-f-]{36})/);
+        return m && m[1] !== oldId;
+      },
+      instanceId,
+      { timeout: 15000 },
+    );
+    return page.url().match(/process\/([0-9a-f-]{36})/)?.[1] ?? '';
   }
 
   test('positive flow: stage 3 return, branch continues, history preserved (1)', async ({ page }) => {
@@ -86,21 +99,19 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await req.post(`${PROSTH}/instances/${instanceId}/start`, { headers: h() });
     await goToBrakStep(page);
 
-    // The original instance has 7 completed steps + 1 in-progress = 8 step executions.
+    // The original instance reached the brak step (e0000028): 8 completed steps
+    // (e0000020–e0000027) + the in-progress brak step = 9 step executions.
     const beforeCount = (await (await req.get(`${PROSTH}/instances/${instanceId}/step-executions`, { headers: h() })).json() as any[]).length;
-    expect(beforeCount).toBe(8);
+    expect(beforeCount).toBe(9);
 
     await fillBrakDialog(page, { softTissue: true, note: 'Тканина зміщена медіально, корекція необхідна' });
     // Only the 3 allowed stages are offered as return points.
     const returnDialog = page.getByRole('dialog');
     await expect(returnDialog.getByRole('radio')).toHaveCount(3);
-    await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
+    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
 
     // Navigated to the new branch's wizard (new id ≠ old id), starting on stage 3.
-    const url = page.url();
-    const m = url.match(/process\/([0-9a-f-]{36})/);
-    expect(m, `URL ${url} has no instance id`).toBeTruthy();
-    branchId = m![1];
+    expect(branchId).toBeTruthy();
     expect(branchId).not.toBe(instanceId);
     await expect(page.getByText('Виготовлення тренувальної гільзи').first()).toBeVisible();
 
@@ -141,11 +152,8 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true });
-    await selectReturnStage(page, 'Виготовлення гіпсового негатива');
-
-    const m = page.url().match(/process\/([0-9a-f-]{36})/);
-    expect(m).toBeTruthy();
-    branchId = m![1];
+    branchId = await selectReturnStage(page, 'Виготовлення гіпсового негатива');
+    expect(branchId).toBeTruthy();
     expect(branchId).not.toBe(instanceId);
     // Stage 1 (Етап 1) begins at the measurement step.
     const branch = (await (await req.get(`${PROSTH}/instances/${branchId}`, { headers: h() })).json()) as any;
@@ -159,11 +167,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true });
-    await selectReturnStage(page, 'Виготовлення гіпсової моделі кукси');
-
-    const m = page.url().match(/process\/([0-9a-f-]{36})/);
-    expect(m).toBeTruthy();
-    branchId = m![1];
+    branchId = await selectReturnStage(page, 'Виготовлення гіпсової моделі кукси');
     const branch = (await (await req.get(`${PROSTH}/instances/${branchId}`, { headers: h() })).json()) as any;
     expect(branch.currentStageId).toBe(STAGE2);
   });
@@ -175,9 +179,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true, note: 'унікальна примітка 123' });
-    await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
-    const m = page.url().match(/process\/([0-9a-f-]{36})/);
-    branchId = m![1];
+    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
 
     const events = (await (await req.get(`${PROSTH}/instances/${instanceId}/brak-events`, { headers: h() })).json()) as any[];
     expect(events[0].note).toBe('унікальна примітка 123');
@@ -190,9 +192,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true, pain: true });
-    await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
-    const m = page.url().match(/process\/([0-9a-f-]{36})/);
-    branchId = m![1];
+    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
 
     const events = (await (await req.get(`${PROSTH}/instances/${instanceId}/brak-events`, { headers: h() })).json()) as any[];
     expect(events[0].softTissueMisalignment).toBe(true);
@@ -206,12 +206,10 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     const before = (await (await req.get(`${PROSTH}/instances/${instanceId}/step-executions`, { headers: h() })).json() as any[]).length;
-    expect(before).toBe(8);
+    expect(before).toBe(9);
 
     await fillBrakDialog(page, { softTissue: true });
-    await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
-    const m = page.url().match(/process\/([0-9a-f-]{36})/);
-    branchId = m![1];
+    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
 
     // The fresh branch carries a single step execution (its first step); the original is untouched.
     const newExecs = (await (await req.get(`${PROSTH}/instances/${branchId}/step-executions`, { headers: h() })).json() as any[]).length;
