@@ -96,28 +96,32 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
   }
 
   /**
-   * Assert the return-stage dialog renders, resolve the chosen return stage's UUID from
-   * the offered radio's stable id (brak-return-{stageId}), then create the branch and
-   * navigate to it. opts.softTissue/pain/note mirror the values typed into the Brak
-   * dialog so the returned brak event stores exactly what the UI dialog carried.
+   * Assert the return-stage dialog renders, confirm the chosen stage is offered (by its
+   * human label), then create the branch and navigate to it. opts.softTissue/pain/note
+   * mirror the values typed into the Brak dialog so the created brak event stores exactly
+   * what the UI dialog carried.
    *
+   * The stage UUID is a known constant passed by the caller (NOT read from the radio's
+   * DOM id — Base UI renders the radio with an auto-generated base-ui-_r_*_ id, not the
+   * `brak-return-` prop). The label is only used to assert the UI offered the stage.
    * Creating the branch through the API helper instead of the UI radio→confirm click
-   * avoids a CI flake: the Base UI RadioGroup's onValueChange can leave the «Створити
-   * гілка» button disabled, so locator.click() times out at 30s. POSTing the stage id
-   * keeps the same end state deterministically; the dialog render assertions above
-   * still cover the UI.
+   * avoids a CI flake: the RadioGroup onValueChange can leave the «Створити гілка»
+   * button disabled, so locator.click() times out at 30s.
    */
   async function selectReturnStage(
     page: any,
+    stageId: string,
     label: string,
     opts?: { notOffered?: string[]; softTissue?: boolean; pain?: boolean; note?: string | null },
   ): Promise<string> {
     const returnDialog = await assertReturnDialog(page, opts);
+    // Assert the UI offered this stage (by its human label) so we're not POSTing an
+    // arbitrary id. The stage UUID comes from a constant, NOT the radio's DOM id: Base
+    // UI renders the radio with an auto-generated base-ui-_r_*_ id, not the
+    // `brak-return-{stageId}` prop passed to RadioGroupItem.
     const radio = returnDialog.getByLabel(label).first();
     await expect(radio).toBeVisible();
-    const radioId: string = (await radio.getAttribute('id')) ?? '';
-    const stageId = radioId.replace(/^brak-return-/, '');
-    expect(stageId, `radio ${radioId} is not a brak-return stage`).toMatch(/^d000001/);
+    expect([STAGE1, STAGE2, STAGE3], 'only the 3 allowed stages may be return points').toContain(stageId);
     const branch = await createBrakViaApi(page.request, h(), instanceId, {
       returnStageId: stageId,
       softTissueMisalignment: opts?.softTissue ?? false,
@@ -141,7 +145,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     expect(beforeCount).toBe(9);
 
     await fillBrakDialog(page, { softTissue: true, note: 'Тканина зміщена медіально, корекція необхідна' });
-    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи', {
+    branchId = await selectReturnStage(page, STAGE3, 'Виготовлення тренувальної гільзи', {
       softTissue: true,
       note: 'Тканина зміщена медіально, корекція необхідна',
     });
@@ -188,7 +192,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true });
-    branchId = await selectReturnStage(page, 'Виготовлення гіпсового негатива');
+    branchId = await selectReturnStage(page, STAGE1, 'Виготовлення гіпсового негатива');
     expect(branchId).toBeTruthy();
     expect(branchId).not.toBe(instanceId);
     // Stage 1 (Етап 1) begins at the measurement step.
@@ -203,7 +207,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true });
-    branchId = await selectReturnStage(page, 'Виготовлення гіпсової моделі кукси');
+    branchId = await selectReturnStage(page, STAGE2, 'Виготовлення гіпсової моделі кукси');
     const branch = (await (await req.get(`${PROSTH}/instances/${branchId}`, { headers: h() })).json()) as any;
     expect(branch.currentStageId).toBe(STAGE2);
   });
@@ -215,7 +219,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true, note: 'унікальна примітка 123' });
-    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи', {
+    branchId = await selectReturnStage(page, STAGE3, 'Виготовлення тренувальної гільзи', {
       softTissue: true,
       note: 'унікальна примітка 123',
     });
@@ -231,7 +235,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await goToBrakStep(page);
 
     await fillBrakDialog(page, { softTissue: true, pain: true });
-    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи', {
+    branchId = await selectReturnStage(page, STAGE3, 'Виготовлення тренувальної гільзи', {
       softTissue: true,
       pain: true,
     });
@@ -251,7 +255,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     expect(before).toBe(9);
 
     await fillBrakDialog(page, { softTissue: true });
-    branchId = await selectReturnStage(page, 'Виготовлення тренувальної гільзи');
+    branchId = await selectReturnStage(page, STAGE3, 'Виготовлення тренувальної гільзи', { softTissue: true });
 
     // The fresh branch carries a single step execution (its first step); the original is untouched.
     const newExecs = (await (await req.get(`${PROSTH}/instances/${branchId}/step-executions`, { headers: h() })).json() as any[]).length;
