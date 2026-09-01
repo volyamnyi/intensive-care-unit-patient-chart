@@ -403,26 +403,31 @@ class BrakIntegrationTest {
     @Test
     void reject_doubleBrak_originalAlreadyBranched() {
         UUID instanceId = createInstanceAtBrak();
-        long beforeEvents = brakEventRepository.count();
+        long beforeFirst = brakEventRepository.count();
         brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST);
         var original = instanceService.get(instanceId, PROSTHETIST, false);
         assertThat(original.getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED.name());
-        // a second brak on the same (now BRANCHED) original must be rejected
+        // the first (successful) brak wrote exactly one event
+        long afterFirst = brakEventRepository.count();
+        assertThat(afterFirst).isEqualTo(beforeFirst + 1);
+        // a second brak on the same (now BRANCHED) original must be rejected without creating a new event
         assertThatThrownBy(() -> brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D13, false, false, null), PROSTHETIST))
                 .isInstanceOf(BadRequestException.class);
-        assertThat(brakEventRepository.count()).isEqualTo(beforeEvents);
+        assertThat(brakEventRepository.count()).isEqualTo(afterFirst);
     }
 
     @Test
     void noteBoundary_1000CharsAccepted() {
         UUID instanceId = createInstanceAtBrak();
-        String maxNote = "брак ".repeat(200); // exactly 1000 chars
+        String maxNote = "брак".repeat(250); // exactly 1000 chars, no leading/trailing whitespace
         assertThat(maxNote).hasSize(1000);
         var branch = brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, false, false, maxNote), PROSTHETIST);
         assertThat(branch.getNewInstanceId()).isNotNull();
         var events = brakService.listBrakEvents(instanceId, PROSTHETIST, false);
         assertThat(events).hasSize(1);
+        // the boundary (1000) note is accepted and stored verbatim (the service trims; no trailing space to strip)
         assertThat(events.get(0).getNote()).isEqualTo(maxNote);
+        assertThat(events.get(0).getNote()).hasSize(1000);
     }
 
     @Test
