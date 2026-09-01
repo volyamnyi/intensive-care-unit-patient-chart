@@ -1,5 +1,8 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
+import com.superhumans.prosthesismanufacturing.dto.BrakCreateRequest;
+import com.superhumans.prosthesismanufacturing.dto.BrakEventResponse;
+import com.superhumans.prosthesismanufacturing.dto.BranchResponse;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
@@ -13,6 +16,7 @@ import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailRequest;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
+import com.superhumans.prosthesismanufacturing.service.BrakService;
 import com.superhumans.prosthesismanufacturing.service.EvidenceFileService;
 import com.superhumans.prosthesismanufacturing.service.FlowInstanceService;
 import com.superhumans.prosthesismanufacturing.service.QualityGateService;
@@ -52,6 +56,7 @@ public class FlowInstanceController {
     FlowInstanceService instanceService;
     QualityGateService gateService;
     EvidenceFileService evidenceFileService;
+    BrakService brakService;
     CurrentUser currentUser;
 
     @PostMapping
@@ -214,5 +219,27 @@ public class FlowInstanceController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(pdf.length)
                 .body(new ByteArrayResource(pdf));
+    }
+
+    @PostMapping("/{id}/brak")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Fix brak at step e0000028 and create branch to allowed stage")
+    public BranchResponse createBrak(@PathVariable UUID id, @Valid @RequestBody BrakCreateRequest request) {
+        return brakService.createBrakAndBranch(id, request, currentUser.userId());
+    }
+
+    @GetMapping("/{id}/brak-events")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
+    @Operation(summary = "List brak events of the instance")
+    public List<BrakEventResponse> listBrakEvents(@PathVariable UUID id) {
+        return brakService.listBrakEvents(id, currentUser.userId(), currentUser.canViewAllInstances());
+    }
+
+    @GetMapping("/{id}/branches")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
+    @Operation(summary = "List child branches of the instance")
+    public List<FlowInstanceResponse> listBranches(@PathVariable UUID id) {
+        return brakService.listBranches(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 }

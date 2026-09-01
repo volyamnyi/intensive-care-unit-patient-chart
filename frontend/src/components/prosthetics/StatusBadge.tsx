@@ -13,6 +13,7 @@ const STATUS_MAP: Record<FlowInstanceStatus, { label: string; className: string 
   FAILED_QC: { label: 'Не пройшов QA', className: 'bg-destructive text-destructive-foreground' },
   COMPLETED: { label: 'Завершено', className: 'bg-success text-success-foreground' },
   FAILED: { label: 'Провалено', className: 'bg-destructive text-destructive-foreground' },
+  BRANCHED: { label: 'Розгалужено', className: 'bg-warning text-warning-foreground' },
 };
 
 export function StatusBadge({ status, className }: { status: FlowInstanceStatus; className?: string }) {

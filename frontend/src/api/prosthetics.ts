@@ -19,6 +19,9 @@ import type {
   GateDecisionResponse,
   ResourceUsageResponse,
   FailureSnapshot,
+  BrakCreateRequest,
+  BrakEvent,
+  BranchResponse,
 } from '../prosthetics/types';
 
 const BASE = '/prosthesis-manufacturing';
@@ -93,6 +96,12 @@ export const flowInstanceApi = {
     client.get<Blob>(`${BASE}/instances/${id}/pdf`, {
       responseType: 'blob',
     }),
+  brak: (id: string, data: BrakCreateRequest) =>
+    client.post<BranchResponse>(`${BASE}/instances/${id}/brak`, data),
+  getBrakEvents: (id: string) =>
+    client.get<BrakEvent[]>(`${BASE}/instances/${id}/brak-events`),
+  getBranches: (id: string) =>
+    client.get<FlowInstance[]>(`${BASE}/instances/${id}/branches`),
 };
 
 export const prostheticsApi = {

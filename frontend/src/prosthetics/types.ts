@@ -8,7 +8,8 @@ export type FlowInstanceStatus =
   | 'CORRECTION'
   | 'FAILED_QC'
   | 'COMPLETED'
-  | 'FAILED';
+  | 'FAILED'
+  | 'BRANCHED';
 
 export type TemplateStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 
@@ -127,6 +128,10 @@ export interface FlowInstance {
   pausedAt: string | null;
   resumedAt: string | null;
   pauseCategory: PauseCategory | null;
+  parentInstanceId?: string | null;
+  branchSequence?: number | null;
+  originStageId?: string | null;
+  originStepId?: string | null;
   /** Values captured in previously-completed steps, keyed by stepId (JSON string). */
   priorStepValues?: Record<string, string> | null;
   createdAt: string;
@@ -395,3 +400,46 @@ export interface SnapshotElement {
   mimeTypes: string[] | null;
   maxSizeMb: number | null;
 }
+
+export interface BrakCreateRequest {
+  returnStageId: string;
+  softTissueMisalignment: boolean;
+  painDiscomfort: boolean;
+  note?: string | null;
+}
+
+export interface BrakEvent {
+  id: string;
+  instanceId: string;
+  stageId: string;
+  stepId: string;
+  softTissueMisalignment: boolean;
+  painDiscomfort: boolean;
+  note: string | null;
+  returnStageId: string;
+  returnStageName?: string | null;
+  newInstanceId: string | null;
+  createdBy: number | null;
+  createdAt: string | null;
+}
+
+export interface BranchResponse {
+  brakEventId: string;
+  originalInstanceId: string;
+  newInstanceId: string;
+  returnStageId: string;
+  returnStageName: string | null;
+  newStatus: FlowInstanceStatus;
+}
+
+export const ALLOWED_RETURN_STAGE_IDS = [
+  'd0000012-0000-0000-0000-000000000012',
+  'd0000013-0000-0000-0000-000000000013',
+  'd0000014-0000-0000-0000-000000000014',
+] as const;
+
+export const ALLOWED_RETURN_STAGE_LABELS: Record<string, string> = {
+  'd0000012-0000-0000-0000-000000000012': 'Виготовлення гіпсового негатива',
+  'd0000013-0000-0000-0000-000000000013': 'Виготовлення гіпсової моделі кукси',
+  'd0000014-0000-0000-0000-000000000014': 'Виготовлення тренувальної гільзи',
+};
