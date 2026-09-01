@@ -121,10 +121,14 @@ class BrakServiceTest {
         when(instanceRepository.findByOrderId(ORDER_ID)).thenReturn(List.of(instance));
         when(brakEventRepository.save(any())).thenAnswer(inv -> {
             var e = (com.superhumans.prosthesismanufacturing.entity.BrakEvent) inv.getArgument(0);
-            e.setId(UUID.randomUUID());
+            if (e.getId() == null) e.setId(UUID.randomUUID());
             return e;
         });
-        when(instanceRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(instanceRepository.save(any())).thenAnswer(inv -> {
+            FlowInstance fi = inv.getArgument(0);
+            if (fi.getId() == null) fi.setId(UUID.randomUUID());
+            return fi;
+        });
         when(executionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -138,11 +142,11 @@ class BrakServiceTest {
         assertThat(res.getOriginalInstanceId()).isEqualTo(INSTANCE_ID);
         assertThat(res.getNewInstanceId()).isNotNull();
         assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED);
-        verify(brakEventRepository).save(any());
+        verify(brakEventRepository, times(2)).save(any());
         verify(auditService, times(3)).logAction(any(), any(), any(), eq(5L));
         ArgumentCaptor<FlowInstance> captor = ArgumentCaptor.forClass(FlowInstance.class);
         verify(instanceRepository, times(2)).save(captor.capture());
-        FlowInstance branch = captor.getAllValues().stream().filter(f -> !f.getId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        FlowInstance branch = captor.getAllValues().stream().filter(f -> f.getParentInstanceId() != null && f.getParentInstanceId().equals(INSTANCE_ID)).findFirst().orElse(null);
         assertThat(branch).isNotNull();
         assertThat(branch.getParentInstanceId()).isEqualTo(INSTANCE_ID);
         assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D12);
@@ -157,7 +161,8 @@ class BrakServiceTest {
         assertThat(res.getReturnStageId()).isEqualTo(STAGE_D13);
         ArgumentCaptor<FlowInstance> captor = ArgumentCaptor.forClass(FlowInstance.class);
         verify(instanceRepository, times(2)).save(captor.capture());
-        FlowInstance branch = captor.getAllValues().stream().filter(f -> !f.getId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        FlowInstance branch = captor.getAllValues().stream().filter(f -> f.getParentInstanceId() != null && f.getParentInstanceId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        assertThat(branch).isNotNull();
         assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D13);
         assertThat(branch.getCurrentStepId()).isEqualTo(STEP_E0022);
     }
@@ -170,7 +175,8 @@ class BrakServiceTest {
         assertThat(res.getReturnStageId()).isEqualTo(STAGE_D14);
         ArgumentCaptor<FlowInstance> captor = ArgumentCaptor.forClass(FlowInstance.class);
         verify(instanceRepository, times(2)).save(captor.capture());
-        FlowInstance branch = captor.getAllValues().stream().filter(f -> !f.getId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        FlowInstance branch = captor.getAllValues().stream().filter(f -> f.getParentInstanceId() != null && f.getParentInstanceId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        assertThat(branch).isNotNull();
         assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D14);
         assertThat(branch.getCurrentStepId()).isEqualTo(STEP_E0024);
     }
@@ -181,7 +187,7 @@ class BrakServiceTest {
         mockCommon(instance);
         BranchResponse res = service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, true, true, "тест"), 5L);
         ArgumentCaptor<com.superhumans.prosthesismanufacturing.entity.BrakEvent> captor = ArgumentCaptor.forClass(com.superhumans.prosthesismanufacturing.entity.BrakEvent.class);
-        verify(brakEventRepository).save(captor.capture());
+        verify(brakEventRepository, times(2)).save(captor.capture());
         assertThat(captor.getValue().getSoftTissueMisalignment()).isTrue();
         assertThat(captor.getValue().getPainDiscomfort()).isTrue();
         assertThat(captor.getValue().getNote()).isEqualTo("тест");
@@ -193,7 +199,7 @@ class BrakServiceTest {
         mockCommon(instance);
         service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, false, false, "примітка"), 5L);
         ArgumentCaptor<com.superhumans.prosthesismanufacturing.entity.BrakEvent> captor = ArgumentCaptor.forClass(com.superhumans.prosthesismanufacturing.entity.BrakEvent.class);
-        verify(brakEventRepository).save(captor.capture());
+        verify(brakEventRepository, times(2)).save(captor.capture());
         assertThat(captor.getValue().getNote()).isEqualTo("примітка");
     }
 
@@ -203,7 +209,7 @@ class BrakServiceTest {
         mockCommon(instance);
         service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, true, false, ""), 5L);
         ArgumentCaptor<com.superhumans.prosthesismanufacturing.entity.BrakEvent> captor = ArgumentCaptor.forClass(com.superhumans.prosthesismanufacturing.entity.BrakEvent.class);
-        verify(brakEventRepository).save(captor.capture());
+        verify(brakEventRepository, times(2)).save(captor.capture());
         assertThat(captor.getValue().getNote()).isNull();
     }
 
@@ -325,7 +331,8 @@ class BrakServiceTest {
         BranchResponse res = service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, false, false, null), 5L);
         ArgumentCaptor<FlowInstance> captor = ArgumentCaptor.forClass(FlowInstance.class);
         verify(instanceRepository, times(2)).save(captor.capture());
-        FlowInstance branch = captor.getAllValues().stream().filter(f -> !f.getId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        FlowInstance branch = captor.getAllValues().stream().filter(f -> f.getParentInstanceId() != null && f.getParentInstanceId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        assertThat(branch).isNotNull();
         assertThat(branch.getParentInstanceId()).isEqualTo(INSTANCE_ID);
         assertThat(branch.getBranchSequence()).isEqualTo(2);
         assertThat(res.getOriginalInstanceId()).isEqualTo(INSTANCE_ID);
