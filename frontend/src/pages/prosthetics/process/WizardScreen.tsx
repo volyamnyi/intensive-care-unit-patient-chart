@@ -11,7 +11,6 @@ import {
   Home,
   PauseCircle,
   PenLine,
-  Save,
   Timer,
   Upload,
   X,
@@ -1589,24 +1588,6 @@ export default function WizardScreen() {
     await completeStep({});
   };
 
-  const saveDraft = async () => {
-    if (!instance?.currentExecutionId) {
-      toast.error('Активне виконання кроку не знайдено.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await flowInstanceApi.saveDraft(instance.id, instance.currentExecutionId, {
-        values: JSON.stringify(values),
-      });
-      toast.success('Чернетку збережено');
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Не вдалося зберегти чернетку'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const goBack = async () => {
     if (!instance) return;
     setSubmitting(true);
@@ -2009,9 +1990,6 @@ export default function WizardScreen() {
       <div className="sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center gap-3 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 sm:pb-3">
         <Button variant="outline" className="min-h-11" disabled={!canGoBack || submitting} onClick={() => void goBack()}>
           <ArrowLeft className="size-4" /> Попередній
-        </Button>
-        <Button variant="outline" className="min-h-11" disabled={submitting} onClick={() => void saveDraft()}>
-          <Save className="size-4" /> Зберегти чернетку
         </Button>
         <Button variant="ghost" className="min-h-11" onClick={() => setPauseOpen(true)}>
           <PauseCircle className="size-4" /> Пауза

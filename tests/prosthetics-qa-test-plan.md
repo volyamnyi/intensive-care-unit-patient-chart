@@ -206,7 +206,6 @@ This test plan covers the complete workflow for creating a prosthetist's technic
 **Bottom Panel Controls:**
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 8.9.1 | Click "Зберегти чернетка" | Draft saved, confirmation message, can resume later |
 | 8.9.2 | Click "Пауза" | Reason dialog opens |
 | 8.9.2a | Select reason "Очікування пацієнта" | Timer stops, status → Paused |
 | 8.9.2b | Select reason "Відсутні матеріали" | Timer stops, status → Paused: Material |

@@ -15,7 +15,7 @@
 | **1** | Persistence & Seed | §5 (ієрархія), §1 (паспорт) | Liquibase/seed `TP-LL-02`, `FlowTemplateService`, snapshot | — |
 | **2** | Business Rules & State Machine | §6–§9 | `validateValues` (MEASUREMENT ≥3, умовний 7.1), час `totalActiveSeconds/IdleSeconds`, `backward`/`fail`/`replacement` без gate | Фаза 1 |
 | **3** | Setup Flow & Template Selection | §2, §4, §14 Screens 3–6 | `ProstheticsContext`, `PatientSearch/OrderSelect/Review/TemplateSelect`, фільтр `LOWER_LIMB/BOTH` | Фаза 1 |
-| **4** | Wizard Execution | §5.3–5.4, §10–§11, §14 Screen 8 | Динамічні форми (MEASUREMENT/CHECKLIST/INFORMATION), альтернатива «Вкладиш не потрібен», `saveDraft`, `EvidenceFile`, Dashboard/History | Фаза 1, 2 |
+| **4** | Wizard Execution | §5.3–5.4, §10–§11, §14 Screen 8 | Динамічні форми (MEASUREMENT/CHECKLIST/INFORMATION), альтернатива «Вкладиш не потрібен», `EvidenceFile`, Dashboard/History | Фаза 1, 2 |
 | **5** | Finalization & QA | §10 (PDF), §12–§15, §17 | `ProstheticsPdfService`, аудит, RBAC, повний E2E `NEW→COMPLETED/FAILED`, регресія vs `TP-UL-01`, доки/rollout | Фази 1–4 |
 
 Загальна тривалість — 5 інкрементів, кожен закінчується зеленим CI (`.github/workflows/playwright.yml`: `format-check` + `backend-test` + `backend-integration` + `frontend-test` + `e2e-test` + `build`).
@@ -154,7 +154,6 @@
   - `CHECKLIST` (2.2,3.2,4.1,5.1,6.1,7.1,7.2,9.1,10.1) — `CheckboxRow` на весь рядок.
   - `INFORMATION` (1.2,2.1,3.1,8.1) — чекбокс підтвердження.
   - Умовний CTA «Пом'якшуючий вкладиш не потрібен» на 7.1 → `completeStep({values:{}})` .
-- `saveDraft` — автозбереження (часткові `values` без валідації).
 - `EvidenceFile` upload — `IMAGE_UPLOAD` на кроках гіпсу/гільз.
 - `ProstheticsDashboard` — таблиця `GET /instances?assignedUserId=me` (ID, Пацієнт, Замовлення `TP-LL-02`, Етап, Крок, Статус, Оновлено) + фільтр `LOWER_LIMB`.
 - `ProcessDetail` / `ProcessLayout` — дерево `Stage→Step` (лінійне, без ромбів), `ProcessHistoryPage` — `step-executions` + `resources` + `audit`.
@@ -167,7 +166,7 @@
 - `DashboardPage.test.tsx` — `GET /instances` фільтр `LOWER_LIMB` показує `TP-LL-02` інстанси, `TP-UL-01` — ні.
 
 **Integration:**
-- `WizardFlowIntegrationTest.TP_LL_02` — `start` → послідовний `completeStep` 16 кроків з різними типами → `COMPLETED`; `saveDraft` на 1.1 зберігає часткові `values` без просування; `pause` (`MATERIAL` на 3.1) → `PAUSED` → `resume` → продовження; `backward` з 6.1 на 5.1 → `CANCELLED`/`IN_PROGRESS`; `fail` з `IN_PROGRESS` → `FAILED`.
+- `WizardFlowIntegrationTest.TP_LL_02` — `start` → послідовний `completeStep` 16 кроків з різними типами → `COMPLETED`; `pause` (`MATERIAL` на 3.1) → `PAUSED` → `resume` → продовження; `backward` з 6.1 на 5.1 → `CANCELLED`/`IN_PROGRESS`; `fail` з `IN_PROGRESS` → `FAILED`.
 - `EvidenceFileIntegrationTest` — `POST /evidence-files` з `image/jpeg` 5 MB → `201`; 11 MB → `400`; прив'язка до `StepExecution` зберігається в `failure-snapshot`/`pdf`.
 
 **E2E:**
@@ -176,7 +175,7 @@
 - `tests/specs/prosthetics/tp-ll-02-dashboard-history.spec.ts` — Dashboard фільтр `LOWER_LIMB` + `ProcessHistoryPage` хронологія `step-executions`/`resources`/`audit` для `TP-LL-02`.
 
 ### Критерії готовності
-- Wizard рендерить всі типи кроків `TP-LL-02`; умовний 7.1 та `saveDraft` працюють; пауза/evidence/Dashboard/History — зелені.
+- Wizard рендерить всі типи кроків `TP-LL-02`; умовний 7.1, пауза/evidence/Dashboard/History — зелені.
 
 ---
 
@@ -190,7 +189,7 @@
 **Backend:**
 - `ProstheticsPdfService` — `generateFinalReport` (`COMPLETED`) / `generateFailureReport` (`FAILED`) з `FlowInstance`, `ProstheticsOrder`, `SnapshotTemplate`, `StepExecution[]`, `ResourceUsage[]`; `GET /instances/{id}/pdf` → `application/pdf`, `sendPdf()` в МІС.
 - `FlowInstance` — `fail`/`replacement` без gate; `requireOwner` (404, не 403), `@PreAuthorize` для `fail`/`replacement`/`evidence`.
-- Аудит — `auditService.logAction` для всіх мутацій (`CREATE/START/COMPLETE/DRAFT_SAVE/PAUSE/RESUME/BACKWARD/FAIL/REPLACEMENT/ARCHIVE`).
+- Аудит — `auditService.logAction` для всіх мутацій (`CREATE/START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL/REPLACEMENT/ARCHIVE`).
 
 **Frontend:**
 - `DoneScreen` (`COMPLETED` → «Виріб готовий», «Експорт PDF») / `FailedScreen` (`FAILED` → «Брак», `replacement` CTA).

@@ -108,7 +108,7 @@ UI form-fill + result assertions is valuable but medium-priority (see §3).
    `selectOrder`, `waitForPdfToLoad`, `selectTemplate`, `selectFirstTemplate`).
 4. `pages/prosthetics/WizardExecutionPage.ts` — sleep-free (`verifyTimerIsRunning`,
    `completeStep`, `selectAllDropdowns`, `interactWithSignature`, `executeCurrentStep`,
-   `pauseProcess`, `addResource`, `goBack`, `saveDraft`).
+   `pauseProcess`, `addResource`, `goBack`).
 5. `helpers/prosthetics-flow.ts` — `startProcessIfNeeded` waits for the start screen to
    unmount.
 6. `specs/nurse/nurse-day-flow.spec.ts` — executions-GET response wait replaces

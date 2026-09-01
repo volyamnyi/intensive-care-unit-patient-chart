@@ -26,7 +26,6 @@ export class WizardExecutionPage {
   // Control Buttons
   readonly completeStepButton: Locator;
   readonly backStepButton: Locator;
-  readonly saveDraftButton: Locator;
   readonly pauseButton: Locator;
   readonly homeButton: Locator;
   
@@ -82,7 +81,6 @@ export class WizardExecutionPage {
     // Control Buttons
     this.completeStepButton = page.getByRole('button', { name: /Готово|Завершити крок/ });
     this.backStepButton = page.getByRole('button', { name: /Назад/ });
-    this.saveDraftButton = page.getByRole('button', { name: /Зберегти чернетку/ });
     this.pauseButton = page.getByRole('button', { name: /Пауза/ });
     this.homeButton = page.getByRole('button', { name: /До головного меню/ });
     
@@ -438,15 +436,6 @@ export class WizardExecutionPage {
 
   async goHome() {
     await this.homeButton.click();
-  }
-
-  async saveDraft() {
-    await this.saveDraftButton.click();
-    // A save toast confirms the draft was stored — wait for it (soft fallback:
-    // callers assert the draft state themselves).
-    await expect(
-      this.page.getByText(/збережено/i).first(),
-    ).toBeVisible({ timeout: 5000 }).catch(() => {});
   }
 
   // ==================== STEP STATE CHECKS ====================

@@ -315,38 +315,6 @@ public class FlowInstanceService {
         return toResponse(instance);
     }
 
-    @Transactional
-    public FlowInstanceResponse saveDraft(UUID instanceId, UUID executionId, StepCompleteRequest request,
-                                          Long userId) {
-        FlowInstance instance = requireOwner(instanceId, userId);
-        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS) {
-            throw new BadRequestException("Чернетку можна зберегти лише під час виконання процесу");
-        }
-        StepExecution execution = executionRepository.findById(executionId)
-                .orElseThrow(() -> new NotFoundException("Execution not found: " + executionId));
-        if (!instanceId.equals(execution.getInstance().getId())) {
-            throw new BadRequestException("Execution does not belong to this instance");
-        }
-        if (!instance.getCurrentStepId().equals(execution.getStepId())) {
-            throw new BadRequestException("Only the current step can be saved as a draft");
-        }
-        if (execution.getStatus() != StepExecutionStatus.IN_PROGRESS) {
-            throw new BadRequestException("Execution is not in progress");
-        }
-        if (request.getValues() != null) {
-            parseValues(request.getValues());
-            execution.setValues(request.getValues());
-            executionRepository.save(execution);
-        }
-        if (request.getResources() != null) {
-            List<ResourceUsage> existing = resourceUsageRepository.findByStepExecutionId(execution.getId());
-            resourceUsageRepository.deleteAll(existing);
-            saveResources(instance, execution, request.getResources(), userId);
-        }
-        auditService.logAction("StepExecution", execution.getId(), "DRAFT_SAVE", userId);
-        return toResponse(instance);
-    }
-
     @Transactional(readOnly = true)
     public List<StepExecutionResponse> listExecutions(UUID instanceId, Long userId, boolean allowAll) {
         requireOwner(instanceId, userId, allowAll);

@@ -103,14 +103,6 @@ public class FlowInstanceController {
         return instanceService.completeStep(id, executionId, request, currentUser.userId());
     }
 
-    @PostMapping("/{id}/steps/{executionId}/draft")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
-    @Operation(summary = "Save a step draft (values and resources, no hard-block validation)")
-    public FlowInstanceResponse saveDraft(@PathVariable UUID id, @PathVariable UUID executionId,
-                                          @Valid @RequestBody StepCompleteRequest request) {
-        return instanceService.saveDraft(id, executionId, request, currentUser.userId());
-    }
-
     @PostMapping("/{id}/backward")
     @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @Operation(summary = "Move back to the previous step of the current stage")

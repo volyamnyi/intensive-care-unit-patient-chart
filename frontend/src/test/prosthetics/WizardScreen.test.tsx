@@ -19,7 +19,6 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   getSnapshot: vi.fn(),
   start: vi.fn(),
   completeStep: vi.fn(),
-  saveDraft: vi.fn(),
   backward: vi.fn(),
   listExecutions: vi.fn(),
   pause: vi.fn(),
@@ -217,27 +216,6 @@ describe('WizardScreen', () => {
     });
   });
 
-  it('saves a draft without validation when the button is clicked', async () => {
-    flowInstanceApiMock.saveDraft.mockResolvedValue({ data: inProgressInstance() });
-    renderWizard();
-    await waitFor(() => {
-      expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
-    });
-
-    fireEvent.change(screen.getByLabelText(/Обхват, см/), { target: { value: '42' } });
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Обхват, см/)).toHaveValue(42);
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Зберегти чернетку/ }));
-    await waitFor(() => {
-      expect(flowInstanceApiMock.saveDraft).toHaveBeenCalledWith(
-        'inst-1',
-        'exec-1',
-        expect.objectContaining({ values: expect.stringContaining('42') })
-      );
-    });
-    expect(flowInstanceApiMock.completeStep).not.toHaveBeenCalled();
-  });
 
   it('disables the backward button on the first step of a stage', async () => {
     renderWizard();
