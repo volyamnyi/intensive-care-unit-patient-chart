@@ -88,7 +88,8 @@ public class FlowInstanceService {
         boolean duplicate = instanceRepository.findByOrderId(request.getOrderId()).stream()
                 .anyMatch(i -> i.getStatus() != FlowInstanceStatus.COMPLETED
                         && i.getStatus() != FlowInstanceStatus.FAILED
-                        && i.getStatus() != FlowInstanceStatus.FAILED_QC);
+                        && i.getStatus() != FlowInstanceStatus.FAILED_QC
+                        && i.getStatus() != FlowInstanceStatus.BRANCHED);
         if (duplicate) {
             throw new BadRequestException("An active instance already exists for this order");
         }

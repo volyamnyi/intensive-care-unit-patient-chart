@@ -19,6 +19,8 @@ public interface FlowInstanceRepository extends JpaRepository<FlowInstance, UUID
     List<FlowInstance> findByAssignedUserIdAndStatus(Long assignedUserId, FlowInstanceStatus status);
     List<FlowInstance> findByStatus(FlowInstanceStatus status);
     List<FlowInstance> findByOrderId(UUID orderId);
+    List<FlowInstance> findByParentInstanceId(UUID parentInstanceId);
+    List<FlowInstance> findByOrderIdOrderByBranchSequence(UUID orderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from FlowInstance i where i.id = :id")

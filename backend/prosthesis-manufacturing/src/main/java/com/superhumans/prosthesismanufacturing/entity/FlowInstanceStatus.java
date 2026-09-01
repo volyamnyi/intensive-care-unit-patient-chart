@@ -10,5 +10,6 @@ public enum FlowInstanceStatus {
     CORRECTION,
     FAILED_QC,
     COMPLETED,
-    FAILED
+    FAILED,
+    BRANCHED
 }

@@ -11,3 +11,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/004-order-template.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/005-brak-branch.sql

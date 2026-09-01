@@ -32,6 +32,10 @@ public class FlowInstanceResponse {
     LocalDateTime pausedAt;
     LocalDateTime resumedAt;
     String pauseCategory;
+    UUID parentInstanceId;
+    Integer branchSequence;
+    UUID originStageId;
+    UUID originStepId;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
     /** Values captured in previously-completed steps, keyed by stepId.

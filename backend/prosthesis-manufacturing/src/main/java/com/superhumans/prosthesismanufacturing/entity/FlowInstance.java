@@ -75,6 +75,23 @@ public class FlowInstance extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     String templateSnapshot;
 
+    @Column(name = "parent_instance_id")
+    UUID parentInstanceId;
+
+    @Column(name = "branch_sequence")
+    @Builder.Default
+    Integer branchSequence = 1;
+
+    @Column(name = "origin_stage_id")
+    UUID originStageId;
+
+    @Column(name = "origin_step_id")
+    UUID originStepId;
+
+    @Column(name = "defect_payload", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    String defectPayload;
+
     @PrePersist
     @PreUpdate
     public void validate() {
