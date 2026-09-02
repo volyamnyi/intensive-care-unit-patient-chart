@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/006-step-note.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/007-pause-categories.sql

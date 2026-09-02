@@ -138,7 +138,7 @@ class FlowInstanceControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/pause", instanceId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("category", "MATERIAL"))))
+                        .content(objectMapper.writeValueAsString(Map.of("category", "VLC_PASSING"))))
                 .andExpect(status().isOk());
     }
 

@@ -1,7 +1,8 @@
 package com.superhumans.prosthesismanufacturing.entity;
 
 public enum PauseCategory {
-    PATIENT,
-    MATERIAL,
-    TECH_IDLE
+    OPERATIVE_INTERVENTION,
+    VLC_PASSING,
+    WENT_ABROAD,
+    REAMPUTATION
 }

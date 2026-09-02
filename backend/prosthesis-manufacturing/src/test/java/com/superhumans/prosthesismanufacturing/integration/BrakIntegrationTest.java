@@ -433,7 +433,7 @@ class BrakIntegrationTest {
     @Test
     void reject_pausedInstance() {
         UUID instanceId = createInstanceAtBrak();
-        instanceService.pause(instanceId, PauseRequest.builder().category(PauseCategory.PATIENT).build(), PROSTHETIST);
+        instanceService.pause(instanceId, PauseRequest.builder().category(PauseCategory.OPERATIVE_INTERVENTION).build(), PROSTHETIST);
         assertThat(instanceService.get(instanceId, PROSTHETIST, false).getStatus())
                 .isEqualTo(FlowInstanceStatus.PAUSED.name());
         assertThatThrownBy(() -> brakService.createBrakAndBranch(instanceId, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST))

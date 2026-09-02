@@ -341,7 +341,7 @@ describe('WizardScreen', () => {
 
   it('opens pause dialog and calls pause API', async () => {
     flowInstanceApiMock.pause.mockResolvedValue({
-      data: { ...inProgressInstance(), status: 'PAUSED', pauseCategory: 'MATERIAL' },
+      data: { ...inProgressInstance(), status: 'PAUSED', pauseCategory: 'VLC_PASSING' },
     });
     renderWizard();
     await waitFor(() => {
@@ -355,7 +355,7 @@ describe('WizardScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Призупинити' }));
 
     await waitFor(() => {
-      expect(flowInstanceApiMock.pause).toHaveBeenCalledWith('inst-1', { category: 'MATERIAL' });
+      expect(flowInstanceApiMock.pause).toHaveBeenCalledWith('inst-1', { category: 'VLC_PASSING' });
     });
   });
 

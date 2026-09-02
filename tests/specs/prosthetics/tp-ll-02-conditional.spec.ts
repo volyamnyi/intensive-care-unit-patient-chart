@@ -159,7 +159,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     // Pause
     const paused = await request.post(`${PROSTH}/instances/${inst.id}/pause`, {
       headers,
-      data: { category: 'PATIENT' },
+      data: { category: 'OPERATIVE_INTERVENTION' },
     });
     expect(paused.ok()).toBeTruthy();
     expect((await paused.json()).status).toBe('PAUSED');

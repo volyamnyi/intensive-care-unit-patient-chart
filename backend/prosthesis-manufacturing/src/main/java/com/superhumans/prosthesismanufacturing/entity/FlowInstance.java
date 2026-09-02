@@ -52,7 +52,7 @@ public class FlowInstance extends BaseEntity {
     @Column(name = "resumed_at")
     LocalDateTime resumedAt;
 
-    @Column(name = "pause_category", length = 16)
+    @Column(name = "pause_category", length = 32)
     @Enumerated(EnumType.STRING)
     PauseCategory pauseCategory;
 

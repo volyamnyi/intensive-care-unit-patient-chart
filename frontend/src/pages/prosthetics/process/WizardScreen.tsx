@@ -72,9 +72,10 @@ import type {
 } from '@/prosthetics/types';
 
 const PAUSE_OPTIONS: { value: PauseCategory; label: string }[] = [
-  { value: 'PATIENT', label: 'Очікування пацієнта' },
-  { value: 'MATERIAL', label: 'Відсутні матеріали' },
-  { value: 'TECH_IDLE', label: 'Технологічний простій (сушіння/полімеризація)' },
+  { value: 'OPERATIVE_INTERVENTION', label: 'Оперативне втручання у пацієнта' },
+  { value: 'VLC_PASSING', label: 'Проходження ВЛК' },
+  { value: 'WENT_ABROAD', label: 'Поїхав за кордон' },
+  { value: 'REAMPUTATION', label: 'Реампутація' },
 ];
 
 // The «Зняття мірок (з пацієнтом)» step renders its ЗІЗ confirmation as a
@@ -1360,7 +1361,7 @@ export default function WizardScreen() {
   const [touched, setTouched] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [pauseOpen, setPauseOpen] = useState(false);
-  const [pauseCategory, setPauseCategory] = useState<PauseCategory>('PATIENT');
+  const [pauseCategory, setPauseCategory] = useState<PauseCategory>('OPERATIVE_INTERVENTION');
   const [failOpen, setFailOpen] = useState(false);
   const [validationAlertDismissed, setValidationAlertDismissed] = useState(false);
   const [failCategory, setFailCategory] = useState('');
@@ -1814,7 +1815,7 @@ export default function WizardScreen() {
         <PauseCircle className="mx-auto size-12 text-warning" />
         <h1 className="mt-4 font-display text-xl font-semibold">Процес призупинено</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Причина: {PAUSE_OPTIONS.find((o) => o.value === instance.pauseCategory)?.label ?? instance.pauseCategory}
+          Причина: {PAUSE_OPTIONS.find((o) => o.value === instance.pauseCategory)?.label ?? '—'}
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Button variant="outline" onClick={() => navigate(`/prosthetics/process/${instance.id}`)}>

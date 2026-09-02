@@ -31,9 +31,10 @@ export class WizardExecutionPage {
   
   // Pause Dialog
   readonly pauseDialog: Locator;
-  readonly pauseReasonPatient: Locator;
-  readonly pauseReasonMaterial: Locator;
-  readonly pauseReasonTechIdle: Locator;
+  readonly pauseReasonOperative: Locator;
+  readonly pauseReasonVlc: Locator;
+  readonly pauseReasonAbroad: Locator;
+  readonly pauseReasonReamp: Locator;
   readonly confirmPauseButton: Locator;
   readonly cancelPauseButton: Locator;
   
@@ -86,9 +87,10 @@ export class WizardExecutionPage {
     
     // Pause Dialog
     this.pauseDialog = page.getByRole('dialog');
-    this.pauseReasonPatient = page.getByLabel(/Очікування пацієнта|Очікуємо пацієнта/).first();
-    this.pauseReasonMaterial = page.getByLabel(/Відсутні матеріали|Очікування матеріалів/).first();
-    this.pauseReasonTechIdle = page.getByLabel(/Технологічний простій|Сушіння|Полімеризація/).first();
+    this.pauseReasonOperative = page.getByLabel(/Оперативне втручання/).first();
+    this.pauseReasonVlc = page.getByLabel(/Проходження ВЛК/).first();
+    this.pauseReasonAbroad = page.getByLabel(/Поїхав за кордон/).first();
+    this.pauseReasonReamp = page.getByLabel(/Реампутація/).first();
     this.confirmPauseButton = page.getByRole('button', { name: /Призупинити|Підтвердити/ });
     this.cancelPauseButton = page.getByRole('button', { name: /Скасувати/ });
     
@@ -376,19 +378,22 @@ export class WizardExecutionPage {
 
   // ==================== PAUSE WORKFLOW ====================
   
-  async pauseProcess(reason: 'PATIENT' | 'MATERIAL' | 'TECH_IDLE') {
+  async pauseProcess(reason: 'OPERATIVE_INTERVENTION' | 'VLC_PASSING' | 'WENT_ABROAD' | 'REAMPUTATION') {
     await this.pauseButton.click();
     await this.pauseDialog.waitFor({ state: 'visible', timeout: 5000 });
-    
+
     switch (reason) {
-      case 'PATIENT':
-        await this.pauseReasonPatient.click();
+      case 'OPERATIVE_INTERVENTION':
+        await this.pauseReasonOperative.click();
         break;
-      case 'MATERIAL':
-        await this.pauseReasonMaterial.click();
+      case 'VLC_PASSING':
+        await this.pauseReasonVlc.click();
         break;
-      case 'TECH_IDLE':
-        await this.pauseReasonTechIdle.click();
+      case 'WENT_ABROAD':
+        await this.pauseReasonAbroad.click();
+        break;
+      case 'REAMPUTATION':
+        await this.pauseReasonReamp.click();
         break;
     }
     

@@ -201,7 +201,7 @@ class TpLl02BusinessRulesIntegrationTest {
 
         // Pause
         var paused = instanceService.pause(started.getId(),
-                new com.superhumans.prosthesismanufacturing.dto.PauseRequest(PauseCategory.PATIENT), 20L);
+                new com.superhumans.prosthesismanufacturing.dto.PauseRequest(PauseCategory.OPERATIVE_INTERVENTION), 20L);
         assertThat(paused.getStatus()).isEqualTo(FlowInstanceStatus.PAUSED.name());
 
         // Resume

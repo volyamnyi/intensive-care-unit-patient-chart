@@ -825,8 +825,8 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     await test.step('Test pause functionality', async () => {
       logStep('Test pause process with patient reason');
       
-      await wizardExecutionPage.pauseProcess('PATIENT');
-      log('✓ Pause dialog opened and patient reason selected');
+      await wizardExecutionPage.pauseProcess('OPERATIVE_INTERVENTION');
+      log('✓ Pause dialog opened and operative reason selected');
       
       // Verify paused state (pauseProcess already awaited the dialog close)
       await takeScreenshot(page, '19-paused-state');

@@ -15,7 +15,11 @@ export type TemplateStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 
 export type GateDecision = 'PASS' | 'REWORK' | 'FAIL';
 
-export type PauseCategory = 'PATIENT' | 'MATERIAL' | 'TECH_IDLE';
+export type PauseCategory =
+  | 'OPERATIVE_INTERVENTION'
+  | 'VLC_PASSING'
+  | 'WENT_ABROAD'
+  | 'REAMPUTATION';
 
 export interface ProstheticsPatient {
   id: string;

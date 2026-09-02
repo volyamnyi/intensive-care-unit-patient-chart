@@ -191,9 +191,9 @@ describe('flowInstanceApi', () => {
 
   it('pauses an instance with category', async () => {
     clientMock.post.mockReturnValue(ok({ id: 'i1' }));
-    await flowInstanceApi.pause('i1', { category: 'MATERIAL' });
+    await flowInstanceApi.pause('i1', { category: 'VLC_PASSING' });
     expect(clientMock.post).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/pause', {
-      category: 'MATERIAL',
+      category: 'VLC_PASSING',
     });
   });
 

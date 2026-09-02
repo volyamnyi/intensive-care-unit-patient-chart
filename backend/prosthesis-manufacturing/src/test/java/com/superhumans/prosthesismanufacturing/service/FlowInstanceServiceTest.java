@@ -214,9 +214,9 @@ class FlowInstanceServiceTest {
         FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
         when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
 
-        service.pause(instance.getId(), new PauseRequest(PauseCategory.MATERIAL), 1L);
+        service.pause(instance.getId(), new PauseRequest(PauseCategory.VLC_PASSING), 1L);
         assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.PAUSED);
-        assertThat(instance.getPauseCategory()).isEqualTo(PauseCategory.MATERIAL);
+        assertThat(instance.getPauseCategory()).isEqualTo(PauseCategory.VLC_PASSING);
         assertThat(instance.getPausedAt()).isNotNull();
 
         Thread.sleep(50);
