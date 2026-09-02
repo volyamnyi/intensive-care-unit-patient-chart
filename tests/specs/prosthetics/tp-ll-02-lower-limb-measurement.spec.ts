@@ -204,7 +204,7 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await cta.click();
 
     // Should advance to next step: "Виготовлення гіпсового негатива" (checkbox)
-    await expect(page.getByText('Виготовлення гіпсового негатива')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Гіпсовий негатив виготовлено')).toBeVisible({ timeout: 5000 });
 
     // Verify that the previous step's values were persisted via API
@@ -296,7 +296,7 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     const cta = page.getByRole('button', { name: /Готово/ }).first();
     await expect(cta).toBeEnabled({ timeout: 5000 });
     await cta.click();
-    await expect(page.getByText('Виготовлення гіпсового негатива')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
 
     // Go back (previous step) – form should be editable again
     const backBtn = page.getByRole('button', { name: /Попередній/ });
@@ -314,7 +314,7 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
       const cta2 = page.getByRole('button', { name: /Готово/ }).first();
       await expect(cta2).toBeEnabled({ timeout: 5000 });
       await cta2.click();
-      await expect(page.getByText('Виготовлення гіпсового негатива')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
     }
 
     await terminateInstance(request, headers, instanceId);

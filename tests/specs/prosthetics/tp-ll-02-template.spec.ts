@@ -97,7 +97,7 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
       expect(el.required).toBe(false);
     }
 
-    // MEASUREMENT step must have 4 numeric inputs
+    // MEASUREMENT step must contain the lower-limb reference form (45 elements, 30 diagram)
     const negStage = detail.stages.find((s: any) => s.name === 'Виготовлення гіпсового негатива');
     const measureStep = negStage.steps.find((st: any) => st.stepType === 'MEASUREMENT');
     expect(measureStep).toBeTruthy();
@@ -105,9 +105,15 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     expect(measureStep.autoStartTimer).toBe(true);
     expect(measureStep.normDurationMin).toBe(20);
     const numericInputs = measureStep.elements.filter((e: any) => e.elementType === 'NUMERIC_INPUT');
-    expect(numericInputs).toHaveLength(4);
-    expect(numericInputs[0].required).toBe(true);
-    expect(numericInputs[0].unit).toBe('см');
+    expect(numericInputs.length).toBeGreaterThanOrEqual(30);
+    const labels = measureStep.elements.map((e: any) => e.label);
+    expect(labels).toContain('Бланк замірів №');
+    expect(labels).toContain('Стегно, R');
+    expect(labels).toContain('Таз L, рівень 15');
+    expect(labels).toContain('Висота каблука');
+    // legacy elements are now optional (new form Hard Block gates via diagram count)
+    const legacy = measureStep.elements.find((e: any) => e.label === 'Довжина кукси, см');
+    expect(legacy.required).toBe(false);
 
     // Last step allowBackward false
     const issueStep = lastStage.steps[0];
