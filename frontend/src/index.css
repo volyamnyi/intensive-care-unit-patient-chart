@@ -356,6 +356,42 @@ body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialo
   }
 }
 
+/* Measurement forms — adapted from measurement-master (prosthetics lower limb) */
+.field-input {
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-input);
+  background-color: var(--color-card);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.field-input:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 25%, transparent);
+}
+
+.diagram-input {
+  position: absolute;
+  border-radius: 3px;
+  border: 1px solid var(--color-input);
+  background-color: var(--color-card);
+  text-align: center;
+  font-weight: 600;
+  padding: 0;
+  outline: none;
+  font-size: max(11px, 1.55cqw);
+  color: var(--color-foreground);
+}
+.diagram-input:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-ring) 35%, transparent);
+  background-color: color-mix(in oklch, var(--color-accent) 35%, var(--color-card));
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

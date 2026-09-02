@@ -46,6 +46,11 @@ import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import { QualityGatePanel } from '@/components/prosthetics/QualityGatePanel';
 import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
 import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
+import {
+  LowerLimbMeasurementForm,
+  LOWER_LIMB_STEP_ID,
+  countFilledLowerLimbDiagram,
+} from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
 import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
 import { ALLOWED_RETURN_STAGE_IDS, ALLOWED_RETURN_STAGE_LABELS } from '@/prosthetics/types';
 import type {
@@ -69,6 +74,12 @@ const PAUSE_OPTIONS: { value: PauseCategory; label: string }[] = [
 const MEASUREMENT_STEP_ID = 'e0000002-0000-0000-0000-000000000002';
 const PPE_MEASUREMENT_GLOVES_KEY = 'ppe-measurement-non-sterile-gloves';
 const PPE_MEASUREMENT_GLOVES_LABEL = 'Нестерильні оглядові нітрилові рукавички';
+
+// Lower-limb measurement (TP-LL-02, stage 1 step 1) — adapted from
+// measurement-master (reference at :8080). No PPE, but requires ≥3 diagram
+// measurements (same MIN as upper limb).
+const LOWER_LIMB_MEASUREMENT_STEP_ID = LOWER_LIMB_STEP_ID;
+const MIN_LOWER_LIMB_MEASUREMENTS = 3;
 
 const STEP_TYPE_LABEL: Record<string, string> = {
   INFORMATION: 'інформація',
@@ -292,6 +303,18 @@ function renderElements(
         key="measurement-forms"
         values={values}
         onChange={(k, v) => onChange(k, v)}
+      />,
+    );
+    return out;
+  }
+  // Lower-limb measurement (TP-LL-02, КРОК 1) — reference from measurement-master
+  if (stepId === LOWER_LIMB_MEASUREMENT_STEP_ID) {
+    out.push(
+      <LowerLimbMeasurementForm
+        key="lower-limb-measurement-form"
+        values={values}
+        onChange={onChange}
+        errors={errors}
       />,
     );
     return out;
@@ -1552,6 +1575,12 @@ export default function WizardScreen() {
     if (step?.id === MEASUREMENT_STEP_ID && values[PPE_MEASUREMENT_GLOVES_KEY] !== true) {
       base[PPE_MEASUREMENT_GLOVES_KEY] = "Обов'язкове підтвердження";
     }
+    if (step?.id === LOWER_LIMB_MEASUREMENT_STEP_ID) {
+      const filled = countFilledLowerLimbDiagram(values);
+      if (filled < MIN_LOWER_LIMB_MEASUREMENTS) {
+        base['lower-limb-diagram'] = `Заповніть щонайменше ${MIN_LOWER_LIMB_MEASUREMENTS} значення вимірювань на схемі`;
+      }
+    }
     return base;
   }, [step, values]);
 
@@ -1561,7 +1590,11 @@ export default function WizardScreen() {
     id,
     label:
       step?.elements.find((e) => e.id === id)?.label ??
-      (id === PPE_MEASUREMENT_GLOVES_KEY ? PPE_MEASUREMENT_GLOVES_LABEL : 'Поле кроку'),
+      (id === PPE_MEASUREMENT_GLOVES_KEY
+        ? PPE_MEASUREMENT_GLOVES_LABEL
+        : id === 'lower-limb-diagram'
+          ? 'Обʼємний розмір та довжина кукси (схема)'
+          : 'Поле кроку'),
     msg,
   }));
 
