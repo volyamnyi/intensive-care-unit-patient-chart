@@ -60,6 +60,13 @@ class TpLl02SeedValidationTest {
         assertThat(sql).contains("'Виготовлення пом''якшуючого вкладиша'");
         // Last step must be allow_backward false
         assertThat(sql).contains("'Видача протеза'");
+        // Phase 4: e0000032 (Примірювання постійного протеза) must allow backward for stage-10 return
+        assertThat(sql).contains(
+                "'e0000032-0000-0000-0000-000000000032', 'd0000020-0000-0000-0000-000000000020', 1, 'Примірювання та коректування постійного протеза', 'Контроль якості та маркування постійного протеза', 'CHECKLIST', true, true, false, 30");
+        assertThat(sql).contains(
+                "'e0000033-0000-0000-0000-000000000033', 'd0000021-0000-0000-0000-000000000021', 1, 'Видача протеза', 'Видача протеза пацієнту. Виріб готовий', 'CHECKLIST', true, false, false, 15");
+        // Steps must use DO UPDATE SET so existing DBs receive allow_backward fix
+        assertThat(sql).contains("ON CONFLICT (id) DO UPDATE SET\n    name = EXCLUDED.name");
     }
 
     @Test

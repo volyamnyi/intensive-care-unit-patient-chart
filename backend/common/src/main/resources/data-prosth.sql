@@ -208,9 +208,16 @@ VALUES
     ('e0000029-0000-0000-0000-000000000029', 'd0000018-0000-0000-0000-000000000018', 1, 'Виготовлення пом''якшуючого вкладиша', 'Візуальний та тактильний контроль пом''якшуючого вкладиша (може бути пропущено)', 'CHECKLIST', false, true, false, 20),
     ('e0000030-0000-0000-0000-000000000030', 'd0000018-0000-0000-0000-000000000018', 2, 'Виготовлення постійної гільзи', 'Візуальний та тактильний контроль постійної гільзи', 'CHECKLIST', true, true, false, 30),
     ('e0000031-0000-0000-0000-000000000031', 'd0000019-0000-0000-0000-000000000019', 1, 'Складання постійного протеза', 'Складання постійного протеза із основних комплектуючих', 'INFORMATION', true, true, false, 30),
-    ('e0000032-0000-0000-0000-000000000032', 'd0000020-0000-0000-0000-000000000020', 1, 'Примірювання та коректування постійного протеза', 'Контроль якості та маркування постійного протеза', 'CHECKLIST', true, false, false, 30),
+    ('e0000032-0000-0000-0000-000000000032', 'd0000020-0000-0000-0000-000000000020', 1, 'Примірювання та коректування постійного протеза', 'Контроль якості та маркування постійного протеза', 'CHECKLIST', true, true, false, 30),
     ('e0000033-0000-0000-0000-000000000033', 'd0000021-0000-0000-0000-000000000021', 1, 'Видача протеза', 'Видача протеза пацієнту. Виріб готовий', 'CHECKLIST', true, false, false, 15)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    step_type = EXCLUDED.step_type,
+    mandatory = EXCLUDED.mandatory,
+    allow_backward = EXCLUDED.allow_backward,
+    auto_start_timer = EXCLUDED.auto_start_timer,
+    norm_duration_min = EXCLUDED.norm_duration_min;
 
 INSERT INTO prosthetics_template_elements (id, step_id, order_index, element_type, label, placeholder, required, unit, min_value, max_value, options, validation_rules)
 VALUES
