@@ -1553,8 +1553,10 @@ export default function WizardScreen() {
       : 'Готово →';
   const isBrakStep =
     instance?.status === 'IN_PROGRESS' &&
-    instance?.currentStageId === 'd0000017-0000-0000-0000-000000000017' &&
-    instance?.currentStepId === 'e0000028-0000-0000-0000-000000000028';
+    ((instance?.currentStageId === 'd0000017-0000-0000-0000-000000000017' &&
+      instance?.currentStepId === 'e0000028-0000-0000-0000-000000000028') ||
+      (instance?.currentStageId === 'd0000020-0000-0000-0000-000000000020' &&
+        instance?.currentStepId === 'e0000032-0000-0000-0000-000000000032'));
 
   useEffect(() => {
     const current = step?.id ?? null;
@@ -2121,7 +2123,11 @@ export default function WizardScreen() {
         <DialogContent mobileFullscreen>
           <DialogHeader>
             <DialogTitle>Брак</DialogTitle>
-            <DialogDescription>Якість посадки кукси в тренувальній гільзі:</DialogDescription>
+            <DialogDescription>
+              {instance?.currentStageId === 'd0000020-0000-0000-0000-000000000020'
+                ? 'Якість посадки кукси в постійній гільзі:'
+                : 'Якість посадки кукси в тренувальній гільзі:'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <CheckboxRow id="brak-soft-tissue" checked={brakSoftTissue} onChange={setBrakSoftTissue} variant="plain">

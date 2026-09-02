@@ -45,8 +45,15 @@ public class BrakService {
     public static final UUID STAGE_D14 = UUID.fromString("d0000014-0000-0000-0000-000000000014");
     public static final UUID STAGE_D17 = UUID.fromString("d0000017-0000-0000-0000-000000000017");
     public static final UUID STEP_E0000028 = UUID.fromString("e0000028-0000-0000-0000-000000000028");
+    public static final UUID STAGE_D20 = UUID.fromString("d0000020-0000-0000-0000-000000000020");
+    public static final UUID STEP_E0000032 = UUID.fromString("e0000032-0000-0000-0000-000000000032");
 
     public static final Set<UUID> ALLOWED_RETURN_STAGE_IDS = Set.of(STAGE_D12, STAGE_D13, STAGE_D14);
+
+    static boolean isBrakTrigger(UUID stageId, UUID stepId) {
+        return (STAGE_D17.equals(stageId) && STEP_E0000028.equals(stepId))
+                || (STAGE_D20.equals(stageId) && STEP_E0000032.equals(stepId));
+    }
 
     FlowInstanceRepository instanceRepository;
     BrakEventRepository brakEventRepository;
@@ -66,9 +73,8 @@ public class BrakService {
         if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS) {
             throw new BadRequestException("Брак можливий лише під час виконання");
         }
-        if (!STAGE_D17.equals(instance.getCurrentStageId())
-                || !STEP_E0000028.equals(instance.getCurrentStepId())) {
-            throw new BadRequestException("Брак доступний лише на кроці 1 етапу 6");
+        if (!isBrakTrigger(instance.getCurrentStageId(), instance.getCurrentStepId())) {
+            throw new BadRequestException("Брак доступний лише на кроці 1 етапу 6 або 9");
         }
         if (request.returnStageId() == null || !ALLOWED_RETURN_STAGE_IDS.contains(request.returnStageId())) {
             throw new BadRequestException("Недозволений етап повернення. Дозволені: d0000012, d0000013, d0000014");
@@ -95,8 +101,8 @@ public class BrakService {
 
         BrakEvent event = BrakEvent.builder()
                 .instanceId(instance.getId())
-                .stageId(STAGE_D17)
-                .stepId(STEP_E0000028)
+                .stageId(instance.getCurrentStageId())
+                .stepId(instance.getCurrentStepId())
                 .softTissueMisalignment(request.softTissueMisalignment())
                 .painDiscomfort(request.painDiscomfort())
                 .note(note)
@@ -107,8 +113,8 @@ public class BrakService {
 
         // update old branch to BRANCHED
         instance.setStatus(FlowInstanceStatus.BRANCHED);
-        instance.setOriginStageId(STAGE_D17);
-        instance.setOriginStepId(STEP_E0000028);
+        instance.setOriginStageId(instance.getCurrentStageId());
+        instance.setOriginStepId(instance.getCurrentStepId());
         instance.setEndTime(now);
         // defect_payload as JSON for audit/history
         try {
@@ -139,8 +145,8 @@ public class BrakService {
                 .currentStepId(firstStep.getId())
                 .parentInstanceId(instance.getId())
                 .branchSequence(nextSequence)
-                .originStageId(STAGE_D17)
-                .originStepId(STEP_E0000028)
+                .originStageId(instance.getCurrentStageId())
+                .originStepId(instance.getCurrentStepId())
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
                 .reworkCount(0)
