@@ -342,6 +342,237 @@ class FlowInstanceServiceTest {
                 .isInstanceOf(com.superhumans.exception.NotFoundException.class);
     }
 
+    @Test
+    void updateNote_successOnInProgress() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.findById(execution.getId())).thenReturn(Optional.of(execution));
+        when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateNote(instance.getId(), execution.getId(), "note text", 1L);
+
+        assertThat(execution.getNote()).isEqualTo("note text");
+        verify(executionRepository).save(execution);
+        verify(auditService).logAction(any(), any(), any(), any());
+    }
+
+    @Test
+    void updateNote_successOnPaused() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.PAUSED, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.findById(execution.getId())).thenReturn(Optional.of(execution));
+        when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateNote(instance.getId(), execution.getId(), "paused note", 1L);
+
+        assertThat(execution.getNote()).isEqualTo("paused note");
+    }
+
+    @Test
+    void updateNote_failsOnCompleted() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.COMPLETED, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.updateNote(instance.getId(), execution.getId(), "note", 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Примітку");
+    }
+
+    @Test
+    void updateNote_trimsToNull() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        execution.setNote("old");
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.findById(execution.getId())).thenReturn(Optional.of(execution));
+        when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateNote(instance.getId(), execution.getId(), "   ", 1L);
+        assertThat(execution.getNote()).isNull();
+
+        service.updateNote(instance.getId(), execution.getId(), "", 1L);
+        assertThat(execution.getNote()).isNull();
+
+        service.updateNote(instance.getId(), execution.getId(), "  trimmed  ", 1L);
+        assertThat(execution.getNote()).isEqualTo("trimmed");
+    }
+
+    @Test
+    void updateNote_2000Allowed() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.findById(execution.getId())).thenReturn(Optional.of(execution));
+        when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        String note2000 = "a".repeat(2000);
+
+        service.updateNote(instance.getId(), execution.getId(), note2000, 1L);
+
+        assertThat(execution.getNote()).hasSize(2000);
+    }
+
+    @Test
+    void updateNote_2001Denied() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        StepExecution execution = executionFor(instance, stepOneId);
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.findById(execution.getId())).thenReturn(Optional.of(execution));
+        String note2001 = "a".repeat(2001);
+
+        assertThatThrownBy(() -> service.updateNote(instance.getId(), execution.getId(), note2001, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("2000");
+    }
+
+    @Test
+    void updateNote_wrongExecutionThrows400() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        FlowInstance otherInstance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        StepExecution execution = StepExecution.builder()
+                .instance(otherInstance)
+                .stageId(stageId)
+                .stepId(stepOneId)
+                .attemptNumber(1)
+                .status(StepExecutionStatus.IN_PROGRESS)
+                .startedAt(java.time.LocalDateTime.now().minusMinutes(5))
+                .activeSeconds(0L)
+                .build();
+        execution.setId(UUID.randomUUID());
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(executionRepository.findById(execution.getId())).thenReturn(Optional.of(execution));
+
+        assertThatThrownBy(() -> service.updateNote(instance.getId(), execution.getId(), "note", 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("does not belong");
+    }
+
+    @Test
+    void fail_allowedCategoriesAllSucceed() {
+        for (String category : List.of("defect", "materials", "component_damage", "order_cancelled", "patient", "other")) {
+            FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+            when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+            when(instanceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+            when(failureSnapshotService.create(any(), any(), any(), any(), any()))
+                    .thenAnswer(invocation -> new com.superhumans.prosthesismanufacturing.entity.FailureSnapshot());
+            service.fail(instance.getId(), category, "desc", null, 1L);
+            assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.FAILED);
+            assertThat(instance.getFailReason()).isEqualTo("desc");
+        }
+    }
+
+    @Test
+    void fail_deniedQualityGate() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.fail(instance.getId(), "quality_gate", "desc", null, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Недопустима");
+    }
+
+    @Test
+    void fail_deniedUppercaseMaterialDefect() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.fail(instance.getId(), "MATERIAL_DEFECT", "desc", null, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Недопустима");
+    }
+
+    @Test
+    void fail_deniedNullCategory() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.fail(instance.getId(), null, "desc", null, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Недопустима");
+    }
+
+    @Test
+    void pauseOperativeIntervention() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        service.pause(instance.getId(), new PauseRequest(PauseCategory.OPERATIVE_INTERVENTION), 1L);
+        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.PAUSED);
+        assertThat(instance.getPauseCategory()).isEqualTo(PauseCategory.OPERATIVE_INTERVENTION);
+    }
+
+    @Test
+    void pauseWentAbroad() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        service.pause(instance.getId(), new PauseRequest(PauseCategory.WENT_ABROAD), 1L);
+        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.PAUSED);
+        assertThat(instance.getPauseCategory()).isEqualTo(PauseCategory.WENT_ABROAD);
+    }
+
+    @Test
+    void pauseReamputation() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        service.pause(instance.getId(), new PauseRequest(PauseCategory.REAMPUTATION), 1L);
+        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.PAUSED);
+        assertThat(instance.getPauseCategory()).isEqualTo(PauseCategory.REAMPUTATION);
+    }
+
+    @Test
+    void pauseFailsWhenNotInProgress() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.PAUSED, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        assertThatThrownBy(() -> service.pause(instance.getId(), new PauseRequest(PauseCategory.VLC_PASSING), 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("in-progress");
+        FlowInstance completed = newInstance(FlowInstanceStatus.COMPLETED, snapshotJson());
+        when(instanceRepository.findById(completed.getId())).thenReturn(Optional.of(completed));
+        assertThatThrownBy(() -> service.pause(completed.getId(), new PauseRequest(PauseCategory.VLC_PASSING), 1L))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void backwardAllowBackwardFalseThrows() {
+        UUID customStageId = stageId;
+        SnapshotTemplate snapshot = SnapshotTemplate.builder()
+                .name("TP-UL-01")
+                .version(1)
+                .stages(List.of(SnapshotStage.builder()
+                        .id(customStageId)
+                        .name("Stage")
+                        .steps(List.of(
+                                SnapshotStep.builder().id(stepOneId).name("Step1").allowBackward(false).elements(List.of()).build(),
+                                SnapshotStep.builder().id(stepTwoId).name("Step2").allowBackward(true).elements(List.of()).build()))
+                        .build()))
+                .build();
+        String snapshotStr = parser.toJson(snapshot);
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotStr);
+        instance.setCurrentStageId(customStageId);
+        instance.setCurrentStepId(stepTwoId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.backward(instance.getId(), 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("заборонено");
+    }
+
+    @Test
+    void backwardFailsWhenNotInProgress() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.COMPLETED, snapshotJson());
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        assertThatThrownBy(() -> service.backward(instance.getId(), 1L))
+                .isInstanceOf(BadRequestException.class);
+    }
+
     private static FlowInstance ownerInstance(UUID id, long assignedUserId) {
         FlowInstance instance = FlowInstance.builder()
                 .templateId(UUID.randomUUID())

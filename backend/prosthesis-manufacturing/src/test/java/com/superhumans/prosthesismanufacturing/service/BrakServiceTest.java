@@ -338,4 +338,151 @@ class BrakServiceTest {
         assertThat(res.getOriginalInstanceId()).isEqualTo(INSTANCE_ID);
         assertThat(res.getNewInstanceId()).isEqualTo(branch.getId());
     }
+
+    // ---- Phase 9: second trigger STAGE_D20 / STEP_E0000032 ----
+
+    private String tpLl02SnapshotWithD20() {
+        SnapshotTemplate snapshot = SnapshotTemplate.builder()
+                .name("TP-LL-02")
+                .version(1)
+                .productType("LOWER_LIMB")
+                .stages(List.of(
+                        SnapshotStage.builder().id(STAGE_D12).name("Виготовлення гіпсового негатива").steps(List.of(
+                                SnapshotStep.builder().id(STEP_E0020).name("Зняття та внесення об'ємних розмірів").elements(List.of()).build()
+                        )).build(),
+                        SnapshotStage.builder().id(STAGE_D13).name("Виготовлення гіпсової моделі кукси").steps(List.of(
+                                SnapshotStep.builder().id(STEP_E0022).name("Виготовлення гіпсового позитива").elements(List.of()).build()
+                        )).build(),
+                        SnapshotStage.builder().id(STAGE_D14).name("Виготовлення тренувальної гільзи").steps(List.of(
+                                SnapshotStep.builder().id(STEP_E0024).name("Виготовлення тренувальної гільзи").elements(List.of()).build()
+                        )).build(),
+                        SnapshotStage.builder().id(STAGE_D15).name("Примірка тренувальної гільзи").steps(List.of(
+                                SnapshotStep.builder().id(UUID.randomUUID()).name("Примірка").elements(List.of()).build()
+                        )).build(),
+                        SnapshotStage.builder().id(STAGE_D16).name("Складання тренувального протеза").steps(List.of(
+                                SnapshotStep.builder().id(UUID.randomUUID()).name("Складання").elements(List.of()).build()
+                        )).build(),
+                        SnapshotStage.builder().id(STAGE_D17).name("Примірювання та коректування тренувального протеза").steps(List.of(
+                                SnapshotStep.builder().id(STEP_E0028).name("Примірювання та коректування тренувального протеза").elements(List.of()).build()
+                        )).build(),
+                        SnapshotStage.builder().id(BrakService.STAGE_D20).name("Примірювання та коректування (етап 9)").steps(List.of(
+                                SnapshotStep.builder().id(BrakService.STEP_E0000032).name("Примірювання та коректування (етап 9 крок 1)").elements(List.of()).build()
+                        )).build()
+                ))
+                .build();
+        return parser.toJson(snapshot);
+    }
+
+    private FlowInstance inProgressInstanceAtD20() {
+        FlowInstance inst = FlowInstance.builder()
+                .templateId(UUID.randomUUID())
+                .patientId("900002")
+                .orderId(ORDER_ID)
+                .assignedUserId(5L)
+                .status(FlowInstanceStatus.IN_PROGRESS)
+                .currentStageId(BrakService.STAGE_D20)
+                .currentStepId(BrakService.STEP_E0000032)
+                .totalActiveSeconds(0L)
+                .totalIdleSeconds(0L)
+                .reworkCount(0)
+                .branchSequence(1)
+                .templateSnapshot(tpLl02SnapshotWithD20())
+                .build();
+        inst.setId(INSTANCE_ID);
+        return inst;
+    }
+
+    private void mockCommonD20(FlowInstance instance) {
+        when(instanceRepository.findByIdForUpdate(INSTANCE_ID)).thenReturn(Optional.of(instance));
+        when(instanceRepository.findByOrderId(ORDER_ID)).thenReturn(List.of(instance));
+        when(brakEventRepository.save(any())).thenAnswer(inv -> {
+            var e = (com.superhumans.prosthesismanufacturing.entity.BrakEvent) inv.getArgument(0);
+            if (e.getId() == null) e.setId(UUID.randomUUID());
+            return e;
+        });
+        when(instanceRepository.save(any())).thenAnswer(inv -> {
+            FlowInstance fi = inv.getArgument(0);
+            if (fi.getId() == null) fi.setId(UUID.randomUUID());
+            return fi;
+        });
+        when(executionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    @Test
+    void createBrakAndBranch_success_stage9_D20_returnsStage1() {
+        FlowInstance instance = inProgressInstanceAtD20();
+        mockCommonD20(instance);
+        BranchResponse res = service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, true, false, "примітка"), 5L);
+        assertThat(res.getReturnStageId()).isEqualTo(STAGE_D12);
+        assertThat(res.getOriginalInstanceId()).isEqualTo(INSTANCE_ID);
+        assertThat(res.getNewInstanceId()).isNotNull();
+        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED);
+        verify(brakEventRepository, times(2)).save(any());
+        ArgumentCaptor<FlowInstance> captor = ArgumentCaptor.forClass(FlowInstance.class);
+        verify(instanceRepository, times(2)).save(captor.capture());
+        FlowInstance branch = captor.getAllValues().stream().filter(f -> f.getParentInstanceId() != null && f.getParentInstanceId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        assertThat(branch).isNotNull();
+        assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D12);
+        assertThat(branch.getCurrentStepId()).isEqualTo(STEP_E0020);
+    }
+
+    @Test
+    void createBrakAndBranch_success_stage9_D20_returnsStage2() {
+        FlowInstance instance = inProgressInstanceAtD20();
+        mockCommonD20(instance);
+        BranchResponse res = service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D13, false, true, null), 5L);
+        assertThat(res.getReturnStageId()).isEqualTo(STAGE_D13);
+        ArgumentCaptor<FlowInstance> captor = ArgumentCaptor.forClass(FlowInstance.class);
+        verify(instanceRepository, times(2)).save(captor.capture());
+        FlowInstance branch = captor.getAllValues().stream().filter(f -> f.getParentInstanceId() != null && f.getParentInstanceId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        assertThat(branch).isNotNull();
+        assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D13);
+        assertThat(branch.getCurrentStepId()).isEqualTo(STEP_E0022);
+    }
+
+    @Test
+    void createBrakAndBranch_success_stage9_D20_returnsStage3() {
+        FlowInstance instance = inProgressInstanceAtD20();
+        mockCommonD20(instance);
+        BranchResponse res = service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D14, false, false, ""), 5L);
+        assertThat(res.getReturnStageId()).isEqualTo(STAGE_D14);
+        ArgumentCaptor<FlowInstance> captor = ArgumentCaptor.forClass(FlowInstance.class);
+        verify(instanceRepository, times(2)).save(captor.capture());
+        FlowInstance branch = captor.getAllValues().stream().filter(f -> f.getParentInstanceId() != null && f.getParentInstanceId().equals(INSTANCE_ID)).findFirst().orElse(null);
+        assertThat(branch).isNotNull();
+        assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D14);
+        assertThat(branch.getCurrentStepId()).isEqualTo(STEP_E0024);
+    }
+
+    @Test
+    void createBrakAndBranch_bothTriggersWork() {
+        // D17 trigger
+        FlowInstance d17 = inProgressInstance();
+        // inject D20 stage into its snapshot so both triggers reference same snapshot shape
+        d17.setTemplateSnapshot(tpLl02SnapshotWithD20());
+        d17.setCurrentStageId(STAGE_D17);
+        d17.setCurrentStepId(STEP_E0028);
+        mockCommon(d17);
+        BranchResponse r1 = service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, false, false, null), 5L);
+        assertThat(r1.getReturnStageId()).isEqualTo(STAGE_D12);
+        assertThat(d17.getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED);
+
+        // D20 trigger with fresh instance (reset mocks)
+        FlowInstance d20 = inProgressInstanceAtD20();
+        mockCommonD20(d20);
+        BranchResponse r2 = service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, false, false, null), 5L);
+        assertThat(r2.getReturnStageId()).isEqualTo(STAGE_D12);
+        assertThat(d20.getStatus()).isEqualTo(FlowInstanceStatus.BRANCHED);
+    }
+
+    @Test
+    void createBrakAndBranch_D20_triggerRequiresCorrectStep() {
+        FlowInstance instance = inProgressInstanceAtD20();
+        // wrong step on D20 stage -> not a brak trigger
+        instance.setCurrentStepId(UUID.randomUUID());
+        when(instanceRepository.findByIdForUpdate(INSTANCE_ID)).thenReturn(Optional.of(instance));
+        assertThatThrownBy(() -> service.createBrakAndBranch(INSTANCE_ID, request(STAGE_D12, false, false, null), 5L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("кроці 1");
+    }
 }

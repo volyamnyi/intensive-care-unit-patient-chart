@@ -9,7 +9,7 @@ async function login(request: any, login: string, password: string): Promise<str
   return (await res.json()).token as string;
 }
 
-test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаза 2) — skipped for stabilization', () => {
+test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаза 2) — skipped: stale (empty DEI now DENY per FlowInstanceService:620, measurement now allows empty); covered by CrossFeatureRegressionIntegrationTest + tp-ll-02-cross-feature.spec.ts (Phase 9)', () => {
   let prosthetistToken: string;
 
   test.beforeAll(async ({ request }) => {

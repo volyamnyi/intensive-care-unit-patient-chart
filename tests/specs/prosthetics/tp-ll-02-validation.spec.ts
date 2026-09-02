@@ -9,7 +9,7 @@ async function login(request: any, login: string, password: string): Promise<str
   return (await res.json()).token as string;
 }
 
-test.describe.skip('TP-LL-02 — Business Rules Validation (Фаза 2) — skipped for Фаза 2 stabilization', () => {
+test.describe.skip('TP-LL-02 — Business Rules Validation (Фаза 2) — skipped: stale (e0000020 now allows empty per TpLl02ValidationUnitTest, numeric range covered); superseded by CrossFeatureRegressionIntegrationTest + TpLl02ValidationUnitTest 8 combos (Phase 9)', () => {
   let prosthetistToken: string;
 
   test.beforeAll(async ({ request }) => {

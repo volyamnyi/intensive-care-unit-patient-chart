@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -244,6 +245,96 @@ class EvidenceFileServiceTest {
 
         assertThatThrownBy(() -> service.download(fileId, 1L, false))
                 .isInstanceOf(com.superhumans.exception.NotFoundException.class);
+    }
+
+    @Test
+    void upload_rejectsWhenMaxFilesReached() {
+        UUID instanceId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        StepExecution execution = executionFor(instance, executionId);
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
+        List<EvidenceFile> ten = List.of(
+                evidenceFor(execution, UUID.randomUUID()), evidenceFor(execution, UUID.randomUUID()),
+                evidenceFor(execution, UUID.randomUUID()), evidenceFor(execution, UUID.randomUUID()),
+                evidenceFor(execution, UUID.randomUUID()), evidenceFor(execution, UUID.randomUUID()),
+                evidenceFor(execution, UUID.randomUUID()), evidenceFor(execution, UUID.randomUUID()),
+                evidenceFor(execution, UUID.randomUUID()), evidenceFor(execution, UUID.randomUUID())
+        );
+        when(evidenceFileRepository.findByStepExecutionId(executionId)).thenReturn(ten);
+        MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png", pngBytes());
+
+        assertThatThrownBy(() -> service.upload(instanceId, executionId, file, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("10");
+        verify(evidenceFileRepository, never()).save(any());
+    }
+
+    @Test
+    void listByExecution_returnsTwoFiles() {
+        UUID instanceId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        StepExecution execution = executionFor(instance, executionId);
+        when(instanceService.requireOwner(instanceId, 1L, false)).thenReturn(instance);
+        when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
+        EvidenceFile f1 = evidenceFor(execution, UUID.randomUUID());
+        EvidenceFile f2 = evidenceFor(execution, UUID.randomUUID());
+        when(evidenceFileRepository.findByStepExecutionId(executionId)).thenReturn(List.of(f1, f2));
+
+        var result = service.listByExecution(instanceId, executionId, 1L, false);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getId()).isEqualTo(f1.getId());
+        assertThat(result.get(1).getId()).isEqualTo(f2.getId());
+    }
+
+    @Test
+    void delete_happyOnInProgress() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        instance.setStatus(FlowInstanceStatus.IN_PROGRESS);
+        StepExecution execution = executionFor(instance, UUID.randomUUID());
+        execution.setStatus(StepExecutionStatus.IN_PROGRESS);
+        EvidenceFile evidence = evidenceFor(execution, UUID.randomUUID());
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        when(evidenceFileRepository.findById(evidence.getId())).thenReturn(Optional.of(evidence));
+
+        service.delete(instanceId, evidence.getId(), 1L);
+
+        verify(evidenceFileRepository).delete(evidence);
+        verify(auditService).logAction(any(), any(), any(), any());
+    }
+
+    @Test
+    void delete_denyOnCompleted() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        instance.setStatus(FlowInstanceStatus.COMPLETED);
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+
+        UUID fileId = UUID.randomUUID();
+        assertThatThrownBy(() -> service.delete(instanceId, fileId, 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("видаляти");
+        verify(evidenceFileRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_denyWhenExecutionNotInProgress() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        instance.setStatus(FlowInstanceStatus.IN_PROGRESS);
+        StepExecution execution = executionFor(instance, UUID.randomUUID());
+        execution.setStatus(StepExecutionStatus.COMPLETED);
+        EvidenceFile evidence = evidenceFor(execution, UUID.randomUUID());
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        when(evidenceFileRepository.findById(evidence.getId())).thenReturn(Optional.of(evidence));
+
+        assertThatThrownBy(() -> service.delete(instanceId, evidence.getId(), 1L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("активному");
     }
 
     private EvidenceFile evidenceFor(StepExecution execution, UUID fileId) {
