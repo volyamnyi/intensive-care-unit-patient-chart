@@ -26,7 +26,7 @@ describe('LowerLimbMeasurementForm', () => {
     expect(screen.getByLabelText('Вага')).toBeInTheDocument();
     expect(screen.getByLabelText('Примітки')).toBeInTheDocument();
 
-    expect(screen.getByText('Обʼємний розмір та довжина кукси')).toBeInTheDocument();
+    expect(screen.getByText(/Об.*ємний розмір та довжина кукси/)).toBeInTheDocument();
     expect(screen.getByAltText('Схема замірів кукси та нижніх кінцівок')).toBeInTheDocument();
     // diagram boxes – sample checks
     expect(screen.getByLabelText('Стегно, R')).toBeInTheDocument();
@@ -50,6 +50,7 @@ describe('LowerLimbMeasurementForm', () => {
     render(<LowerLimbMeasurementForm values={values} onChange={onChange} />);
     expect(screen.getByLabelText('П.І.Б')).toHaveValue('Іваненко І. І.');
     expect(screen.getByLabelText('Стегно, R')).toHaveValue('24');
+    // diagram inputs are now text with filtering, so value stays string
 
     fireEvent.change(screen.getByLabelText('Вік'), { target: { value: '45' } });
     expect(onChange).toHaveBeenCalledWith(LOWER_LIMB_ELEMENT_IDS.age, '45');

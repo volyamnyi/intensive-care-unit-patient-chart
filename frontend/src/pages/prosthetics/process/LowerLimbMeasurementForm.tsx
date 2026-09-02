@@ -395,7 +395,7 @@ export function LowerLimbMeasurementForm({
               return (
                 <input
                   key={b.id}
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   aria-label={b.label}
                   title={b.label}
