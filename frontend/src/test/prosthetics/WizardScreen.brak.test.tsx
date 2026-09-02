@@ -209,11 +209,12 @@ describe('WizardScreen — Брак', () => {
     renderBrakWizard();
     await waitFor(() => expect(screen.getByRole('button', { name: /Брак/ })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /Брак/ }));
-    expect(await screen.findByText('Якість посадки кукси в тренувальній гільзі:')).toBeInTheDocument();
-    expect(screen.getByText('Неправильне розташування м’яких тканин у гільзі')).toBeInTheDocument();
-    expect(screen.getByText('Наявні больові відчуття і дискомфорт при посадці')).toBeInTheDocument();
-    expect(screen.getByLabelText('Примітка')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Підтвердити' })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Якість посадки кукси в тренувальній гільзі:')).toBeInTheDocument();
+    expect(within(dialog).getByText('Неправильне розташування м’яких тканин у гільзі')).toBeInTheDocument();
+    expect(within(dialog).getByText('Наявні больові відчуття і дискомфорт при посадці')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Примітка')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Підтвердити' })).toBeInTheDocument();
   });
 
   it('confirm opens stage-selection dialog', async () => {
@@ -293,11 +294,12 @@ describe('WizardScreen — Брак', () => {
     renderBrakWizard();
     await waitFor(() => expect(screen.getByRole('button', { name: /Брак/ })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /Брак/ }));
-    await screen.findByText('Якість посадки кукси в тренувальній гільзі:');
-    fireEvent.click(screen.getByText('Неправильне розташування м’яких тканин у гільзі').closest('label')!);
-    fireEvent.click(screen.getByText('Наявні больові відчуття і дискомфорт при посадці').closest('label')!);
-    fireEvent.change(screen.getByLabelText('Примітка'), { target: { value: ' примітка тест ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Підтвердити' }));
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText('Якість посадки кукси в тренувальній гільзі:');
+    fireEvent.click(within(dialog).getByText('Неправильне розташування м’яких тканин у гільзі').closest('label')!);
+    fireEvent.click(within(dialog).getByText('Наявні больові відчуття і дискомфорт при посадці').closest('label')!);
+    fireEvent.change(within(dialog).getByLabelText('Примітка'), { target: { value: ' примітка тест ' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Підтвердити' }));
     await screen.findByText('Повернутись на етап:');
     fireEvent.click(screen.getByRole('radio', { name: 'Виготовлення гіпсової моделі кукси' }));
     fireEvent.click(screen.getByRole('button', { name: 'Створити гілку' }));
