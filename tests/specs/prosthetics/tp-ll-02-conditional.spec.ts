@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 const API = 'http://localhost:8085/api';
 const PROSTH = 'http://localhost:8085/api/prosthesis-manufacturing';
@@ -33,7 +33,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
       if (blocker) {
         await request.post(`${PROSTH}/instances/${blocker.id}/fail`, {
           headers,
-          data: { category: 'test_cleanup', description: 'conditional prep' },
+          data: { category: 'other', description: 'conditional prep' },
         });
         orderId = (orders as Array<any>).find((o) => o.productType === 'LOWER_LIMB')?.id ?? '20000000-0000-4000-8000-000000000002';
       }
@@ -45,7 +45,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
       const inst2 = await (await request.get(`${PROSTH}/instances`, { headers })).json();
       const blk = (inst2 as Array<any>).find((i) => i.orderId === orderId && ['NEW', 'IN_PROGRESS', 'PAUSED'].includes(i.status));
       if (blk) {
-        await request.post(`${PROSTH}/instances/${blk.id}/fail`, { headers, data: { category: 'test_cleanup', description: 'retry' } });
+        await request.post(`${PROSTH}/instances/${blk.id}/fail`, { headers, data: { category: 'other', description: 'retry' } });
         const retry = await request.post(`${PROSTH}/instances`, { headers, data: { orderId, templateId: tp.id } });
         expect(retry.ok()).toBeTruthy();
         instance = await retry.json();
@@ -129,7 +129,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     // Cleanup first instance
     await request.post(`${PROSTH}/instances/${currentId}/fail`, {
       headers,
-      data: { category: 'test_cleanup', description: 'conditional first path cleanup' },
+      data: { category: 'other', description: 'conditional first path cleanup' },
     });
   });
 
@@ -145,7 +145,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     // Ensure free
     const act = (instances as Array<any>).find((i) => i.orderId === orderId && ['NEW', 'IN_PROGRESS', 'PAUSED'].includes(i.status));
     if (act) {
-      await request.post(`${PROSTH}/instances/${act.id}/fail`, { headers, data: { category: 'test_cleanup', description: 'state machine prep' } });
+      await request.post(`${PROSTH}/instances/${act.id}/fail`, { headers, data: { category: 'other', description: 'state machine prep' } });
     }
 
     const create = await request.post(`${PROSTH}/instances`, { headers, data: { orderId, templateId: tp.id } });
@@ -187,7 +187,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     // Cleanup replacement
     await request.post(`${PROSTH}/instances/${replBody.id}/fail`, {
       headers,
-      data: { category: 'test_cleanup', description: 'replacement cleanup' },
+      data: { category: 'other', description: 'replacement cleanup' },
     });
   });
 });

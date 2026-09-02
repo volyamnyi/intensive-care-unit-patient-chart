@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+﻿import { test, expect, type APIRequestContext } from '@playwright/test';
 import { completeInstanceViaApi } from '../../helpers/prosthetics-flow';
 import { WizardExecutionPage } from '../../pages/prosthetics/WizardExecutionPage';
 
@@ -73,7 +73,7 @@ async function createInstance(request: APIRequestContext): Promise<string> {
     if (blocker) {
       await request.post(`${BASE}/instances/${blocker.id}/fail`, {
         headers,
-        data: { category: 'test_cleanup', description: 'responsive smoke: free order' },
+        data: { category: 'other', description: 'responsive smoke: free order' },
       });
       // Recompute free order after failing blocker
       const refreshedOrders = (await (await request.get(`${BASE}/orders`, { headers })).json()) as Array<{

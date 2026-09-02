@@ -75,6 +75,9 @@ public class FlowInstanceService {
     private static final String TACTILE_SOFT_LINER_KEY = "f0000215-0000-0000-0000-000000000215";
     private static final String NOT_REQUIRED_SOFT_LINER_KEY = "f0000240-0000-0000-0000-000000000240";
 
+    private static final Set<String> ALLOWED_FAIL_CATEGORIES = Set.of(
+            "defect", "materials", "component_damage", "order_cancelled", "patient", "other");
+
     FlowInstanceRepository instanceRepository;
     FlowTemplateRepository templateRepository;
     ProstheticsOrderRepository orderRepository;
@@ -484,6 +487,9 @@ public class FlowInstanceService {
     public FlowInstanceResponse fail(UUID instanceId, String category, String description, String snapshotJson,
                                      Long userId) {
         FlowInstance instance = requireOwner(instanceId, userId);
+        if (category == null || !ALLOWED_FAIL_CATEGORIES.contains(category.toLowerCase())) {
+            throw new BadRequestException("Недопустима категорія провалу");
+        }
         if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS
                 && instance.getStatus() != FlowInstanceStatus.WAITING_REVIEW) {
             throw new BadRequestException("Instance cannot be failed from its current status");

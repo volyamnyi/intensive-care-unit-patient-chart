@@ -17,7 +17,7 @@ test.describe('TP-LL-02 — Failure & Replacement (Фаза 5)', () => {
     prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
   });
 
-  test('FAILED (material_defect) → failure PDF → replacement NEW → COMPLETED', async ({ request }) => {
+  test('FAILED (materials) → failure PDF → replacement NEW → COMPLETED', async ({ request }) => {
     const headers = headersFor(prosthetistToken);
     const templateId = await findTemplateByIdName(request, headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, headers, templateId);
@@ -27,17 +27,17 @@ test.describe('TP-LL-02 — Failure & Replacement (Фаза 5)', () => {
     await request.post(`${PROSTH}/instances/${instance.id}/start`, { headers });
     await completeOneStep(request, headers, instance.id);
 
-    // Fail with a material defect.
+    // Fail with a material defect (Phase 7: only 6 categories allowed).
     const failRes = await request.post(`${PROSTH}/instances/${instance.id}/fail`, {
       headers,
-      data: { category: 'MATERIAL_DEFECT', description: 'Гільза тріснула' },
+      data: { category: 'materials', description: 'Гільза тріснула' },
     });
     expect(failRes.ok()).toBeTruthy();
     expect((await failRes.json()).status).toBe('FAILED');
 
     // The failure snapshot records the category + description verbatim.
     const snapshot = await (await request.get(`${PROSTH}/instances/${instance.id}/failure-snapshot`, { headers })).json();
-    expect(snapshot.category).toBe('MATERIAL_DEFECT');
+    expect(snapshot.category).toBe('materials');
     expect(snapshot.description).toBe('Гільза тріснула');
 
     // The failure report PDF renders for the FAILED instance.

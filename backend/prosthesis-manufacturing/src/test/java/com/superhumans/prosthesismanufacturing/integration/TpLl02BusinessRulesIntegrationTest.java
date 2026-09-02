@@ -208,8 +208,8 @@ class TpLl02BusinessRulesIntegrationTest {
         var resumed = instanceService.resume(started.getId(), 20L);
         assertThat(resumed.getStatus()).isEqualTo(FlowInstanceStatus.IN_PROGRESS.name());
 
-        // Fail
-        var failed = instanceService.fail(started.getId(), "material_defect", "Тест брак", null, 20L);
+        // Fail (Phase 7: only 6 categories allowed)
+        var failed = instanceService.fail(started.getId(), "materials", "Тест брак", null, 20L);
         assertThat(failed.getStatus()).isEqualTo(FlowInstanceStatus.FAILED.name());
 
         // Replacement

@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+﻿import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { completeCurrentStepViaApi, completeInstanceViaApi, passPendingGateViaApi } from '../../helpers/prosthetics-flow';
 
 // Wizard checkbox whole-surface clickability: every parent checkbox row in the
@@ -94,7 +94,7 @@ async function createInstance(request: APIRequestContext): Promise<string> {
     if (blocker) {
       await request.post(`${BASE}/instances/${blocker.id}/fail`, {
         headers,
-        data: { category: 'test_cleanup', description: 'wizard surface: free order' },
+        data: { category: 'other', description: 'wizard surface: free order' },
       });
       const refreshedInstances = (await (await request.get(`${BASE}/instances`, { headers })).json()) as Array<{
         id: string;

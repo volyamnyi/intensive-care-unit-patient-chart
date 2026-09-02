@@ -82,7 +82,7 @@ class TpLl02RbacReplacementIntegrationTest {
         UUID instanceId = createInstance(templateId);
 
         instanceService.start(instanceId, PROSTHETIST_A);
-        instanceService.fail(instanceId, "material_defect", "Гільза тріснула", null, PROSTHETIST_A);
+        instanceService.fail(instanceId, "materials", "Гільза тріснула", null, PROSTHETIST_A);
 
         var original = instanceService.get(instanceId, PROSTHETIST_A, false);
         assertThat(original.getStatus()).isEqualTo(FlowInstanceStatus.FAILED.name());

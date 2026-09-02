@@ -205,7 +205,7 @@ class AuditServiceTest {
             stubOwnerLookup();
             when(instanceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-            service.fail(instanceId, "MATERIAL_DEFECT", "Гільза тріснула", null, prosthetistId);
+            service.fail(instanceId, "materials", "Гільза тріснула", null, prosthetistId);
 
             AuditLog log = captureAuditLog();
             assertThat(log.getEntity()).isEqualTo("FlowInstance");

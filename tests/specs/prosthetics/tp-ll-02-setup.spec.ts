@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 const API = 'http://localhost:8085/api';
 const PROSTH = 'http://localhost:8085/api/prosthesis-manufacturing';
@@ -50,7 +50,7 @@ test.describe('TP-LL-02 — Setup Flow & Template Selection (Фаза 3)', () =>
       // No free LOWER order — fail a blocker and retry
       const blocker = (instances as Array<any>).find((i) => ['NEW', 'IN_PROGRESS', 'PAUSED'].includes(i.status));
       if (blocker) {
-        await request.post(`${PROSTH}/instances/${blocker.id}/fail`, { headers, data: { category: 'test_cleanup', description: 'setup flow prep' } });
+        await request.post(`${PROSTH}/instances/${blocker.id}/fail`, { headers, data: { category: 'other', description: 'setup flow prep' } });
         orderId = '20000000-0000-4000-8000-000000000002';
       }
     }

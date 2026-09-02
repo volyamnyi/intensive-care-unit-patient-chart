@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+﻿import { test, expect, type APIRequestContext } from '@playwright/test';
 import { completeInstanceViaApi } from '../../helpers/prosthetics-flow';
 
 // Phase 4 tablet pass (issue #178): ProcessLayout shows a collapsed icon rail
@@ -64,7 +64,7 @@ async function createInstance(request: APIRequestContext): Promise<string> {
     if (blocker) {
       await request.post(`${BASE}/instances/${blocker.id}/fail`, {
         headers,
-        data: { category: 'test_cleanup', description: 'responsive tablet: free order' },
+        data: { category: 'other', description: 'responsive tablet: free order' },
       });
       const refreshedOrders = (await (await request.get(`${BASE}/orders`, { headers })).json()) as Array<{
         id: string;

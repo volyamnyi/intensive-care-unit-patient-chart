@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 const API = 'http://localhost:8085/api';
 const PROSTH = 'http://localhost:8085/api/prosthesis-manufacturing';
@@ -154,7 +154,7 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
         if (blocker) {
           await request.post(`${PROSTH}/instances/${blocker.id}/fail`, {
             headers: { Authorization: `Bearer ${prosthetistToken}` },
-            data: { category: 'test_cleanup', description: 'cleanup blocker for tp-ll-02' },
+            data: { category: 'other', description: 'cleanup blocker for tp-ll-02' },
           });
           createRes = await request.post(`${PROSTH}/instances`, {
             headers: { Authorization: `Bearer ${prosthetistToken}` },
@@ -219,7 +219,7 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     // Cleanup: fail instance to avoid blocking future runs (IN_PROGRESS → FAILED allows replacement)
     await request.post(`${PROSTH}/instances/${instance.id}/fail`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
-      data: { category: 'test_cleanup', description: 'Phase 1 E2E cleanup' },
+      data: { category: 'other', description: 'Phase 1 E2E cleanup' },
     });
   });
 

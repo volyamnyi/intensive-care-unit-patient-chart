@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 const API = 'http://localhost:8085/api';
 const PROSTH = 'http://localhost:8085/api/prosthesis-manufacturing';
@@ -48,7 +48,7 @@ test.describe.skip('TP-LL-02 — Business Rules Validation (Фаза 2) — skip
         if (blocker) {
           await request.post(`${PROSTH}/instances/${blocker.id}/fail`, {
             headers: { Authorization: `Bearer ${prosthetistToken}` },
-            data: { category: 'test_cleanup', description: 'validation test cleanup' },
+            data: { category: 'other', description: 'validation test cleanup' },
           });
         }
       }
@@ -69,7 +69,7 @@ test.describe.skip('TP-LL-02 — Business Rules Validation (Фаза 2) — skip
       if (blk) {
         await request.post(`${PROSTH}/instances/${blk.id}/fail`, {
           headers: { Authorization: `Bearer ${prosthetistToken}` },
-          data: { category: 'test_cleanup', description: 'retry' },
+          data: { category: 'other', description: 'retry' },
         });
         const retry = await request.post(`${PROSTH}/instances`, {
           headers: { Authorization: `Bearer ${prosthetistToken}` },
@@ -134,7 +134,7 @@ test.describe.skip('TP-LL-02 — Business Rules Validation (Фаза 2) — skip
     // Cleanup
     await request.post(`${PROSTH}/instances/${instance.id}/fail`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
-      data: { category: 'test_cleanup', description: 'validation cleanup' },
+      data: { category: 'other', description: 'validation cleanup' },
     });
   });
 
@@ -155,7 +155,7 @@ test.describe.skip('TP-LL-02 — Business Rules Validation (Фаза 2) — skip
     if (activeForOrder) {
       await page.request.post(`${PROSTH}/instances/${activeForOrder.id}/fail`, {
         headers,
-        data: { category: 'test_cleanup', description: 'ui hard block prep' },
+        data: { category: 'other', description: 'ui hard block prep' },
       });
     }
     const create = await page.request.post(`${PROSTH}/instances`, { headers, data: { orderId, templateId: tp.id } });
@@ -176,7 +176,7 @@ test.describe.skip('TP-LL-02 — Business Rules Validation (Фаза 2) — skip
     // Cleanup
     await page.request.post(`${PROSTH}/instances/${instance.id}/fail`, {
       headers,
-      data: { category: 'test_cleanup', description: 'ui hard block cleanup' },
+      data: { category: 'other', description: 'ui hard block cleanup' },
     });
   });
 });

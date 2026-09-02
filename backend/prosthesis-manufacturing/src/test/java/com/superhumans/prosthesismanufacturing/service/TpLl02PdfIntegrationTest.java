@@ -84,7 +84,7 @@ class TpLl02PdfIntegrationTest {
         var instance = instanceService.create(new InstanceCreateRequest(order.getId(), templateId), 1L);
         var started = instanceService.start(instance.getId(), 1L);
 
-        instanceService.fail(started.getId(), "material_defect", "Гільза тріснала", null, 1L);
+        instanceService.fail(started.getId(), "materials", "Гільза тріснала", null, 1L);
 
         byte[] pdf = instanceService.generateReport(started.getId(), 1L, true);
 
@@ -96,7 +96,7 @@ class TpLl02PdfIntegrationTest {
                 text += PdfTextExtractor.getTextFromPage(doc.getPage(i));
             }
             assertThat(text).contains("ЗВІТ ПРО НЕВИКОНАННЯ");
-            assertThat(text).contains("material_defect");
+            assertThat(text).contains("materials");
             assertThat(text).contains("Гільза тріснала");
         }
     }
