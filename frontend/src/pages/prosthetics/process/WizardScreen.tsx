@@ -1585,9 +1585,11 @@ export default function WizardScreen() {
     id,
     label:
       step?.elements.find((e) => e.id === id)?.label ??
-      id === PPE_MEASUREMENT_GLOVES_KEY
+      (id === PPE_MEASUREMENT_GLOVES_KEY
         ? PPE_MEASUREMENT_GLOVES_LABEL
-        : 'Поле кроку'),
+        : id === 'lower-limb-diagram'
+          ? 'Обʼємний розмір та довжина кукси (схема)'
+          : 'Поле кроку'),
     msg,
   }));
 
