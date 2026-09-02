@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Фаза 2 — Business Rules & State Machine (без Quality Gate).
- * Unit-перевірка валідації TP-LL-02: MEASUREMENT ≥3, умовний 7.1, numeric range, backward target.
+ * Unit-перевірка валідації TP-LL-02: умовний 7.1, numeric range, backward target.
+ * The lower-limb measurement step (e0000020) skips the ≥3-values MEASUREMENT
+ * threshold — it can advance with any (including zero) filled values.
  */
 class TpLl02ValidationUnitTest {
 
@@ -70,17 +72,16 @@ class TpLl02ValidationUnitTest {
     }
 
     @Test
-    void measurementStep_insufficientValuesFails() {
+    void lowerLimbMeasurementStep_insufficientValuesPasses() {
+        // The lower-limb measurement step (e0000020) intentionally allows advancing
+        // without filling any measurement values, so <3 values no longer fails.
         SnapshotStep step = measurementStep();
-        // Only 2 numeric values -> should fail (needs >=3 non-checkbox)
         String values = """
                 {"f0000200-0000-0000-0000-000000000200": "18",
                  "f0000201-0000-0000-0000-000000000201": "24",
                  "f0000204-0000-0000-0000-000000000204": true}
                 """;
-        assertThatThrownBy(() -> service.validateValues(values, step))
-                .isInstanceOf(com.superhumans.exception.BadRequestException.class)
-                .hasMessageContaining("3 значення");
+        assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
     }
 
     @Test

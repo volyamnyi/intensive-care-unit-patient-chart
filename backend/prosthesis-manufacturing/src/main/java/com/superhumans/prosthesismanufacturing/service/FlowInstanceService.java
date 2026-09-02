@@ -62,6 +62,13 @@ public class FlowInstanceService {
     /** Transition rule for MEASUREMENT steps: at least this many filled values to proceed. */
     private static final int MIN_MEASUREMENT_VALUES = 3;
 
+    /**
+     * The lower-limb measurement step (TP-LL-02, stage 1) intentionally allows
+     * advancing to the next step without filling any measurement values, so the
+     * {@link #MIN_MEASUREMENT_VALUES} threshold does not apply to it.
+     */
+    private static final UUID LOWER_LIMB_MEASUREMENT_STEP_ID = UUID.fromString("e0000020-0000-0000-0000-000000000020");
+
     FlowInstanceRepository instanceRepository;
     FlowTemplateRepository templateRepository;
     ProstheticsOrderRepository orderRepository;
@@ -584,7 +591,7 @@ public class FlowInstanceService {
                     .filter(entry -> entry.getValue() != null
                             && !String.valueOf(entry.getValue()).isBlank())
                     .count();
-            if (filled < MIN_MEASUREMENT_VALUES) {
+            if (!LOWER_LIMB_MEASUREMENT_STEP_ID.equals(step.getId()) && filled < MIN_MEASUREMENT_VALUES) {
                 throw new BadRequestException(
                         "Заповніть щонайменше " + MIN_MEASUREMENT_VALUES
                                 + " значення вимірювань для переходу до наступного кроку");

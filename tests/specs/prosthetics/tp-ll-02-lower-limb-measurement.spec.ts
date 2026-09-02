@@ -71,7 +71,7 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
 
     await expect(page.getByText('Кожне поле на схемі — числове значення заміру в сантиметрах.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Друк' })).toBeVisible();
-    await expect(page.getByText('Заповніть не менше 3 вимірів на схемі')).toBeVisible();
+    await expect(page.getByText(/можна переходити далі/)).toBeVisible();
 
     // clean up
     await request.post(`${PROSTH}/instances/${instanceId}/fail`, {
@@ -80,34 +80,28 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     });
   });
 
-  test('validates that at least 3 diagram measurements are required (Hard Block)', async ({ page, request }) => {
+  test('completes the measurement step with zero filled values', async ({ page, request }) => {
     const { id: instanceId } = await createAndStartLowerInstance(request);
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
     await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
 
     const cta = page.getByRole('button', { name: /Готово/ }).first();
     await expect(cta).toBeVisible();
+    // No diagram values are required — the CTA is enabled from the start.
+    await expect(cta).toBeEnabled();
 
-    // Initially with 0 values, clicking should trigger validation and keep blocked
+    // Click with the entire diagram empty — the step completes and advances.
     await cta.click();
-    await expect(page.getByText(/Заповніть щонайменше 3 значення/)).toBeVisible({ timeout: 5000 });
-    // after touched, blocked => button disabled
-    await expect(cta).toBeDisabled({ timeout: 5000 });
+    await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Гіпсовий негатив виготовлено')).toBeVisible({ timeout: 5000 });
 
-    // Fill 2 diagram values – still blocked
-    await page.getByLabel('Стегно, R').fill('12');
-    await page.getByLabel('Стегно, L').fill('13');
-    await expect(page.getByText(/Заповніть щонайменше 3 значення/)).toBeVisible();
-    await expect(cta).toBeDisabled();
-
-    // Fill 3rd – should unblock
-    await page.getByLabel('Обхват гомілки').fill('14');
-    await expect(page.getByText(/Заповніть щонайменше 3 значення/)).toBeHidden({ timeout: 3000 });
-    await expect(cta).toBeEnabled({ timeout: 5000 });
+    // The completed execution persisted — verify a COMPLETED execution exists.
+    const execs = (await (await request.get(`${PROSTH}/instances/${instanceId}/step-executions`, { headers: headersFor(prosthetistToken) })).json()) as Array<any>;
+    expect(execs.find((e: any) => e.status === 'COMPLETED')).toBeTruthy();
 
     await request.post(`${PROSTH}/instances/${instanceId}/fail`, {
       headers: headersFor(prosthetistToken),
-      data: { category: 'defect', description: 'E2E lower limb validation cleanup' },
+      data: { category: 'defect', description: 'E2E lower limb empty cleanup' },
     });
   });
 
@@ -223,26 +217,24 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await terminateInstance(request, headers, instanceId);
   });
 
-  test('handles incorrect and incomplete data without crashing', async ({ page, request }) => {
+  test('advances past the measurement step with an empty diagram', async ({ page, request }) => {
     const { id: instanceId } = await createAndStartLowerInstance(request);
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
     await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
 
     const cta = page.getByRole('button', { name: /Готово/ }).first();
-    // Try with completely empty diagram – should stay blocked after click
+    await expect(cta).toBeEnabled();
+    // Click with a completely empty diagram — the step must advance, not block.
     await cta.click();
-    await expect(page.getByText(/Заповніть щонайменше 3 значення/)).toBeVisible();
-    // Ensure no navigation away from measurement step
-    await expect(page.getByText('Бланк замірів №')).toBeVisible();
-    // Page should still be responsive
-    await page.getByLabel('П.І.Б').fill('Incomplete Test');
-    await expect(page.getByLabel('П.І.Б')).toHaveValue('Incomplete Test');
-    // Still blocked (diagram still empty)
-    await expect(cta).toBeDisabled();
+    await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
+    // The measurement form is no longer on screen.
+    await expect(page.getByText('Бланк замірів №')).toBeHidden({ timeout: 3000 });
+    // No hard-block error anywhere.
+    await expect(page.getByText(/Заповніть щонайменше/)).toBeHidden();
 
     await request.post(`${PROSTH}/instances/${instanceId}/fail`, {
       headers: headersFor(prosthetistToken),
-      data: { category: 'defect', description: 'E2E incomplete cleanup' },
+      data: { category: 'defect', description: 'E2E empty-diagram advance cleanup' },
     });
   });
 

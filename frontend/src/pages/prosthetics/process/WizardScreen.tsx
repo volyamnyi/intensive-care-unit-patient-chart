@@ -49,7 +49,6 @@ import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
 import {
   LowerLimbMeasurementForm,
   LOWER_LIMB_STEP_ID,
-  countFilledLowerLimbDiagram,
 } from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
 import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
 import { ALLOWED_RETURN_STAGE_IDS, ALLOWED_RETURN_STAGE_LABELS } from '@/prosthetics/types';
@@ -76,10 +75,10 @@ const PPE_MEASUREMENT_GLOVES_KEY = 'ppe-measurement-non-sterile-gloves';
 const PPE_MEASUREMENT_GLOVES_LABEL = 'Нестерильні оглядові нітрилові рукавички';
 
 // Lower-limb measurement (TP-LL-02, stage 1 step 1) — adapted from
-// measurement-master (reference at :8080). No PPE, but requires ≥3 diagram
-// measurements (same MIN as upper limb).
+// measurement-master (reference at :8080). No PPE and no minimum-measurement
+// rule: the step can advance to the next one with any (including zero)
+// filled values, like all other optional fields on it.
 const LOWER_LIMB_MEASUREMENT_STEP_ID = LOWER_LIMB_STEP_ID;
-const MIN_LOWER_LIMB_MEASUREMENTS = 3;
 
 const STEP_TYPE_LABEL: Record<string, string> = {
   INFORMATION: 'інформація',
@@ -1575,12 +1574,8 @@ export default function WizardScreen() {
     if (step?.id === MEASUREMENT_STEP_ID && values[PPE_MEASUREMENT_GLOVES_KEY] !== true) {
       base[PPE_MEASUREMENT_GLOVES_KEY] = "Обов'язкове підтвердження";
     }
-    if (step?.id === LOWER_LIMB_MEASUREMENT_STEP_ID) {
-      const filled = countFilledLowerLimbDiagram(values);
-      if (filled < MIN_LOWER_LIMB_MEASUREMENTS) {
-        base['lower-limb-diagram'] = `Заповніть щонайменше ${MIN_LOWER_LIMB_MEASUREMENTS} значення вимірювань на схемі`;
-      }
-    }
+    // The lower-limb measurement step (LOWER_LIMB_MEASUREMENT_STEP_ID) has no
+    // minimum-measurement rule: every field is optional, so it can advance empty.
     return base;
   }, [step, values]);
 
@@ -1590,11 +1585,9 @@ export default function WizardScreen() {
     id,
     label:
       step?.elements.find((e) => e.id === id)?.label ??
-      (id === PPE_MEASUREMENT_GLOVES_KEY
+      id === PPE_MEASUREMENT_GLOVES_KEY
         ? PPE_MEASUREMENT_GLOVES_LABEL
-        : id === 'lower-limb-diagram'
-          ? 'Обʼємний розмір та довжина кукси (схема)'
-          : 'Поле кроку'),
+        : 'Поле кроку'),
     msg,
   }));
 

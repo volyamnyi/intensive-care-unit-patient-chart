@@ -465,7 +465,7 @@ export function LowerLimbMeasurementForm({
         >
           Друк
         </button>
-        <span className="text-xs text-muted-foreground">Заповніть не менше 3 вимірів на схемі для переходу далі.</span>
+        <span className="text-xs text-muted-foreground">Усі поля необов'язкові — можна переходити далі, заповнивши хоча б одне вимірювання або жодного.</span>
       </footer>
     </div>
   );
