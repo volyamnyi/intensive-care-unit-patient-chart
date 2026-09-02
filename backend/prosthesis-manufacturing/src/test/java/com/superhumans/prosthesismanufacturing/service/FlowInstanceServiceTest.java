@@ -250,7 +250,7 @@ class FlowInstanceServiceTest {
         when(failureSnapshotService.create(any(), any(), any(), any(), any()))
                 .thenAnswer(invocation -> new com.superhumans.prosthesismanufacturing.entity.FailureSnapshot());
 
-        service.fail(instance.getId(), "technical", "Зламано обладнання", null, 1L);
+        service.fail(instance.getId(), "other", "Зламано обладнання", null, 1L);
 
         assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.FAILED);
         assertThat(instance.getFailReason()).isEqualTo("Зламано обладнання");
