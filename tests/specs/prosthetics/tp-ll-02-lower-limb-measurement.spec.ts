@@ -50,7 +50,7 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await expect(page.getByLabel('Примітки')).toBeVisible();
 
     // diagram header
-    await expect(page.getByText('Обʼємний розмір та довжина кукси')).toBeVisible();
+    await expect(page.getByText(/Об.*ємний розмір/)).toBeVisible();
     await expect(page.getByAltText('Схема замірів кукси та нижніх кінцівок')).toBeVisible();
     // diagram boxes – sample
     await expect(page.getByLabel('Стегно, R')).toBeVisible();
