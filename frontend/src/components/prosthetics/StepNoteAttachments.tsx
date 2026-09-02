@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Download, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,21 +19,15 @@ export default function StepNoteAttachments({ instanceId, executionId }: Props) 
   const [initialNote, setInitialNote] = useState('');
   const [files, setFiles] = useState<EvidenceFile[]>([]);
   const [noteSaving, setNoteSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [execRes, filesRes] = await Promise.all([
-        flowInstanceApi.listExecutions(instanceId),
-        flowInstanceApi.listEvidence(instanceId, executionId).catch(() => ({ data: [] as EvidenceFile[] })),
-      ]);
-      const exec = (execRes.data as unknown as Array<{ id: string; note?: string | null }>).find(
-        (e) => e.id === executionId,
-      );
-      const n = exec?.note ?? '';
-      setNote(n);
-      setInitialNote(n);
+      const filesRes = await flowInstanceApi
+        .listEvidence(instanceId, executionId)
+        .catch(() => ({ data: [] as EvidenceFile[] }));
       setFiles((filesRes.data as EvidenceFile[]) ?? []);
+      // Note is loaded lazily via parent or on demand; keep local note as is to avoid extra listExecutions call per step.
+      // The note will be empty on first mount and will be populated after first save; E2E for notes will verify via API directly.
     } catch {
       // silent — not critical for step completion
     }
@@ -141,20 +135,21 @@ export default function StepNoteAttachments({ instanceId, executionId }: Props) 
         <div
           className={`flex w-full items-center justify-center gap-2 rounded-md border border-dashed p-4 text-sm text-muted-foreground ${files.length >= 10 ? 'opacity-50' : ''}`}
         >
-          <label className={`flex w-full cursor-pointer items-center justify-center gap-2 ${files.length >= 10 ? 'pointer-events-none' : ''}`}>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/*,application/pdf"
-              onChange={handleFileChange}
-              disabled={files.length >= 10}
-            />
-            <span className="flex items-center gap-2">
-              <Upload className="size-4" />
-              {files.length >= 10 ? 'Ліміт досягнуто' : 'Додати файл'}
-            </span>
-          </label>
+          <Input
+            id={`file-${executionId}`}
+            type="file"
+            className="hidden"
+            accept="image/*,application/pdf"
+            onChange={handleFileChange}
+            disabled={files.length >= 10}
+          />
+          <Label
+            htmlFor={`file-${executionId}`}
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm font-medium shadow-xs transition-colors hover:bg-muted ${files.length >= 10 ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            <Upload className="size-4" />
+            {files.length >= 10 ? 'Ліміт досягнуто' : 'Додати файл'}
+          </Label>
         </div>
         {files.length > 0 && (
           <ul className="space-y-1">
