@@ -1,13 +1,14 @@
-# ADR-002 — Branch-модель для «Брак» (TP-LL-02, етап 6 крок 1)
+# ADR-002 — Branch-модель для «Брак» (TP-LL-02, етапи 6 та 9)
 
-> **Статус:** `ACCEPTED` (2026-09-01) · **Контекст:** Issue #204 · **Автор:** OpenCode (Muse Spark)
-> **Пов'язані:** ADR-001 не існує (перший ADR проєкту), `docs/TP-LL-02-Brak-Analysis-Issue-203.md`, Issue #203/#205
+> **Статус:** `ACCEPTED` (2026-09-01) · **Amendment Phase 2** `ACCEPTED` (2026-09-02) — розширення тригерів на етап 9 · **Контекст:** Issue #204, #212 (ТЗ №1)
+> **Автор:** OpenCode (Muse Spark)
+> **Пов'язані:** `docs/TP-LL-02-Brak-Analysis-Issue-203.md`, Issue #203/#205, `docs/TP-LL-02-Refinement-Implementation-Plan.md` §2.1, Issue #212 / #215
 
 ---
 
 ## 1. Контекст та проблема
 
-TP-LL-02 «Етапи технологічного процесу нижніх кінцівок» — 10 етапів / 14 кроків, лінійний, без Quality Gate (`data-prosth.sql:177-241` — 0 `prosthetics_quality_gates` для `d0000012..021`). На кроці `e0000028` (етап `d0000017` «Примірювання та коректування тренувального протеза») оператор виявляє дефект посадки кукси та має створити нову **гілку** процесу з поверненням на один з трьох дозволених етапів (`d0000012, d0000013, d0000014`), при цьому стара гілка лишається незмінною в історії (§4-§10 ТЗ).
+TP-LL-02 «Етапи технологічного процесу нижніх кінцівок» — 10 етапів / 14 кроків, лінійний, без Quality Gate (`data-prosth.sql:177-241` — 0 `prosthetics_quality_gates` для `d0000012..021`). На кроці `e0000028` (етап `d0000017` «Примірювання та коректування тренувального протеза») **та** на кроці `e0000032` (етап `d0000020` «Примірювання та коректування постійного протеза», КРОК 1) оператор виявляє дефект та має створити нову **гілку** процесу з поверненням на один з трьох дозволених етапів (`d0000012, d0000013, d0000014`), при цьому стара гілка лишається незмінною в історії (ТЗ №1, §4-§10). Перший тригер реалізовано у Issues #204–#210; другий — узагальнення у Phase 2/5 (Issue #212/#215).
 
 Поточна модель (`FlowInstance:14-91` + `FlowInstanceService:79-843` + `FailureSnapshot:14-39` + `prosth/001-manufacturing.sql:199-`) має єдиний глобальний `POST /fail → FAILED + FailureSnapshot(1:1)` та `POST /replacement → NEW(копія snapshot)`. Для гілок бракує:
 
@@ -91,21 +92,39 @@ CREATE UNIQUE INDEX uq_flow_instances_active_order
 
 ### 3.2 Зв'язок
 
-- Стара гілка: `status = BRANCHED`, `origin_stage_id = d0000017`, `origin_step_id = e0000028`, `failReason = brakNote` (опц., для сумісності з `FailedScreen` якщо хтось фільтрує `FAILED|BRANCHED`), `endTime = now`.
+- Стара гілка: `status = BRANCHED`, `origin_stage_id ∈ {d0000017, d0000020}`, `origin_step_id ∈ {e0000028, e0000032}` (фактичний тригер), `failReason = brakNote` (опц., для сумісності з `FailedScreen` якщо хтось фільтрує `FAILED|BRANCHED`), `endTime = now`.
 - Нова гілка: `status = NEW → IN_PROGRESS` (після `start` або одразу `IN_PROGRESS` зі створенням першого `StepExecution`), `parent_instance_id = old.id`, `branch_sequence = (max sibling +1)`, `currentStageId = returnStageId`, `currentStepId = firstStepOf(returnStage)` (напр. `d0000012 → e0000020`), `templateSnapshot = old.templateSnapshot` (копія без змін), `assignedUserId = old.assignedUserId` (або `userId` викликача).
 
 ### 3.3 `BrakEvent`
 
-`1:N` до старої гілки (`instance_id`), `new_instance_id` — FK до нової (nullable до commit, заповнюється після `INSERT` нової). Поля `softTissueMisalignment, painDiscomfort BOOL NOT NULL DEFAULT FALSE`, `note TEXT CHECK(length≤1000)`, `stage_id/step_id = d0000017/e0000028` (денормовано для аудиту), `return_stage_id NOT NULL CHECK IN (d0000012, d0000013, d0000014)` (додатковий `CHECK` або лише app-валідка — вибрано app `ALLOWED_RETURN_STAGE_IDS` в `BrakService` щоб не хардкодити в DDL).
+`1:N` до старої гілки (`instance_id`), `new_instance_id` — FK до нової (nullable до commit, заповнюється після `INSERT` нової). Поля `softTissueMisalignment, painDiscomfort BOOL NOT NULL DEFAULT FALSE`, `note TEXT CHECK(length≤1000)`, `stage_id/step_id ∈ {(d0000017,e0000028), (d0000020,e0000032)}` (фактичний тригер, денормовано для аудиту), `return_stage_id NOT NULL CHECK IN (d0000012, d0000013, d0000014)` (додатковий `CHECK` або лише app-валідка — вибрано app `ALLOWED_RETURN_STAGE_IDS` в `BrakService` щоб не хардкодити в DDL).
+
+### 3.4 Розширення на етап 9 — «Примірювання та коректування постійного протеза» (Phase 2, Issue #212, реалізація Issue #215)
+
+**Множина дозволених брак-тригерів (узагальнення констант `BrakService`):**
+
+```java
+ALLOWED_BRAK_TRIGGERS = {
+  (stageId=d0000017, stepId=e0000028), // етап 6 «Примірювання та коректування тренувального протеза»
+  (stageId=d0000020, stepId=e0000032)  // етап 9 «Примірювання та коректування постійного протеза» — ТЗ №1
+}
+ALLOWED_RETURN_STAGE_IDS = {d0000012, d0000013, d0000014} // без змін, збігається з ТЗ №1
+```
+
+- **Валідація:** `BrakService.createBrakAndBranch` перевіряє `(currentStageId, currentStepId) ∈ ALLOWED_BRAK_TRIGGERS` замість `== (d0000017,e0000028)`; повідомлення узагальнено: `"Брак доступний лише на кроці 1 етапу 6 або 9"` (детально — у коді).
+- **Frontend:** `WizardScreen.isBrakStep` — предикат за множиною тригерів (`BRAK_TRIGGER_STEPS` у `prosthetics/types.ts`); діалог «Брак» stage-aware (`DialogDescription`: для `d0000017` — «Якість посадки кукси в тренувальній гільзі», для `d0000020` — «Якість посадки кукси в постійній гільзі / постійному протезі»).
+- **Доведення покриття ТЗ №1:** існуючий механізм (транзакція, `parentInstanceId/branchSequence/defectPayload`, RBAC, audit, індекс `uq_flow_instances_active_order` з `BRANCHED`) покриває всі вимоги ТЗ №1 — різниця лише в розширенні тригера; нова гілка створюється тими самими кроками (`firstStepOf(returnStage)`, `StepExecution IN_PROGRESS`).
+- **Transaction / edge cases:** один `@Transactional` з `findByIdForUpdate` (PESSIMISTIC_WRITE); race двох «Брак» на одному `instance_id` → другий бачить `status != IN_PROGRESS` → 400; `status != IN_PROGRESS`, `step ∉ ALLOWED_BRAK_TRIGGERS` → 400; `returnStageId ∉ ALLOWED_RETURN_STAGE_IDS` → 400 `BUSINESS_RULE`; snapshot без етапу → 400; повернення на етап з гейтом — відсутній для TP-LL-02 (гейтів 0).
+- **Тест-план Phase 5:** unit `BrakServiceTest` (етап 9: створення, валідація target 1/2/3 ALLOW, інші 400, RBAC), integration `BrakIntegrationTest` (сценарії етапу 9: API→Service→DB, BRANCHED, історія), E2E `tp-ll-02-stage9-brak.spec.ts` (повний сценарій: етап 9/крок 1 → «Брак» → підтвердити → етапи 1/2/3 → нова гілка → історія).
 
 ---
 
 ## 4. Наслідки
 
-- **Міграція:** `prosth/005-brak-branch.sql` (`split-prosth:17-19`) — 3 changesets: `ADD COLUMN parent_instance_id/branch_sequence/origin_stage_id/origin_step_id`, `CREATE INDEX idx_flow_instances_parent`, `CREATE TABLE prosthetics_brak_events`, `DROP/CREATE INDEX uq_…`. `DATABASECHANGELOG` — `split-prosth:17,18,19`.
-- **Сумісність:** `parent_instance_id=null` для всіх історичних рядків; `BRANCHED` не ламає існуючі `findByOrderId`/`findByStatus` (нові статуси фільтруються автоматично); `TP-UL-01` регресія не зачеплена.
-- **API:** `POST /instances/{id}/brak` атомарно (див. `docs/Brak-Design-Issue-204.md`).
-- **UI:** `WizardScreen.tsx:1990` умовна кнопка `BRANCHED` не показує wizard (як `FAILED`).
+- **Міграція:** `prosth/005-brak-branch.sql` (`split-prosth:17-19`) — 3 changesets: `ADD COLUMN parent_instance_id/branch_sequence/origin_stage_id/origin_step_id`, `CREATE INDEX idx_flow_instances_parent`, `CREATE TABLE prosthetics_brak_events`, `DROP/CREATE INDEX uq_…`. `DATABASECHANGELOG` — `split-prosth:17,18,19`. **Phase 2 не додає нової міграції** — схема вже містить усі колонки/таблиці для обох тригерів.
+- **Сумісність:** `parent_instance_id=null` для всіх історичних рядків; `BRANCHED` не ламає існуючі `findByOrderId`/`findByStatus` (нові статуси фільтруються автоматично); `TP-UL-01` регресія не зачеплена; існуючий брак етапу 6 лишається зеленим (регресія Phase 5).
+- **API:** `POST /instances/{id}/brak` атомарно (див. `docs/Brak-Design-Issue-204.md`); Phase 2 додає лише валідацію другого тригера.
+- **UI:** `WizardScreen.tsx:1990` умовна кнопка `BRANCHED` не показує wizard (як `FAILED`); Phase 2 додає stage-aware опис діалогу «Брак».
 
 ---
 
@@ -118,5 +137,6 @@ CREATE UNIQUE INDEX uq_flow_instances_active_order
 ## 6. Посилання
 
 - `docs/TP-LL-02-Brak-Analysis-Issue-203.md:§5` (R1 UQ блокер)
-- `backend/common/src/main/resources/db/changelog/prosth/001-manufacturing.sql:342` (індекс)
-- Issue #204, #205, #206, #207
+- `backend/common/src/main/resources/db/changelog/prosth/001-manufacturing.sql` (індекс)
+- Issue #204, #205, #206, #207, #212, #215
+- `docs/TP-LL-02-Refinement-Implementation-Plan.md` §1.2, §2.1, §3 (фази P2/P5)
