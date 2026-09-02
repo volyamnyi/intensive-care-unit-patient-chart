@@ -33,7 +33,7 @@ describe('LowerLimbMeasurementForm', () => {
     expect(screen.getByLabelText('Стегно, L')).toBeInTheDocument();
     expect(screen.getByLabelText('Обхват гомілки')).toBeInTheDocument();
     expect(screen.getByLabelText('Таз R, рівень 15')).toBeInTheDocument();
-    expect(screen.getAllByLabelText(/Стегно|Коліно|Таз|Обхват|Довжина|Висота/)).toHaveLength(30);
+    expect(document.querySelectorAll('input.diagram-input')).toHaveLength(30);
 
     expect(screen.getByLabelText('Висота каблука')).toBeInTheDocument();
     expect(screen.getByLabelText('Розмір стопи')).toBeInTheDocument();
