@@ -69,6 +69,12 @@ public class FlowInstanceService {
      */
     private static final UUID LOWER_LIMB_MEASUREMENT_STEP_ID = UUID.fromString("e0000020-0000-0000-0000-000000000020");
 
+    // TP-LL-02 stage 7 step 1 — soft liner: exclusive transition rule (Phase 3)
+    private static final UUID SOFT_LINER_STEP_ID = UUID.fromString("e0000029-0000-0000-0000-000000000029");
+    private static final String VISUAL_SOFT_LINER_KEY = "f0000214-0000-0000-0000-000000000214";
+    private static final String TACTILE_SOFT_LINER_KEY = "f0000215-0000-0000-0000-000000000215";
+    private static final String NOT_REQUIRED_SOFT_LINER_KEY = "f0000240-0000-0000-0000-000000000240";
+
     FlowInstanceRepository instanceRepository;
     FlowTemplateRepository templateRepository;
     ProstheticsOrderRepository orderRepository;
@@ -576,6 +582,21 @@ public class FlowInstanceService {
 
     void validateValues(String valuesJson, SnapshotStep step) {
         Map<String, Object> values = parseValues(valuesJson);
+        // Soft-liner exclusive rule: exactly one of the two variants must hold (Phase 3)
+        if (SOFT_LINER_STEP_ID.equals(step.getId())) {
+            boolean visual = Boolean.TRUE.equals(values.get(VISUAL_SOFT_LINER_KEY));
+            boolean tactile = Boolean.TRUE.equals(values.get(TACTILE_SOFT_LINER_KEY));
+            boolean notRequired = Boolean.TRUE.equals(values.get(NOT_REQUIRED_SOFT_LINER_KEY));
+            boolean allowed = (visual && tactile && !notRequired) || (notRequired && !visual && !tactile);
+            if (!allowed) {
+                throw new BadRequestException(
+                        "Для переходу виберіть або обидва контрольні чекбокси "
+                                + "«Візуальний контроль чистоти помʼякшуючого вкладиша» та "
+                                + "«Тактильний контроль поверхні…», або чекбокс "
+                                + "«Помʼякшуючий вкладиш не потрібен» — інші комбінації не дозволені");
+            }
+            return;
+        }
         if ("MEASUREMENT".equals(step.getStepType())) {
             // The measurement step collects values via the visual measurement forms:
             // the transition rule is "at least MIN_MEASUREMENT_VALUES filled values"

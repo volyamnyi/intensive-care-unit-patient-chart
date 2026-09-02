@@ -41,6 +41,11 @@ export function buildValues(
       values[element.id] = 'test';
     }
   }
+  // Phase 3: soft-liner step e0000029 — keep default as variant A (visual && tactile && !notRequired).
+  const NOT_REQUIRED_KEY = 'f0000240-0000-0000-0000-000000000240';
+  if (NOT_REQUIRED_KEY in values) {
+    values[NOT_REQUIRED_KEY] = false;
+  }
   if (stepType === 'MEASUREMENT') {
     // The measurement step collects values via the visual measurement forms
     // (not DB elements) and requires ≥3 filled values + the ЗІЗ gloves

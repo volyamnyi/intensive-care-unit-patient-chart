@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
 /**
- * Tripwire for TP-LL-02 — Етапи технологічного процесу нижніх кінцівок (Фаза 1 + Lower Limb Measurement).
+ * Tripwire for TP-LL-02 — Етапи технологічного процесу нижніх кінцівок (Фаза 1 + Lower Limb Measurement + Phase 3 soft liner).
  * Validates that data-prosth.sql contains the TP-LL-02 template with
- * the expected structure (без Quality Gate): 10 stages / 14 steps / 69 elements
- * (24 legacy + 45 lower-limb measurement form — adapted from measurement-master).
+ * the expected structure (без Quality Gate): 10 stages / 14 steps / 70 elements
+ * (24 legacy + 45 lower-limb measurement form — adapted from measurement-master + 1 Phase 3 soft-liner checkbox).
  */
 class TpLl02SeedValidationTest {
 
@@ -98,8 +98,10 @@ class TpLl02SeedValidationTest {
         assertThat(sql).contains("'На протез нанесено маркування'");
         assertThat(sql).contains("'Супровідна документація оформлена'");
         assertThat(sql).contains("'Протез переданий пацієнту для подальшої експлуатації'");
-        // Conditional insert elements are required false
+        // Conditional insert elements are required false (Phase 3: third checkbox)
         assertThat(sql).contains("'f0000214-0000-0000-0000-000000000214'");
+        assertThat(sql).contains("'f0000240-0000-0000-0000-000000000240'");
+        assertThat(sql).contains("'Пом''якшуючий вкладиш не потрібен'");
     }
 
     @Test

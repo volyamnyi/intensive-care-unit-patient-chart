@@ -97,6 +97,12 @@ export function buildValues(elements, stepType): string {
       values[el.id] = max != null ? Math.round(min + (max - min) / 2) : 10;
     } else values[el.id] = 'test';
   }
+  // Phase 3: soft-liner step e0000029 — new exclusive rule: keep default as variant A
+  // (visual && tactile && !notRequired) so that generic helpers produce a valid ALLOW.
+  const NOT_REQUIRED_KEY = 'f0000240-0000-0000-0000-000000000240';
+  if (NOT_REQUIRED_KEY in values) {
+    values[NOT_REQUIRED_KEY] = false;
+  }
   if (stepType === 'MEASUREMENT') {
     // The MEASUREMENT step needs ≥3 filled (non-checkbox) values + the ЗІЗ
     // gloves acknowledgment (hardcoded on «Зняття мірок» step). The fields are

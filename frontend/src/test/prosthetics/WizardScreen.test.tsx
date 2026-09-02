@@ -446,7 +446,7 @@ describe('WizardScreen', () => {
     });
   });
 
-  it('shows conditional skip CTA only for TP-LL-02 insert step (7.1) and completes with empty values', async () => {
+  it('Phase 3: soft-liner exclusive checkbox logic — skip CTA removed, third checkbox present and transition gated', async () => {
     const conditionalSnapshot: SnapshotTemplate = {
       ...baseSnapshot(),
       stages: [
@@ -467,8 +467,9 @@ describe('WizardScreen', () => {
               autoStartTimer: false,
               normDurationMin: 20,
               elements: [
-                { id: 'f-soft-1', elementType: 'CHECKBOX', label: 'Візуальний контроль вкладиша', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
-                { id: 'f-soft-2', elementType: 'CHECKBOX', label: 'Тактильний контроль вкладиша', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                { id: 'f0000214-0000-0000-0000-000000000214', elementType: 'CHECKBOX', label: 'Візуальний контроль чистоти помʼякшуючого вкладиша: відсутній пил, стружка, забруднення та інші залишки від механічної обробки.', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                { id: 'f0000215-0000-0000-0000-000000000215', elementType: 'CHECKBOX', label: 'Тактильний контроль поверхні та якість обробки країв помʼякшуючого вкладиша: помʼякшуючий вкладиш перевірено на відсутність задирок, тріщин та гострих кромок. Краї заокруглені та відполіровані. Поверхня гладка та рівномірна, без жорстких включень та виступів.', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                { id: 'f0000240-0000-0000-0000-000000000240', elementType: 'CHECKBOX', label: 'Помʼякшуючий вкладиш не потрібен', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
               ],
             },
             {
@@ -491,27 +492,15 @@ describe('WizardScreen', () => {
       data: inProgressInstance({ currentStageId: 'stage-soft', currentStepId: 'e0000029-0000-0000-0000-000000000029', currentExecutionId: 'exec-soft' }),
     });
     flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: conditionalSnapshot });
-    flowInstanceApiMock.completeStep.mockResolvedValue({ data: inProgressInstance({ currentStepId: 'e0000030-0000-0000-0000-000000000030' }) });
+    flowInstanceApiMock.listExecutions.mockResolvedValue({ data: [] });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Пом'якшуючий вкладиш не потрібен/ })).toBeInTheDocument();
+      expect(screen.getByText(/Виготовлення помʼякшуючого вкладиша/)).toBeInTheDocument();
     });
-    const skipBtn = screen.getByRole('button', { name: /Пом'якшуючий вкладиш не потрібен/ });
-    expect(skipBtn).toBeInTheDocument();
-    fireEvent.click(skipBtn);
-    await waitFor(() => {
-      expect(flowInstanceApiMock.completeStep).toHaveBeenCalledWith('inst-1', 'exec-soft', expect.objectContaining({ values: '{}' }));
-    });
-
-    // On non-conditional step, the skip CTA must not appear
-    flowInstanceApiMock.getById.mockResolvedValue({
-      data: inProgressInstance({ currentStageId: 'stage-soft', currentStepId: 'e0000030-0000-0000-0000-000000000030', currentExecutionId: 'exec-soft-2' }),
-    });
-    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: conditionalSnapshot });
-    renderWizard();
-    await waitFor(() => {
-      expect(screen.getByText(/Виготовлення постійної гільзи/)).toBeInTheDocument();
-    });
-    expect(screen.queryByRole('button', { name: /Пом'якшуючий вкладиш не потрібен/ })).not.toBeInTheDocument();
+    // Skip CTA button must be removed — the option is now a checkbox element, not a separate button
+    expect(screen.queryByRole('button', { name: /Помʼякшуючий вкладиш не потрібен/ })).not.toBeInTheDocument();
+    // The third checkbox must be rendered as a checkbox with the label
+    expect(screen.getByText('Помʼякшуючий вкладиш не потрібен')).toBeInTheDocument();
+    // CTA is gated by the exclusive combo once touched; empty combo → DENY is validated on complete
   });
 });

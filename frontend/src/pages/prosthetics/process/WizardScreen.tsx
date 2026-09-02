@@ -52,6 +52,14 @@ import {
 } from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
 import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
 import { ALLOWED_RETURN_STAGE_IDS, ALLOWED_RETURN_STAGE_LABELS } from '@/prosthetics/types';
+import {
+  isSoftLinerComboAllowed,
+  NOT_REQUIRED_SOFT_LINER_KEY,
+  SOFT_LINER_ERROR,
+  SOFT_LINER_STEP_ID,
+  TACTILE_SOFT_LINER_KEY,
+  VISUAL_SOFT_LINER_KEY,
+} from '@/prosthetics/softLinerRules';
 import type {
   FlowInstance,
   GateDecision,
@@ -1574,6 +1582,14 @@ export default function WizardScreen() {
     if (step?.id === MEASUREMENT_STEP_ID && values[PPE_MEASUREMENT_GLOVES_KEY] !== true) {
       base[PPE_MEASUREMENT_GLOVES_KEY] = "Обов'язкове підтвердження";
     }
+    if (step?.id === SOFT_LINER_STEP_ID) {
+      const visual = values[VISUAL_SOFT_LINER_KEY] === true;
+      const tactile = values[TACTILE_SOFT_LINER_KEY] === true;
+      const notRequired = values[NOT_REQUIRED_SOFT_LINER_KEY] === true;
+      if (!isSoftLinerComboAllowed(visual, tactile, notRequired)) {
+        base[NOT_REQUIRED_SOFT_LINER_KEY] = SOFT_LINER_ERROR;
+      }
+    }
     // The lower-limb measurement step (LOWER_LIMB_MEASUREMENT_STEP_ID) has no
     // minimum-measurement rule: every field is optional, so it can advance empty.
     return base;
@@ -1620,11 +1636,6 @@ export default function WizardScreen() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const skipConditionalInsert = async () => {
-    // For TP-LL-02 step 7.1 (mandatory false) — complete with empty values
-    await completeStep({});
   };
 
   const goBack = async () => {
@@ -2070,16 +2081,6 @@ export default function WizardScreen() {
         <Button variant="ghost" className="min-h-11" onClick={() => navigate('/prosthetics')}>
           <Home className="size-4" /> До головного меню
         </Button>
-        {step?.id === 'e0000029-0000-0000-0000-000000000029' && (
-          <Button
-            variant="secondary"
-            className="min-h-11 w-full sm:w-auto"
-            disabled={submitting}
-            onClick={() => void skipConditionalInsert()}
-          >
-            Пом&apos;якшуючий вкладиш не потрібен
-          </Button>
-        )}
         <Button
           className="ml-auto min-h-11 w-full bg-accent text-accent-foreground shadow-sm hover:bg-accent/90 hover:shadow-md sm:w-auto"
           disabled={(touched && blocked) || submitting}
