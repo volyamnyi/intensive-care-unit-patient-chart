@@ -351,7 +351,7 @@ describe('WizardScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /Пауза/ }));
     expect(screen.getByText('Призупинення роботи')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Відсутні матеріали' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Проходження ВЛК' }));
     fireEvent.click(screen.getByRole('button', { name: 'Призупинити' }));
 
     await waitFor(() => {
