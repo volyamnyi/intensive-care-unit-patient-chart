@@ -2062,7 +2062,7 @@ export default function WizardScreen() {
                 )
               )}
             </div>
-            {instance?.currentExecutionId && (
+            {snapshot?.productType === 'LOWER_LIMB' && instance?.currentExecutionId && (
               <div className="pt-4">
                 <StepNoteAttachments instanceId={instance.id} executionId={instance.currentExecutionId} />
               </div>
