@@ -55,7 +55,8 @@ class TpLl02ValidationUnitTest {
                 .allowBackward(true)
                 .elements(List.of(
                         SnapshotElement.builder().id(UUID.fromString("f0000214-0000-0000-0000-000000000214")).label("Візуальний контроль чистоти пом'якшуючого вкладиша").elementType("CHECKBOX").required(false).build(),
-                        SnapshotElement.builder().id(UUID.fromString("f0000215-0000-0000-0000-000000000215")).label("Тактильний контроль пом'якшуючого вкладиша").elementType("CHECKBOX").required(false).build()))
+                        SnapshotElement.builder().id(UUID.fromString("f0000215-0000-0000-0000-000000000215")).label("Тактильний контроль пом'якшуючого вкладиша").elementType("CHECKBOX").required(false).build(),
+                        SnapshotElement.builder().id(UUID.fromString("f0000240-0000-0000-0000-000000000240")).label("Помʼякшуючий вкладиш не потрібен").elementType("CHECKBOX").required(false).build()))
                 .build();
     }
 
@@ -96,15 +97,60 @@ class TpLl02ValidationUnitTest {
         assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
     }
 
+    // Phase 3: exclusive soft-liner rule — 8 combos (ALLOW = (v&&t&&!n) || (n&&!v&&!t))
     @Test
-    void conditionalInsertStep_emptyValuesPassesWhenMandatoryFalse() {
+    void conditionalInsertStep_emptyValuesDenied() {
         SnapshotStep step = conditionalInsertStep();
-        // Empty JSON for "не потрібен" path — mandatory false, required false -> should pass
-        String values = "{}";
-        // The service's validateValues for CHECKLIST with mandatory false and required false should pass with empty
-        // For conditional step, we expect no exception when values is empty (the step is skippable)
-        // The current implementation will still check required elements if present, but since we send empty and required false, it passes
+        String values = "{}"; // false/false/false -> DENY
+        assertThatThrownBy(() -> service.validateValues(values, step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+    }
+
+    @Test
+    void conditionalInsertStep_bothControlsWithoutNotRequiredAllowed() {
+        SnapshotStep step = conditionalInsertStep();
+        String values = """
+                {"f0000214-0000-0000-0000-000000000214": true,
+                 "f0000215-0000-0000-0000-000000000215": true,
+                 "f0000240-0000-0000-0000-000000000240": false}
+                """;
         assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void conditionalInsertStep_notRequiredAloneAllowed() {
+        SnapshotStep step = conditionalInsertStep();
+        String values = """
+                {"f0000214-0000-0000-0000-000000000214": false,
+                 "f0000215-0000-0000-0000-000000000215": false,
+                 "f0000240-0000-0000-0000-000000000240": true}
+                """;
+        assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void conditionalInsertStep_mixedCombosDenied() {
+        SnapshotStep step = conditionalInsertStep();
+        // true/false/false -> DENY
+        assertThatThrownBy(() -> service.validateValues(
+                "{\"f0000214-0000-0000-0000-000000000214\": true, \"f0000215-0000-0000-0000-000000000215\": false, \"f0000240-0000-0000-0000-000000000240\": false}", step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+        // false/true/false -> DENY
+        assertThatThrownBy(() -> service.validateValues(
+                "{\"f0000214-0000-0000-0000-000000000214\": false, \"f0000215-0000-0000-0000-000000000215\": true, \"f0000240-0000-0000-0000-000000000240\": false}", step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+        // true/true/true -> DENY
+        assertThatThrownBy(() -> service.validateValues(
+                "{\"f0000214-0000-0000-0000-000000000214\": true, \"f0000215-0000-0000-0000-000000000215\": true, \"f0000240-0000-0000-0000-000000000240\": true}", step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+        // true/false/true -> DENY
+        assertThatThrownBy(() -> service.validateValues(
+                "{\"f0000214-0000-0000-0000-000000000214\": true, \"f0000215-0000-0000-0000-000000000215\": false, \"f0000240-0000-0000-0000-000000000240\": true}", step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+        // false/true/true -> DENY
+        assertThatThrownBy(() -> service.validateValues(
+                "{\"f0000214-0000-0000-0000-000000000214\": false, \"f0000215-0000-0000-0000-000000000215\": true, \"f0000240-0000-0000-0000-000000000240\": true}", step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
     }
 
     @Test

@@ -495,12 +495,9 @@ describe('WizardScreen', () => {
     flowInstanceApiMock.listExecutions.mockResolvedValue({ data: [] });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByText(/Виготовлення помʼякшуючого вкладиша/)).toBeInTheDocument();
+      expect(screen.getByText('Помʼякшуючий вкладиш не потрібен')).toBeInTheDocument();
     });
     // Skip CTA button must be removed — the option is now a checkbox element, not a separate button
     expect(screen.queryByRole('button', { name: /Помʼякшуючий вкладиш не потрібен/ })).not.toBeInTheDocument();
-    // The third checkbox must be rendered as a checkbox with the label
-    expect(screen.getByText('Помʼякшуючий вкладиш не потрібен')).toBeInTheDocument();
-    // CTA is gated by the exclusive combo once touched; empty combo → DENY is validated on complete
   });
 });
