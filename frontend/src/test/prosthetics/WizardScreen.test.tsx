@@ -25,12 +25,18 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   resume: vi.fn(),
   decideGate: vi.fn(),
   uploadEvidence: vi.fn(),
+  listEvidence: vi.fn().mockResolvedValue({ data: [] }),
+  deleteEvidence: vi.fn().mockResolvedValue({}),
+  patchStepNote: vi.fn().mockResolvedValue({ data: {} }),
   list: vi.fn(),
   create: vi.fn(),
   fail: vi.fn(),
   replacement: vi.fn(),
   downloadEvidence: vi.fn(),
   generateReport: vi.fn(),
+  brak: vi.fn(),
+  getBrakEvents: vi.fn(),
+  getBranches: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({

@@ -52,6 +52,7 @@ import {
 } from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
 import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
 import { ALLOWED_RETURN_STAGE_IDS, ALLOWED_RETURN_STAGE_LABELS } from '@/prosthetics/types';
+import StepNoteAttachments from '@/components/prosthetics/StepNoteAttachments';
 import {
   isSoftLinerComboAllowed,
   NOT_REQUIRED_SOFT_LINER_KEY,
@@ -2061,6 +2062,11 @@ export default function WizardScreen() {
                 )
               )}
             </div>
+            {instance?.currentExecutionId && (
+              <div className="pt-4">
+                <StepNoteAttachments instanceId={instance.id} executionId={instance.currentExecutionId} />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

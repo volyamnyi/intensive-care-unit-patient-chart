@@ -5,7 +5,9 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
+import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.StepExecution;
+import com.superhumans.prosthesismanufacturing.entity.StepExecutionStatus;
 import com.superhumans.prosthesismanufacturing.repository.EvidenceFileRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
 import com.superhumans.service.AuditService;
@@ -31,9 +33,15 @@ public class EvidenceFileService {
     FlowInstanceService instanceService;
     AuditService auditService;
 
+    private static final int MAX_FILES_PER_EXECUTION = 10;
+
     @Transactional
     public EvidenceFileResponse upload(UUID instanceId, UUID executionId, MultipartFile file, Long userId) {
         FlowInstance instance = instanceService.requireOwner(instanceId, userId);
+        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS
+                && instance.getStatus() != FlowInstanceStatus.PAUSED) {
+            throw new BadRequestException("Файли можна завантажувати лише під час виконання процесу");
+        }
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("File is empty");
         }
@@ -44,6 +52,13 @@ public class EvidenceFileService {
                 .orElseThrow(() -> new NotFoundException("Execution not found: " + executionId));
         if (!instanceId.equals(execution.getInstance().getId())) {
             throw new BadRequestException("Execution does not belong to this instance");
+        }
+        if (execution.getStatus() != StepExecutionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Файли можна завантажувати лише на активному кроці");
+        }
+        long existingCount = evidenceFileRepository.findByStepExecutionId(executionId).size();
+        if (existingCount >= MAX_FILES_PER_EXECUTION) {
+            throw new BadRequestException("Досягнуто ліміт файлів на кроці (10)");
         }
         String mimeType = resolveMimeType(file);
         byte[] data = toBytes(file);
@@ -59,6 +74,38 @@ public class EvidenceFileService {
         evidenceFileRepository.save(evidence);
         auditService.logAction("EvidenceFile", evidence.getId(), "UPLOAD", userId);
         return toResponse(evidence);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<EvidenceFileResponse> listByExecution(UUID instanceId, UUID executionId, Long userId, boolean allowAll) {
+        FlowInstance instance = instanceService.requireOwner(instanceId, userId, allowAll);
+        StepExecution execution = executionRepository.findById(executionId)
+                .orElseThrow(() -> new NotFoundException("Execution not found: " + executionId));
+        if (!instanceId.equals(execution.getInstance().getId())) {
+            throw new BadRequestException("Execution does not belong to this instance");
+        }
+        return evidenceFileRepository.findByStepExecutionId(executionId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void delete(UUID instanceId, UUID fileId, Long userId) {
+        FlowInstance instance = instanceService.requireOwner(instanceId, userId);
+        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS
+                && instance.getStatus() != FlowInstanceStatus.PAUSED) {
+            throw new BadRequestException("Файли можна видаляти лише під час виконання процесу");
+        }
+        EvidenceFile evidence = evidenceFileRepository.findById(fileId)
+                .orElseThrow(() -> new NotFoundException("Evidence file not found: " + fileId));
+        if (!evidence.getStepExecution().getInstance().getId().equals(instanceId)) {
+            throw new BadRequestException("File does not belong to this instance");
+        }
+        if (evidence.getStepExecution().getStatus() != StepExecutionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Файли можна видаляти лише на активному кроці");
+        }
+        evidenceFileRepository.delete(evidence);
+        auditService.logAction("EvidenceFile", fileId, "DELETE", userId);
     }
 
     @Transactional(readOnly = true)

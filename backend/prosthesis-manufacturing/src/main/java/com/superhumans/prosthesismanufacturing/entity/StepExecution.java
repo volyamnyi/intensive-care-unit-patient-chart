@@ -54,6 +54,9 @@ public class StepExecution extends BaseEntity {
     @Column(name = "completed_by")
     Long completedBy;
 
+    @Column(name = "note", columnDefinition = "TEXT")
+    String note;
+
     @PrePersist
     @PreUpdate
     public void validate() {

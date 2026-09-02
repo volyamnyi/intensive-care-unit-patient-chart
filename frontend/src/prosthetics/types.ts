@@ -149,6 +149,7 @@ export interface StepExecution {
   completedAt: string | null;
   activeSeconds: number | null;
   values: string | null;
+  note: string | null;
   completedBy: number | null;
 }
 
@@ -226,6 +227,12 @@ export interface EvidenceFile {
   mimeType: string;
   sizeBytes: number;
   checksum: string;
+  stepExecutionId?: string | null;
+  createdAt?: string | null;
+}
+
+export interface StepNotePatchRequest {
+  note?: string | null;
 }
 
 export interface ProstheticsPdf {

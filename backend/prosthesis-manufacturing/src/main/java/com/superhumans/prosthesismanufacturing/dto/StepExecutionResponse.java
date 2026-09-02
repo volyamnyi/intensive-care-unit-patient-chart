@@ -18,5 +18,6 @@ public class StepExecutionResponse {
     LocalDateTime completedAt;
     Long activeSeconds;
     String values;
+    String note;
     Long completedBy;
 }

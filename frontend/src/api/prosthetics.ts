@@ -22,6 +22,7 @@ import type {
   BrakCreateRequest,
   BrakEvent,
   BranchResponse,
+  StepNotePatchRequest,
 } from '../prosthetics/types';
 
 const BASE = '/prosthesis-manufacturing';
@@ -88,10 +89,16 @@ export const flowInstanceApi = {
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );
   },
+  listEvidence: (id: string, executionId: string) =>
+    client.get<EvidenceFile[]>(`${BASE}/instances/${id}/evidence`, { params: { executionId } }),
+  deleteEvidence: (id: string, fileId: string) =>
+    client.delete<void>(`${BASE}/instances/${id}/evidence/${fileId}`),
   downloadEvidence: (id: string, fileId: string) =>
     client.get<Blob>(`${BASE}/instances/${id}/evidence/${fileId}`, {
       responseType: 'blob',
     }),
+  patchStepNote: (id: string, executionId: string, data: StepNotePatchRequest) =>
+    client.patch<StepExecution>(`${BASE}/instances/${id}/step-executions/${executionId}`, data),
   generateReport: (id: string) =>
     client.get<Blob>(`${BASE}/instances/${id}/pdf`, {
       responseType: 'blob',

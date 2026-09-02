@@ -329,6 +329,34 @@ public class FlowInstanceService {
         return toResponse(instance);
     }
 
+    @Transactional
+    public StepExecutionResponse updateNote(UUID instanceId, UUID executionId, String note, Long userId) {
+        FlowInstance instance = requireOwner(instanceId, userId);
+        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS
+                && instance.getStatus() != FlowInstanceStatus.PAUSED) {
+            throw new BadRequestException("Примітку можна редагувати лише під час виконання процесу");
+        }
+        StepExecution execution = executionRepository.findById(executionId)
+                .orElseThrow(() -> new NotFoundException("Execution not found: " + executionId));
+        if (!instanceId.equals(execution.getInstance().getId())) {
+            throw new BadRequestException("Execution does not belong to this instance");
+        }
+        if (execution.getStatus() != StepExecutionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Примітку можна редагувати лише на активному кроці");
+        }
+        String trimmed = note == null ? null : note.trim();
+        if (trimmed != null && trimmed.isEmpty()) {
+            trimmed = null;
+        }
+        if (trimmed != null && trimmed.length() > 2000) {
+            throw new BadRequestException("Примітка не повинна перевищувати 2000 символів");
+        }
+        execution.setNote(trimmed);
+        executionRepository.save(execution);
+        auditService.logAction("StepExecution", execution.getId(), "NOTE", userId);
+        return instanceMapper.toExecutionResponse(execution);
+    }
+
     @Transactional(readOnly = true)
     public List<StepExecutionResponse> listExecutions(UUID instanceId, Long userId, boolean allowAll) {
         requireOwner(instanceId, userId, allowAll);

@@ -13,6 +13,7 @@ import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageResponse;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
+import com.superhumans.prosthesismanufacturing.dto.StepNotePatchRequest;
 import com.superhumans.prosthesismanufacturing.dto.FailRequest;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
@@ -32,7 +33,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -122,6 +125,14 @@ public class FlowInstanceController {
         return instanceService.listExecutions(id, currentUser.userId(), currentUser.canViewAllInstances());
     }
 
+    @PatchMapping("/{id}/step-executions/{executionId}")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
+    @Operation(summary = "Update note for a step execution (IN_PROGRESS only)")
+    public StepExecutionResponse updateNote(@PathVariable UUID id, @PathVariable UUID executionId,
+                                            @Valid @RequestBody StepNotePatchRequest request) {
+        return instanceService.updateNote(id, executionId, request.getNote(), currentUser.userId());
+    }
+
     @GetMapping("/{id}/gate-decisions")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List quality gate decisions of the instance")
@@ -190,6 +201,22 @@ public class FlowInstanceController {
                                                @RequestParam UUID executionId,
                                                @RequestParam("file") MultipartFile file) {
         return evidenceFileService.upload(id, executionId, file, currentUser.userId());
+    }
+
+    @GetMapping("/{id}/evidence")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
+    @Operation(summary = "List evidence files for a step execution")
+    public List<EvidenceFileResponse> listEvidence(@PathVariable UUID id,
+                                                   @RequestParam UUID executionId) {
+        return evidenceFileService.listByExecution(id, executionId, currentUser.userId(), currentUser.canViewAllInstances());
+    }
+
+    @DeleteMapping("/{id}/evidence/{fileId}")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete evidence file (owner, IN_PROGRESS only)")
+    public void deleteEvidence(@PathVariable UUID id, @PathVariable UUID fileId) {
+        evidenceFileService.delete(id, fileId, currentUser.userId());
     }
 
     @GetMapping("/{id}/evidence/{fileId}")
