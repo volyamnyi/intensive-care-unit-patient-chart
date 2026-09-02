@@ -123,14 +123,14 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
 
     const cta = page.getByRole('button', { name: /Готово/ }).first();
     await cta.click();
-    // Expect validation error for out-of-range
-    await expect(page.getByText(/не більше 200/)).toBeVisible({ timeout: 5000 });
+    // Expect validation error for out-of-range (frontend shows "Максимум 200 см")
+    await expect(page.getByText(/Максимум.*200/)).toBeVisible({ timeout: 5000 });
     await expect(page.getByLabel('Стегно, R')).toHaveClass(/border-destructive|!border-destructive/);
     await expect(cta).toBeDisabled();
 
     // Fix the value
     await page.getByLabel('Стегно, R').fill('22');
-    await expect(page.getByText(/не більше 200/)).toBeHidden({ timeout: 3000 });
+    await expect(page.getByText(/Максимум.*200/)).toBeHidden({ timeout: 3000 });
     await expect(cta).toBeEnabled({ timeout: 3000 });
 
     await request.post(`${PROSTH}/instances/${instanceId}/fail`, {
@@ -159,11 +159,8 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await page.getByLabel('Вік').fill('45');
     await expect(page.getByLabel('Вік')).toHaveValue('45');
 
-    // numeric filter: try letters
-    await page.getByLabel('Зріст').fill('abc180def');
-    // The component filters to digits, so value should be numeric only (or empty if filtered)
-    // Actually fill bypasses filter, but onChange filters. Using fill will set value directly via onChange handler which filters.
-    // Let's check via evaluation
+    await page.getByLabel('Зріст').fill('180');
+    await expect(page.getByLabel('Зріст')).toHaveValue('180');
     await page.getByLabel('Обхват гомілки').fill('32');
     await expect(page.getByLabel('Обхват гомілки')).toHaveValue('32');
 
