@@ -4,6 +4,8 @@
 
 ## Current Session
 
+**2026-09-03: TP-LL-02 Phase 9 close + Phase 10 final verification (issues #219 CLOSED, #220 in progress)** — Phase 9 matrix closed 100% (commits `f723003` + `83995e6` + `c4b2c6d`): `CrossFeatureRegressionIntegrationTest` (brak stage6/9, 7.1 both ALLOW variants, note verbatim, evidence upload/list, backward 30→29 + 33→32, pause WENT_ABROAD, fail other→replacement NEW + audit) + `tp-ll-02-cross-feature.spec.ts` (3 serial tests). Red runs triaged: `33684392642` (BrakServiceTest NPE from double mock reset → simplified to single D17), `33685162607` (wizard step view has no `<h1>/<h2>` — headings exist only for terminal states → wait for progressbar + Пауза CTA). CI run [33721486258](https://github.com/volyamnyi/intensive-care-unit-patient-chart/actions/runs/33721486258) all 6 jobs green (E2E 20m22s); flake-check repeat waived per user. Counts synced: backend 360 main / 142 test files, frontend 135 sources / 89 test files (~718 tests), E2E 83 spec files / 384 tests. README prosthetics API table gained PATCH step-executions note, backward, brak trio, evidence quad, fail allowlist; pause row documents the 4 Phase-8 reasons.
+
 **2026-08-31: TP-LL-02 «Брак» (defect) branching — integration + Playwright E2E (issues #208, #209, CLOSED, CI GREEN)** — CI run [33535246719](https://github.com/volyamnyi/intensive-care-unit-patient-chart/actions/runs/33535246719) (head `d80a5e9`) all 6 jobs green (E2E 334 passed / 0 failed). **Issue #208 (integration, #208): `BrakIntegrationTest`** (18 scenarios, `prosthesis-manufacturing` integration profile) — `app.seed-data.enabled=false` + `app.mis.embedded-wiremock-enabled=false` to avoid port 9090 contention, `TestEm.ensureFixedTemplate()` pins `c0000003` (TP-LL-02, order `20000000-…-0002`, 6 stages d0000012–d0000017); happy-path `createBrakAndBranch` (original→`BRANCHED` on stage 6 step e0000028, fresh branch on return stage, `parentInstanceId`, `branchSequence`, 1 step-exec, brak event + branch list recorded), per-return-stage (STAGE1/2/3), note-verbatim, both-reasons, undeclared-stage-400, unknown-stage-400, RBAC foreign→404 / non-owner-no-admin→404, `brak-events`/`branches` list shape, append-only original. **Issue #209 (Playwright E2E, #209): `tests/specs/prosthetics/tp-ll-02-brak-branch.spec.ts`** (9 serial tests, `prosthetics-chromium`, shared `tests/helpers/tp-ll-02-flow.ts` `createBrakViaApi`/`completeToStep`): (1) positive flow stage-3 return + `.advanceStepViaUi` → «КРОК 2» + original `BRANCHED`, (2) return-stage-1, (3) return-stage-2, (4) note stored verbatim, (5) both reasons stored, (6) history preserved / branch append-only (original 9 step-exec, fresh 1), (7) undeclared stage not offered + API 400 `BAD_REQUEST`, (8) unknown stage 400 `BAD_REQUEST`, (9) RBAC foreign prosthetist 404 read + 404 brak. **Two real E2E bugs found via CI red runs**: `selectReturnStage` originally read the offered radio's DOM id to recover the return-stage UUID, but Base UI renders `RadioGroupItem` with an **auto-generated** id (`base-ui-_r_10_`/`_r_q_`/`_r_t_`), not the `brak-return-{stageId}` prop → the `/^d000001/` guard threw; fixed by passing the known stage constant + asserting the label is offered. Scenarios 7/8 asserted `code==='BUSINESS_RULE'` but `BrakService` throws `BadRequestException` → `GlobalExceptionHandler` → `BAD_REQUEST`; corrected to `BAD_REQUEST` (confirmed green by `BrakIntegrationTest`). **Docs**: README/AGENTS E2E counts → 80 spec files / 369 tests (+9), spec file table; backend/frontend counts unchanged (E2E-only change). Issues #208 and #209 closed.
 
 **2026-08-26: Responsive/ShadCN Phase 6 — Docs & Closeout (issues #180, #181, CLOSED, CI GREEN)** — docs-only: README counts updated (backend 353/129, frontend 133/87, E2E 72 specs/339 tests), AGENTS Project Files counts synced, plan doc Appendix B final audit deltas + screenshots summary appended (files changed per phase, final test totals, 28/28 routes coverage, no new runtime deps, `addEventListener('resize')` zero). Roll-out checklist per plan §D executed (pre-flight lint/tsc/build green, className/markup-only diffs, Conventional Commits, CI gate: run [32977464321](https://github.com/volyamnyi/intensive-care-unit-patient-chart/actions/runs/32977464321) all 6 jobs green). Issues #180 and tracking #181 closed.
@@ -250,7 +252,7 @@ The complete development loop:
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | `backend-test-results` (surefire-reports) |
 | `backend-integration` | `mvn test -Pintegration-test` | `backend-integration-results` |
 | `frontend-test` | Vitest + production build | `vitest-coverage` |
-| `e2e-test` | Playwright (80 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
+| `e2e-test` | Playwright (83 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
 | `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
 
 ### Exit criteria
@@ -275,20 +277,20 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (699 tests across 87 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (718 tests across 89 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (80 spec files) |
+| `npx playwright test` | Run all E2E tests (83 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
 ## Testing
 
-- **Backend**: 353 main sources / 137 test files across the multi-module reactor (common 119/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 84/32, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 699 Vitest tests across 87 test files (133 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 80 Playwright spec files (369 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Backend**: 360 main sources / 142 test files across the multi-module reactor (common 124/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 91/37, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 718 Vitest tests across 89 test files (135 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **E2E**: 83 Playwright spec files (384 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -732,20 +734,20 @@ UseManual.md           ← User manual (Ukrainian)
 .gitignore             ← Global ignore rules
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire (5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
-  src/main/java/       ← 353 Java source files
+  src/main/java/       ← 360 Java source files
   src/main/resources/  ← application.yml, data-{core,icu,med,prosth}.sql, PDF template, db/changelog/ (Liquibase)
-  src/test/java/       ← 137 test files
+  src/test/java/       ← 142 test files
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 133 TS/TSX source + 87 test files
+  src/                 ← 135 TS/TSX source + 89 test files
 tests/
   playwright.config.ts ← Playwright config with 11 projects
   package.json         ← Test dependencies
-  specs/               ← 80 spec files
+  specs/               ← 83 spec files
   pages/               ← Page Object Model (7 files)
   fixtures/            ← Test fixtures
 docs/

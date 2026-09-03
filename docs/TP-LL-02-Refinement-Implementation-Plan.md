@@ -258,3 +258,38 @@
 4. Мануальний сценарій (dev): етап 7 (комбінації) → етап 8 → етап 9 (брак → гілка на етап 1/2/3) → повторний прохід → етап 10 («Попередній» туди-назад) → пауза (4 причини) → провал (без вилученої причини) → примітки/файли на всіх кроках.
 5. Docs: README/AGENTS — оновлення counts (backend/frontend/E2E), API-таблиця (3 нові ендпоінти), розділ Seed Data (TP-LL-02 правки).
 6. Закриття Issues #211–#220 з посиланнями на CI-рани.
+
+---
+
+## 8. Phase 9 / Phase 10 completion status (2026-09-03)
+
+### Phase 9 — #219 CLOSED
+- Coverage matrix 100%: unit (8 combos of 7.1 ALLOW/DENY in TpLl02ValidationUnitTest;
+  brak triggers D17+D20 in BrakServiceTest; backward config; note validation; fail
+  allowlist; pause enum parity) + integration (CrossFeatureRegressionIntegrationTest:
+  brak stage6/9, 7.1 both ALLOW variants, note verbatim, evidence upload/list,
+  backward 30->29 and 33->32, pause WENT_ABROAD, fail other->replacement NEW + audit)
+  + E2E (tp-ll-02-cross-feature.spec.ts, 3 serial tests).
+- Commits: f723003 (coverage), 83995e6 (BrakServiceTest NPE fix), c4b2c6d
+  (wizard heading-assertion fix — step view has no h1/h2, wait for progressbar +
+  pause CTA instead).
+- CI: red 33684392642 and 33685162607 triaged/fixed; GREEN 33721486258 (all 6 jobs,
+  E2E 20m22s). Flake-check repeat waived per user decision.
+- No describe.skip/test.skip left without justification (conditional/validation specs
+  marked stale + superseded; validation-edge-cases time-window skip pre-existing).
+
+### Phase 10 — #220 acceptance (this issue)
+- [x] Full CI green on main: 33721486258 (format-check, backend-test,
+      backend-integration, frontend-test, e2e-test, build).
+- [x] Phases 3-8 acceptance criteria verified against tests:
+      P3 soft-liner ALLOW rule (unit+integration+E2E), P4 issuance backward
+      (integration+E2E), P5 stage-9 brak branching (unit+integration+E2E),
+      P6 notes/evidence CRUD (unit+integration+E2E), P7 fail allowlist without
+      quality_gate (unit+integration+E2E), P8 four pause reasons (unit+integration+E2E).
+- [x] Branch integrity (parent/child, branchSequence, brak-events, history, audit)
+      covered by BrakIntegrationTest + CrossFeatureRegressionIntegrationTest +
+      tp-ll-02-cross-feature.spec.ts.
+- [x] Docs: README prosthetics API table (PATCH note, backward, brak trio, evidence
+      quad, fail allowlist, 4 pause reasons) + counts (backend 360/142, frontend
+      135/89 ~718 tests, E2E 83 specs/384 tests); AGENTS.md session + counts synced.
+- [x] Issues #211-#220 closed with summaries and CI run links.

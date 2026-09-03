@@ -54,10 +54,10 @@
 - **Prosthetics Dashboard** — View own flow instances with status filters (Active, Paused, Completed, Failed)
 - **Setup Wizard** — Patient search (from local mock DB) → Order selection → Order review (recipe PDF) → Template selection → Instance creation
 - **Execution Wizard** — Step-by-step guided workflow with validation (measurements, anamnesis, manufacturing, file uploads)
-- **Pause/Resume** — Timer-aware pausing with categorized reasons (Materials, Approval, Technical, Other)
+- **Pause/Resume** — Timer-aware pausing with categorized reasons (operative intervention, VLC passing, went abroad, reamputation)
 - **Quality Gate** — PASS / REWORK / FAIL decisions (PROSTHETICS_ADMINISTRATOR only)
 - **Rework Loop** — Automatic rollback to target step/stage with max attempt limits
-- **Failure Handling** — Failure snapshot capture (reason, description, attachments) + replacement instance creation
+- **Failure Handling** — Failure snapshot capture (allowlisted category, description, attachments) + replacement instance creation
 - **PDF Reports** — Recipe PDF (order review), Instance PDF (Done screen), Failure PDF (Failed screen)
 - **Evidence Upload** — Image/PDF uploads (10 MB limit) per step
 
@@ -400,9 +400,19 @@ java -jar app/target/app-*.jar
 | `POST` | `/api/prosthesis-manufacturing/instances` | PROSTHETIST | Create instance from order + template |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/step-executions` | PROSTHETIST, PROSTHETICS_ADMIN | Get step executions for instance |
 | `POST` | `/api/prosthesis-manufacturing/step-executions/{id}/complete` | PROSTHETIST | Complete step execution |
+| `PATCH` | `/api/prosthesis-manufacturing/instances/{id}/step-executions/{executionId}` | PROSTHETIST | Update step note (IN_PROGRESS execution only) |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/backward` | PROSTHETIST | Go back one step (target step must allow backward) |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/brak` | PROSTHETIST | Report defect at stage 6/9 → branch instance to return stage 1/2/3 |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/brak-events` | PROSTHETIST, PROSTHETICS_ADMIN | List defect events for instance |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/branches` | PROSTHETIST, PROSTHETICS_ADMIN | List branch instances |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/evidence?executionId=` | PROSTHETIST | Upload evidence file (image/PDF, 10 MB limit) |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/evidence?executionId=` | PROSTHETIST, PROSTHETICS_ADMIN | List evidence files for a step execution |
+| `GET` | `/api/prosthesis-manufacturing/instances/{id}/evidence/{fileId}` | PROSTHETIST, PROSTHETICS_ADMIN | Download evidence file |
+| `DELETE` | `/api/prosthesis-manufacturing/instances/{id}/evidence/{fileId}` | PROSTHETIST | Delete evidence file (IN_PROGRESS only) |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/fail` | PROSTHETIST | Fail instance (allowlisted category: defect, materials, component_damage, order_cancelled, patient, other) |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/quality-gates` | PROSTHETIST, PROSTHETICS_ADMIN | Get quality gates for instance |
 | `POST` | `/api/prosthesis-manufacturing/gate-decisions` | PROSTHETICS_ADMIN | Make gate decision (PASS/REWORK/FAIL) |
-| `POST` | `/api/prosthesis-manufacturing/instances/{id}/pause` | PROSTHETIST | Pause instance |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/pause` | PROSTHETIST | Pause instance (reason: operative intervention, VLC passing, went abroad, reamputation) |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/resume` | PROSTHETIST | Resume instance |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/replacement` | PROSTHETIST | Create replacement after FAIL |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | PROSTHETIST, PROSTHETICS_ADMIN | Get failure snapshot |
@@ -495,8 +505,8 @@ icu-patient-chart/
 │       ├── services/           # AuthContext
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
-│       └── test/               # Vitest tests (87 files)
-├── tests/                      # Playwright E2E (80 spec files, 11 projects)
+│       └── test/               # Vitest tests (89 files)
+├── tests/                      # Playwright E2E (83 spec files, 11 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -517,8 +527,8 @@ icu-patient-chart/
 | `mvn -pl app spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (137 test files) |
-| `mvn test -Pintegration-test` | Run integration tests (79) — requires Docker/PostgreSQL |
+| `mvn test` | Run unit tests (142 test files) |
+| `mvn test -Pintegration-test` | Run integration tests (85) — requires Docker/PostgreSQL |
 
 #### Frontend
 | Command | Action |
@@ -527,12 +537,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (699 across 87 files) |
+| `npm t` | Run Vitest tests (718 across 89 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (80 spec files, 369 tests) |
+| `npx playwright test` | Run all E2E tests (83 spec files, 384 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -548,16 +558,16 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (80 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (83 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend tests**: 137 test files across the multi-module reactor — common (19) + icu-chart (68) + medication-sheet (17) + prosthesis-manufacturing (32) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
-- **Backend integration tests**: 84 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 699 tests (87 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 80 spec files (369 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Backend tests**: 142 test files across the multi-module reactor — common (19) + icu-chart (68) + medication-sheet (17) + prosthesis-manufacturing (37) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
+- **Backend integration tests**: 85 tests — `mvn test -Pintegration-test`
+- **Frontend Vitest tests**: 718 tests (89 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 83 spec files (384 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
