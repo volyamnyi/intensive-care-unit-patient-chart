@@ -245,8 +245,10 @@ test.describe.serial('TP-LL-02 cross-feature', () => {
     // Pause via UI (WizardExecutionPage) with the new 4-value category WENT_ABROAD.
     await page.goto(`/prosthetics/process/${branchId}/wizard`);
     const wizard = new WizardExecutionPage(page);
-    // The wizard must render before pausing; the heading is the current step title (e0000032).
-    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
+    // The step view has no <h1>/<h2> (headings exist only for terminal states) —
+    // wait for the progress bar + Пауза CTA instead (see WizardScreen.tsx).
+    await expect(wizard.progressBar).toBeVisible({ timeout: 10_000 });
+    await expect(wizard.pauseButton).toBeVisible({ timeout: 10_000 });
     await wizard.pauseProcess('WENT_ABROAD');
 
     const paused = (await (await req.get(`${PROSTH}/instances/${branchId}`, { headers })).json()) as any;
