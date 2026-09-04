@@ -9,6 +9,7 @@ const mockGetItems = vi.fn();
 const mockGetAllergies = vi.fn().mockResolvedValue({ data: [] });
 const mockGetGrid = vi.fn().mockResolvedValue({ data: [] });
 const mockAddItemDay = vi.fn();
+const mockRemoveItemDay = vi.fn();
 const mockCancelMedication = vi.fn();
 const mockRestoreToPlanned = vi.fn();
 const mockCancelAssignment = vi.fn();
@@ -25,6 +26,7 @@ vi.mock('../../api/medication', () => ({
     getItems: (...a: unknown[]) => mockGetItems(...a),
     getAllergies: (...a: unknown[]) => mockGetAllergies(...a),
     addItemDay: (...a: unknown[]) => mockAddItemDay(...a),
+    removeItemDay: (...a: unknown[]) => mockRemoveItemDay(...a),
     planDose: vi.fn(), completeDose: vi.fn(),
     cancelMedication: (...a: unknown[]) => mockCancelMedication(...a),
     restoreToPlanned: (...a: unknown[]) => mockRestoreToPlanned(...a),
@@ -93,6 +95,16 @@ function makeItem(id = 'item-1', dayId = 'day-1') {
   };
 }
 
+function makeTwoDayItem() {
+  const today = new Date().toISOString().slice(0, 10);
+  const part = (id: string, dayId: string, dayDate: string) => ({
+    id, dayId, dayDate, period: 'morning', dose: '5mg',
+    isPlanned: false, isPlannedFinished: false, isCompleted: false, isCompletedFinished: false,
+    doctorName: null, nurseName: null,
+  });
+  return { ...makeItem(), dayParts: [part('dp-1', 'day-1', today), part('dp-2', 'day-2', '2999-12-31')] };
+}
+
 function makeCellItem(flags: { isPlanned: boolean; isPlannedFinished: boolean; isCompleted?: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
   return {
@@ -126,6 +138,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     vi.clearAllMocks();
     mockAuth = () => doctorAuth;
     mockAddItemDay.mockResolvedValue({ data: makeItem() });
+    mockRemoveItemDay.mockResolvedValue({ data: null });
     mockCancelMedication.mockResolvedValue({ data: makeItem() });
     mockRestoreToPlanned.mockResolvedValue({ data: makeItem() });
     mockCancelAssignment.mockResolvedValue({ data: makeItem() });
@@ -140,6 +153,27 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     expect(mockAddItemDay).toHaveBeenCalledWith('item-1');
     await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
     expect(screen.queryByText(/Не вдалося додати день/)).not.toBeInTheDocument();
+  });
+
+  it('doctor: «−» removes the last day via API and refreshes items', async () => {
+    renderPage(() => doctorAuth, [makeTwoDayItem()]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Видалити день' }));
+
+    await waitFor(() => expect(mockRemoveItemDay).toHaveBeenCalledTimes(1));
+    expect(mockRemoveItemDay).toHaveBeenCalledWith('item-1', 'day-2');
+    await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/Не вдалося видалити день/)).not.toBeInTheDocument();
+  });
+
+  it('doctor: failed removeDay surfaces the backend message', async () => {
+    const ukMessage = 'День містить виконані призначення, видалення неможливе';
+    mockRemoveItemDay.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
+    renderPage(() => doctorAuth, [makeTwoDayItem()]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Видалити день' }));
+
+    await waitFor(() => expect(mockRemoveItemDay).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText(ukMessage)).toBeInTheDocument());
+    expect(screen.queryByText('Не вдалося видалити день')).not.toBeInTheDocument();
   });
 
   it('doctor: «Відмінити це призначення» calls cancelAssignment and refreshes items', async () => {

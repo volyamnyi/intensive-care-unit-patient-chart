@@ -25,6 +25,10 @@ test.describe('Nurse — prescription day UI is read-only', () => {
     await expect(page.getByRole('button', { name: DODATI_DENY })).toHaveCount(0);
   });
 
+  test('«Видалити день» button is not rendered for any item row (nurse gating)', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Видалити день' })).toHaveCount(0);
+  });
+
   test('right-clicking a dose cell does not open the context menu (nurse gating)', async ({ page }) => {
     const firstRow = page.locator('tbody tr').first();
     const cell = firstRow.locator('td').nth(1);

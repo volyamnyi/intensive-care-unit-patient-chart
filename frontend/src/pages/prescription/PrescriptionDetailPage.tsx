@@ -148,6 +148,17 @@ export default function PrescriptionDetailPage() {
     }
   }
 
+  const handleRemoveDay = async (itemId: string, dayId: string) => {
+    if (!id) return
+    setError(null)
+    try {
+      await prescriptionApi.removeItemDay(itemId, dayId)
+      await loadItems(id)
+    } catch (err) {
+      setError(getErrorMessage(err, 'Не вдалося видалити день'))
+    }
+  }
+
   const handleCellUpdate = async (dayId: string, period: string, paramKey: string, value: string) => {
     if (!id) return
     setError(null)
@@ -238,6 +249,7 @@ export default function PrescriptionDetailPage() {
         onRestoreToPlanned={handleRestoreToPlanned}
         onCancelAssignment={handleCancelAssignment}
         onAddDay={isNurseUser ? undefined : handleAddDay}
+        onRemoveDay={isNurseUser ? undefined : handleRemoveDay}
         onExecute={isNurseUser ? handleExecute : undefined}
         onAddItem={isNurseUser ? async () => {} : handleAddItem}
         onRemoveItem={isNurseUser ? async () => {} : handleRemoveItem}

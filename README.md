@@ -375,7 +375,7 @@ java -jar app/target/app-*.jar
 | `POST` | `/api/prescriptions/{listId}/items` | Doctor/HOD | Add medicine item (auto-creates 21-day grid) |
 | `DELETE` | `/api/prescriptions/items/{itemId}` | Doctor/HOD | Remove item |
 | `POST` | `/api/prescriptions/items/{itemId}/days` | Doctor/HOD | Add next day (max day date + 1) with 4 unplanned day parts |
-| `DELETE` | `/api/prescriptions/items/{itemId}/days/{dayId}` | Doctor/HOD | Remove a day (422 if any day part is completed) |
+| `DELETE` | `/api/prescriptions/items/{itemId}/days/{dayId}` | Doctor/HOD | Remove a day (422 if any day part is completed or it is the last remaining day) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/plan` | Doctor/HOD | Plan dose for day part |
 | `PUT` | `/api/prescriptions/day-parts/{id}/cancel` | Doctor/HOD | Cancel medication («Відмінити препарат»; 422 if not planned or completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/replan` | Doctor/HOD | Restore cancelled dose to planned, keeping the dose (422 if not cancelled or completed) |

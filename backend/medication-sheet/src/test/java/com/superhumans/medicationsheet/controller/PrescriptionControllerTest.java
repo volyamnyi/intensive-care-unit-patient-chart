@@ -288,7 +288,7 @@ class PrescriptionControllerTest {
                         .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isNoContent());
 
-        verify(itemService).removeDay(itemId, dayId);
+        verify(itemService).removeDay(itemId, dayId, 1L);
     }
 
     @Test
@@ -298,14 +298,14 @@ class PrescriptionControllerTest {
                         .with(TestSecurityHelper.hod()))
                 .andExpect(status().isNoContent());
 
-        verify(itemService).removeDay(itemId, dayId);
+        verify(itemService).removeDay(itemId, dayId, 4L);
     }
 
     @Test
     void removeDay_dayNotFound_returnsNotFound() throws Exception {
         UUID dayId = UUID.randomUUID();
         doThrow(new NotFoundException("Day not found: " + dayId))
-                .when(itemService).removeDay(eq(itemId), eq(dayId));
+                .when(itemService).removeDay(eq(itemId), eq(dayId), any());
 
         mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
                         .with(TestSecurityHelper.doctor()))
@@ -319,7 +319,21 @@ class PrescriptionControllerTest {
         UUID dayId = UUID.randomUUID();
         String ukMsg = "Р”РµРЅСЊ РјС–СЃС‚РёС‚СЊ РІРёРєРѕРЅР°РЅС– РїСЂРёР·РЅР°С‡РµРЅРЅСЏ, РІРёРґР°Р»РµРЅРЅСЏ РЅРµРјРѕР¶Р»РёРІРµ";
         doThrow(new BusinessException(ErrorCode.BUSINESS_RULE, ukMsg))
-                .when(itemService).removeDay(eq(itemId), eq(dayId));
+                .when(itemService).removeDay(eq(itemId), eq(dayId), any());
+
+        mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value(ErrorCode.BUSINESS_RULE))
+                .andExpect(jsonPath("$.message").value(ukMsg));
+    }
+
+    @Test
+    void removeDay_lastRemainingDay_returnsUnprocessableEntity() throws Exception {
+        UUID dayId = UUID.randomUUID();
+        String ukMsg = "Неможливо видалити останній день призначення";
+        doThrow(new BusinessException(ErrorCode.BUSINESS_RULE, ukMsg))
+                .when(itemService).removeDay(eq(itemId), eq(dayId), any());
 
         mockMvc.perform(delete("/api/prescriptions/items/{itemId}/days/{dayId}", itemId, dayId)
                         .with(TestSecurityHelper.doctor()))
@@ -720,6 +734,6 @@ class PrescriptionControllerTest {
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isForbidden());
 
-        verify(itemService, never()).removeDay(any(), any());
+        verify(itemService, never()).removeDay(any(), any(), any());
     }
 }

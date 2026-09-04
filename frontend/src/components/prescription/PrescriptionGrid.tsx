@@ -19,6 +19,7 @@ export interface GridProps {
   onRestoreToPlanned: (dayPartId: string) => Promise<void>;
   onCancelAssignment: (dayPartId: string) => Promise<void>;
   onAddDay?: (itemId: string) => Promise<void> | void;
+  onRemoveDay?: (itemId: string, dayId: string) => Promise<void> | void;
   onExecute?: (dayPartId: string, actualDose: string, secondPersonLogin: string, secondPersonPassword: string) => Promise<void>;
   onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
   onRemoveItem: (itemId: string) => Promise<void>;
@@ -29,7 +30,7 @@ export interface GridProps {
 
 export default function PrescriptionGrid({
   items, canEdit, isDoctor, isNurse,
-  onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onAddDay, onExecute,
+  onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onAddDay, onRemoveDay, onExecute,
   onAddItem, onRemoveItem,
   onSearchMedicine, allergies, loading,
 }: GridProps) {
@@ -159,6 +160,7 @@ export default function PrescriptionGrid({
         onShiftLeft={shiftLeft}
         onShiftRight={shiftRight}
         onAddDay={onAddDay}
+        onRemoveDay={onRemoveDay}
         onPlan={onPlan}
         onCancelMedication={onCancelMedication}
         onRestoreToPlanned={onRestoreToPlanned}

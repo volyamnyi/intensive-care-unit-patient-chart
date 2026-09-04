@@ -159,15 +159,17 @@ public class PrescriptionController {
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @DeleteMapping("/items/{itemId}/days/{dayId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Remove day from medicine item", description = "Soft-deletes a single day from a medicine item. Blocked if any day part is completed. Requires DOCTOR or HEAD_OF_DEPARTMENT role (PRESCRIPTION_CREATE permission).")
+    @Operation(summary = "Remove day from medicine item", description = "Soft-deletes a single day from a medicine item. Blocked if any day part is completed, or if it is the last remaining day of the item. Requires DOCTOR or HEAD_OF_DEPARTMENT role (PRESCRIPTION_CREATE permission).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Day removed successfully"),
             @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
             @ApiResponse(responseCode = "404", description = "Medicine item or day not found"),
-            @ApiResponse(responseCode = "422", description = "Business rule violated - day contains completed prescriptions")
+            @ApiResponse(responseCode = "422", description = "Business rule violated - day contains completed prescriptions or is the last remaining day")
     })
     public void removeDay(@PathVariable UUID itemId, @PathVariable UUID dayId) {
-        itemService.removeDay(itemId, dayId);
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        itemService.removeDay(itemId, dayId, currentUserId);
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")

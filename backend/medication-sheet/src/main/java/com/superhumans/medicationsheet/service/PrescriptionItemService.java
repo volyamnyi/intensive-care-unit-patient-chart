@@ -107,7 +107,7 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public void removeDay(UUID itemId, UUID dayId) {
+    public void removeDay(UUID itemId, UUID dayId, Long userId) {
         PrescriptionItemDay day = dayRepository.findById(dayId)
                 .orElseThrow(() -> new NotFoundException("Day not found: " + dayId));
         if (Boolean.TRUE.equals(day.getDeleted())) {
@@ -124,9 +124,19 @@ public class PrescriptionItemService {
                     "День містить виконані призначення, видалення неможливе");
         }
 
+        // The row must keep at least one day: removing the last remaining day
+        // would leave a medicine row with zero columns.
+        List<PrescriptionItemDay> remaining =
+                dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
+        if (remaining.size() <= 1) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Неможливо видалити останній день призначення");
+        }
+
         day.setDeleted(true);
-        day.setUpdatedBy(0L);
+        day.setUpdatedBy(userId);
         dayRepository.save(day);
+        auditService.logAction("PrescriptionItemDay", day.getId(), "REMOVE", userId);
         log.info("Prescription day removed: itemId={}, dayId={}", itemId, dayId);
     }
 

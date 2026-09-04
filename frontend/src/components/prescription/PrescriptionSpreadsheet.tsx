@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X, Undo2, Eraser } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Plus, Minus, Trash2, X, Undo2, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PrescriptionDayPart } from '../../types/medication';
@@ -38,6 +38,26 @@ function cellLabel(part: PrescriptionDayPart | undefined) {
 
 function dayPartKey(date: string, period: string) { return `${date}|${period}`; }
 
+// «−» removes the LAST non-deleted day of the row: the dayId behind the
+// maximum dayDate among the item's cells. Computed from domain data at click
+// time (never a hardcoded index); ties resolve to the first-seen dayId.
+function lastDayIdOf(item: GridItem): string | undefined {
+  let best: { dayDate: string; dayId: string } | undefined;
+  item.cells.forEach((dp) => {
+    if (!dp.dayDate || !dp.dayId) return;
+    if (!best || dp.dayDate > best.dayDate) best = { dayDate: dp.dayDate, dayId: dp.dayId };
+  });
+  return best?.dayId;
+}
+
+function dayCountOf(item: GridItem): number {
+  const dates = new Set<string>();
+  item.cells.forEach((dp) => {
+    if (dp.dayDate) dates.add(dp.dayDate);
+  });
+  return dates.size;
+}
+
 export interface DayContextMenuState {
   clientX: number;
   clientY: number;
@@ -61,6 +81,7 @@ export interface PrescriptionSpreadsheetProps {
   onShiftLeft: () => void;
   onShiftRight: () => void;
   onAddDay?: (itemId: string) => Promise<void> | void;
+  onRemoveDay?: (itemId: string, dayId: string) => Promise<void> | void;
   onPlan: (dayPartId: string, dose: string) => Promise<void>;
   onCancelMedication: (dayPartId: string) => Promise<void>;
   onRestoreToPlanned: (dayPartId: string) => Promise<void>;
@@ -71,7 +92,7 @@ export interface PrescriptionSpreadsheetProps {
 
 export default function PrescriptionSpreadsheet({
   canEdit, isDoctor, isNurse, gridItems, visibleDates, allDates, viewStart, daysToShow,
-  loading, onShiftLeft, onShiftRight, onAddDay, onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onOpenExecute, onOpenDeleteConfirm,
+  loading, onShiftLeft, onShiftRight, onAddDay, onRemoveDay, onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onOpenExecute, onOpenDeleteConfirm,
 }: PrescriptionSpreadsheetProps) {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editingDose, setEditingDose] = useState('');
@@ -357,6 +378,19 @@ export default function PrescriptionSpreadsheet({
                           onClick={() => onAddDay?.(item.id)}
                         >
                           <Plus className="size-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Видалити день"
+                          title="Видалити день"
+                          disabled={!onRemoveDay || dayCountOf(item) <= 1 || !lastDayIdOf(item)}
+                          onClick={() => {
+                            const dayId = lastDayIdOf(item);
+                            if (dayId) onRemoveDay?.(item.id, dayId);
+                          }}
+                        >
+                          <Minus className="size-3" />
                         </Button>
                       </div>
                     </td>

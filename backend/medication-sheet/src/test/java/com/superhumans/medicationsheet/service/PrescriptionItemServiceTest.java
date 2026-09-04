@@ -224,12 +224,16 @@ class PrescriptionItemServiceTest {
     void removeDay_softDeletesDay() {
         PrescriptionItemDay day = dayWithParts(LocalDate.of(2026, 1, 5),
                 buildPart("morning", false, false), buildPart("evening", false, false));
+        PrescriptionItemDay otherDay = dayWithDate(LocalDate.of(2026, 1, 4));
         when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
+        when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId))
+                .thenReturn(List.of(otherDay, day));
         when(dayRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.removeDay(itemId, day.getId());
+        service.removeDay(itemId, day.getId(), 7L);
 
         verify(dayRepository).save(argThat(d -> Boolean.TRUE.equals(d.getDeleted())));
+        verify(auditService).logAction("PrescriptionItemDay", day.getId(), "REMOVE", 7L);
     }
 
     @Test
@@ -238,7 +242,7 @@ class PrescriptionItemServiceTest {
                 buildPart("morning", true, false), buildPart("evening", false, false));
         when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
 
-        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId(), 7L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("День містить виконані призначення, видалення неможливе");
         verify(dayRepository, never()).save(any());
@@ -250,7 +254,7 @@ class PrescriptionItemServiceTest {
                 buildPart("morning", false, false), buildPart("night", false, true));
         when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
 
-        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId(), 7L))
                 .isInstanceOf(BusinessException.class);
         verify(dayRepository, never()).save(any());
     }
@@ -263,7 +267,7 @@ class PrescriptionItemServiceTest {
         day.setItem(otherItem);
         when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
 
-        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId(), 7L))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -273,16 +277,31 @@ class PrescriptionItemServiceTest {
         day.setDeleted(true);
         when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
 
-        assertThatThrownBy(() -> service.removeDay(itemId, day.getId()))
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId(), 7L))
                 .isInstanceOf(NotFoundException.class);
         verify(dayRepository, never()).save(any());
+    }
+
+    @Test
+    void removeDay_throws_whenLastRemainingDay() {
+        PrescriptionItemDay day = dayWithParts(LocalDate.of(2026, 1, 5),
+                buildPart("morning", false, false), buildPart("evening", false, false));
+        when(dayRepository.findById(day.getId())).thenReturn(Optional.of(day));
+        when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId))
+                .thenReturn(List.of(day));
+
+        assertThatThrownBy(() -> service.removeDay(itemId, day.getId(), 7L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Неможливо видалити останній день призначення");
+        verify(dayRepository, never()).save(any());
+        verify(auditService, never()).logAction(any(), any(), any(), any());
     }
 
     @Test
     void removeDay_throws_whenDayNotFound() {
         when(dayRepository.findById(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.removeDay(itemId, UUID.randomUUID()))
+        assertThatThrownBy(() -> service.removeDay(itemId, UUID.randomUUID(), 7L))
                 .isInstanceOf(NotFoundException.class);
     }
 

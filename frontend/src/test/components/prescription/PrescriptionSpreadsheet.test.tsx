@@ -51,6 +51,7 @@ function renderGrid(props: Partial<GridProps> = {}) {
         onCancelMedication={props.onCancelMedication ?? vi.fn()}
         onRestoreToPlanned={props.onRestoreToPlanned ?? vi.fn()}
         onAddDay={props.onAddDay}
+        onRemoveDay={props.onRemoveDay ?? vi.fn()}
         onCancelAssignment={props.onCancelAssignment ?? vi.fn()}
         onAddItem={props.onAddItem ?? vi.fn()}
         onRemoveItem={props.onRemoveItem ?? vi.fn()}
@@ -76,9 +77,40 @@ describe('PrescriptionSpreadsheet — per-item day actions', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the «Додати день» row button for a doctor', () => {
-    renderGrid({ onAddDay: vi.fn() });
-    expect(screen.getAllByRole('button', { name: 'Додати день' })).toHaveLength(1);
+  it('renders the «Видалити день» row button for a doctor', () => {
+    renderGrid({ onAddDay: vi.fn(), onRemoveDay: vi.fn() });
+    expect(screen.getAllByRole('button', { name: 'Видалити день' })).toHaveLength(1);
+  });
+
+  it('does not render the «Видалити день» row button for a nurse', () => {
+    renderGrid({ isNurse: true, isDoctor: false, onAddDay: vi.fn(), onRemoveDay: vi.fn() });
+    expect(screen.queryAllByRole('button', { name: 'Видалити день' })).toHaveLength(0);
+  });
+
+  it('clicking «−» calls onRemoveDay(itemId, lastDayId) with the max-date day', async () => {
+    const onRemoveDay = vi.fn().mockResolvedValue(undefined);
+    const today = new Date().toISOString().slice(0, 10);
+    const mk = (id: string, dayId: string, dayDate: string): PrescriptionDayPart => ({
+      ...makeDayPart({ id }),
+      dayId,
+      dayDate,
+    });
+    renderGrid({
+      items: [makeItem([
+        mk('dp-early', 'day-early', '2026-01-01'),
+        mk('dp-late', 'day-late', '2026-02-01'),
+        mk('dp-today', 'day-today', today),
+      ])],
+      onRemoveDay,
+    });
+    await userEvent.click(screen.getAllByRole('button', { name: 'Видалити день' })[0]);
+    await waitFor(() => expect(onRemoveDay).toHaveBeenCalledTimes(1));
+    expect(onRemoveDay).toHaveBeenCalledWith('item-1', 'day-today');
+  });
+
+  it('«−» is disabled when the row has a single day', () => {
+    renderGrid({ onAddDay: vi.fn(), onRemoveDay: vi.fn() });
+    expect(screen.getByRole('button', { name: 'Видалити день' })).toBeDisabled();
   });
 
   it('does not render the «Додати день» row button for a nurse', () => {
