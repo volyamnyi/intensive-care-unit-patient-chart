@@ -136,8 +136,9 @@ test.describe('Doctor — «−» day removal (last day of the row)', () => {
         row.getByRole('button', { name: REMOVE_DAY }).click(),
       ]);
       expect(delRes.status()).toBe(204);
-      // The removed day is exactly the added last day.
       expect(delRes.url().endsWith(`/days/${added.dayId}`)).toBeTruthy();
+      const doneToast = page.locator('[data-sonner-toast][data-type="success"]', { hasText: 'День видалено' });
+      await expect(doneToast).toBeVisible({ timeout: 10_000 });
 
       const after = await getParts(request, doctorToken, listId, itemId);
       expect(distinctDayIds(after)).toHaveLength(21);
@@ -203,7 +204,8 @@ test.describe('Doctor — «−» day removal (last day of the row)', () => {
         row.getByRole('button', { name: REMOVE_DAY }).click(),
       ]);
       expect(delRes.status()).toBe(422);
-      await expect(page.getByText(COMPLETED_MSG)).toBeVisible({ timeout: 10_000 });
+      const errToast = page.locator('[data-sonner-toast][data-type="error"]', { hasText: COMPLETED_MSG });
+      await expect(errToast).toBeVisible({ timeout: 10_000 });
 
       const after = await getParts(request, doctorToken, listId, itemId);
       expect(after.some((p) => p.dayId === last.dayId)).toBe(true);

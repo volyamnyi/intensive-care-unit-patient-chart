@@ -13,6 +13,8 @@ const mockRemoveItemDay = vi.fn();
 const mockCancelMedication = vi.fn();
 const mockRestoreToPlanned = vi.fn();
 const mockCancelAssignment = vi.fn();
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
 let mockAuth: () => unknown = () => doctorAuth;
 
 vi.mock('react-router-dom', async () => {
@@ -57,6 +59,15 @@ const nurseAuth = { ...doctorAuth, user: { ...doctorAuth.user, id: 2, login: 'nu
 
 vi.mock('../../services/AuthContext', () => ({
   useAuth: () => mockAuth(),
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...a: unknown[]) => mockToastSuccess(...a),
+    error: (...a: unknown[]) => mockToastError(...a),
+    info: vi.fn(),
+    warning: vi.fn(),
+  },
 }));
 
 import PrescriptionDetailPage from '../../pages/prescription/PrescriptionDetailPage';
@@ -152,6 +163,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     await waitFor(() => expect(mockAddItemDay).toHaveBeenCalledTimes(1));
     expect(mockAddItemDay).toHaveBeenCalledWith('item-1');
     await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('День додано'));
     expect(screen.queryByText(/Не вдалося додати день/)).not.toBeInTheDocument();
   });
 
@@ -162,18 +174,19 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     await waitFor(() => expect(mockRemoveItemDay).toHaveBeenCalledTimes(1));
     expect(mockRemoveItemDay).toHaveBeenCalledWith('item-1', 'day-2');
     await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('День видалено'));
     expect(screen.queryByText(/Не вдалося видалити день/)).not.toBeInTheDocument();
   });
 
-  it('doctor: failed removeDay surfaces the backend message', async () => {
+  it('doctor: failed removeDay shows an error toast with the backend message', async () => {
     const ukMessage = 'День містить виконані призначення, видалення неможливе';
     mockRemoveItemDay.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
     renderPage(() => doctorAuth, [makeTwoDayItem()]);
     await userEvent.click(await screen.findByRole('button', { name: 'Видалити день' }));
 
     await waitFor(() => expect(mockRemoveItemDay).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByText(ukMessage)).toBeInTheDocument());
-    expect(screen.queryByText('Не вдалося видалити день')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith(ukMessage));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('doctor: «Відмінити це призначення» calls cancelAssignment and refreshes items', async () => {
@@ -189,9 +202,10 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     await waitFor(() => expect(mockCancelAssignment).toHaveBeenCalledTimes(1));
     expect(mockCancelAssignment).toHaveBeenCalledWith('dp-1');
     await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Призначення відмінено'));
   });
 
-  it('doctor: failed cancelAssignment surfaces the backend message', async () => {
+  it('doctor: failed cancelAssignment shows an error toast with the backend message', async () => {
     const ukMessage = 'Виконане призначення не може бути відмінене';
     mockCancelAssignment.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
     renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: false })]);
@@ -204,8 +218,8 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити це призначення/ }));
 
     await waitFor(() => expect(mockCancelAssignment).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.getByText(ukMessage)).toBeInTheDocument());
-    expect(screen.queryByText('Не вдалося відмінити призначення')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith(ukMessage));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('doctor: «Відмінити препарат» calls cancelMedication and refreshes items', async () => {
@@ -221,6 +235,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     await waitFor(() => expect(mockCancelMedication).toHaveBeenCalledTimes(1));
     expect(mockCancelMedication).toHaveBeenCalledWith('dp-1');
     await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Препарат відмінено'));
   });
 
   it('doctor: «Повернути у Заплановано» calls restoreToPlanned and refreshes items', async () => {
@@ -236,9 +251,10 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     await waitFor(() => expect(mockRestoreToPlanned).toHaveBeenCalledTimes(1));
     expect(mockRestoreToPlanned).toHaveBeenCalledWith('dp-1');
     await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Повернуто у Заплановано'));
   });
 
-  it('doctor: failed restore surfaces the backend message', async () => {
+  it('doctor: failed restore shows an error toast with the backend message', async () => {
     const ukMessage = 'Призначення не у статусі «Відмінено», повернення неможливе';
     mockRestoreToPlanned.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
     renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: true })]);
@@ -250,8 +266,9 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
 
     await userEvent.click(await screen.findByRole('menuitem', { name: /Повернути у Заплановано/ }));
 
-    await waitFor(() => expect(screen.getByText(ukMessage)).toBeInTheDocument());
-    expect(screen.queryByText('Не вдалося повернути у заплановані')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    expect(mockToastError).toHaveBeenCalledWith(ukMessage);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('nurse: «+ День» is not rendered and API is never called', async () => {

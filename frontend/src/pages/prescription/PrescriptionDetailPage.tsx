@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { Loader2, X, RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertAction } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
@@ -86,22 +87,22 @@ export default function PrescriptionDetailPage() {
   }
 
   const handleCancelMedication = async (dayPartId: string) => {
-    setError(null)
     try {
       await prescriptionApi.cancelMedication(dayPartId)
       if (id) await loadItems(id)
+      toast.success('Препарат відмінено')
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося відмінити препарат'))
+      toast.error(getErrorMessage(err, 'Не вдалося відмінити препарат'))
     }
   }
 
   const handleRestoreToPlanned = async (dayPartId: string) => {
-    setError(null)
     try {
       await prescriptionApi.restoreToPlanned(dayPartId)
       if (id) await loadItems(id)
+      toast.success('Повернуто у Заплановано')
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося повернути у заплановані'))
+      toast.error(getErrorMessage(err, 'Не вдалося повернути у заплановані'))
     }
   }
 
@@ -129,33 +130,33 @@ export default function PrescriptionDetailPage() {
 
   const handleAddDay = async (itemId: string) => {
     if (!id) return
-    setError(null)
     try {
       await prescriptionApi.addItemDay(itemId)
       await loadItems(id)
+      toast.success('День додано')
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося додати день'))
+      toast.error(getErrorMessage(err, 'Не вдалося додати день'))
     }
   }
 
   const handleCancelAssignment = async (dayPartId: string) => {
-    setError(null)
     try {
       await prescriptionApi.cancelAssignment(dayPartId)
       if (id) await loadItems(id)
+      toast.success('Призначення відмінено')
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося відмінити призначення'))
+      toast.error(getErrorMessage(err, 'Не вдалося відмінити призначення'))
     }
   }
 
   const handleRemoveDay = async (itemId: string, dayId: string) => {
     if (!id) return
-    setError(null)
     try {
       await prescriptionApi.removeItemDay(itemId, dayId)
       await loadItems(id)
+      toast.success('День видалено')
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося видалити день'))
+      toast.error(getErrorMessage(err, 'Не вдалося видалити день'))
     }
   }
 
