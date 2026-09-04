@@ -84,6 +84,10 @@ async function gotoDetail(page: Page, listId: string): Promise<void> {
 }
 
 async function openMenuOnCell(page: Page, row: ReturnType<Page['locator']>, text: string) {
+  // The row renders only after items load; items loading also completes
+  // `allDates`, which drives the shift chevron's disabled state. Without this
+  // wait the chevron reads disabled (0+7 >= 0) and the window never shifts.
+  await expect(row).toBeVisible({ timeout: 10_000 });
   const cell = row.locator('td', { hasText: text });
   await shiftCellIntoView(page, cell);
   await cell.click({ button: 'right' });
@@ -165,7 +169,9 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
       // Reload keeps the restored state.
       await page.reload();
       await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
-      const afterReload = page.locator('tbody tr').filter({ hasText: name }).locator('td', { hasText: DOSE });
+      const reloadRow = page.locator('tbody tr').filter({ hasText: name });
+      await expect(reloadRow).toBeVisible({ timeout: 10_000 });
+      const afterReload = reloadRow.locator('td', { hasText: DOSE });
       await shiftCellIntoView(page, afterReload);
       await expect(afterReload).toHaveCSS('background-color', BLUE);
     } finally {
