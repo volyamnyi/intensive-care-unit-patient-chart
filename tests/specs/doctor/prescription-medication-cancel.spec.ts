@@ -85,10 +85,26 @@ async function gotoDetail(page: Page, listId: string): Promise<void> {
 
 async function openMenuOnCell(page: Page, row: ReturnType<Page['locator']>, text: string) {
   const cell = row.locator('td', { hasText: text });
+  await shiftCellIntoView(page, cell);
   await cell.click({ button: 'right' });
   const menu = page.getByRole('menu', { name: MENU_LABEL });
   await expect(menu).toBeVisible();
   return { cell, menu };
+}
+
+// The items grid opens at the oldest dates: `viewStart` useState initialises
+// to 0 while items are still loading, so a newly added item (days from today)
+// starts outside the visible 7-day window. Shift right until the cell renders.
+async function shiftCellIntoView(page: Page, cell: ReturnType<Page['locator']>): Promise<void> {
+  // Items grid renders before the vital grid, so its chevron is first in DOM order.
+  const shiftRight = page.locator('button:has(.lucide-chevron-right)').first();
+  for (let i = 0; i < 30; i++) {
+    if (await cell.isVisible({ timeout: 300 }).catch(() => false)) return;
+    if (await shiftRight.isDisabled().catch(() => true)) break;
+    await shiftRight.click();
+    await page.waitForTimeout(150);
+  }
+  await expect(cell).toBeVisible({ timeout: 10_000 });
 }
 
 test.describe('Doctor — «Відмінити препарат» and «Повернути у Заплановано»', () => {
@@ -150,6 +166,7 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
       await page.reload();
       await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
       const afterReload = page.locator('tbody tr').filter({ hasText: name }).locator('td', { hasText: DOSE });
+      await shiftCellIntoView(page, afterReload);
       await expect(afterReload).toHaveCSS('background-color', BLUE);
     } finally {
       await request.delete(`${API}/prescriptions/items/${itemId}`, { headers: auth });
