@@ -178,14 +178,14 @@ class ClinicalRbacIntegrationTest extends AbstractIntegrationTest {
     // ---- Prosthetics method security beyond the URL ceiling ----
 
     @Test
-    void prosthetist_gateDecision_forbidden() {
-        String prosthetist = tokenForRole("prosthetist-rbac", UserRole.PROSTHETIST);
+    void nurse_createInstance_forbidden() {
+        String nurse = tokenForRole("nurse-prosth-rbac", UserRole.NURSE);
 
         var res = restTemplate.exchange(
-                "/api/prosthesis-manufacturing/instances/{iid}/gates/{gid}/decision",
+                "/api/prosthesis-manufacturing/instances",
                 HttpMethod.POST,
-                authEntity("{\"decision\":\"PASS\"}", prosthetist),
-                String.class, UUID.randomUUID(), UUID.randomUUID());
+                authEntity("{\"orderId\":\"" + UUID.randomUUID() + "\",\"templateId\":\"" + UUID.randomUUID() + "\"}", nurse),
+                String.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
