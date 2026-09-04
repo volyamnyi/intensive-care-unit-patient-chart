@@ -4,6 +4,7 @@ import com.superhumans.medicationsheet.entity.*;
 import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.*;
+import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,7 @@ class PrescriptionItemServiceTest {
     @Mock private PrescriptionItemDayRepository dayRepository;
     @Mock private PrescriptionDayPartRepository partRepository;
     @Mock private PrescriptionListRepository listRepository;
+    @Mock private AuditService auditService;
 
     @InjectMocks
     private PrescriptionItemService service;
@@ -311,6 +313,7 @@ class PrescriptionItemServiceTest {
     void planDose_setsDoseAndDoctorName() {
         UUID dayPartId = UUID.randomUUID();
         UUID doctorId = UUID.randomUUID();
+        Long userId = 7L;
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").isPlanned(false).isCompleted(false).build();
         part.setId(dayPartId);
@@ -318,19 +321,42 @@ class PrescriptionItemServiceTest {
         when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
         when(partRepository.save(any())).thenReturn(part);
 
-        PrescriptionDayPart result = service.planDose(dayPartId, "50mg", doctorId);
+        PrescriptionDayPart result = service.planDose(dayPartId, "50mg", doctorId, userId);
 
         verify(partRepository).save(partCaptor.capture());
         assertThat(partCaptor.getValue().getDose()).isEqualTo("50mg");
         assertThat(partCaptor.getValue().getIsPlanned()).isTrue();
+        assertThat(partCaptor.getValue().getIsPlannedFinished()).isFalse();
         assertThat(partCaptor.getValue().getDoctorName()).isEqualTo(doctorId.toString());
+        verify(auditService).logAction("PrescriptionDayPart", dayPartId, "PLAN", userId);
+    }
+
+    @Test
+    void planDose_resetsPlannedFinished_whenReplanningCancelled() {
+        UUID dayPartId = UUID.randomUUID();
+        UUID doctorId = UUID.randomUUID();
+        Long userId = 7L;
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(true).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+        when(partRepository.save(any())).thenReturn(part);
+
+        PrescriptionDayPart result = service.planDose(dayPartId, "60mg", doctorId, userId);
+
+        assertThat(result.getIsPlanned()).isTrue();
+        assertThat(result.getIsPlannedFinished()).isFalse();
+        assertThat(result.getDose()).isEqualTo("60mg");
+        verify(auditService).logAction("PrescriptionDayPart", dayPartId, "PLAN", userId);
     }
 
     @Test
     void planDose_throws_whenNotFound() {
         when(partRepository.findById(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.planDose(UUID.randomUUID(), "10mg", UUID.randomUUID()))
+        assertThatThrownBy(() -> service.planDose(UUID.randomUUID(), "10mg", UUID.randomUUID(), 7L))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -370,6 +396,182 @@ class PrescriptionItemServiceTest {
 
         verify(partRepository).save(partCaptor.capture());
         assertThat(partCaptor.getValue().getIsCompletedFinished()).isTrue();
+    }
+
+    // --- markPlannedFinished («Відмінити препарат») ---
+
+    @Test
+    void markPlannedFinished_setsFlagKeepsDoseAndAudits() {
+        UUID dayPartId = UUID.randomUUID();
+        UUID doctorId = UUID.randomUUID();
+        Long userId = 7L;
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(false).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+        when(partRepository.save(any())).thenReturn(part);
+
+        PrescriptionDayPart result = service.markPlannedFinished(dayPartId, doctorId, userId);
+
+        assertThat(result.getIsPlanned()).isTrue();
+        assertThat(result.getIsPlannedFinished()).isTrue();
+        assertThat(result.getDose()).isEqualTo("50mg");
+        verify(auditService).logAction("PrescriptionDayPart", dayPartId, "CANCEL", userId);
+    }
+
+    @Test
+    void markPlannedFinished_throws_whenCompleted() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(false).isCompleted(true).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.markPlannedFinished(dayPartId, UUID.randomUUID(), 7L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Виконане призначення не може бути відмінене");
+        verify(partRepository, never()).save(any());
+        verify(auditService, never()).logAction(any(), any(), any(), any());
+    }
+
+    @Test
+    void markPlannedFinished_throws_whenCompletedFinished() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(false).isCompleted(true).isCompletedFinished(true).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.markPlannedFinished(dayPartId, UUID.randomUUID(), 7L))
+                .isInstanceOf(BusinessException.class);
+        verify(partRepository, never()).save(any());
+    }
+
+    @Test
+    void markPlannedFinished_throws_whenUnplanned() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning")
+                .isPlanned(false).isPlannedFinished(false).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.markPlannedFinished(dayPartId, UUID.randomUUID(), 7L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Незаплановане призначення не може бути відмінене");
+        verify(partRepository, never()).save(any());
+    }
+
+    @Test
+    void markPlannedFinished_throws_whenAlreadyCancelled() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(true).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.markPlannedFinished(dayPartId, UUID.randomUUID(), 7L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Призначення вже відмінене");
+        verify(partRepository, never()).save(any());
+    }
+
+    @Test
+    void markPlannedFinished_throws_whenNotFound() {
+        when(partRepository.findById(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.markPlannedFinished(UUID.randomUUID(), UUID.randomUUID(), 7L))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    // --- restoreToPlanned («Повернути у Заплановано») ---
+
+    @Test
+    void restoreToPlanned_clearsCancelFlagKeepsDoseAndAudits() {
+        UUID dayPartId = UUID.randomUUID();
+        UUID doctorId = UUID.randomUUID();
+        Long userId = 7L;
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(true).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+        when(partRepository.save(any())).thenReturn(part);
+
+        PrescriptionDayPart result = service.restoreToPlanned(dayPartId, doctorId, userId);
+
+        assertThat(result.getIsPlanned()).isTrue();
+        assertThat(result.getIsPlannedFinished()).isFalse();
+        assertThat(result.getIsCompleted()).isFalse();
+        assertThat(result.getIsCompletedFinished()).isFalse();
+        assertThat(result.getDose()).isEqualTo("50mg");
+        verify(auditService).logAction("PrescriptionDayPart", dayPartId, "REPLAN", userId);
+    }
+
+    @Test
+    void restoreToPlanned_throws_whenNotCancelled() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(false).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.restoreToPlanned(dayPartId, UUID.randomUUID(), 7L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Призначення не у статусі «Відмінено», повернення неможливе");
+        verify(partRepository, never()).save(any());
+        verify(auditService, never()).logAction(any(), any(), any(), any());
+    }
+
+    @Test
+    void restoreToPlanned_throws_whenCompleted() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(false).isCompleted(true).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.restoreToPlanned(dayPartId, UUID.randomUUID(), 7L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Виконане призначення не може бути повернене у заплановані");
+        verify(partRepository, never()).save(any());
+    }
+
+    @Test
+    void restoreToPlanned_throws_whenCompletedFinished() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg")
+                .isPlanned(true).isPlannedFinished(true).isCompleted(true).isCompletedFinished(true).build();
+        part.setId(dayPartId);
+
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.restoreToPlanned(dayPartId, UUID.randomUUID(), 7L))
+                .isInstanceOf(BusinessException.class);
+        verify(partRepository, never()).save(any());
+    }
+
+    @Test
+    void restoreToPlanned_throws_whenNotFound() {
+        when(partRepository.findById(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.restoreToPlanned(UUID.randomUUID(), UUID.randomUUID(), 7L))
+                .isInstanceOf(NotFoundException.class);
     }
 
     // --- getDays ---

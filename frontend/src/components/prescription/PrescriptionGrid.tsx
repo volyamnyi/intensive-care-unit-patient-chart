@@ -15,7 +15,8 @@ export interface GridProps {
   isDoctor: boolean;
   isNurse: boolean;
   onPlan: (dayPartId: string, dose: string) => Promise<void>;
-  onCancel: (dayPartId: string) => Promise<void>;
+  onCancelMedication: (dayPartId: string) => Promise<void>;
+  onRestoreToPlanned: (dayPartId: string) => Promise<void>;
   onAddDay?: (itemId: string) => Promise<void> | void;
   onRemoveDay?: (itemId: string, dayId: string) => Promise<void> | void;
   onExecute?: (dayPartId: string, actualDose: string, secondPersonLogin: string, secondPersonPassword: string) => Promise<void>;
@@ -28,7 +29,7 @@ export interface GridProps {
 
 export default function PrescriptionGrid({
   items, canEdit, isDoctor, isNurse,
-  onPlan, onCancel, onAddDay, onRemoveDay, onExecute,
+  onPlan, onCancelMedication, onRestoreToPlanned, onAddDay, onRemoveDay, onExecute,
   onAddItem, onRemoveItem,
   onSearchMedicine, allergies, loading,
 }: GridProps) {
@@ -160,7 +161,8 @@ export default function PrescriptionGrid({
         onAddDay={onAddDay}
         onRemoveDay={onRemoveDay}
         onPlan={onPlan}
-        onCancel={onCancel}
+        onCancelMedication={onCancelMedication}
+        onRestoreToPlanned={onRestoreToPlanned}
         onOpenExecute={openExecute}
         onOpenDeleteConfirm={openDeleteConfirm}
       />

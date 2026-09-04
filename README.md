@@ -377,6 +377,8 @@ java -jar app/target/app-*.jar
 | `POST` | `/api/prescriptions/items/{itemId}/days` | Doctor/HOD | Add next day (max day date + 1) with 4 unplanned day parts |
 | `DELETE` | `/api/prescriptions/items/{itemId}/days/{dayId}` | Doctor/HOD | Remove a day (422 if any day part is completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/plan` | Doctor/HOD | Plan dose for day part |
+| `PUT` | `/api/prescriptions/day-parts/{id}/cancel` | Doctor/HOD | Cancel medication («Відмінити препарат»; 422 if not planned or completed) |
+| `PUT` | `/api/prescriptions/day-parts/{id}/replan` | Doctor/HOD | Restore cancelled dose to planned, keeping the dose (422 if not cancelled or completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/complete` | Nurse/HOD | Complete day part |
 | `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (with optional 2P auth) |
 | `GET` | `/api/prescriptions/allergies?patientId=` | Yes | Patient allergies (from MIS) |

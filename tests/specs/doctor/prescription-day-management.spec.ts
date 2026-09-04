@@ -126,8 +126,8 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
     await cell.click({ button: 'right' });
     const menu = page.getByRole('menu', { name: MENU_LABEL });
     await expect(menu).toBeVisible();
-    // The added day is unplanned/uncompleted → no "Скасувати дозу" expected.
-    await expect(menu.getByRole('menuitem', { name: 'Скасувати дозу' })).toHaveCount(0);
+    // The added day is unplanned/uncompleted → no "Відмінити препарат" expected.
+    await expect(menu.getByRole('menuitem', { name: 'Відмінити препарат' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: MENU_REMOVE_DAY })).toBeVisible();
 
     const [delRes] = await Promise.all([

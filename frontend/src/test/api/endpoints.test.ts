@@ -209,6 +209,16 @@ describe('prescriptionApi', () => {
     expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/plan', { dose: '10mg' });
   });
 
+  it('cancelMedication puts to /prescriptions/day-parts/:id/cancel', () => {
+    prescriptionApi.cancelMedication('part-1');
+    expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/cancel');
+  });
+
+  it('restoreToPlanned puts to /prescriptions/day-parts/:id/replan', () => {
+    prescriptionApi.restoreToPlanned('part-1');
+    expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/replan');
+  });
+
   it('completeDose puts to /prescriptions/day-parts/:id/complete', () => {
     prescriptionApi.completeDose('part-1');
     expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/complete');

@@ -32,8 +32,10 @@ export const prescriptionApi = {
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/plan`, { dose }),
   completeDose: (dayPartId: string) =>
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/complete`),
-  cancelDose: (dayPartId: string) =>
+  cancelMedication: (dayPartId: string) =>
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/cancel`),
+  restoreToPlanned: (dayPartId: string) =>
+    client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/replan`),
   executeDose: (dayPartId: string, data: PrescriptionExecutionCreateRequest) =>
     client.post<void>(`/prescriptions/day-parts/${dayPartId}/execute`, data),
   getAllergies: (patientId: number) =>

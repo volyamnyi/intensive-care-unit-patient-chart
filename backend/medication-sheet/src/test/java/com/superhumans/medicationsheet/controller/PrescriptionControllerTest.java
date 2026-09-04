@@ -384,14 +384,14 @@ class PrescriptionControllerTest {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).isPlannedFinished(true).build();
         part.setId(dayPartId);
-        when(itemService.markPlannedFinished(eq(dayPartId), any())).thenReturn(part);
+        when(itemService.markPlannedFinished(eq(dayPartId), any(), any())).thenReturn(part);
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel", dayPartId)
                         .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isOk());
 
         UUID expectedUuid = UUID.nameUUIDFromBytes("1".getBytes());
-        verify(itemService).markPlannedFinished(eq(dayPartId), eq(expectedUuid));
+        verify(itemService).markPlannedFinished(eq(dayPartId), eq(expectedUuid), eq(1L));
     }
 
     @Test
@@ -540,12 +540,81 @@ class PrescriptionControllerTest {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).isPlannedFinished(true).build();
         part.setId(dayPartId);
-        when(itemService.markPlannedFinished(eq(dayPartId), any())).thenReturn(part);
+        when(itemService.markPlannedFinished(eq(dayPartId), any(), any())).thenReturn(part);
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel", dayPartId)
                         .with(TestSecurityHelper.hod()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isPlannedFinished").value(true));
+    }
+
+    @Test
+    void replanDose_returnsDayPart() throws Exception {
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).isPlannedFinished(false).build();
+        part.setId(dayPartId);
+        when(itemService.restoreToPlanned(eq(dayPartId), any(), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/replan", dayPartId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isPlanned").value(true))
+                .andExpect(jsonPath("$.isPlannedFinished").value(false))
+                .andExpect(jsonPath("$.dose").value("50mg"));
+
+        UUID expectedUuid = UUID.nameUUIDFromBytes("1".getBytes());
+        verify(itemService).restoreToPlanned(eq(dayPartId), eq(expectedUuid), eq(1L));
+    }
+
+    @Test
+    void replanDose_withHodRole_returnsDayPart() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).isPlannedFinished(false).build();
+        part.setId(dayPartId);
+        when(itemService.restoreToPlanned(eq(dayPartId), any(), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/replan", dayPartId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isPlannedFinished").value(false));
+    }
+
+    @Test
+    void replanDose_withNurseRole_returnsForbidden() throws Exception {
+        when(permissionService.has(eq("PRESCRIPTION_CREATE"))).thenReturn(false);
+        when(permissionService.has(eq("PRESCRIPTION_EXECUTE"))).thenReturn(true);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/replan", dayPartId)
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isForbidden());
+
+        verify(itemService, never()).restoreToPlanned(any(), any(), any());
+    }
+
+    @Test
+    void replanDose_partNotFound_returnsNotFound() throws Exception {
+        when(itemService.restoreToPlanned(eq(dayPartId), any(), any()))
+                .thenThrow(new NotFoundException("Day part not found: " + dayPartId));
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/replan", dayPartId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("Day part not found: " + dayPartId));
+    }
+
+    @Test
+    void replanDose_notCancelled_returnsUnprocessableEntity() throws Exception {
+        String ukMsg = "Призначення не у статусі «Відмінено», повернення неможливе";
+        when(itemService.restoreToPlanned(eq(dayPartId), any(), any()))
+                .thenThrow(new BusinessException(ErrorCode.BUSINESS_RULE, ukMsg));
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/replan", dayPartId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value(ErrorCode.BUSINESS_RULE))
+                .andExpect(jsonPath("$.message").value(ukMsg));
     }
 
     @Test

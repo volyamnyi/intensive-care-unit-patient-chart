@@ -43,7 +43,8 @@ function renderGrid(props: Partial<React.ComponentProps<typeof PrescriptionGrid>
         isDoctor={props.isDoctor ?? true}
         isNurse={props.isNurse ?? false}
         onPlan={props.onPlan ?? vi.fn()}
-        onCancel={props.onCancel ?? vi.fn()}
+        onCancelMedication={props.onCancelMedication ?? vi.fn()}
+        onRestoreToPlanned={props.onRestoreToPlanned ?? vi.fn()}
         onExecute={props.onExecute}
         onAddItem={props.onAddItem ?? vi.fn()}
         onRemoveItem={props.onRemoveItem ?? vi.fn()}

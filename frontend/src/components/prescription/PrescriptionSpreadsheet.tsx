@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X, CalendarDays, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PrescriptionDayPart } from '../../types/medication';
@@ -45,6 +45,7 @@ export interface DayContextMenuState {
   dayId?: string;
   cellLabel: string;
   cancelEnabled: boolean;
+  restoreEnabled: boolean;
   cancelDayPart: PrescriptionDayPart | null;
 }
 
@@ -63,14 +64,15 @@ export interface PrescriptionSpreadsheetProps {
   onAddDay?: (itemId: string) => Promise<void> | void;
   onRemoveDay?: (itemId: string, dayId: string) => Promise<void> | void;
   onPlan: (dayPartId: string, dose: string) => Promise<void>;
-  onCancel: (dayPartId: string) => Promise<void>;
+  onCancelMedication: (dayPartId: string) => Promise<void>;
+  onRestoreToPlanned: (dayPartId: string) => Promise<void>;
   onOpenExecute: (dp: PrescriptionDayPart, el: HTMLElement) => void;
   onOpenDeleteConfirm: (itemId: string, el: HTMLElement) => void;
 }
 
 export default function PrescriptionSpreadsheet({
   canEdit, isDoctor, isNurse, gridItems, visibleDates, allDates, viewStart, daysToShow,
-  loading, onShiftLeft, onShiftRight, onAddDay, onRemoveDay, onPlan, onCancel, onOpenExecute, onOpenDeleteConfirm,
+  loading, onShiftLeft, onShiftRight, onAddDay, onRemoveDay, onPlan, onCancelMedication, onRestoreToPlanned, onOpenExecute, onOpenDeleteConfirm,
 }: PrescriptionSpreadsheetProps) {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editingDose, setEditingDose] = useState('');
@@ -95,7 +97,8 @@ export default function PrescriptionSpreadsheet({
   const openDayMenu = (e: React.MouseEvent, item: GridItem, date: string, dp: PrescriptionDayPart) => {
     e.preventDefault();
     if (!canMenu) return;
-    const cancelEnabled = Boolean(dp.isPlanned && !dp.isCompleted);
+    const cancelEnabled = Boolean(dp.isPlanned && !dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished);
+    const restoreEnabled = Boolean(dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished);
     setDayMenu({
       clientX: e.clientX,
       clientY: e.clientY,
@@ -103,6 +106,7 @@ export default function PrescriptionSpreadsheet({
       dayId: dp.dayId,
       cellLabel: `${formatDate(date)} · ${PERIOD_FULL[dp.period] ?? dp.period}`,
       cancelEnabled,
+      restoreEnabled,
       cancelDayPart: dp,
     });
   };
@@ -128,9 +132,15 @@ export default function PrescriptionSpreadsheet({
     };
   }, [dayMenu]);
 
-  const handlePlanFromMenu = async () => {
+  const handleCancelFromMenu = async () => {
     const dp = dayMenu?.cancelDayPart;
-    if (dp) await onCancel(dp.id);
+    if (dp) await onCancelMedication(dp.id);
+    closeDayMenu();
+  };
+
+  const handleRestoreFromMenu = async () => {
+    const dp = dayMenu?.cancelDayPart;
+    if (dp) await onRestoreToPlanned(dp.id);
     closeDayMenu();
   };
 
@@ -377,10 +387,21 @@ export default function PrescriptionSpreadsheet({
                 type="button"
                 role="menuitem"
                 className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left rounded-md hover:bg-muted"
-                onClick={handlePlanFromMenu}
+                onClick={handleCancelFromMenu}
               >
                 <X className="size-3.5 text-muted-foreground" />
-                Скасувати дозу
+                Відмінити препарат
+              </button>
+            )}
+            {dayMenu.restoreEnabled && dayMenu.cancelDayPart && (
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left rounded-md hover:bg-muted"
+                onClick={handleRestoreFromMenu}
+              >
+                <Undo2 className="size-3.5 text-muted-foreground" />
+                Повернути у Заплановано
               </button>
             )}
             {dayMenu.dayId && onRemoveDay && (

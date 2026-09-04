@@ -85,13 +85,23 @@ export default function PrescriptionDetailPage() {
     }
   }
 
-  const handleCancel = async (dayPartId: string) => {
+  const handleCancelMedication = async (dayPartId: string) => {
     setError(null)
     try {
-      await prescriptionApi.cancelDose(dayPartId)
+      await prescriptionApi.cancelMedication(dayPartId)
       if (id) await loadItems(id)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося скасувати дозу'))
+      setError(getErrorMessage(err, 'Не вдалося відмінити препарат'))
+    }
+  }
+
+  const handleRestoreToPlanned = async (dayPartId: string) => {
+    setError(null)
+    try {
+      await prescriptionApi.restoreToPlanned(dayPartId)
+      if (id) await loadItems(id)
+    } catch (err) {
+      setError(getErrorMessage(err, 'Не вдалося повернути у заплановані'))
     }
   }
 
@@ -225,7 +235,8 @@ export default function PrescriptionDetailPage() {
         isDoctor={!isNurseUser}
         isNurse={isNurseUser}
         onPlan={handlePlan}
-        onCancel={handleCancel}
+        onCancelMedication={handleCancelMedication}
+        onRestoreToPlanned={handleRestoreToPlanned}
         onAddDay={isNurseUser ? undefined : handleAddDay}
         onRemoveDay={isNurseUser ? undefined : handleRemoveDay}
         onExecute={isNurseUser ? handleExecute : undefined}

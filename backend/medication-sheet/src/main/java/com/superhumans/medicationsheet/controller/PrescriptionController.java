@@ -183,7 +183,7 @@ public class PrescriptionController {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId = (Long) auth.getCredentials();
         UUID currentUserUuid = UUID.nameUUIDFromBytes(currentUserId.toString().getBytes());
-        return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), currentUserUuid));
+        return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), currentUserUuid, currentUserId));
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
@@ -201,15 +201,32 @@ public class PrescriptionController {
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
     @PutMapping("/day-parts/{dayPartId}/cancel")
-    @Operation(summary = "Cancel planned dose", description = "Marks a planned day part as cancelled (isPlannedFinished). Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
+    @Operation(summary = "Cancel medication («Відмінити препарат»)", description = "Marks a planned day part as cancelled (isPlannedFinished). Only a planned, non-completed part can be cancelled. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Planned dose cancelled successfully")
+            @ApiResponse(responseCode = "200", description = "Planned dose cancelled successfully"),
+            @ApiResponse(responseCode = "422", description = "Business rule violated - part is not planned or already completed/cancelled")
     })
     public PrescriptionDayPartResponse cancelDose(@PathVariable UUID dayPartId) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId = (Long) auth.getCredentials();
         UUID currentUserUuid = UUID.nameUUIDFromBytes(currentUserId.toString().getBytes());
-        return prescriptionDayPartMapper.toResponse(itemService.markPlannedFinished(dayPartId, currentUserUuid));
+        return prescriptionDayPartMapper.toResponse(itemService.markPlannedFinished(dayPartId, currentUserUuid, currentUserId));
+    }
+
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
+    @PutMapping("/day-parts/{dayPartId}/replan")
+    @Operation(summary = "Restore cancelled dose to planned («Повернути у Заплановано»)", description = "Returns a cancelled (isPlannedFinished) day part to the planned state, keeping the retained dose. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cancelled dose restored to planned successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Day part not found"),
+            @ApiResponse(responseCode = "422", description = "Business rule violated - part is not cancelled or is completed")
+    })
+    public PrescriptionDayPartResponse replanDose(@PathVariable UUID dayPartId) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        UUID currentUserUuid = UUID.nameUUIDFromBytes(currentUserId.toString().getBytes());
+        return prescriptionDayPartMapper.toResponse(itemService.restoreToPlanned(dayPartId, currentUserUuid, currentUserId));
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")

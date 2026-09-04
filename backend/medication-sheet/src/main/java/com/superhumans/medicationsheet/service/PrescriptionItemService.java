@@ -9,6 +9,7 @@ import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.service.AuditService;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionItemDayRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionItemRepository;
@@ -31,6 +32,7 @@ public class PrescriptionItemService {
     PrescriptionItemDayRepository dayRepository;
     PrescriptionDayPartRepository partRepository;
     PrescriptionListRepository listRepository;
+    AuditService auditService;
 
     @Transactional(readOnly = true)
     public List<PrescriptionItem> getByList(UUID listId) {
@@ -169,13 +171,18 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionDayPart planDose(UUID dayPartId, String dose, UUID doctorId) {
+    public PrescriptionDayPart planDose(UUID dayPartId, String dose, UUID doctorId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setDose(dose);
         part.setIsPlanned(true);
+        // Re-planning a cancelled dose («Відмінити препарат») returns it to Scheduled:
+        // the cancel flag must be cleared, otherwise the cell keeps rendering «Відмінено».
+        part.setIsPlannedFinished(false);
         part.setDoctorName(doctorId.toString());
-        part.setUpdatedBy(0L);
-        return partRepository.save(part);
+        part.setUpdatedBy(userId);
+        PrescriptionDayPart saved = partRepository.save(part);
+        auditService.logAction("PrescriptionDayPart", saved.getId(), "PLAN", userId);
+        return saved;
     }
 
     @Transactional
@@ -196,12 +203,46 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionDayPart markPlannedFinished(UUID dayPartId, UUID doctorId) {
+    public PrescriptionDayPart markPlannedFinished(UUID dayPartId, UUID doctorId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
+        if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Виконане призначення не може бути відмінене");
+        }
+        if (!Boolean.TRUE.equals(part.getIsPlanned())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Незаплановане призначення не може бути відмінене");
+        }
+        if (Boolean.TRUE.equals(part.getIsPlannedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Призначення вже відмінене");
+        }
         part.setIsPlannedFinished(true);
         part.setDoctorName(doctorId.toString());
-        part.setUpdatedBy(0L);
-        return partRepository.save(part);
+        part.setUpdatedBy(userId);
+        PrescriptionDayPart saved = partRepository.save(part);
+        auditService.logAction("PrescriptionDayPart", saved.getId(), "CANCEL", userId);
+        return saved;
+    }
+
+    @Transactional
+    public PrescriptionDayPart restoreToPlanned(UUID dayPartId, UUID doctorId, Long userId) {
+        PrescriptionDayPart part = getDayPart(dayPartId);
+        if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Виконане призначення не може бути повернене у заплановані");
+        }
+        if (!Boolean.TRUE.equals(part.getIsPlannedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Призначення не у статусі «Відмінено», повернення неможливе");
+        }
+        part.setIsPlanned(true);
+        part.setIsPlannedFinished(false);
+        part.setDoctorName(doctorId.toString());
+        part.setUpdatedBy(userId);
+        PrescriptionDayPart saved = partRepository.save(part);
+        auditService.logAction("PrescriptionDayPart", saved.getId(), "REPLAN", userId);
+        return saved;
     }
 
     public List<PrescriptionItemDay> getDays(UUID itemId) {

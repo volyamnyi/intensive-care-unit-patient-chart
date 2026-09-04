@@ -48,7 +48,8 @@ function renderGrid(props: Partial<GridProps> = {}) {
         isDoctor={props.isDoctor ?? true}
         isNurse={props.isNurse ?? false}
         onPlan={props.onPlan ?? vi.fn()}
-        onCancel={props.onCancel ?? vi.fn()}
+        onCancelMedication={props.onCancelMedication ?? vi.fn()}
+        onRestoreToPlanned={props.onRestoreToPlanned ?? vi.fn()}
         onAddDay={props.onAddDay}
         onRemoveDay={props.onRemoveDay}
         onAddItem={props.onAddItem ?? vi.fn()}
@@ -109,26 +110,77 @@ describe('PrescriptionSpreadsheet — per-item day actions', () => {
     expect(screen.queryByRole('menu', { name: 'Контекстне меню дня' })).not.toBeInTheDocument();
   });
 
-  it('«Скасувати дозу» appears for planned not-completed doses and calls onCancel', async () => {
-    const onCancel = vi.fn().mockResolvedValue(undefined);
+  it('«Відмінити препарат» appears for planned not-completed doses and calls onCancelMedication', async () => {
+    const onCancelMedication = vi.fn().mockResolvedValue(undefined);
     const planned = makeDayPart({ id: 'dp-planned', isPlanned: true, dose: '7.5mg' });
-    renderGrid({ items: [makeItem([planned])], onCancel });
+    renderGrid({ items: [makeItem([planned])], onCancelMedication });
 
     const cell = screen.getAllByText('7.5mg')[0].closest('td');
     expect(cell).not.toBeNull();
     fireEvent.contextMenu(cell!);
 
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Скасувати дозу/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити препарат/ }));
 
-    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
-    expect(onCancel).toHaveBeenCalledWith(planned.id);
+    await waitFor(() => expect(onCancelMedication).toHaveBeenCalledTimes(1));
+    expect(onCancelMedication).toHaveBeenCalledWith(planned.id);
   });
 
-  it('«Скасувати дозу» is hidden for an unplanned cell', async () => {
+  it('«Відмінити препарат» is hidden for an unplanned cell', async () => {
     renderGrid();
     fireEvent.contextMenu(await firstDayCell());
     await screen.findByRole('menu', { name: 'Контекстне меню дня' });
-    expect(screen.queryByRole('menuitem', { name: /Скасувати дозу/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Відмінити препарат/ })).not.toBeInTheDocument();
+  });
+
+  it('«Відмінити препарат» is hidden for an already-cancelled cell', async () => {
+    const cancelled = makeDayPart({ id: 'dp-cancelled', isPlanned: true, isPlannedFinished: true, dose: '7.5mg' });
+    renderGrid({ items: [makeItem([cancelled])] });
+    const cell = screen.getAllByText('✕')[0].closest('td');
+    expect(cell).not.toBeNull();
+    fireEvent.contextMenu(cell!);
+    await screen.findByRole('menu', { name: 'Контекстне меню дня' });
+    expect(screen.queryByRole('menuitem', { name: /Відмінити препарат/ })).not.toBeInTheDocument();
+  });
+
+  it('«Повернути у Заплановано» appears only for cancelled cells and calls onRestoreToPlanned', async () => {
+    const onRestoreToPlanned = vi.fn().mockResolvedValue(undefined);
+    const cancelled = makeDayPart({ id: 'dp-cancelled', isPlanned: true, isPlannedFinished: true, dose: '7.5mg' });
+    renderGrid({ items: [makeItem([cancelled])], onRestoreToPlanned });
+
+    const cell = screen.getAllByText('✕')[0].closest('td');
+    expect(cell).not.toBeNull();
+    fireEvent.contextMenu(cell!);
+
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Повернути у Заплановано/ }));
+
+    await waitFor(() => expect(onRestoreToPlanned).toHaveBeenCalledTimes(1));
+    expect(onRestoreToPlanned).toHaveBeenCalledWith(cancelled.id);
+  });
+
+  it('«Повернути у Заплановано» is hidden for planned, unplanned and completed cells', async () => {
+    const planned = makeDayPart({ id: 'dp-planned', isPlanned: true, dose: '7.5mg' });
+    renderGrid({ items: [makeItem([planned])] });
+    const plannedCell = screen.getAllByText('7.5mg')[0].closest('td');
+    fireEvent.contextMenu(plannedCell!);
+    await screen.findByRole('menu', { name: 'Контекстне меню дня' });
+    expect(screen.queryByRole('menuitem', { name: /Повернути у Заплановано/ })).not.toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Контекстне меню дня' })).not.toBeInTheDocument());
+
+    fireEvent.contextMenu(await firstDayCell());
+    await screen.findByRole('menu', { name: 'Контекстне меню дня' });
+    expect(screen.queryByRole('menuitem', { name: /Повернути у Заплановано/ })).not.toBeInTheDocument();
+  });
+
+  it('neither «Відмінити препарат» nor «Повернути у Заплановано» appears for a completed cell', async () => {
+    const completed = makeDayPart({ id: 'dp-completed', isPlanned: true, isCompleted: true, dose: '7.5mg' });
+    renderGrid({ items: [makeItem([completed])] });
+    const cell = screen.getAllByText('✓')[0].closest('td');
+    expect(cell).not.toBeNull();
+    fireEvent.contextMenu(cell!);
+    await screen.findByRole('menu', { name: 'Контекстне меню дня' });
+    expect(screen.queryByRole('menuitem', { name: /Відмінити препарат/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Повернути у Заплановано/ })).not.toBeInTheDocument();
   });
 
   it('does not open the context menu for a nurse', async () => {

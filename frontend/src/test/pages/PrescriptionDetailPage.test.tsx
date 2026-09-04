@@ -10,6 +10,8 @@ const mockGetAllergies = vi.fn().mockResolvedValue({ data: [] });
 const mockGetGrid = vi.fn().mockResolvedValue({ data: [] });
 const mockAddItemDay = vi.fn();
 const mockRemoveItemDay = vi.fn();
+const mockCancelMedication = vi.fn();
+const mockRestoreToPlanned = vi.fn();
 let mockAuth: () => unknown = () => doctorAuth;
 
 vi.mock('react-router-dom', async () => {
@@ -24,7 +26,10 @@ vi.mock('../../api/medication', () => ({
     getAllergies: (...a: unknown[]) => mockGetAllergies(...a),
     addItemDay: (...a: unknown[]) => mockAddItemDay(...a),
     removeItemDay: (...a: unknown[]) => mockRemoveItemDay(...a),
-    planDose: vi.fn(), completeDose: vi.fn(), cancelDose: vi.fn(), executeDose: vi.fn(),
+    planDose: vi.fn(), completeDose: vi.fn(),
+    cancelMedication: (...a: unknown[]) => mockCancelMedication(...a),
+    restoreToPlanned: (...a: unknown[]) => mockRestoreToPlanned(...a),
+    executeDose: vi.fn(),
     addItem: vi.fn(), removeItem: vi.fn(), create: vi.fn(), delete: vi.fn(), close: vi.fn(),
     getByPatient: vi.fn(),
     getMedicineCatalog: () => Promise.resolve({ data: [] }),
@@ -88,11 +93,27 @@ function makeItem(id = 'item-1', dayId = 'day-1') {
   };
 }
 
-function renderPage(auth: () => unknown = () => doctorAuth) {
+function makeCellItem(flags: { isPlanned: boolean; isPlannedFinished: boolean; isCompleted?: boolean }) {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    ...makeItem(),
+    dayParts: [
+      {
+        id: 'dp-1', dayId: 'day-1', dayDate: today, period: 'morning', dose: '5mg',
+        isPlanned: flags.isPlanned,
+        isPlannedFinished: flags.isPlannedFinished,
+        isCompleted: flags.isCompleted ?? false,
+        isCompletedFinished: false,
+        doctorName: null, nurseName: null,
+      },
+    ],
+  };
+}
+function renderPage(auth: () => unknown = () => doctorAuth, items = [makeItem()]) {
   mockAuth = auth;
   mockUseParams.mockReturnValue({ id: 'list-1' });
   mockGetById.mockResolvedValue({ data: makeList() });
-  mockGetItems.mockResolvedValue({ data: [makeItem()] });
+  mockGetItems.mockResolvedValue({ data: items });
   return render(
     <ThemeModeProvider>
       <PrescriptionDetailPage />
@@ -106,6 +127,8 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     mockAuth = () => doctorAuth;
     mockAddItemDay.mockResolvedValue({ data: makeItem() });
     mockRemoveItemDay.mockResolvedValue({ data: null });
+    mockCancelMedication.mockResolvedValue({ data: makeItem() });
+    mockRestoreToPlanned.mockResolvedValue({ data: makeItem() });
   });
 
   it('doctor: «+ День» adds a day via API and refreshes items', async () => {
@@ -135,6 +158,52 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     expect(mockRemoveItemDay).toHaveBeenCalledWith('item-1', 'day-1');
     await waitFor(() => expect(screen.getByText(ukMessage)).toBeInTheDocument());
     expect(screen.queryByText('Не вдалося видалити день')).not.toBeInTheDocument();
+  });
+
+  it('doctor: «Відмінити препарат» calls cancelMedication and refreshes items', async () => {
+    renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: false })]);
+
+    const row = (await screen.findByText('Dopamine')).closest('tr');
+    expect(row).not.toBeNull();
+    const cell = row!.querySelectorAll('td')[1];
+    fireEvent.contextMenu(cell);
+
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити препарат/ }));
+
+    await waitFor(() => expect(mockCancelMedication).toHaveBeenCalledTimes(1));
+    expect(mockCancelMedication).toHaveBeenCalledWith('dp-1');
+    await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+  });
+
+  it('doctor: «Повернути у Заплановано» calls restoreToPlanned and refreshes items', async () => {
+    renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: true })]);
+
+    const row = (await screen.findByText('Dopamine')).closest('tr');
+    expect(row).not.toBeNull();
+    const cell = row!.querySelectorAll('td')[1];
+    fireEvent.contextMenu(cell);
+
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Повернути у Заплановано/ }));
+
+    await waitFor(() => expect(mockRestoreToPlanned).toHaveBeenCalledTimes(1));
+    expect(mockRestoreToPlanned).toHaveBeenCalledWith('dp-1');
+    await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+  });
+
+  it('doctor: failed restore surfaces the backend message', async () => {
+    const ukMessage = 'Призначення не у статусі «Відмінено», повернення неможливе';
+    mockRestoreToPlanned.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
+    renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: true })]);
+
+    const row = (await screen.findByText('Dopamine')).closest('tr');
+    expect(row).not.toBeNull();
+    const cell = row!.querySelectorAll('td')[1];
+    fireEvent.contextMenu(cell);
+
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Повернути у Заплановано/ }));
+
+    await waitFor(() => expect(screen.getByText(ukMessage)).toBeInTheDocument());
+    expect(screen.queryByText('Не вдалося повернути у заплановані')).not.toBeInTheDocument();
   });
 
   it('nurse: «+ День» is not rendered and API is never called', async () => {
