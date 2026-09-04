@@ -3,7 +3,6 @@ package com.superhumans.prosthesismanufacturing.dto;
 import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
-import com.superhumans.prosthesismanufacturing.entity.ReworkType;
 import com.superhumans.prosthesismanufacturing.entity.StageType;
 import com.superhumans.prosthesismanufacturing.entity.StepType;
 import jakarta.validation.constraints.NotBlank;
@@ -58,45 +57,7 @@ public class TemplateCreateRequest {
 
         Boolean canSkip;
         Boolean requiresApproval;
-        TemplateGateRequest gate;
         List<TemplateStepRequest> steps;
-    }
-
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @FieldDefaults(level = AccessLevel.PRIVATE)
-    public static class TemplateGateRequest {
-        @NotBlank
-        String name;
-
-        String description;
-
-        @NotBlank
-        String requiredApproverRole;
-
-        List<String> checklist;
-        Boolean attachmentsRequired;
-        List<GateReworkLoopRequest> reworkLoops;
-    }
-
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @FieldDefaults(level = AccessLevel.PRIVATE)
-    public static class GateReworkLoopRequest {
-        Integer targetStepIndex;
-
-        @NotNull
-        ReworkType reworkType;
-
-        @NotNull
-        @Positive
-        Integer maxAttempts;
     }
 
     @Getter

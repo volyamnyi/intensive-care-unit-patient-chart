@@ -149,7 +149,6 @@ public class BrakService {
                 .originStepId(instance.getCurrentStepId())
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
-                .reworkCount(0)
                 .startTime(now)
                 .resumedAt(now)
                 .templateSnapshot(instance.getTemplateSnapshot())

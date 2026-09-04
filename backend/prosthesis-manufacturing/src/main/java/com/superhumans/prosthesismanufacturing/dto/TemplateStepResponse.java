@@ -17,6 +17,5 @@ public class TemplateStepResponse {
     Boolean allowBackward;
     Boolean autoStartTimer;
     Integer normDurationMin;
-    UUID reworkTargetStepId;
     List<TemplateElementResponse> elements;
 }

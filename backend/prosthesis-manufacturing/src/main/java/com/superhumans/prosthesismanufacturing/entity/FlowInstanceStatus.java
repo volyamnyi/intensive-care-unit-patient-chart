@@ -6,9 +6,6 @@ public enum FlowInstanceStatus {
     PAUSED,
     BLOCKED_PATIENT,
     BLOCKED_MATERIAL,
-    WAITING_REVIEW,
-    CORRECTION,
-    FAILED_QC,
     COMPLETED,
     FAILED,
     BRANCHED

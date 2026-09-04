@@ -41,9 +41,6 @@ public class TemplateStage extends BaseEntity {
     @Builder.Default
     List<TemplateStep> steps = new ArrayList<>();
 
-    @OneToOne(mappedBy = "stage", fetch = FetchType.LAZY)
-    QualityGate gate;
-
     @PrePersist
     @PreUpdate
     public void validate() {

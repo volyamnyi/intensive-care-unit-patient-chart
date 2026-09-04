@@ -1,5 +1,6 @@
 package com.superhumans.prosthesismanufacturing.service;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -67,41 +68,16 @@ public class TemplateSnapshotParser {
     @NoArgsConstructor
     @AllArgsConstructor
     @FieldDefaults(level = AccessLevel.PRIVATE)
+    // Historic snapshots persisted before the Quality Gate removal may still carry a
+    // "gate" block — tolerate and ignore it instead of failing the parse.
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class SnapshotStage {
         UUID id;
         String name;
         String stageType;
         boolean canSkip;
         boolean requiresApproval;
-        SnapshotGate gate;
         List<SnapshotStep> steps;
-    }
-
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @FieldDefaults(level = AccessLevel.PRIVATE)
-    public static class SnapshotGate {
-        UUID id;
-        String name;
-        String requiredApproverRole;
-        List<String> checklist;
-        boolean attachmentsRequired;
-        List<SnapshotReworkLoop> reworkLoops;
-    }
-
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @FieldDefaults(level = AccessLevel.PRIVATE)
-    public static class SnapshotReworkLoop {
-        UUID targetStepId;
-        String reworkType;
-        int maxAttempts;
     }
 
     @Getter

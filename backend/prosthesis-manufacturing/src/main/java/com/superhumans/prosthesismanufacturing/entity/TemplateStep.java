@@ -8,7 +8,6 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "prosthetics_template_steps")
@@ -47,9 +46,6 @@ public class TemplateStep extends BaseEntity {
 
     @Column(name = "norm_duration_min")
     Integer normDurationMin;
-
-    @Column(name = "rework_target_step_id")
-    UUID reworkTargetStepId;
 
     @OneToMany(mappedBy = "step", fetch = FetchType.LAZY)
     @Builder.Default

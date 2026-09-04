@@ -27,7 +27,6 @@ public class FlowInstanceResponse {
     LocalDateTime endTime;
     Long totalActiveSeconds;
     Long totalIdleSeconds;
-    Integer reworkCount;
     String failReason;
     LocalDateTime pausedAt;
     LocalDateTime resumedAt;

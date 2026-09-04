@@ -15,5 +15,4 @@ public class TemplateStageResponse {
     Boolean canSkip;
     Boolean requiresApproval;
     List<TemplateStepResponse> steps;
-    QualityGateResponse gate;
 }

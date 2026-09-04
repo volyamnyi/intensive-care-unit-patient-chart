@@ -6,8 +6,6 @@ import com.superhumans.prosthesismanufacturing.dto.BranchResponse;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
-import com.superhumans.prosthesismanufacturing.dto.GateDecisionRequest;
-import com.superhumans.prosthesismanufacturing.dto.GateDecisionResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageResponse;
@@ -20,7 +18,6 @@ import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.service.BrakService;
 import com.superhumans.prosthesismanufacturing.service.EvidenceFileService;
 import com.superhumans.prosthesismanufacturing.service.FlowInstanceService;
-import com.superhumans.prosthesismanufacturing.service.QualityGateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -57,7 +54,6 @@ import java.util.UUID;
 public class FlowInstanceController {
 
     FlowInstanceService instanceService;
-    QualityGateService gateService;
     EvidenceFileService evidenceFileService;
     BrakService brakService;
     CurrentUser currentUser;
@@ -133,13 +129,6 @@ public class FlowInstanceController {
         return instanceService.updateNote(id, executionId, request.getNote(), currentUser.userId());
     }
 
-    @GetMapping("/{id}/gate-decisions")
-    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
-    @Operation(summary = "List quality gate decisions of the instance")
-    public List<GateDecisionResponse> listGateDecisions(@PathVariable UUID id) {
-        return instanceService.listGateDecisions(id, currentUser.userId(), currentUser.canViewAllInstances());
-    }
-
     @GetMapping("/{id}/resources")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List resource usage records of the instance")
@@ -182,15 +171,6 @@ public class FlowInstanceController {
     @Operation(summary = "Create a replacement instance for a failed one")
     public FlowInstanceResponse replacement(@PathVariable UUID id) {
         return instanceService.replacement(id, currentUser.userId());
-    }
-
-    @PostMapping("/{id}/gates/{gateId}/decision")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_GATE_DECISION')")
-    @Operation(summary = "Decide a quality gate: PASS / REWORK / FAIL")
-    public FlowInstanceResponse decideGate(@PathVariable UUID id, @PathVariable UUID gateId,
-                                           @Valid @RequestBody GateDecisionRequest request) {
-        return gateService.decide(id, gateId, request, currentUser.userId(),
-                currentUser.isProstheticsAdmin());
     }
 
     @PostMapping(value = "/{id}/evidence", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

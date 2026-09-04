@@ -43,7 +43,6 @@ public final class PermissionCatalog {
     public static final String PROSTHETICS_INSTANCE_CREATE = "PROSTHETICS_INSTANCE_CREATE";
     public static final String PROSTHETICS_STEP_COMPLETE = "PROSTHETICS_STEP_COMPLETE";
     public static final String PROSTHETICS_PAUSE_RESUME = "PROSTHETICS_PAUSE_RESUME";
-    public static final String PROSTHETICS_GATE_DECISION = "PROSTHETICS_GATE_DECISION";
     public static final String PROSTHETICS_TEMPLATE_MANAGE = "PROSTHETICS_TEMPLATE_MANAGE";
     public static final String PROSTHETICS_ORDER_MANAGE = "PROSTHETICS_ORDER_MANAGE";
 
@@ -99,8 +98,6 @@ public final class PermissionCatalog {
                     "Заповнення та завершення кроків процесу, завантаження файлів", PROSTHETICS),
             new Def(PROSTHETICS_PAUSE_RESUME, "Пауза / відновлення",
                     "Призупинення та відновлення процесу", PROSTHETICS),
-            new Def(PROSTHETICS_GATE_DECISION, "Рішення quality gate",
-                    "Рішення контролю якості (PASS / REWORK / FAIL)", PROSTHETICS),
             new Def(PROSTHETICS_TEMPLATE_MANAGE, "Керування шаблонами",
                     "Створення та редагування шаблонів технологічних процесів", PROSTHETICS),
             new Def(PROSTHETICS_ORDER_MANAGE, "Пацієнти та замовлення",
@@ -147,7 +144,7 @@ public final class PermissionCatalog {
             Map.entry(UserRole.PROSTHETICS_ADMINISTRATOR, Set.of(
                     PROSTHETICS_DASHBOARD, PROSTHETICS_INSTANCE_CREATE,
                     PROSTHETICS_STEP_COMPLETE, PROSTHETICS_PAUSE_RESUME,
-                    PROSTHETICS_GATE_DECISION, PROSTHETICS_TEMPLATE_MANAGE,
+                    PROSTHETICS_TEMPLATE_MANAGE,
                     PROSTHETICS_ORDER_MANAGE, MODULE_PROSTHETICS_ACCESS)));
 
     public static List<Def> definitions() {

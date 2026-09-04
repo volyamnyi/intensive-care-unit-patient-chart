@@ -8,16 +8,12 @@ import com.superhumans.prosthesismanufacturing.dto.TemplatePatchRequest;
 import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
-import com.superhumans.prosthesismanufacturing.entity.QualityGate;
-import com.superhumans.prosthesismanufacturing.entity.ReworkLoop;
 import com.superhumans.prosthesismanufacturing.entity.TemplateElement;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStage;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStep;
 import com.superhumans.prosthesismanufacturing.mapper.FlowTemplateMapper;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
-import com.superhumans.prosthesismanufacturing.repository.QualityGateRepository;
-import com.superhumans.prosthesismanufacturing.repository.ReworkLoopRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateElementRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateStageRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateStepRepository;
@@ -25,8 +21,6 @@ import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.service.AuditService;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotElement;
-import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotGate;
-import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotReworkLoop;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotTemplate;
@@ -51,8 +45,6 @@ public class FlowTemplateService {
     TemplateStageRepository stageRepository;
     TemplateStepRepository stepRepository;
     TemplateElementRepository elementRepository;
-    QualityGateRepository gateRepository;
-    ReworkLoopRepository reworkLoopRepository;
     FlowTemplateMapper templateMapper;
     AuditService auditService;
     TemplateSnapshotParser snapshotParser;
@@ -193,45 +185,6 @@ public class FlowTemplateService {
                     }
                 }
 
-                if (stageRequest.getGate() != null) {
-                    TemplateCreateRequest.TemplateGateRequest gateRequest = stageRequest.getGate();
-                    QualityGate gate = QualityGate.builder()
-                            .stage(stage)
-                            .name(gateRequest.getName())
-                            .description(gateRequest.getDescription())
-                            .requiredApproverRole(gateRequest.getRequiredApproverRole())
-                            .checklist(toJson(gateRequest.getChecklist()))
-                            .attachmentsRequired(Boolean.TRUE.equals(gateRequest.getAttachmentsRequired()))
-                            .reworkLoops(new ArrayList<>())
-                            .build();
-                    gateRepository.save(gate);
-                    stage.setGate(gate);
-
-                    if (gateRequest.getReworkLoops() != null) {
-                        List<TemplateStep> stageSteps = stage.getSteps();
-                        for (TemplateCreateRequest.GateReworkLoopRequest loopRequest
-                                : gateRequest.getReworkLoops()) {
-                            UUID targetStepId = null;
-                            if (loopRequest.getTargetStepIndex() != null) {
-                                if (loopRequest.getTargetStepIndex() < 0
-                                        || loopRequest.getTargetStepIndex() >= stageSteps.size()) {
-                                    throw new BadRequestException(
-                                            "Rework target step index is out of range for stage " + stage.getName());
-                                }
-                                targetStepId = stageSteps.get(loopRequest.getTargetStepIndex()).getId();
-                            }
-                            ReworkLoop loop = ReworkLoop.builder()
-                                    .gate(gate)
-                                    .targetStageId(stage.getId())
-                                    .targetStepId(targetStepId)
-                                    .reworkType(loopRequest.getReworkType())
-                                    .maxAttempts(loopRequest.getMaxAttempts())
-                                    .build();
-                            reworkLoopRepository.save(loop);
-                            gate.getReworkLoops().add(loop);
-                        }
-                    }
-                }
             }
         }
         auditService.logAction("FlowTemplate", template.getId(), "CREATE", userId);
@@ -284,10 +237,6 @@ public class FlowTemplateService {
                 step.setElements(elementRepository.findByStepIdOrderByOrderIndex(step.getId()));
             }
             stage.setSteps(steps);
-            gateRepository.findByStageId(stage.getId()).ifPresent(gate -> {
-                gate.setReworkLoops(reworkLoopRepository.findByGateId(gate.getId()));
-                stage.setGate(gate);
-            });
         }
         template.setStages(stages);
         return template;
@@ -296,26 +245,6 @@ public class FlowTemplateService {
     private SnapshotTemplate buildSnapshot(FlowTemplate template) {
         List<SnapshotStage> stages = template.getStages().stream()
                 .map(stage -> {
-                    SnapshotGate gate = null;
-                    if (stage.getGate() != null) {
-                        QualityGate g = stage.getGate();
-                        gate = SnapshotGate.builder()
-                                .id(g.getId())
-                                .name(g.getName())
-                                .requiredApproverRole(g.getRequiredApproverRole())
-                                .checklist(parseList(g.getChecklist()))
-                                .attachmentsRequired(Boolean.TRUE.equals(g.getAttachmentsRequired()))
-                                .reworkLoops(g.getReworkLoops().stream()
-                                        .map(loop -> SnapshotReworkLoop.builder()
-                                                .targetStepId(loop.getTargetStepId())
-                                                .reworkType(loop.getReworkType() == null ? null
-                                                        : loop.getReworkType().name())
-                                                .maxAttempts(loop.getMaxAttempts() == null ? 1
-                                                        : loop.getMaxAttempts())
-                                                .build())
-                                        .toList())
-                                .build();
-                    }
                     List<SnapshotStep> steps = stage.getSteps().stream()
                             .map(step -> SnapshotStep.builder()
                                     .id(step.getId())
@@ -351,7 +280,6 @@ public class FlowTemplateService {
                             .stageType(stage.getType() == null ? null : stage.getType().name())
                             .canSkip(Boolean.TRUE.equals(stage.getCanSkip()))
                             .requiresApproval(Boolean.TRUE.equals(stage.getRequiresApproval()))
-                            .gate(gate)
                             .steps(steps)
                             .build();
                 })

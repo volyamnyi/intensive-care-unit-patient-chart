@@ -64,10 +64,6 @@ public class FlowInstance extends BaseEntity {
     @Builder.Default
     Long totalIdleSeconds = 0L;
 
-    @Column(name = "rework_count")
-    @Builder.Default
-    Integer reworkCount = 0;
-
     @Column(name = "fail_reason")
     String failReason;
 
@@ -100,9 +96,6 @@ public class FlowInstance extends BaseEntity {
         }
         if (totalIdleSeconds == null || totalIdleSeconds < 0) {
             throw new IllegalArgumentException("Total idle seconds must not be negative");
-        }
-        if (reworkCount == null || reworkCount < 0) {
-            throw new IllegalArgumentException("Rework count must not be negative");
         }
     }
 }

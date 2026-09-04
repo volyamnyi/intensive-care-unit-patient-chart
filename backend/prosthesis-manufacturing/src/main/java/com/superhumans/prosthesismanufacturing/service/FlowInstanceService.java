@@ -7,7 +7,6 @@ import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
-import com.superhumans.prosthesismanufacturing.dto.GateDecisionResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
@@ -16,7 +15,6 @@ import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
-import com.superhumans.prosthesismanufacturing.entity.GateDecision;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
 import com.superhumans.prosthesismanufacturing.entity.ResourceUsage;
 import com.superhumans.prosthesismanufacturing.entity.StepExecution;
@@ -25,7 +23,6 @@ import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
-import com.superhumans.prosthesismanufacturing.repository.GateDecisionRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
 import com.superhumans.prosthesismanufacturing.repository.ResourceUsageRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
@@ -83,7 +80,6 @@ public class FlowInstanceService {
     ProstheticsOrderRepository orderRepository;
     StepExecutionRepository executionRepository;
     ResourceUsageRepository resourceUsageRepository;
-    GateDecisionRepository decisionRepository;
     FlowInstanceMapper instanceMapper;
     FlowTemplateService templateService;
     FailureSnapshotService failureSnapshotService;
@@ -104,7 +100,6 @@ public class FlowInstanceService {
         boolean duplicate = instanceRepository.findByOrderId(request.getOrderId()).stream()
                 .anyMatch(i -> i.getStatus() != FlowInstanceStatus.COMPLETED
                         && i.getStatus() != FlowInstanceStatus.FAILED
-                        && i.getStatus() != FlowInstanceStatus.FAILED_QC
                         && i.getStatus() != FlowInstanceStatus.BRANCHED);
         if (duplicate) {
             throw new BadRequestException("An active instance already exists for this order");
@@ -118,7 +113,6 @@ public class FlowInstanceService {
                 .status(FlowInstanceStatus.NEW)
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
-                .reworkCount(0)
                 .templateSnapshot(templateService.createSnapshot(request.getTemplateId()))
                 .build();
         instanceRepository.save(instance);
@@ -416,18 +410,6 @@ public class FlowInstanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<GateDecisionResponse> listGateDecisions(UUID instanceId, Long userId, boolean allowAll) {
-        requireOwner(instanceId, userId, allowAll);
-        SnapshotTemplate snapshot = snapshotParser.parse(instanceRepository.findById(instanceId)
-                .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId))
-                .getTemplateSnapshot());
-        return decisionRepository.findByInstanceId(instanceId).stream()
-                .sorted(Comparator.comparing(GateDecision::getDecidedAt))
-                .map(d -> toDecisionResponse(d, snapshot))
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
     public List<ResourceUsageResponse> listResources(UUID instanceId, Long userId, boolean allowAll) {
         requireOwner(instanceId, userId, allowAll);
         SnapshotTemplate snapshot = snapshotParser.parse(instanceRepository.findById(instanceId)
@@ -447,22 +429,19 @@ public class FlowInstanceService {
                 .orElseThrow(() -> new NotFoundException("Order not found: " + instance.getOrderId()));
         SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
         List<StepExecution> executions = executionRepository.findByInstanceId(instanceId);
-        List<GateDecision> decisions = decisionRepository.findByInstanceId(instanceId);
         List<ResourceUsage> resources = resourceUsageRepository.findByInstanceId(instanceId);
-        if (instance.getStatus() == FlowInstanceStatus.FAILED
-                || instance.getStatus() == FlowInstanceStatus.FAILED_QC) {
+        if (instance.getStatus() == FlowInstanceStatus.FAILED) {
             String category = failureSnapshotService.getByInstance(instanceId).getCategory();
             String description = instance.getFailReason();
             return pdfService.generateFailureReport(instance, order, snapshot, category, description);
         }
-        return pdfService.generateFinalReport(instance, order, snapshot, executions, decisions, resources);
+        return pdfService.generateFinalReport(instance, order, snapshot, executions, resources);
     }
 
     @Transactional
     public FlowInstanceResponse replacement(UUID instanceId, Long userId) {
         FlowInstance original = requireOwner(instanceId, userId);
-        if (original.getStatus() != FlowInstanceStatus.FAILED
-                && original.getStatus() != FlowInstanceStatus.FAILED_QC) {
+        if (original.getStatus() != FlowInstanceStatus.FAILED) {
             throw new BadRequestException("Replacement is allowed only for failed instances");
         }
         ProstheticsOrder order = orderRepository.findById(original.getOrderId())
@@ -475,7 +454,6 @@ public class FlowInstanceService {
                 .status(FlowInstanceStatus.NEW)
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
-                .reworkCount(0)
                 .templateSnapshot(original.getTemplateSnapshot())
                 .build();
         instanceRepository.save(instance);
@@ -490,8 +468,7 @@ public class FlowInstanceService {
         if (category == null || !ALLOWED_FAIL_CATEGORIES.contains(category.toLowerCase())) {
             throw new BadRequestException("Недопустима категорія провалу");
         }
-        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS
-                && instance.getStatus() != FlowInstanceStatus.WAITING_REVIEW) {
+        if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS) {
             throw new BadRequestException("Instance cannot be failed from its current status");
         }
         instance.setStatus(FlowInstanceStatus.FAILED);
@@ -501,14 +478,6 @@ public class FlowInstanceService {
         failureSnapshotService.create(instance, category, description, snapshotJson, userId);
         auditService.logAction("FlowInstance", instance.getId(), "FAIL", userId);
         return toResponse(instance);
-    }
-
-    public void markQcFailed(FlowInstance instance, String reason, Long userId) {
-        instance.setStatus(FlowInstanceStatus.FAILED_QC);
-        instance.setFailReason(reason);
-        instance.setEndTime(LocalDateTime.now());
-        instanceRepository.save(instance);
-        auditService.logAction("FlowInstance", instance.getId(), "QC_FAIL", userId);
     }
 
     void advance(FlowInstance instance, SnapshotTemplate snapshot, SnapshotStage stage, SnapshotStep step,
@@ -522,29 +491,7 @@ public class FlowInstanceService {
                     nextAttemptNumber(instance, next.getId()), now);
             return;
         }
-        int stageIdx = stageIndex(snapshot).applyAsInt(stage);
-        SnapshotStage nextStage = stageIdx + 1 < snapshot.getStages().size()
-                ? snapshot.getStages().get(stageIdx + 1) : null;
-        if (nextStage != null && nextStage.getGate() != null) {
-            instance.setStatus(FlowInstanceStatus.WAITING_REVIEW);
-            instance.setCurrentStageId(nextStage.getId());
-            instanceRepository.save(instance);
-            return;
-        }
         moveToNextStage(instance, snapshot, stage, now, userId);
-    }
-
-    void enterStage(FlowInstance instance, SnapshotStage stage, LocalDateTime now, Long userId) {
-        SnapshotStep firstStep = stage.getSteps().stream()
-                .min(Comparator.comparingInt(stepIndex(stage)))
-                .orElseThrow(() -> new BadRequestException(
-                        "Stage " + stage.getName() + " has no steps"));
-        instance.setStatus(FlowInstanceStatus.IN_PROGRESS);
-        instance.setCurrentStageId(stage.getId());
-        instance.setCurrentStepId(firstStep.getId());
-        instanceRepository.save(instance);
-        createExecution(instance, stage.getId(), firstStep.getId(),
-                nextAttemptNumber(instance, firstStep.getId()), now);
     }
 
     void moveToNextStage(FlowInstance instance, SnapshotTemplate snapshot, SnapshotStage currentStage,
@@ -773,21 +720,6 @@ public class FlowInstanceService {
         return Math.max(0L, Duration.between(since, now).getSeconds());
     }
 
-    private GateDecisionResponse toDecisionResponse(GateDecision decision, SnapshotTemplate snapshot) {
-        String gateName = findGateName(snapshot, decision.getGate().getId());
-        return GateDecisionResponse.builder()
-                .id(decision.getId())
-                .instanceId(decision.getInstance().getId())
-                .gateId(decision.getGate().getId())
-                .gateName(gateName != null ? gateName : decision.getGate().getName())
-                .decision(decision.getDecision().name())
-                .criteriaConfirmed(parseCriteria(decision.getCriteriaConfirmed()))
-                .comment(decision.getComment())
-                .decidedBy(decision.getDecidedBy())
-                .decidedAt(decision.getDecidedAt())
-                .build();
-    }
-
     private ResourceUsageResponse toResourceResponse(ResourceUsage usage, SnapshotTemplate snapshot) {
         StepExecution execution = usage.getStepExecution();
         UUID stepId = execution == null ? null : execution.getStepId();
@@ -814,27 +746,6 @@ public class FlowInstanceService {
             }
         }
         return null;
-    }
-
-    private String findGateName(SnapshotTemplate snapshot, UUID gateId) {
-        for (SnapshotStage stage : snapshot.getStages()) {
-            if (stage.getGate() != null && stage.getGate().getId().equals(gateId)) {
-                return stage.getGate().getName();
-            }
-        }
-        return null;
-    }
-
-    private List<String> parseCriteria(String json) {
-        if (!StringUtils.hasText(json)) {
-            return List.of();
-        }
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {
-            });
-        } catch (JsonProcessingException e) {
-            return List.of();
-        }
     }
 
     FlowInstance requireOwner(UUID instanceId, Long userId) {

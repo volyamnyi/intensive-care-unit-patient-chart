@@ -25,7 +25,6 @@ import com.superhumans.mis.dto.DepartmentDTO;
 import com.superhumans.mis.dto.PatientInfoMisDTO;
 import com.superhumans.mis.dto.ServiceMisDTO;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
-import com.superhumans.prosthesismanufacturing.entity.GateDecision;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
@@ -701,7 +700,7 @@ public class ProstheticsPdfService {
 
     public byte[] generateFinalReport(FlowInstance instance, ProstheticsOrder order,
                                       SnapshotTemplate snapshot, List<StepExecution> executions,
-                                      List<GateDecision> decisions, List<ResourceUsage> resources) {
+                                      List<ResourceUsage> resources) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (Document doc = newDocument(out)) {
             PdfFont font = loadFont();
@@ -719,8 +718,6 @@ public class ProstheticsPdfService {
                     instance.getTotalActiveSeconds() == null ? "0" : formatDuration(instance.getTotalActiveSeconds()));
             infoLine(doc, font, "Простої",
                     instance.getTotalIdleSeconds() == null ? "0" : formatDuration(instance.getTotalIdleSeconds()));
-            infoLine(doc, font, "Кількість доопрацювань",
-                    String.valueOf(instance.getReworkCount() == null ? 0 : instance.getReworkCount()));
 
             Map<UUID, SnapshotStep> stepsById = indexSteps(snapshot);
             for (StepExecution execution : executions) {
@@ -730,15 +727,6 @@ public class ProstheticsPdfService {
                         .setFont(bold).setFontSize(10));
                 for (Map.Entry<String, String> entry : valueSummary(stepsById, execution).entrySet()) {
                     doc.add(new Paragraph(entry.getKey() + ": " + entry.getValue())
-                            .setFont(font).setFontSize(10).setMarginLeft(12));
-                }
-            }
-            if (decisions != null && !decisions.isEmpty()) {
-                doc.add(new Paragraph("Рішення контролю якості").setFont(bold).setFontSize(11));
-                for (GateDecision decision : decisions) {
-                    doc.add(new Paragraph(decision.getDecision().name()
-                            + (decision.getComment() == null || decision.getComment().isBlank() ? ""
-                            : " — " + decision.getComment()))
                             .setFont(font).setFontSize(10).setMarginLeft(12));
                 }
             }
