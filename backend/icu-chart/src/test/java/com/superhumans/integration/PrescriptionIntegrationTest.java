@@ -3,11 +3,16 @@ package com.superhumans.integration;
 import com.superhumans.medicationsheet.dto.*;
 import com.superhumans.medicationsheet.entity.*;
 import com.superhumans.medicationsheet.repository.*;
+import com.superhumans.medicationsheet.service.PrescriptionItemService;
+import com.superhumans.medicationsheet.service.PrescriptionListService;
+import com.superhumans.repository.core.AuditLogRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +30,12 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
     private PrescriptionDayPartRepository partRepository;
     @Autowired
     private PrescriptionExecutionRepository executionRepository;
+    @Autowired
+    private PrescriptionItemService itemService;
+    @Autowired
+    private PrescriptionListService listService;
+    @Autowired
+    private AuditLogRepository auditLogRepository;
 
     private static final UUID SEED_LIST_ID =
             UUID.fromString("cccc0001-0001-0001-0001-000000000001");
@@ -262,5 +273,199 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull().isEmpty();
+    }
+
+    // --- Phase 2–4 flows: HTTP → Service → DB → AuditLog (isolated chains) ---
+
+    private UUID newItemId() {
+        PrescriptionList list = listService.create(1003L);
+        return itemService.addItem(list.getId(), "IT-Drug", "IV", "test").getId();
+    }
+
+    private PrescriptionDayPart morningPartOf(UUID itemId, LocalDate dayDate) {
+        return itemService.getDays(itemId).stream()
+                .filter(d -> dayDate.equals(d.getDayDate()))
+                .findFirst().orElseThrow()
+                .getDayParts().stream()
+                .filter(p -> "morning".equals(p.getPeriod()))
+                .findFirst().orElseThrow();
+    }
+
+    private boolean hasAudit(String entity, UUID entityId, String action) {
+        return auditLogRepository
+                .findByEntityAndEntityIdOrderByTimestampDesc(entity, entityId, PageRequest.of(0, 10))
+                .stream().anyMatch(a -> action.equals(a.getAction()) && a.getUserId() != null);
+    }
+
+    @Test
+    void cancelDose_asDoctor_cancelsAndWritesAudit() {
+        UUID itemId = newItemId();
+        PrescriptionDayPart part = morningPartOf(itemId, LocalDate.now());
+        itemService.planDose(part.getId(), "50mg", UUID.randomUUID(), 1L);
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/day-parts/{dayPartId}/cancel", HttpMethod.PUT,
+                authEntity(null, getDoctorToken()),
+                PrescriptionDayPartResponse.class, part.getId());
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getIsPlannedFinished()).isTrue();
+
+        PrescriptionDayPart persisted = partRepository.findById(part.getId()).orElseThrow();
+        assertThat(persisted.getIsPlanned()).isTrue();
+        assertThat(persisted.getIsPlannedFinished()).isTrue();
+        assertThat(persisted.getDose()).isEqualTo("50mg");
+        assertThat(hasAudit("PrescriptionDayPart", part.getId(), "CANCEL")).isTrue();
+    }
+
+    @Test
+    void cancelDose_asNurse_returnsForbidden() {
+        UUID itemId = newItemId();
+        PrescriptionDayPart part = morningPartOf(itemId, LocalDate.now());
+        itemService.planDose(part.getId(), "50mg", UUID.randomUUID(), 1L);
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/day-parts/{dayPartId}/cancel", HttpMethod.PUT,
+                authEntity(null, getNurseToken()),
+                String.class, part.getId());
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void replanDose_asDoctor_restoresAndWritesAudit() {
+        UUID itemId = newItemId();
+        PrescriptionDayPart part = morningPartOf(itemId, LocalDate.now());
+        itemService.planDose(part.getId(), "50mg", UUID.randomUUID(), 1L);
+        itemService.markPlannedFinished(part.getId(), UUID.randomUUID(), 1L);
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/day-parts/{dayPartId}/replan", HttpMethod.PUT,
+                authEntity(null, getDoctorToken()),
+                PrescriptionDayPartResponse.class, part.getId());
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getIsPlanned()).isTrue();
+        assertThat(res.getBody().getIsPlannedFinished()).isFalse();
+        assertThat(res.getBody().getDose()).isEqualTo("50mg");
+
+        PrescriptionDayPart persisted = partRepository.findById(part.getId()).orElseThrow();
+        assertThat(persisted.getIsPlannedFinished()).isFalse();
+        assertThat(hasAudit("PrescriptionDayPart", part.getId(), "REPLAN")).isTrue();
+    }
+
+    @Test
+    void replanDose_notCancelled_returnsUnprocessableEntity() {
+        UUID itemId = newItemId();
+        PrescriptionDayPart part = morningPartOf(itemId, LocalDate.now());
+        itemService.planDose(part.getId(), "50mg", UUID.randomUUID(), 1L);
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/day-parts/{dayPartId}/replan", HttpMethod.PUT,
+                authEntity(null, getDoctorToken()),
+                String.class, part.getId());
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @Test
+    void cancelAssignment_asDoctor_resetsCellKeepsSiblingAndWritesAudit() {
+        UUID itemId = newItemId();
+        LocalDate today = LocalDate.now();
+        PrescriptionDayPart target = morningPartOf(itemId, today);
+        PrescriptionDayPart sibling = itemService.getDays(itemId).stream()
+                .filter(d -> today.equals(d.getDayDate())).findFirst().orElseThrow()
+                .getDayParts().stream()
+                .filter(p -> "day".equals(p.getPeriod())).findFirst().orElseThrow();
+        itemService.planDose(target.getId(), "50mg", UUID.randomUUID(), 1L);
+        itemService.planDose(sibling.getId(), "25mg", UUID.randomUUID(), 1L);
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", HttpMethod.PUT,
+                authEntity(null, getDoctorToken()),
+                PrescriptionDayPartResponse.class, target.getId());
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getIsPlanned()).isFalse();
+        assertThat(res.getBody().getDose()).isNull();
+
+        PrescriptionDayPart cleared = partRepository.findById(target.getId()).orElseThrow();
+        assertThat(cleared.getIsPlanned()).isFalse();
+        assertThat(cleared.getIsPlannedFinished()).isFalse();
+        assertThat(cleared.getDose()).isNull();
+        PrescriptionDayPart untouched = partRepository.findById(sibling.getId()).orElseThrow();
+        assertThat(untouched.getIsPlanned()).isTrue();
+        assertThat(untouched.getDose()).isEqualTo("25mg");
+        assertThat(hasAudit("PrescriptionDayPart", target.getId(), "CANCEL_ASSIGNMENT")).isTrue();
+    }
+
+    @Test
+    void cancelAssignment_onCompleted_returnsUnprocessableEntity() {
+        UUID itemId = newItemId();
+        PrescriptionDayPart part = morningPartOf(itemId, LocalDate.now());
+        itemService.planDose(part.getId(), "50mg", UUID.randomUUID(), 1L);
+        itemService.markCompleted(part.getId(), UUID.randomUUID());
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", HttpMethod.PUT,
+                authEntity(null, getDoctorToken()),
+                String.class, part.getId());
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @Test
+    void removeDay_asDoctor_removesAndWritesAudit() {
+        UUID itemId = newItemId();
+        List<PrescriptionItemDay> days = itemService.getDays(itemId);
+        assertThat(days).hasSizeGreaterThanOrEqualTo(2);
+        UUID dayId = days.get(days.size() - 1).getId();
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/items/{itemId}/days/{dayId}", HttpMethod.DELETE,
+                authEntity(null, getDoctorToken()),
+                String.class, itemId, dayId);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(dayRepository.findById(dayId).orElseThrow().getDeleted()).isTrue();
+        assertThat(hasAudit("PrescriptionItemDay", dayId, "REMOVE")).isTrue();
+    }
+
+    @Test
+    void removeDay_lastDay_returnsUnprocessableEntity() {
+        PrescriptionList list = listService.create(1003L);
+        UUID itemId = itemService.addItem(list.getId(), "IT-Single", "IV", "test").getId();
+        List<PrescriptionItemDay> days = itemService.getDays(itemId);
+        for (PrescriptionItemDay d : days.subList(1, days.size())) {
+            itemService.removeDay(itemId, d.getId(), 1L);
+        }
+        UUID lastDayId = itemService.getDays(itemId).get(0).getId();
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/items/{itemId}/days/{dayId}", HttpMethod.DELETE,
+                authEntity(null, getDoctorToken()),
+                String.class, itemId, lastDayId);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @Test
+    void addDay_asDoctor_appendsUnplannedDay() {
+        UUID itemId = newItemId();
+        int before = itemService.getDays(itemId).size();
+
+        var res = restTemplate.exchange(
+                "/api/prescriptions/items/{itemId}/days", HttpMethod.POST,
+                authEntity(null, getDoctorToken()),
+                PrescriptionItemResponse.class, itemId);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getDayParts()).hasSize(before * 4 + 4);
+        List<PrescriptionItemDay> after = itemService.getDays(itemId);
+        assertThat(after).hasSize(before + 1);
     }
 }

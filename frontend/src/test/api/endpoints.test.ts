@@ -224,6 +224,16 @@ describe('prescriptionApi', () => {
     expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/cancel-assignment');
   });
 
+  it('addItemDay posts to /prescriptions/items/:id/days', () => {
+    prescriptionApi.addItemDay('item-1');
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/items/item-1/days');
+  });
+
+  it('removeItemDay deletes /prescriptions/items/:id/days/:dayId', () => {
+    prescriptionApi.removeItemDay('item-1', 'day-1');
+    expect(mockClient.delete).toHaveBeenCalledWith('/prescriptions/items/item-1/days/day-1');
+  });
+
   it('completeDose puts to /prescriptions/day-parts/:id/complete', () => {
     prescriptionApi.completeDose('part-1');
     expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/complete');

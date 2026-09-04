@@ -252,7 +252,7 @@ The complete development loop:
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | `backend-test-results` (surefire-reports) |
 | `backend-integration` | `mvn test -Pintegration-test` | `backend-integration-results` |
 | `frontend-test` | Vitest + production build | `vitest-coverage` |
-| `e2e-test` | Playwright (83 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
+| `e2e-test` | Playwright (88 spec files, chromium, 40-min timeout; `needs: backend-test, frontend-test`) | `playwright-report`, `playwright-test-results` |
 | `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
 
 ### Exit criteria
@@ -277,7 +277,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (718 tests across 89 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (781 tests across 90 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
@@ -289,7 +289,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 ## Testing
 
 - **Backend**: 360 main sources / 142 test files across the multi-module reactor (common 124/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 91/37, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 718 Vitest tests across 89 test files (135 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **Frontend**: 781 Vitest tests across 90 test files (136 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
 - **E2E**: 83 Playwright spec files (384 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
@@ -744,7 +744,7 @@ frontend/
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 135 TS/TSX source + 89 test files
+  src/                 ← 136 TS/TSX source + 90 test files
 tests/
   playwright.config.ts ← Playwright config with 11 projects
   package.json         ← Test dependencies
