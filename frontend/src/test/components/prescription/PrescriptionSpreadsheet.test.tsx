@@ -248,6 +248,80 @@ describe('PrescriptionSpreadsheet — per-item day actions', () => {
     expect(screen.queryByRole('menuitem', { name: /Відмінити це призначення/ })).not.toBeInTheDocument();
   });
 
+// Sparse fixture: Jun 15 lies beyond Jan 5 + 20 days, so it counts as added
+// yet still renders inside the same 7-day window (the union has few dates).
+function fullDay(dayId: string, dayDate: string): PrescriptionDayPart[] {
+  return (['morning', 'day', 'evening', 'night'] as const).map((period) => makeDayPart({
+    id: `dp-${dayId}-${period}`,
+    dayId,
+    dayDate,
+    period,
+    dose: null,
+    isPlanned: false,
+  }));
+}
+
+describe('PrescriptionSpreadsheet — added/removed day markers', () => {
+  it('marks added-day headers and white cells, leaves base dates clean', () => {
+    renderGrid({ items: [makeItem([...fullDay('day-base', '2026-01-05'), ...fullDay('day-added', '2026-06-15')])] });
+
+    const addedHeader = screen.getByText('15 черв.').closest('th');
+    expect(addedHeader).not.toBeNull();
+    expect(addedHeader).toHaveAttribute('data-added-day', 'true');
+    expect(addedHeader!.getAttribute('title')).toContain('Dopamine');
+
+    const baseHeader = screen.getByText('05 січ.').closest('th');
+    expect(baseHeader).not.toBeNull();
+    expect(baseHeader!.hasAttribute('data-added-day')).toBe(false);
+
+    // All four white slots of the added day are marked; base cells are not.
+    expect(document.querySelectorAll('td[data-added-day="true"]')).toHaveLength(4);
+    for (const cell of document.querySelectorAll('td[data-added-day="true"]')) {
+      expect(cell.className).toMatch(/bg-muted/);
+    }
+  });
+
+  it('planned cell on an added day keeps its status color and stays marker-free', () => {
+    const addedDay = fullDay('day-added', '2026-06-15').map((p) =>
+      p.period === 'morning' ? { ...p, dose: '5mg', isPlanned: true } : p,
+    );
+    renderGrid({ items: [makeItem([...fullDay('day-base', '2026-01-05'), ...addedDay])] });
+
+    const cell = screen.getByText('5mg').closest('td');
+    expect(cell).not.toBeNull();
+    expect(cell!.hasAttribute('data-added-day')).toBe(false);
+    expect(cell!.style.backgroundColor).toBe('rgb(187, 222, 251)');
+
+    // The date itself is still marked at the header level.
+    const addedHeader = screen.getByText('15 черв.').closest('th');
+    expect(addedHeader).toHaveAttribute('data-added-day', 'true');
+    expect(document.querySelectorAll('td[data-added-day="true"]')).toHaveLength(3);
+  });
+
+  it('marks the header following a removed gap', () => {
+    const d1 = makeDayPart({ id: 'dp-1', dayId: 'day-1', dayDate: '2026-01-05', period: 'morning', dose: null, isPlanned: false });
+    const d2 = makeDayPart({ id: 'dp-2', dayId: 'day-2', dayDate: '2026-01-07', period: 'morning', dose: null, isPlanned: false });
+    renderGrid({ items: [makeItem([d1, d2])] });
+
+    const gapHeader = screen.getByText('07 січ.').closest('th');
+    expect(gapHeader).not.toBeNull();
+    expect(gapHeader).toHaveAttribute('data-removed-gap', 'true');
+    expect(gapHeader!.getAttribute('title')).toContain('07 січ.');
+
+    const baseHeader = screen.getByText('05 січ.').closest('th');
+    expect(baseHeader).not.toBeNull();
+    expect(baseHeader!.hasAttribute('data-removed-gap')).toBe(false);
+    expect(baseHeader!.hasAttribute('data-added-day')).toBe(false);
+  });
+
+  it('legend explains added and removed days', () => {
+    renderGrid();
+    expect(screen.getByText('Заплановано')).toBeInTheDocument();
+    expect(screen.getByText('Доданий день')).toBeInTheDocument();
+    expect(screen.getByText('Пропущений день')).toBeInTheDocument();
+  });
+});
+
   it('does not open the context menu for a nurse', async () => {
     renderGrid({ isNurse: true, isDoctor: false });
     fireEvent.contextMenu(await firstDayCell());

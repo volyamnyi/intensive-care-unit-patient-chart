@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Plus, Minus, Trash2, X, Undo2, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PrescriptionDayPart } from '../../types/medication';
 import type { GridItem } from './PrescriptionGrid';
+import { gridDateMeta, shouldMarkAddedCell } from './prescriptionDateMeta';
 
 const PERIODS = ['morning', 'day', 'evening', 'night'] as const;
 const PERIOD_LABELS: Record<string, string> = {
@@ -114,6 +115,16 @@ export default function PrescriptionSpreadsheet({
 
   const canMenu = canEdit && isDoctor;
 
+  // Derived added/removed-day metadata (no persistence): per-item added dates
+  // beyond the 21-day base window, union header flags, and gap edge markers.
+  const dateMeta = useMemo(() => gridDateMeta(
+    gridItems.map((g) => ({
+      id: g.id,
+      medicineName: g.medicineName,
+      dayDates: (g.dayParts ?? []).map((dp) => dp.dayDate).filter((d): d is string => Boolean(d)),
+    })),
+  ), [gridItems]);
+
   const openDayMenu = (e: React.MouseEvent, date: string, dp: PrescriptionDayPart) => {
     e.preventDefault();
     if (!canMenu) return;
@@ -196,6 +207,14 @@ export default function PrescriptionSpreadsheet({
               <span className="text-[10px]">{label}</span>
             </div>
           ))}
+          <div className="flex items-center gap-0.5">
+            <div className="size-3.5 rounded-sm bg-muted" style={{ border: '1px solid #ccc' }} title="Дні, додані кнопкою «+» понад базовий 21-денний курс" />
+            <span className="text-[10px]">Доданий день</span>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <div className="h-3.5 w-1 rounded-sm" style={{ backgroundColor: '#94a3b8' }} title="Межа пропущеного (видаленого) дня" />
+            <span className="text-[10px]">Пропущений день</span>
+          </div>
         </div>
       </div>
 
@@ -222,22 +241,36 @@ export default function PrescriptionSpreadsheet({
                 >
                   <span className="text-[10px] font-bold">Препарат / Метод</span>
                 </th>
-                {visibleDates.map((date, dateIdx) => (
-                  <th
-                    key={date}
-                    colSpan={4}
-                    className="p-1 border border-border bg-muted text-center"
-                    style={
-                      dateIdx < visibleDates.length - 1
-                        ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
-                        : undefined
-                    }
-                  >
-                    <span className="text-[10px] font-bold">
-                      {formatDate(date)}
-                    </span>
-                  </th>
-                ))}
+                {visibleDates.map((date, dateIdx) => {
+                  const addedNames = dateMeta.headerAdded.get(date);
+                  const gapAfter = dateMeta.headerGapAfter.has(date);
+                  return (
+                    <th
+                      key={date}
+                      colSpan={4}
+                      className={`p-1 border border-border text-center ${addedNames ? 'bg-accent' : 'bg-muted'}`}
+                      data-added-day={addedNames ? 'true' : undefined}
+                      data-removed-gap={gapAfter ? 'true' : undefined}
+                      title={
+                        addedNames
+                          ? `Доданий день для: ${addedNames.join(', ')}`
+                          : gapAfter
+                            ? `Пропущений день перед: ${formatDate(date)}`
+                            : undefined
+                      }
+                      style={{
+                        ...(dateIdx < visibleDates.length - 1
+                          ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
+                          : null),
+                        ...(gapAfter ? { borderLeftWidth: 2, borderLeftColor: '#94a3b8' } : null),
+                      }}
+                    >
+                      <span className="text-[10px] font-bold">
+                        {formatDate(date)}
+                      </span>
+                    </th>
+                  );
+                })}
                 {canEdit && isDoctor && <th className="w-16 border border-border" />}
               </tr>
               <tr>
@@ -307,6 +340,9 @@ export default function PrescriptionSpreadsheet({
                       const bg = cellBg(dp);
                       const label = cellLabel(dp);
                       const isEditing = editingCell === (dp?.id);
+                      // Inactive (white) cells of added days get the muted marker;
+                      // status colors always win.
+                      const markedAdded = shouldMarkAddedCell(dateMeta.perItem.get(item.id), date, dp);
 
                       const onClick = (e: React.MouseEvent) => {
                         if (!dp || !canEdit) return;
@@ -318,9 +354,11 @@ export default function PrescriptionSpreadsheet({
                       return (
                         <td
                           key={`${date}-${period}`}
+                          className={markedAdded ? 'bg-muted' : undefined}
+                          data-added-day={markedAdded ? 'true' : undefined}
                           style={{
                             width: 68, height: 32, cursor: bg === '#fff' || !dp ? 'default' : 'pointer',
-                            backgroundColor: bg, textAlign: 'center', verticalAlign: 'middle',
+                            backgroundColor: markedAdded ? undefined : bg, textAlign: 'center', verticalAlign: 'middle',
                             position: 'relative',
                             border: '1px solid var(--color-border)',
                             ...(period === 'night' && dateIdx < visibleDates.length - 1
