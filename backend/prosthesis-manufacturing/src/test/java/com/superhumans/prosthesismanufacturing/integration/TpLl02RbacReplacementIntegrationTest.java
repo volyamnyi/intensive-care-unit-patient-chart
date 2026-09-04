@@ -101,7 +101,7 @@ class TpLl02RbacReplacementIntegrationTest {
         UUID instanceId = createInstance(templateId);
 
         instanceService.start(instanceId, PROSTHETIST_A);
-        // Replacement is only allowed for FAILED / FAILED_QC — an in-flight instance is
+        // Replacement is only allowed for FAILED — an in-flight instance is
         // rejected (BadRequestException, mapped to HTTP 400).
         assertThatThrownBy(() -> instanceService.replacement(instanceId, PROSTHETIST_A))
                 .isInstanceOf(BadRequestException.class);

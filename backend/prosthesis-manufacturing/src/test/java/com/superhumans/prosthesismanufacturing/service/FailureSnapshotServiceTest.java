@@ -50,14 +50,14 @@ class FailureSnapshotServiceTest {
             return saved;
         });
 
-        var response = service.create(instance, "quality_gate", "max attempts exceeded", snapshotJson, 1L);
+        var response = service.create(instance, "materials", "max attempts exceeded", snapshotJson, 1L);
 
         ArgumentCaptor<FailureSnapshot> captor = ArgumentCaptor.forClass(FailureSnapshot.class);
         verify(snapshotRepository).save(captor.capture());
-        assertThat(captor.getValue().getCategory()).isEqualTo("quality_gate");
+        assertThat(captor.getValue().getCategory()).isEqualTo("materials");
         assertThat(captor.getValue().getDescription()).isEqualTo("max attempts exceeded");
         assertThat(captor.getValue().getSnapshot()).isEqualTo(snapshotJson);
-        assertThat(response.getCategory()).isEqualTo("quality_gate");
+        assertThat(response.getCategory()).isEqualTo("materials");
         verify(auditService).logAction("FailureSnapshot", response.getId(), "CREATE", 1L);
     }
 

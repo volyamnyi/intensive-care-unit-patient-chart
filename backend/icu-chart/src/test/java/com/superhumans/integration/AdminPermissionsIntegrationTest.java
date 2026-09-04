@@ -44,7 +44,7 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         assertThat(res.getBody().getPermissions())
                 .extracting(p -> p.getCode())
                 .contains(EPISODE_CREATE, "PRESCRIPTION_CREATE", "VITALS_ENTER",
-                        "PROSTHETICS_GATE_DECISION", "AUDIT_ACCESS",
+                        "PROSTHETICS_TEMPLATE_MANAGE", "AUDIT_ACCESS",
                         "MODULE_ICU_ACCESS", "MODULE_MEDICATION_ACCESS",
                         "MODULE_PROSTHETICS_ACCESS", "MODULE_ADMIN_ACCESS");
     }
@@ -64,10 +64,10 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
                 .doesNotContain(EPISODE_CREATE, "MODULE_ICU_ACCESS", "MODULE_MEDICATION_ACCESS",
                         "MODULE_PROSTHETICS_ACCESS");
         assertThat(body.getGrants().get("PROSTHETICS_ADMINISTRATOR"))
-                .contains("PROSTHETICS_GATE_DECISION", "PROSTHETICS_TEMPLATE_MANAGE");
+                .contains("PROSTHETICS_TEMPLATE_MANAGE", "PROSTHETICS_ORDER_MANAGE");
         assertThat(body.getGrants().get("PROSTHETIST"))
                 .contains("PROSTHETICS_DASHBOARD")
-                .doesNotContain("PROSTHETICS_GATE_DECISION");
+                .doesNotContain("PROSTHETICS_TEMPLATE_MANAGE");
     }
 
     @Test

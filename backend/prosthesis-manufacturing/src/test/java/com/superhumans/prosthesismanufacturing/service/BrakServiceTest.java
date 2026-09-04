@@ -104,7 +104,6 @@ class BrakServiceTest {
                 .currentStepId(STEP_E0028)
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
-                .reworkCount(0)
                 .branchSequence(1)
                 .templateSnapshot(tpLl02Snapshot())
                 .build();
@@ -384,7 +383,6 @@ class BrakServiceTest {
                 .currentStepId(BrakService.STEP_E0000032)
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
-                .reworkCount(0)
                 .branchSequence(1)
                 .templateSnapshot(tpLl02SnapshotWithD20())
                 .build();

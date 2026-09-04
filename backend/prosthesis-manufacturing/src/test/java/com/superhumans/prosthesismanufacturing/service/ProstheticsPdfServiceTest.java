@@ -175,7 +175,7 @@ class ProstheticsPdfServiceTest {
                 .version(1)
                 .build();
 
-        byte[] pdf = service.generateFinalReport(instance, order, snapshot, List.of(), List.of(), List.of());
+        byte[] pdf = service.generateFinalReport(instance, order, snapshot, List.of(), List.of());
 
         assertThat(pdf).startsWith(new byte[]{'%', 'P', 'D', 'F'});
         try (PdfDocument doc = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdf)))) {

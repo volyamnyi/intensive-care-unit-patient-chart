@@ -5,14 +5,11 @@ import com.superhumans.prosthesismanufacturing.dto.TemplateCreateRequest;
 import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
-import com.superhumans.prosthesismanufacturing.entity.ReworkType;
 import com.superhumans.prosthesismanufacturing.entity.StageType;
 import com.superhumans.prosthesismanufacturing.entity.StepType;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowTemplateMapperImpl;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
-import com.superhumans.prosthesismanufacturing.repository.QualityGateRepository;
-import com.superhumans.prosthesismanufacturing.repository.ReworkLoopRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateElementRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateStageRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateStepRepository;
@@ -46,10 +43,6 @@ class FlowTemplateServiceTest {
     @Mock
     TemplateElementRepository elementRepository;
     @Mock
-    QualityGateRepository gateRepository;
-    @Mock
-    ReworkLoopRepository reworkLoopRepository;
-    @Mock
     AuditService auditService;
 
     FlowTemplateService service;
@@ -57,7 +50,7 @@ class FlowTemplateServiceTest {
     @BeforeEach
     void setUp() {
         service = new FlowTemplateService(templateRepository, stageRepository, stepRepository,
-                elementRepository, gateRepository, reworkLoopRepository,
+                elementRepository,
                 new FlowTemplateMapperImpl(), auditService,
                 new TemplateSnapshotParser(new ObjectMapper()), new ObjectMapper());
     }
@@ -96,16 +89,12 @@ class FlowTemplateServiceTest {
         when(stageRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(stepRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(elementRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(gateRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(reworkLoopRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = service.create(basicRequest(), 1L);
 
         assertThat(response.getStages()).hasSize(1);
         assertThat(response.getStages().get(0).getSteps()).hasSize(1);
         assertThat(response.getStages().get(0).getSteps().get(0).getElements()).hasSize(1);
-        assertThat(response.getStages().get(0).getGate()).isNotNull();
-        verify(reworkLoopRepository).save(any());
         verify(auditService).logAction(any(), any(), any(), any());
     }
 
@@ -153,15 +142,6 @@ class FlowTemplateServiceTest {
                 .stages(List.of(TemplateCreateRequest.TemplateStageRequest.builder()
                         .name("Клінічне обстеження")
                         .type(StageType.CLINICAL)
-                        .gate(TemplateCreateRequest.TemplateGateRequest.builder()
-                                .name("Приймальний контроль")
-                                .requiredApproverRole("PROSTHETICS_ADMINISTRATOR")
-                                .reworkLoops(List.of(TemplateCreateRequest.GateReworkLoopRequest.builder()
-                                        .targetStepIndex(0)
-                                        .reworkType(ReworkType.PARTIAL)
-                                        .maxAttempts(2)
-                                        .build()))
-                                .build())
                         .steps(List.of(TemplateCreateRequest.TemplateStepRequest.builder()
                                 .name("Вимірювання")
                                 .stepType(StepType.MEASUREMENT)

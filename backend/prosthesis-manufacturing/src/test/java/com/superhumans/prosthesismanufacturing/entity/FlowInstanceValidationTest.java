@@ -24,19 +24,6 @@ class FlowInstanceValidationTest {
     }
 
     @Test
-    void shouldRejectNegativeReworkCount() {
-        FlowInstance instance = FlowInstance.builder()
-                .templateId(UUID.randomUUID())
-                .orderId(UUID.randomUUID())
-                .reworkCount(-1)
-                .build();
-
-        assertThatThrownBy(instance::validate)
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Rework count");
-    }
-
-    @Test
     void shouldAcceptNewInstanceWithDefaults() {
         FlowInstance instance = FlowInstance.builder()
                 .templateId(UUID.randomUUID())

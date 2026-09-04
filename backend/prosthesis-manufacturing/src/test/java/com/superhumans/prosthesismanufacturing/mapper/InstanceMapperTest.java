@@ -33,7 +33,6 @@ class InstanceMapperTest {
                 .startTime(LocalDateTime.of(2026, 8, 4, 9, 0))
                 .totalActiveSeconds(1200L)
                 .totalIdleSeconds(300L)
-                .reworkCount(1)
                 .build();
         instance.setId(instanceId);
 
@@ -44,7 +43,6 @@ class InstanceMapperTest {
         assertThat(response.getStatus()).isEqualTo("IN_PROGRESS");
         assertThat(response.getTotalActiveSeconds()).isEqualTo(1200L);
         assertThat(response.getTotalIdleSeconds()).isEqualTo(300L);
-        assertThat(response.getReworkCount()).isEqualTo(1);
         assertThat(response.getStartTime()).isEqualTo(instance.getStartTime());
     }
 

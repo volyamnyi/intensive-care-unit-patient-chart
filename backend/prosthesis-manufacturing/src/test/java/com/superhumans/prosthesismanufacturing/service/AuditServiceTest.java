@@ -17,7 +17,6 @@ import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
-import com.superhumans.prosthesismanufacturing.repository.GateDecisionRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
 import com.superhumans.prosthesismanufacturing.repository.ResourceUsageRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
@@ -65,8 +64,6 @@ class AuditServiceTest {
     @Mock
     ResourceUsageRepository resourceUsageRepository;
     @Mock
-    GateDecisionRepository decisionRepository;
-    @Mock
     FlowTemplateService templateService;
     @Mock
     FailureSnapshotService failureSnapshotService;
@@ -96,7 +93,7 @@ class AuditServiceTest {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         auditService = new AuditService(auditLogRepository, mock(AuditLogMapper.class));
         service = new FlowInstanceService(instanceRepository, templateRepository, orderRepository,
-                executionRepository, resourceUsageRepository, decisionRepository,
+                executionRepository, resourceUsageRepository,
                 mock(FlowInstanceMapper.class), templateService, failureSnapshotService, pdfService,
                 auditService, parser, new ObjectMapper());
         current = instance();
@@ -243,7 +240,6 @@ class AuditServiceTest {
                 .currentStepId(stepBId)
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
-                .reworkCount(0)
                 .templateSnapshot(snapshotJson())
                 .startTime(LocalDateTime.now().minusHours(2))
                 .build();

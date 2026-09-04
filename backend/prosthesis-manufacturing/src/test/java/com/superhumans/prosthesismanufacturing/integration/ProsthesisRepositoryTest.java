@@ -57,12 +57,6 @@ class ProsthesisRepositoryTest {
     TemplateElementRepository elementRepository;
 
     @Autowired
-    QualityGateRepository gateRepository;
-
-    @Autowired
-    ReworkLoopRepository reworkLoopRepository;
-
-    @Autowired
     FlowInstanceRepository instanceRepository;
 
     @Autowired
@@ -70,9 +64,6 @@ class ProsthesisRepositoryTest {
 
     @Autowired
     ResourceUsageRepository resourceUsageRepository;
-
-    @Autowired
-    GateDecisionRepository gateDecisionRepository;
 
     @Autowired
     EvidenceFileRepository evidenceFileRepository;
@@ -142,7 +133,7 @@ class ProsthesisRepositoryTest {
         TemplateStage stageTwo = TemplateStage.builder()
                 .template(template)
                 .orderIndex(1)
-                .name("Контроль якості")
+                .name("Складання")
                 .type(StageType.TECHNICAL)
                 .build();
         em.persistAndFlush(stageOne);
@@ -172,27 +163,10 @@ class ProsthesisRepositoryTest {
                 .build();
         em.persistAndFlush(element);
 
-        QualityGate gate = QualityGate.builder()
-                .stage(stageTwo)
-                .name("Контроль якості")
-                .requiredApproverRole("PROSTHETICS_ADMINISTRATOR")
-                .checklist("[{\"label\":\"Відповідність міркам\"}]")
-                .attachmentsRequired(true)
-                .build();
-        em.persistAndFlush(gate);
-
-        ReworkLoop rework = ReworkLoop.builder()
-                .gate(gate)
-                .targetStepId(step.getId())
-                .reworkType(ReworkType.PARTIAL)
-                .maxAttempts(2)
-                .build();
-        em.persistAndFlush(rework);
-
         List<TemplateStage> stages = stageRepository.findByTemplateIdOrderByOrderIndex(template.getId());
         assertThat(stages).hasSize(2);
         assertThat(stages.get(0).getName()).isEqualTo("Підготовка");
-        assertThat(stages.get(1).getName()).isEqualTo("Контроль якості");
+        assertThat(stages.get(1).getName()).isEqualTo("Складання");
 
         List<TemplateStep> steps = stepRepository.findByStageIdOrderByOrderIndex(stageOne.getId());
         assertThat(steps).hasSize(1);
@@ -207,16 +181,6 @@ class ProsthesisRepositoryTest {
         assertThat(foundElement.getMaxValue()).isEqualByComparingTo("60.0");
         assertThat(foundElement.getOptions()).isEqualTo("{\"units\":[\"см\"]}");
         assertThat(foundElement.getValidationRules()).isEqualTo("{\"required\":true}");
-
-        Optional<QualityGate> foundGate = gateRepository.findByStageId(stageTwo.getId());
-        assertThat(foundGate).isPresent();
-        assertThat(foundGate.get().getChecklist()).isEqualTo("[{\"label\":\"Відповідність міркам\"}]");
-        assertThat(foundGate.get().getAttachmentsRequired()).isTrue();
-
-        List<ReworkLoop> loops = reworkLoopRepository.findByGateId(gate.getId());
-        assertThat(loops).hasSize(1);
-        assertThat(loops.get(0).getTargetStepId()).isEqualTo(step.getId());
-        assertThat(loops.get(0).getMaxAttempts()).isEqualTo(2);
 
         boolean exists = templateRepository.existsByNameAndTemplateVersion("TP-UL-01", 1);
         assertThat(exists).isTrue();
@@ -283,31 +247,6 @@ class ProsthesisRepositoryTest {
                 .build();
         em.persistAndFlush(usage);
 
-        TemplateStage gateStage = TemplateStage.builder()
-                .template(template)
-                .orderIndex(0)
-                .name("Гейт")
-                .type(StageType.TECHNICAL)
-                .build();
-        em.persistAndFlush(gateStage);
-        QualityGate gate = QualityGate.builder()
-                .stage(gateStage)
-                .name("Контроль")
-                .requiredApproverRole("PROSTHETICS_ADMINISTRATOR")
-                .build();
-        em.persistAndFlush(gate);
-
-        GateDecision decision = GateDecision.builder()
-                .instance(instance)
-                .gate(gate)
-                .decision(GateDecisionType.PASS)
-                .criteriaConfirmed("[true]")
-                .comment("Все збігається")
-                .decidedBy(22L)
-                .decidedAt(LocalDateTime.now())
-                .build();
-        em.persistAndFlush(decision);
-
         EvidenceFile evidence = EvidenceFile.builder()
                 .stepExecution(execution)
                 .fileName("foto.png")
@@ -338,11 +277,6 @@ class ProsthesisRepositoryTest {
         List<ResourceUsage> usages = resourceUsageRepository.findByInstanceId(instance.getId());
         assertThat(usages).hasSize(1);
         assertThat(usages.get(0).getMaterial()).isEqualTo("Термопласт");
-
-        List<GateDecision> decisions = gateDecisionRepository.findByInstanceId(instance.getId());
-        assertThat(decisions).hasSize(1);
-        assertThat(decisions.get(0).getDecision()).isEqualTo(GateDecisionType.PASS);
-        assertThat(decisions.get(0).getDecidedBy()).isEqualTo(22L);
 
         List<EvidenceFile> evidenceFiles = evidenceFileRepository.findByStepExecutionId(execution.getId());
         assertThat(evidenceFiles).hasSize(1);

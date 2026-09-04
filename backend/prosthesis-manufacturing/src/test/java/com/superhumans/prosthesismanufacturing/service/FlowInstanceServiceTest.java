@@ -18,7 +18,6 @@ import com.superhumans.prosthesismanufacturing.entity.StepExecutionStatus;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
-import com.superhumans.prosthesismanufacturing.repository.GateDecisionRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
 import com.superhumans.prosthesismanufacturing.repository.ResourceUsageRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
@@ -61,8 +60,6 @@ class FlowInstanceServiceTest {
     @Mock
     ResourceUsageRepository resourceUsageRepository;
     @Mock
-    GateDecisionRepository decisionRepository;
-    @Mock
     FlowTemplateService templateService;
     @Mock
     FailureSnapshotService failureSnapshotService;
@@ -85,7 +82,7 @@ class FlowInstanceServiceTest {
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         service = new FlowInstanceService(instanceRepository, templateRepository, orderRepository,
-                executionRepository, resourceUsageRepository, decisionRepository,
+                executionRepository, resourceUsageRepository,
                 mock(com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper.class),
                 templateService, failureSnapshotService, pdfService, auditService, parser,
                 new ObjectMapper());
@@ -471,16 +468,6 @@ class FlowInstanceServiceTest {
     }
 
     @Test
-    void fail_deniedQualityGate() {
-        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
-        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
-
-        assertThatThrownBy(() -> service.fail(instance.getId(), "quality_gate", "desc", null, 1L))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Недопустима");
-    }
-
-    @Test
     void fail_deniedUppercaseMaterialDefect() {
         FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
         when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
@@ -593,7 +580,6 @@ class FlowInstanceServiceTest {
                 .currentStageId(stageId)
                 .totalActiveSeconds(0L)
                 .totalIdleSeconds(0L)
-                .reworkCount(0)
                 .templateSnapshot(snapshot)
                 .build();
         instance.setId(UUID.randomUUID());

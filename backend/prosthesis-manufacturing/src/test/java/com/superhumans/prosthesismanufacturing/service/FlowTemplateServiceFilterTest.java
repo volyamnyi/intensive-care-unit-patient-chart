@@ -9,8 +9,6 @@ import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowTemplateMapperImpl;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
-import com.superhumans.prosthesismanufacturing.repository.QualityGateRepository;
-import com.superhumans.prosthesismanufacturing.repository.ReworkLoopRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateElementRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateStageRepository;
 import com.superhumans.prosthesismanufacturing.repository.TemplateStepRepository;
@@ -34,8 +32,6 @@ class FlowTemplateServiceFilterTest {
     @Mock TemplateStageRepository stageRepository;
     @Mock TemplateStepRepository stepRepository;
     @Mock TemplateElementRepository elementRepository;
-    @Mock QualityGateRepository gateRepository;
-    @Mock ReworkLoopRepository reworkLoopRepository;
     @Mock AuditService auditService;
 
     FlowTemplateService service;
@@ -43,7 +39,7 @@ class FlowTemplateServiceFilterTest {
     @BeforeEach
     void setUp() {
         service = new FlowTemplateService(templateRepository, stageRepository, stepRepository,
-                elementRepository, gateRepository, reworkLoopRepository,
+                elementRepository,
                 new FlowTemplateMapperImpl(), auditService,
                 new TemplateSnapshotParser(new ObjectMapper()), new ObjectMapper());
     }

@@ -1,8 +1,6 @@
 package com.superhumans.prosthesismanufacturing.mapper;
 
 import com.superhumans.prosthesismanufacturing.dto.FlowTemplateResponse;
-import com.superhumans.prosthesismanufacturing.dto.QualityGateResponse;
-import com.superhumans.prosthesismanufacturing.dto.ReworkLoopResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateElementResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateStageResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateStepResponse;
@@ -46,7 +44,6 @@ class FlowTemplateMapperTest {
     @Test
     void shouldMapFullTemplateTree() {
         UUID stepId = UUID.randomUUID();
-        UUID gateId = UUID.randomUUID();
 
         TemplateElement element = TemplateElement.builder()
                 .orderIndex(0)
@@ -68,21 +65,6 @@ class FlowTemplateMapperTest {
                 .build();
         step.setId(stepId);
 
-        ReworkLoop rework = ReworkLoop.builder()
-                .targetStepId(stepId)
-                .reworkType(ReworkType.PARTIAL)
-                .maxAttempts(2)
-                .build();
-        rework.setId(UUID.randomUUID());
-
-        QualityGate gate = QualityGate.builder()
-                .name("Контроль якості")
-                .requiredApproverRole("PROSTHETICS_ADMINISTRATOR")
-                .attachmentsRequired(true)
-                .reworkLoops(List.of(rework))
-                .build();
-        gate.setId(gateId);
-
         TemplateStage stage = TemplateStage.builder()
                 .orderIndex(0)
                 .name("Підготовка")
@@ -90,7 +72,6 @@ class FlowTemplateMapperTest {
                 .canSkip(false)
                 .requiresApproval(false)
                 .steps(List.of(step))
-                .gate(gate)
                 .build();
         stage.setId(UUID.randomUUID());
 
@@ -118,7 +99,6 @@ class FlowTemplateMapperTest {
         assertThat(stageResponse.getType()).isEqualTo("TECHNICAL");
         assertThat(stageResponse.getCanSkip()).isFalse();
         assertThat(stageResponse.getSteps()).hasSize(1);
-        assertThat(stageResponse.getGate()).isNotNull();
 
         TemplateStepResponse stepResponse = stageResponse.getSteps().get(0);
         assertThat(stepResponse.getId()).isEqualTo(stepId);
@@ -131,30 +111,18 @@ class FlowTemplateMapperTest {
         assertThat(elementResponse.getRequired()).isTrue();
         assertThat(elementResponse.getMinValue()).isEqualByComparingTo("10.0");
         assertThat(elementResponse.getUnit()).isEqualTo("см");
-
-        QualityGateResponse gateResponse = stageResponse.getGate();
-        assertThat(gateResponse.getId()).isEqualTo(gateId);
-        assertThat(gateResponse.getRequiredApproverRole()).isEqualTo("PROSTHETICS_ADMINISTRATOR");
-        assertThat(gateResponse.getAttachmentsRequired()).isTrue();
-        assertThat(gateResponse.getReworkLoops()).hasSize(1);
-
-        ReworkLoopResponse reworkResponse = gateResponse.getReworkLoops().get(0);
-        assertThat(reworkResponse.getTargetStepId()).isEqualTo(stepId);
-        assertThat(reworkResponse.getReworkType()).isEqualTo("PARTIAL");
-        assertThat(reworkResponse.getMaxAttempts()).isEqualTo(2);
     }
 
     @Test
-    void shouldMapStageWithoutGateToNull() {
+    void shouldMapStageWithoutStepsToEmptyList() {
         TemplateStage stage = TemplateStage.builder()
                 .orderIndex(0)
-                .name("Етап без воріт")
+                .name("Етап без кроків")
                 .type(StageType.ADMINISTRATIVE)
                 .build();
 
         TemplateStageResponse response = mapper.toStageResponse(stage);
 
-        assertThat(response.getGate()).isNull();
         assertThat(response.getSteps()).isEmpty();
     }
 }

@@ -112,22 +112,6 @@ class TpLl02SeedValidationTest {
     }
 
     @Test
-    void prosthSeed_doesNotContainQualityGateForTpLl02() throws Exception {
-        String sql = sqlText();
-
-        // After removal, TP-LL-02 must not have quality_gates / rework_loops entries
-        long gateInserts = sql.lines()
-                .filter(l -> l.contains("prosthetics_quality_gates") && l.contains("c0000003"))
-                .count();
-        assertThat(gateInserts).isZero();
-
-        long reworkInserts = sql.lines()
-                .filter(l -> l.contains("prosthetics_rework_loops") && l.contains("c0000003"))
-                .count();
-        assertThat(reworkInserts).isZero();
-    }
-
-    @Test
     void prosthSeed_templateIsActiveAndIndexed() throws Exception {
         String sql = sqlText();
 

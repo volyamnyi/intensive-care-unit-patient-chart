@@ -9,7 +9,6 @@ import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.service.EvidenceFileService;
 import com.superhumans.prosthesismanufacturing.service.BrakService;
 import com.superhumans.prosthesismanufacturing.service.FlowInstanceService;
-import com.superhumans.prosthesismanufacturing.service.QualityGateService;
 import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
 import com.superhumans.config.EnableTestExceptionHandler;
@@ -50,8 +49,6 @@ class FlowInstanceControllerTest {
     @MockitoBean
     FlowInstanceService instanceService;
     @MockitoBean
-    QualityGateService gateService;
-    @MockitoBean
     EvidenceFileService evidenceFileService;
     @MockitoBean
     BrakService brakService;
@@ -64,7 +61,6 @@ class FlowInstanceControllerTest {
 
     UUID instanceId = UUID.randomUUID();
     UUID executionId = UUID.randomUUID();
-    UUID gateId = UUID.randomUUID();
     UUID fileId = UUID.randomUUID();
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -83,7 +79,6 @@ class FlowInstanceControllerTest {
         when(instanceService.resume(eq(instanceId), eq(1L))).thenReturn(response());
         when(instanceService.fail(eq(instanceId), any(), any(), any(), eq(1L))).thenReturn(response());
         when(instanceService.replacement(eq(instanceId), eq(1L))).thenReturn(response());
-        when(gateService.decide(eq(instanceId), eq(gateId), any(), eq(1L), eq(false))).thenReturn(response());
         when(evidenceFileService.upload(eq(instanceId), eq(executionId), any(), eq(1L))).thenReturn(
                 EvidenceFileResponse.builder().id(fileId).stepExecutionId(executionId).fileName("photo.png").mimeType("image/png").sizeBytes(3L).checksum("abc123").build());
         when(evidenceFileService.download(eq(fileId), eq(1L), eq(false))).thenReturn(
@@ -176,13 +171,13 @@ class FlowInstanceControllerTest {
     }
 
     @Test
-    void gateDecision_returnsOk() throws Exception {
+    void gateDecisionEndpointIsGone() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/gates/{gateId}/decision",
-                        instanceId, gateId)
+                        instanceId, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("decision", "PASS"))))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -244,16 +239,6 @@ class FlowInstanceControllerTest {
     void fail_rejectsMissingCategory() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/fail", instanceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void gateDecision_rejectsMissingDecision() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post(
-                        "/api/prosthesis-manufacturing/instances/{id}/gates/{gateId}/decision",
-                        instanceId, gateId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());

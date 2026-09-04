@@ -2,8 +2,6 @@ package com.superhumans.prosthesismanufacturing.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotElement;
-import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotGate;
-import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotReworkLoop;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotTemplate;
@@ -29,8 +27,6 @@ class TemplateSnapshotParserTest {
     @Test
     void parse_roundTripsFullSnapshot() {
         UUID stepId = UUID.randomUUID();
-        UUID gateId = UUID.randomUUID();
-        UUID loopStepId = UUID.randomUUID();
         UUID elementId = UUID.randomUUID();
         UUID stageId = UUID.randomUUID();
 
@@ -47,18 +43,6 @@ class TemplateSnapshotParserTest {
                         .stageType("preparation")
                         .canSkip(false)
                         .requiresApproval(false)
-                        .gate(SnapshotGate.builder()
-                                .id(gateId)
-                                .name("Контроль якості")
-                                .requiredApproverRole("PROSTHETICS_ADMINISTRATOR")
-                                .checklist(List.of("Геометрія", "Матеріал"))
-                                .attachmentsRequired(true)
-                                .reworkLoops(List.of(SnapshotReworkLoop.builder()
-                                        .targetStepId(loopStepId)
-                                        .reworkType("FULL")
-                                        .maxAttempts(3)
-                                        .build()))
-                                .build())
                         .steps(List.of(SnapshotStep.builder()
                                 .id(stepId)
                                 .name("Зняття мірки")
@@ -101,17 +85,6 @@ class TemplateSnapshotParserTest {
         assertThat(stage.getId()).isEqualTo(stageId);
         assertThat(stage.getStageType()).isEqualTo("preparation");
         assertThat(stage.isCanSkip()).isFalse();
-
-        SnapshotGate gate = stage.getGate();
-        assertThat(gate.getId()).isEqualTo(gateId);
-        assertThat(gate.getRequiredApproverRole()).isEqualTo("PROSTHETICS_ADMINISTRATOR");
-        assertThat(gate.getChecklist()).containsExactly("Геометрія", "Матеріал");
-        assertThat(gate.isAttachmentsRequired()).isTrue();
-        assertThat(gate.getReworkLoops()).singleElement().satisfies(loop -> {
-            assertThat(loop.getTargetStepId()).isEqualTo(loopStepId);
-            assertThat(loop.getReworkType()).isEqualTo("FULL");
-            assertThat(loop.getMaxAttempts()).isEqualTo(3);
-        });
 
         SnapshotStep step = stage.getSteps().get(0);
         assertThat(step.getId()).isEqualTo(stepId);
@@ -156,6 +129,18 @@ class TemplateSnapshotParserTest {
         SnapshotTemplate parsed = parser.parse(parser.toJson(template));
 
         assertThat(parsed.getStages()).isEmpty();
+    }
+
+    @Test
+    void parse_legacyGateBlock_isIgnored() {
+        String legacyJson = "{\"name\":\"TP-UL-01\",\"version\":1,\"stages\":[{\"id\":\"" + UUID.randomUUID()
+                + "\",\"name\":\"Підготовка\",\"gate\":{\"id\":\"" + UUID.randomUUID()
+                + "\",\"name\":\"Контроль якості\",\"reworkLoops\":[]},\"steps\":[]}]}";
+
+        SnapshotTemplate parsed = parser.parse(legacyJson);
+
+        assertThat(parsed.getStages()).hasSize(1);
+        assertThat(parsed.getStages().get(0).getName()).isEqualTo("Підготовка");
     }
 
     @Test
