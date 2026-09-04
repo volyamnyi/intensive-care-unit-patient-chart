@@ -229,6 +229,21 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.restoreToPlanned(dayPartId, currentUserUuid, currentUserId));
     }
 
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
+    @PutMapping("/day-parts/{dayPartId}/cancel-assignment")
+    @Operation(summary = "Cancel day-period assignment («Відмінити це призначення»)", description = "Resets exactly one day-period cell to the unplanned state (all flags false, dose cleared). Sibling cells are untouched. Completed parts cannot be unassigned. Requires DOCTOR or HEAD_OF_DEPARTMENT role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Day-period assignment cancelled successfully"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Day part not found"),
+            @ApiResponse(responseCode = "422", description = "Business rule violated - part is completed")
+    })
+    public PrescriptionDayPartResponse cancelAssignment(@PathVariable UUID dayPartId) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        return prescriptionDayPartMapper.toResponse(itemService.cancelAssignment(dayPartId, currentUserId));
+    }
+
     @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
     @PostMapping("/day-parts/{dayPartId}/execute")
     @Operation(summary = "Execute dose", description = "Executes a dose for a day part. Requires NURSE or HEAD_OF_DEPARTMENT role. Requires 2-person authentication with a different nurse's credentials.")

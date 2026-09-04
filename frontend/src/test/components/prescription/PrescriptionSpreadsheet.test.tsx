@@ -51,7 +51,7 @@ function renderGrid(props: Partial<GridProps> = {}) {
         onCancelMedication={props.onCancelMedication ?? vi.fn()}
         onRestoreToPlanned={props.onRestoreToPlanned ?? vi.fn()}
         onAddDay={props.onAddDay}
-        onRemoveDay={props.onRemoveDay}
+        onCancelAssignment={props.onCancelAssignment ?? vi.fn()}
         onAddItem={props.onAddItem ?? vi.fn()}
         onRemoveItem={props.onRemoveItem ?? vi.fn()}
         onSearchMedicine={props.onSearchMedicine ?? vi.fn().mockResolvedValue([])}
@@ -95,19 +95,51 @@ describe('PrescriptionSpreadsheet — per-item day actions', () => {
     expect(onAddDay).toHaveBeenCalledWith('item-1');
   });
 
-  it('contextmenu on a day cell opens the menu with «Видалити цей день» and triggers onRemoveDay', async () => {
-    const onRemoveDay = vi.fn().mockResolvedValue(undefined);
-    renderGrid({ onRemoveDay });
-    fireEvent.contextMenu(await firstDayCell());
+  it('contextmenu on a planned cell opens the menu with «Відмінити це призначення» and triggers onCancelAssignment', async () => {
+    const onCancelAssignment = vi.fn().mockResolvedValue(undefined);
+    const planned = makeDayPart({ id: 'dp-planned', isPlanned: true, dose: '5mg' });
+    renderGrid({ items: [makeItem([planned])], onCancelAssignment });
+    const cell = screen.getAllByText('5mg')[0].closest('td');
+    expect(cell).not.toBeNull();
+    fireEvent.contextMenu(cell!);
 
     const menu = await screen.findByRole('menu', { name: 'Контекстне меню дня' });
     expect(menu).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('menuitem', { name: /Видалити цей день/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Відмінити це призначення/ }));
 
-    await waitFor(() => expect(onRemoveDay).toHaveBeenCalledTimes(1));
-    expect(onRemoveDay).toHaveBeenCalledWith('item-1', 'day-1');
+    await waitFor(() => expect(onCancelAssignment).toHaveBeenCalledTimes(1));
+    expect(onCancelAssignment).toHaveBeenCalledWith('dp-planned');
     expect(screen.queryByRole('menu', { name: 'Контекстне меню дня' })).not.toBeInTheDocument();
+  });
+
+  it('«Відмінити це призначення» appears for a cancelled cell and triggers onCancelAssignment', async () => {
+    const onCancelAssignment = vi.fn().mockResolvedValue(undefined);
+    const cancelled = makeDayPart({ id: 'dp-cancelled', isPlanned: true, isPlannedFinished: true, dose: '5mg' });
+    renderGrid({ items: [makeItem([cancelled])], onCancelAssignment });
+    const cell = screen.getAllByText('✕')[0].closest('td');
+    expect(cell).not.toBeNull();
+    fireEvent.contextMenu(cell!);
+
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити це призначення/ }));
+
+    await waitFor(() => expect(onCancelAssignment).toHaveBeenCalledTimes(1));
+    expect(onCancelAssignment).toHaveBeenCalledWith('dp-cancelled');
+  });
+
+  it('«Відмінити це призначення» is hidden for unplanned and completed cells', async () => {
+    const completed = makeDayPart({ id: 'dp-completed', isPlanned: true, isCompleted: true, dose: '5mg' });
+    renderGrid({ items: [makeItem([completed])] });
+    const completedCell = screen.getAllByText('✓')[0].closest('td');
+    fireEvent.contextMenu(completedCell!);
+    await screen.findByRole('menu', { name: 'Контекстне меню дня' });
+    expect(screen.queryByRole('menuitem', { name: /Відмінити це призначення/ })).not.toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Контекстне меню дня' })).not.toBeInTheDocument());
+
+    fireEvent.contextMenu(await firstDayCell());
+    await screen.findByRole('menu', { name: 'Контекстне меню дня' });
+    expect(screen.queryByRole('menuitem', { name: /Відмінити це призначення/ })).not.toBeInTheDocument();
   });
 
   it('«Відмінити препарат» appears for planned not-completed doses and calls onCancelMedication', async () => {
@@ -181,6 +213,7 @@ describe('PrescriptionSpreadsheet — per-item day actions', () => {
     await screen.findByRole('menu', { name: 'Контекстне меню дня' });
     expect(screen.queryByRole('menuitem', { name: /Відмінити препарат/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /Повернути у Заплановано/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Відмінити це призначення/ })).not.toBeInTheDocument();
   });
 
   it('does not open the context menu for a nurse', async () => {
@@ -190,7 +223,7 @@ describe('PrescriptionSpreadsheet — per-item day actions', () => {
   });
 
   it('closes the menu on Escape', async () => {
-    renderGrid({ onRemoveDay: vi.fn() });
+    renderGrid();
     fireEvent.contextMenu(await firstDayCell());
     await screen.findByRole('menu', { name: 'Контекстне меню дня' });
     fireEvent.keyDown(document.body, { key: 'Escape' });

@@ -618,6 +618,75 @@ class PrescriptionControllerTest {
     }
 
     @Test
+    void cancelAssignment_returnsUnplannedDayPart() throws Exception {
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning")
+                .isPlanned(false).isPlannedFinished(false).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+        when(itemService.cancelAssignment(eq(dayPartId), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", dayPartId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isPlanned").value(false))
+                .andExpect(jsonPath("$.isPlannedFinished").value(false))
+                .andExpect(jsonPath("$.isCompleted").value(false));
+
+        verify(itemService).cancelAssignment(eq(dayPartId), eq(1L));
+    }
+
+    @Test
+    void cancelAssignment_withHodRole_returnsDayPart() throws Exception {
+        when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("day")
+                .isPlanned(false).isPlannedFinished(false).isCompleted(false).isCompletedFinished(false).build();
+        part.setId(dayPartId);
+        when(itemService.cancelAssignment(eq(dayPartId), any())).thenReturn(part);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", dayPartId)
+                        .with(TestSecurityHelper.hod()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isPlanned").value(false));
+    }
+
+    @Test
+    void cancelAssignment_withNurseRole_returnsForbidden() throws Exception {
+        when(permissionService.has(eq("PRESCRIPTION_CREATE"))).thenReturn(false);
+        when(permissionService.has(eq("PRESCRIPTION_EXECUTE"))).thenReturn(true);
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", dayPartId)
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isForbidden());
+
+        verify(itemService, never()).cancelAssignment(any(), any());
+    }
+
+    @Test
+    void cancelAssignment_partNotFound_returnsNotFound() throws Exception {
+        when(itemService.cancelAssignment(eq(dayPartId), any()))
+                .thenThrow(new NotFoundException("Day part not found: " + dayPartId));
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", dayPartId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+    }
+
+    @Test
+    void cancelAssignment_onCompletedPart_returnsUnprocessableEntity() throws Exception {
+        String ukMsg = "Виконане призначення не може бути відмінене";
+        when(itemService.cancelAssignment(eq(dayPartId), any()))
+                .thenThrow(new BusinessException(ErrorCode.BUSINESS_RULE, ukMsg));
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", dayPartId)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value(ErrorCode.BUSINESS_RULE))
+                .andExpect(jsonPath("$.message").value(ukMsg));
+    }
+
+    @Test
     void executeDose_withHodRole_returnsOk() throws Exception {
         mockMvc.perform(post("/api/prescriptions/day-parts/{dayPartId}/execute", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)

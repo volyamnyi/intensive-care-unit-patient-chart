@@ -9,9 +9,9 @@ const mockGetItems = vi.fn();
 const mockGetAllergies = vi.fn().mockResolvedValue({ data: [] });
 const mockGetGrid = vi.fn().mockResolvedValue({ data: [] });
 const mockAddItemDay = vi.fn();
-const mockRemoveItemDay = vi.fn();
 const mockCancelMedication = vi.fn();
 const mockRestoreToPlanned = vi.fn();
+const mockCancelAssignment = vi.fn();
 let mockAuth: () => unknown = () => doctorAuth;
 
 vi.mock('react-router-dom', async () => {
@@ -25,10 +25,10 @@ vi.mock('../../api/medication', () => ({
     getItems: (...a: unknown[]) => mockGetItems(...a),
     getAllergies: (...a: unknown[]) => mockGetAllergies(...a),
     addItemDay: (...a: unknown[]) => mockAddItemDay(...a),
-    removeItemDay: (...a: unknown[]) => mockRemoveItemDay(...a),
     planDose: vi.fn(), completeDose: vi.fn(),
     cancelMedication: (...a: unknown[]) => mockCancelMedication(...a),
     restoreToPlanned: (...a: unknown[]) => mockRestoreToPlanned(...a),
+    cancelAssignment: (...a: unknown[]) => mockCancelAssignment(...a),
     executeDose: vi.fn(),
     addItem: vi.fn(), removeItem: vi.fn(), create: vi.fn(), delete: vi.fn(), close: vi.fn(),
     getByPatient: vi.fn(),
@@ -126,9 +126,9 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     vi.clearAllMocks();
     mockAuth = () => doctorAuth;
     mockAddItemDay.mockResolvedValue({ data: makeItem() });
-    mockRemoveItemDay.mockResolvedValue({ data: null });
     mockCancelMedication.mockResolvedValue({ data: makeItem() });
     mockRestoreToPlanned.mockResolvedValue({ data: makeItem() });
+    mockCancelAssignment.mockResolvedValue({ data: makeItem() });
   });
 
   it('doctor: «+ День» adds a day via API and refreshes items', async () => {
@@ -142,22 +142,36 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     expect(screen.queryByText(/Не вдалося додати день/)).not.toBeInTheDocument();
   });
 
-  it('doctor: failed removeDay surfaces the backend message', async () => {
-    const ukMessage = 'День містить виконані призначення, видалення неможливе';
-    mockRemoveItemDay.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
-    renderPage();
+  it('doctor: «Відмінити це призначення» calls cancelAssignment and refreshes items', async () => {
+    renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: false })]);
 
     const row = (await screen.findByText('Dopamine')).closest('tr');
     expect(row).not.toBeNull();
     const cell = row!.querySelectorAll('td')[1];
     fireEvent.contextMenu(cell);
 
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Видалити цей день/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити це призначення/ }));
 
-    await waitFor(() => expect(mockRemoveItemDay).toHaveBeenCalledTimes(1));
-    expect(mockRemoveItemDay).toHaveBeenCalledWith('item-1', 'day-1');
+    await waitFor(() => expect(mockCancelAssignment).toHaveBeenCalledTimes(1));
+    expect(mockCancelAssignment).toHaveBeenCalledWith('dp-1');
+    await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+  });
+
+  it('doctor: failed cancelAssignment surfaces the backend message', async () => {
+    const ukMessage = 'Виконане призначення не може бути відмінене';
+    mockCancelAssignment.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
+    renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: false })]);
+
+    const row = (await screen.findByText('Dopamine')).closest('tr');
+    expect(row).not.toBeNull();
+    const cell = row!.querySelectorAll('td')[1];
+    fireEvent.contextMenu(cell);
+
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити це призначення/ }));
+
+    await waitFor(() => expect(mockCancelAssignment).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.getByText(ukMessage)).toBeInTheDocument());
-    expect(screen.queryByText('Не вдалося видалити день')).not.toBeInTheDocument();
+    expect(screen.queryByText('Не вдалося відмінити призначення')).not.toBeInTheDocument();
   });
 
   it('doctor: «Відмінити препарат» calls cancelMedication and refreshes items', async () => {

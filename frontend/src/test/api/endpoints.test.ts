@@ -219,6 +219,11 @@ describe('prescriptionApi', () => {
     expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/replan');
   });
 
+  it('cancelAssignment puts to /prescriptions/day-parts/:id/cancel-assignment', () => {
+    prescriptionApi.cancelAssignment('part-1');
+    expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/cancel-assignment');
+  });
+
   it('completeDose puts to /prescriptions/day-parts/:id/complete', () => {
     prescriptionApi.completeDose('part-1');
     expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/complete');

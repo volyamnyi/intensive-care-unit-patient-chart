@@ -245,6 +245,29 @@ public class PrescriptionItemService {
         return saved;
     }
 
+    @Transactional
+    public PrescriptionDayPart cancelAssignment(UUID dayPartId, Long userId) {
+        PrescriptionDayPart part = getDayPart(dayPartId);
+        if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Виконане призначення не може бути відмінене");
+        }
+        // «Відмінити це призначення»: reset exactly this period cell to the
+        // unplanned (white) zero-state. Sibling cells are untouched — the caller
+        // addresses them by their own dayPartId.
+        part.setIsPlanned(false);
+        part.setIsPlannedFinished(false);
+        part.setDose(null);
+        part.setIsCompleted(false);
+        part.setIsCompletedFinished(false);
+        part.setDoctorName(null);
+        part.setNurseName(null);
+        part.setUpdatedBy(userId);
+        PrescriptionDayPart saved = partRepository.save(part);
+        auditService.logAction("PrescriptionDayPart", saved.getId(), "CANCEL_ASSIGNMENT", userId);
+        return saved;
+    }
+
     public List<PrescriptionItemDay> getDays(UUID itemId) {
         return dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
     }

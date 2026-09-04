@@ -138,14 +138,13 @@ export default function PrescriptionDetailPage() {
     }
   }
 
-  const handleRemoveDay = async (itemId: string, dayId: string) => {
-    if (!id) return
+  const handleCancelAssignment = async (dayPartId: string) => {
     setError(null)
     try {
-      await prescriptionApi.removeItemDay(itemId, dayId)
-      await loadItems(id)
+      await prescriptionApi.cancelAssignment(dayPartId)
+      if (id) await loadItems(id)
     } catch (err) {
-      setError(getErrorMessage(err, 'Не вдалося видалити день'))
+      setError(getErrorMessage(err, 'Не вдалося відмінити призначення'))
     }
   }
 
@@ -237,8 +236,8 @@ export default function PrescriptionDetailPage() {
         onPlan={handlePlan}
         onCancelMedication={handleCancelMedication}
         onRestoreToPlanned={handleRestoreToPlanned}
+        onCancelAssignment={handleCancelAssignment}
         onAddDay={isNurseUser ? undefined : handleAddDay}
-        onRemoveDay={isNurseUser ? undefined : handleRemoveDay}
         onExecute={isNurseUser ? handleExecute : undefined}
         onAddItem={isNurseUser ? async () => {} : handleAddItem}
         onRemoveItem={isNurseUser ? async () => {} : handleRemoveItem}

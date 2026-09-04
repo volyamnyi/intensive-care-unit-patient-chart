@@ -1,13 +1,15 @@
 import { test, expect } from '../../fixtures/index';
 import type { Locator, Page } from '@playwright/test';
 
-// E2E for per-item prescription day management (issue #169, phase 4).
-// Round-trips: adds a new day (max_day_date + 1), then deletes the same day
-// via the context menu — net-zero, no seed pollution.
+// E2E for per-item prescription day management (issue #169, phase 4;
+// reshaped by issue #223, phase 3: whole-day deletion left the cell menu,
+// so this spec adds a day via «+», asserts the menu offers no whole-day
+// delete, and removes the day via API — net-zero, no seed pollution).
 
+const API = 'http://localhost:8085/api';
 const DODATI_DENY = 'Додати день';
 const MENU_LABEL = 'Контекстне меню дня';
-const MENU_REMOVE_DAY = 'Видалити цей день';
+const MENU_WHOLE_DAY_DELETE = 'Видалити цей день';
 
 function formatUa(iso: string): string {
   return new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
@@ -57,6 +59,7 @@ async function gotoDay(page: Page, grid: Locator, iso: string): Promise<void> {
 }
 
 test.describe('Doctor — prescription day add + remove (UI)', () => {
+  let doctorToken = '';
   test.beforeAll(async ({ request }) => {
     const res = await request.post('http://localhost:8085/api/auth/login', {
       data: { login: 'doctor1', password: 'doctor123' },
@@ -64,6 +67,7 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     const token = body.token as string;
+    doctorToken = token;
     await request.post('http://localhost:8085/api/mis/error-mode?mode=none', {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -82,7 +86,7 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
     await expect(addBtns).toHaveCount(expected);
   });
 
-  test('adds a new day then deletes it via context menu (round-trip)', async ({ page }) => {
+  test('adds a new day via «+»; cell menu offers no whole-day delete (API cleanup)', async ({ page, request }) => {
     const grid = await scopeGrid(page);
     const itemRows = grid.locator('tbody tr');
     const firstRow = itemRows.first();
@@ -123,25 +127,27 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
     expect(dateColIdx).toBeGreaterThanOrEqual(0);
 
     const cell = firstRow.locator('td').nth(1 + dateColIdx * 4);
-    await cell.click({ button: 'right' });
+    await cell.click({ button: 'right', position: { x: 50, y: 16 } });
     const menu = page.getByRole('menu', { name: MENU_LABEL });
     await expect(menu).toBeVisible();
     // The added day is unplanned/uncompleted → no "Відмінити препарат" expected.
     await expect(menu.getByRole('menuitem', { name: 'Відмінити препарат' })).toHaveCount(0);
-    await expect(menu.getByRole('menuitem', { name: MENU_REMOVE_DAY })).toBeVisible();
-
-    const [delRes] = await Promise.all([
-      page.waitForResponse(r => /\/items\/[0-9a-f-]+\/days\/[0-9a-f-]+$/.test(r.url()) && r.request().method() === 'DELETE'),
-      menu.getByRole('menuitem', { name: MENU_REMOVE_DAY }).click(),
-    ]);
-    expect(delRes.status()).toBe(204);
-
-    // The successful remove unmounts the day context menu (closeDayMenu()). This
-    // confirms the UI completed the delete end-to-end. We deliberately do NOT assert
-    // the date header is gone from the table: header dates are the union across ALL
-    // items, so a sibling item sharing the date would keep the <th> and cause a false
-    // flake. The round-trip contract is already proven by the 201/204 above (and the
-    // API spec covers it exhaustively).
+    // Phase 3 removed whole-day deletion from the cell menu (it returns as the
+    // row-level «−» button in Phase 4).
+    await expect(menu.getByRole('menuitem', { name: MENU_WHOLE_DAY_DELETE })).toHaveCount(0);
+    await expect(menu.getByRole('menuitem', { name: 'Відмінити це призначення' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(menu).toBeHidden({ timeout: 5_000 });
+
+    // Net-zero cleanup via API (row-level «−» arrives in Phase 4).
+    const itemId = body.id as string;
+    const addedDay = (body.dayParts as { dayDate: string; dayId: string }[]).find(p => p.dayDate === addedDate);
+    expect(addedDay).toBeTruthy();
+    if (!addedDay) throw new Error('added day missing in add-day response');
+    const delRes = await request.delete(
+      `${API}/prescriptions/items/${itemId}/days/${addedDay.dayId}`,
+      { headers: { Authorization: `Bearer ${doctorToken}` } },
+    );
+    expect(delRes.status()).toBe(204);
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X, CalendarDays, Undo2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, X, Undo2, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PrescriptionDayPart } from '../../types/medication';
@@ -41,11 +41,10 @@ function dayPartKey(date: string, period: string) { return `${date}|${period}`; 
 export interface DayContextMenuState {
   clientX: number;
   clientY: number;
-  itemId: string;
-  dayId?: string;
   cellLabel: string;
   cancelEnabled: boolean;
   restoreEnabled: boolean;
+  cancelAssignmentEnabled: boolean;
   cancelDayPart: PrescriptionDayPart | null;
 }
 
@@ -62,17 +61,17 @@ export interface PrescriptionSpreadsheetProps {
   onShiftLeft: () => void;
   onShiftRight: () => void;
   onAddDay?: (itemId: string) => Promise<void> | void;
-  onRemoveDay?: (itemId: string, dayId: string) => Promise<void> | void;
   onPlan: (dayPartId: string, dose: string) => Promise<void>;
   onCancelMedication: (dayPartId: string) => Promise<void>;
   onRestoreToPlanned: (dayPartId: string) => Promise<void>;
+  onCancelAssignment: (dayPartId: string) => Promise<void>;
   onOpenExecute: (dp: PrescriptionDayPart, el: HTMLElement) => void;
   onOpenDeleteConfirm: (itemId: string, el: HTMLElement) => void;
 }
 
 export default function PrescriptionSpreadsheet({
   canEdit, isDoctor, isNurse, gridItems, visibleDates, allDates, viewStart, daysToShow,
-  loading, onShiftLeft, onShiftRight, onAddDay, onRemoveDay, onPlan, onCancelMedication, onRestoreToPlanned, onOpenExecute, onOpenDeleteConfirm,
+  loading, onShiftLeft, onShiftRight, onAddDay, onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onOpenExecute, onOpenDeleteConfirm,
 }: PrescriptionSpreadsheetProps) {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editingDose, setEditingDose] = useState('');
@@ -94,19 +93,19 @@ export default function PrescriptionSpreadsheet({
 
   const canMenu = canEdit && isDoctor;
 
-  const openDayMenu = (e: React.MouseEvent, item: GridItem, date: string, dp: PrescriptionDayPart) => {
+  const openDayMenu = (e: React.MouseEvent, date: string, dp: PrescriptionDayPart) => {
     e.preventDefault();
     if (!canMenu) return;
     const cancelEnabled = Boolean(dp.isPlanned && !dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished);
     const restoreEnabled = Boolean(dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished);
+    const cancelAssignmentEnabled = Boolean((dp.isPlanned || dp.isPlannedFinished) && !dp.isCompleted && !dp.isCompletedFinished);
     setDayMenu({
       clientX: e.clientX,
       clientY: e.clientY,
-      itemId: item.id,
-      dayId: dp.dayId,
       cellLabel: `${formatDate(date)} · ${PERIOD_FULL[dp.period] ?? dp.period}`,
       cancelEnabled,
       restoreEnabled,
+      cancelAssignmentEnabled,
       cancelDayPart: dp,
     });
   };
@@ -144,10 +143,9 @@ export default function PrescriptionSpreadsheet({
     closeDayMenu();
   };
 
-  const handleRemoveDayFromMenu = async () => {
-    const itemId = dayMenu?.itemId;
-    const dayId = dayMenu?.dayId;
-    if (itemId && dayId) await onRemoveDay?.(itemId, dayId);
+  const handleCancelAssignmentFromMenu = async () => {
+    const dp = dayMenu?.cancelDayPart;
+    if (dp) await onCancelAssignment(dp.id);
     closeDayMenu();
   };
 
@@ -309,7 +307,7 @@ export default function PrescriptionSpreadsheet({
                               : null),
                           }}
                           onClick={onClick}
-                          onContextMenu={dp ? (e) => openDayMenu(e, item, date, dp) : undefined}
+                          onContextMenu={dp ? (e) => openDayMenu(e, date, dp) : undefined}
                         >
                           {isEditing ? (
                             <form onSubmit={e => { e.preventDefault(); if (dp) commitEdit(dp); }}
@@ -404,15 +402,15 @@ export default function PrescriptionSpreadsheet({
                 Повернути у Заплановано
               </button>
             )}
-            {dayMenu.dayId && onRemoveDay && (
+            {dayMenu.cancelAssignmentEnabled && dayMenu.cancelDayPart && (
               <button
                 type="button"
                 role="menuitem"
                 className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left rounded-md hover:bg-muted text-destructive"
-                onClick={handleRemoveDayFromMenu}
+                onClick={handleCancelAssignmentFromMenu}
               >
-                <CalendarDays className="size-3.5" />
-                Видалити цей день
+                <Eraser className="size-3.5" />
+                Відмінити це призначення
               </button>
             )}
           </div>
