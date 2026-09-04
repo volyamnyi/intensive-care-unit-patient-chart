@@ -336,7 +336,7 @@ class PrescriptionControllerTest {
         PrescriptionItemDay day = PrescriptionItemDay.builder().build();
         day.setId(UUID.randomUUID());
         part.setDay(day);
-        when(itemService.planDose(eq(dayPartId), eq("50mg"), any())).thenReturn(part);
+        when(itemService.planDose(eq(dayPartId), eq("50mg"), any(), any())).thenReturn(part);
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/plan", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -352,7 +352,7 @@ class PrescriptionControllerTest {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).build();
         part.setId(dayPartId);
-        when(itemService.planDose(eq(dayPartId), eq("50mg"), any())).thenReturn(part);
+        when(itemService.planDose(eq(dayPartId), eq("50mg"), any(), any())).thenReturn(part);
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/plan", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -361,7 +361,7 @@ class PrescriptionControllerTest {
                 .andExpect(status().isOk());
 
         UUID expectedUuid = UUID.nameUUIDFromBytes("1".getBytes());
-        verify(itemService).planDose(eq(dayPartId), eq("50mg"), eq(expectedUuid));
+        verify(itemService).planDose(eq(dayPartId), eq("50mg"), eq(expectedUuid), eq(1L));
     }
 
     @Test
@@ -498,7 +498,7 @@ class PrescriptionControllerTest {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).build();
         part.setId(dayPartId);
-        when(itemService.planDose(eq(dayPartId), eq("50mg"), any())).thenReturn(part);
+        when(itemService.planDose(eq(dayPartId), eq("50mg"), any(), any())).thenReturn(part);
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/plan", dayPartId)
                         .contentType(MediaType.APPLICATION_JSON)
