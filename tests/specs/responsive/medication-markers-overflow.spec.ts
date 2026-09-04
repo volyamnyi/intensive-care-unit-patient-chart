@@ -30,6 +30,48 @@ async function openListId(request: APIRequestContext, token: string): Promise<st
   return open.id;
 }
 
+function formatUa(iso: string): string {
+  return new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
+}
+
+function itemsGrid(page: Page) {
+  return page.locator('table').filter({ hasText: 'Препарат / Метод' });
+}
+
+type DayPart = {
+  id: string;
+  dayId: string;
+  dayDate: string;
+  period: string;
+};
+
+async function addedDateOf(request: APIRequestContext, token: string, listId: string, itemId: string): Promise<string> {
+  const res = await request.get(`${API}/prescriptions/${listId}/items`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(res.ok()).toBeTruthy();
+  const items = (await res.json()) as { id: string; dayParts: DayPart[] }[];
+  const item = items.find((i) => i.id === itemId);
+  if (!item) throw new Error(`item not found: ${itemId}`);
+  const max = item.dayParts.map((p) => p.dayDate).sort().at(-1);
+  if (!max) throw new Error('item has no days');
+  return max;
+}
+
+// The items grid opens at the oldest dates; shift the 7-day window until the
+// target header renders.
+async function shiftHeaderIntoView(page: Page, isoDate: string): Promise<void> {
+  const header = itemsGrid(page).locator('thead tr').first().locator('th[colspan]', { hasText: formatUa(isoDate) });
+  const shiftRight = page.locator('button:has(.lucide-chevron-right)').first();
+  for (let i = 0; i < 30; i++) {
+    if (await header.isVisible({ timeout: 300 }).catch(() => false)) return;
+    if (await shiftRight.isDisabled().catch(() => true)) break;
+    await shiftRight.click();
+    await page.waitForTimeout(150);
+  }
+  await expect(header).toBeVisible({ timeout: 10_000 });
+}
+
 async function stableDocWidth(page: Page): Promise<{ doc: number; win: number }> {
   // Layout can shift after async fonts/data settle — poll until two reads agree.
   let prev = -1;
@@ -72,7 +114,7 @@ test.describe('Responsive — medication grid with added-day markers', () => {
     });
   });
 
-  test('detail page has no horizontal overflow with markers present', async ({ page }) => {
+  test('detail page has no horizontal overflow with markers present', async ({ page, request }) => {
     await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10_000 });
     await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
@@ -80,7 +122,10 @@ test.describe('Responsive — medication grid with added-day markers', () => {
     await expect(page.locator('tbody tr').filter({ hasText: ROW_PREFIX })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Доданий день')).toBeVisible();
     await expect(page.getByText('Пропущений день')).toBeVisible();
-    // An added-day header marker is rendered for our row's appended day.
+    // The grid opens at the oldest dates: shift until our appended day renders,
+    // then assert its header marker.
+    const addedDate = await addedDateOf(request, doctorToken, listId, itemId);
+    await shiftHeaderIntoView(page, addedDate);
     await expect(page.locator('th[data-added-day="true"]')).not.toHaveCount(0);
 
     const { doc, win } = await stableDocWidth(page);

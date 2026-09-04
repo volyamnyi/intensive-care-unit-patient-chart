@@ -367,7 +367,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
                 authEntity(null, getDoctorToken()),
                 String.class, part.getId());
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Test
@@ -414,7 +414,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
                 authEntity(null, getDoctorToken()),
                 String.class, part.getId());
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Test
@@ -449,7 +449,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
                 authEntity(null, getDoctorToken()),
                 String.class, itemId, lastDayId);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
     }
 
     @Test
