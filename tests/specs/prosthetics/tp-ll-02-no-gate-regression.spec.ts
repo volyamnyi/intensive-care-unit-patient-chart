@@ -33,7 +33,7 @@ test.describe('TP-LL-02 — No Quality Gate (v2.1 regression, Фаза 5)', () =
     expect(JSON.stringify(detail)).not.toContain('rework_loops');
     // (The «Видача протеза» stage legitimately requires handover approval — that is a
     // sign-off, NOT a Quality Gate. The no-gate proof is the absence of quality_gates /
-    // rework_loops / WAITING_REVIEW and an empty gate-decisions list, asserted here.)
+    // rework_loops / WAITING_REVIEW plus the removed gate-decisions endpoint, asserted below.)
 
     // The instance-level immutable snapshot must not reference WAITING_REVIEW.
     const instance = await createFreeLowerInstance(request, headers, templateId);
@@ -43,13 +43,14 @@ test.describe('TP-LL-02 — No Quality Gate (v2.1 regression, Фаза 5)', () =
     await terminateInstance(request, headers, instance.id);
   });
 
-  test('get gate-decisions returns an empty list (no gates on TP-LL-02)', async ({ request }) => {
+  test('gate-decisions endpoint is gone (no gates on TP-LL-02)', async ({ request }) => {
     const headers = headersFor(prosthetistToken);
     const templateId = await findTemplateByIdName(request, headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, headers, templateId);
 
-    const gateDecisions = await (await request.get(`${PROSTH}/instances/${instance.id}/gate-decisions`, { headers })).json();
-    expect(gateDecisions).toHaveLength(0);
+    const res = await request.get(`${PROSTH}/instances/${instance.id}/gate-decisions`, { headers });
+    // Unmapped route since the Quality Gate removal: never a decision list.
+    expect([401, 404]).toContain(res.status());
 
     await terminateInstance(request, headers, instance.id);
   });

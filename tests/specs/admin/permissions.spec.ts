@@ -53,7 +53,6 @@ test.describe('Role & permission management', () => {
     await expect(page.getByText('Створення епізоду')).toBeVisible();
     await expect(page.getByText('Створення клінічного дня')).toBeVisible();
     await expect(page.getByText('Підпис медсестрою')).toBeVisible();
-    await expect(page.getByText('Рішення quality gate')).toBeVisible();
     await expect(page.getByText('Керування шаблонами')).toBeVisible();
 
     // Module-navigation rows: default matrix grants prosthetics module to prosthetics roles only
