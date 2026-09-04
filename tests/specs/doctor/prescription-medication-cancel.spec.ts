@@ -83,6 +83,28 @@ async function gotoDetail(page: Page, listId: string): Promise<void> {
   await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
 }
 
+// Clicks a context-menu item and waits for BOTH the mutation PUT and the
+// subsequent items GET (`loadItems` refetch). Waiting for the GET is required:
+// locating the next cell before the grid re-renders makes the shift loop
+// overshoot the target window with no way back.
+async function clickMenuItemAndReload(
+  page: Page,
+  menu: ReturnType<Page['locator']>,
+  name: string,
+  putUrlSuffix: string,
+  listId: string,
+) {
+  const [putRes] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.url().endsWith(putUrlSuffix) && r.request().method() === 'PUT',
+    ),
+    page.waitForResponse(
+      (r) => r.url().includes(`/prescriptions/${listId}/items`) && r.request().method() === 'GET',
+    ),
+    menu.getByRole('menuitem', { name }).click(),
+  ]);
+  return putRes;
+}
 async function openMenuOnCell(page: Page, row: ReturnType<Page['locator']>, text: string) {
   // The row renders only after items load; items loading also completes
   // `allDates`, which drives the shift chevron's disabled state. Without this
@@ -143,12 +165,7 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
       await expect(opened.menu.getByRole('menuitem', { name: CANCEL_ITEM })).toBeVisible();
       await expect(opened.menu.getByRole('menuitem', { name: RESTORE_ITEM })).toHaveCount(0);
 
-      const [cancelRes] = await Promise.all([
-        page.waitForResponse(
-          (r) => r.url().endsWith(`/day-parts/${part.id}/cancel`) && r.request().method() === 'PUT',
-        ),
-        opened.menu.getByRole('menuitem', { name: CANCEL_ITEM }).click(),
-      ]);
+      const cancelRes = await clickMenuItemAndReload(page, opened.menu, CANCEL_ITEM, `/day-parts/${part.id}/cancel`, listId);
       expect(cancelRes.status()).toBe(200);
 
       // Cancelled cell: ✕ on purple, offers restore instead of cancel.
@@ -157,12 +174,7 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
       await expect(opened.menu.getByRole('menuitem', { name: CANCEL_ITEM })).toHaveCount(0);
       await expect(opened.menu.getByRole('menuitem', { name: RESTORE_ITEM })).toBeVisible();
 
-      const [replanRes] = await Promise.all([
-        page.waitForResponse(
-          (r) => r.url().endsWith(`/day-parts/${part.id}/replan`) && r.request().method() === 'PUT',
-        ),
-        opened.menu.getByRole('menuitem', { name: RESTORE_ITEM }).click(),
-      ]);
+      const replanRes = await clickMenuItemAndReload(page, opened.menu, RESTORE_ITEM, `/day-parts/${part.id}/replan`, listId);
       expect(replanRes.status()).toBe(200);
 
       // Restored cell: same dose on blue.
