@@ -90,7 +90,10 @@ async function openMenuOnCell(page: Page, row: ReturnType<Page['locator']>, text
   await expect(row).toBeVisible({ timeout: 10_000 });
   const cell = row.locator('td', { hasText: text });
   await shiftCellIntoView(page, cell);
-  await cell.click({ button: 'right' });
+  // Cells are 68x32; a first-column cell's center can sit under the sticky
+  // «Препарат/Метод» column (z-10), so the contextmenu would hit the sticky
+  // overlay instead of the td. Click near the cell's right edge instead.
+  await cell.click({ button: 'right', position: { x: 50, y: 16 } });
   const menu = page.getByRole('menu', { name: MENU_LABEL });
   await expect(menu).toBeVisible();
   return { cell, menu };
