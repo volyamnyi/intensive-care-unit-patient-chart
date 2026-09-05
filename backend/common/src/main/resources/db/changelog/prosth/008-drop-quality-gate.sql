@@ -1,12 +1,11 @@
 --liquibase formatted sql
 
+--changeset split-prosth:23
 --comment Quality Gate removal (QG-Removal Phase 2, issue #230): the QC subsystem
 --comment (QualityGate/GateDecision/ReworkLoop, WAITING_REVIEW/CORRECTION/FAILED_QC,
 --comment rework_count, rework_target_step_id, PROSTHETICS_GATE_DECISION) is deleted
 --comment from the backend. This changeset removes its schema. Historic rows in removed
 --comment states are remapped to the linear flow first; AuditLog history is kept as-is.
-
---changeset split-prosth:23
 UPDATE prosthetics_flow_instances SET status = 'IN_PROGRESS' WHERE status IN ('WAITING_REVIEW', 'CORRECTION');
 --rollback SELECT 1;
 
