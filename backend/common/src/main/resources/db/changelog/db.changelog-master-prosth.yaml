@@ -20,3 +20,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/007-pause-categories.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/008-drop-quality-gate.sql

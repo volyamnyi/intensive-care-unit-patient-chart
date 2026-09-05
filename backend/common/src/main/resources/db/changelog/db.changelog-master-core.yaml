@@ -14,3 +14,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/005-role-permissions-add-prescription-list-create.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/006-remove-gate-decision-permission.sql
