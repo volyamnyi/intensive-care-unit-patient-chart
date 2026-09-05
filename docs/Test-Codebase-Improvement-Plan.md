@@ -1,5 +1,7 @@
 # Test Codebase Improvement Plan
 
+> **Note (QG-Removal, issues #229–#234):** `QualityGateServiceTest` / gate-endpoint rows below are historical — deleted with the whole Quality Gate subsystem.
+
 **Status:** Implemented — 2026-08-20 (all H/M changes applied; pre-flight green; tests themselves un-run per CI-only rule)
 **Scope:** Backend unit/integration tests (JUnit 5, Mockito, AssertJ — 112 files) and frontend Vitest tests (76 files). Playwright E2E is out of scope.
 **Method:** Full inventory of both test suites (per-module/per-directory counts), representative reading of every backend module and all major frontend suites, byte-level verification of the suspected seed-file encoding issue, cross-referencing of recently shipped features (dynamic RBAC, `PRESCRIPTION_LIST_CREATE`, responsive UI phases) against their test coverage.

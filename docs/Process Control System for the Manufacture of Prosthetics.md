@@ -2,6 +2,12 @@
 
 # Система управління технологічним процесом виготовлення протезів
 
+> **Note (QG-Removal, issues #229–#234):** the Quality Gate subsystem specified below
+> (Screen 9 «Контрольна точка якості», Screen 10 rejection dialog, rework loops,
+> `WAITING_REVIEW` / `CORRECTION` / `FAILED_QC` statuses, PASS/REWORK/FAIL decisions)
+> has been deleted from the product — the flow is linear. The gate sections are
+> retained as history and no longer apply.
+
 ## 1\. Вступ та основні принципи
 
 ### 1.1 Призначення системи

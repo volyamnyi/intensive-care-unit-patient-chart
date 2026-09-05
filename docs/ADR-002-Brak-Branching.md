@@ -1,6 +1,7 @@
 # ADR-002 — Branch-модель для «Брак» (TP-LL-02, етапи 6 та 9)
 
 > **Статус:** `ACCEPTED` (2026-09-01) · **Amendment Phase 2** `ACCEPTED` (2026-09-02) — розширення тригерів на етап 9 · **Контекст:** Issue #204, #212 (ТЗ №1)
+> **Note (QG-Removal, issues #229–#234):** `WAITING_REVIEW` / `CORRECTION` statuses referenced below no longer exist; the Quality Gate subsystem is deleted, the flow is linear.
 > **Автор:** OpenCode (Muse Spark)
 > **Пов'язані:** `docs/TP-LL-02-Brak-Analysis-Issue-203.md`, Issue #203/#205, `docs/TP-LL-02-Refinement-Implementation-Plan.md` §2.1, Issue #212 / #215
 

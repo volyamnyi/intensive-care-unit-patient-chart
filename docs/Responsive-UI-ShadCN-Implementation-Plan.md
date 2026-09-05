@@ -1,5 +1,7 @@
 # Responsive UI & ShadCN Implementation Plan
 
+> **Note (QG-Removal, issues #229–#234):** `QualityGatePanel` references below are historical — the component was deleted with the whole Quality Gate subsystem.
+
 > Status: PLANNED · Priority band: **tablet 640–1024px** · Scope: layout/markup/styling/a11y only — **no business logic, data flow, API clients, or backend changes**
 >
 > Baseline: Responsive Phases 1–5 (#160–#164) and QA pass (#165) are complete and CI-green. This plan closes the remaining gaps.

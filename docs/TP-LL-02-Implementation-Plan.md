@@ -4,6 +4,8 @@
 > **Універсальний шаблон:** `docs/Універсальний шаблон опису технологічного процесу.md` (v1.1)
 > **Код шаблону:** `TP-LL-02` — `LOWER_LIMB` / `generic_lower_limb` / `BOTH`, `DRAFT→ACTIVE`, 10 етапів у інстансі (16 кроків) + setup-фаза, `estimatedDurationMin=540`
 > **Рушій:** `prosthesis-manufacturing` (`FlowTemplate`→`FlowInstance`→`StepExecution`, `FlowInstanceService`/`FlowTemplateService`, `TemplateSnapshotParser`, `WizardScreen`, `ProstheticsContext`)
+> **Note (QG-Removal, issues #229–#234):** the Quality Gate subsystem referenced below has since been fully deleted; the flow is linear. Retained as history.
+>
 > **Принцип:** Quality Gate повністю вилучено; процес лінійний, брак — через `fail`/`backward`, умовний вкладиш — `mandatory=false`.
 
 ---

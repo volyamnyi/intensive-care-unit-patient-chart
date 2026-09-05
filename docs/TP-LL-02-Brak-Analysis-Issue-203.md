@@ -1,5 +1,7 @@
 # Аналіз існуючої реалізації функціоналу «Брак» — TP-LL-02, етап 6 крок 1 (e0000028) — Issue #203
 
+> **Note (QG-Removal, issues #229–#234):** the Quality Gate mechanics analyzed below (`WAITING_REVIEW` / `FAILED_QC`, `QualityGateService.decide`, gate endpoints, `reworkCount`) have since been fully deleted; the flow is linear. Retained as history.
+>
 > **Дата:** 2026-09-01 · **Автор:** OpenCode (Muse Spark) · **Статус:** `ANALYSIS COMPLETE` · **Блокує Issues 2–8**
 > **Template:** `TP-LL-02` (`c0000003`, `LOWER_LIMB`/`generic_lower_limb`, `ACTIVE`, 10 етапів/14 кроків, без Quality Gate) · **Цільовий крок:** `e0000028` «Примірювання та коректування тренувального протеза» в етапі `d0000017`
 

@@ -33,7 +33,7 @@ ICU Patient Chart — пошаговий посібник із переведе�
 | `my_fullstack_core` | common | Users, RBAC matrix, audit log, system settings |
 | `my_fullstack_icu` | icu-chart | Episodes, clinical days, hourly records, orders, scales, PDFs, signatures |
 | `my_fullstack_med` | medication-sheet | Prescription lists/items/executions, vital signs, medicine cache |
-| `my_fullstack_prosth` | prosthesis-manufacturing | Prosthesis patients, orders, templates, instances, gates, evidence |
+| `my_fullstack_prosth` | prosthesis-manufacturing | Prosthesis patients, orders, templates, instances, evidence |
 
 4 фізичні бази в PostgreSQL (CI використовує версію 16; продакшн — теж 16 або новішу). Кожна має **свій** Liquibase bean + **свій** changeset master + **свій** seed script:
 

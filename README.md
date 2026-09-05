@@ -12,7 +12,7 @@
 
 > A full-stack electronic medical record system for Intensive Care Units (ICU). Implements the Ukrainian standard form **003-15/о «Карта інтенсивної терапії»**. Enables doctors and nurses to digitally manage patient ICU charts — including hourly vital sign tracking, fluid balance monitoring, prescription management, clinical scale assessments, PDF generation (A4 landscape, Times New Roman), and digital signing workflows.
 
-**Also includes: Prosthetics Manufacturing Module** — A workflow management system for prosthetics production (from order selection → template selection → step-by-step wizard → quality gate decisions → PDF reports), with role-based access (PROSTHETIST / PROSTHETICS_ADMINISTRATOR).
+**Also includes: Prosthetics Manufacturing Module** — A workflow management system for prosthetics production (from order selection → template selection → step-by-step wizard → PDF reports), with role-based access (PROSTHETIST / PROSTHETICS_ADMINISTRATOR).
 
 ---
 
@@ -55,8 +55,6 @@
 - **Setup Wizard** — Patient search (from local mock DB) → Order selection → Order review (recipe PDF) → Template selection → Instance creation
 - **Execution Wizard** — Step-by-step guided workflow with validation (measurements, anamnesis, manufacturing, file uploads)
 - **Pause/Resume** — Timer-aware pausing with categorized reasons (operative intervention, VLC passing, went abroad, reamputation)
-- **Quality Gate** — PASS / REWORK / FAIL decisions (PROSTHETICS_ADMINISTRATOR only)
-- **Rework Loop** — Automatic rollback to target step/stage with max attempt limits
 - **Failure Handling** — Failure snapshot capture (allowlisted category, description, attachments) + replacement instance creation
 - **PDF Reports** — Recipe PDF (order review), Instance PDF (Done screen), Failure PDF (Failed screen)
 - **Evidence Upload** — Image/PDF uploads (10 MB limit) per step
@@ -157,7 +155,7 @@ The application uses **4 separate PostgreSQL databases** (one per module), each 
 | `my_fullstack_core` | COMMON (single-deployment core) | Users & authentication, dynamic RBAC (`permissions` + `role_permissions` matrix), audit log (`audit_logs`), system settings and reference values |
 | `my_fullstack_icu` | ICU Chart | Episodes, clinical days, hourly records, medical orders & executions, notes, clinical scale results, signatures, generated PDFs, labs, ventilation, patient state, fluid balance |
 | `my_fullstack_med` | Medication Sheet | Prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/allergy/drug-interaction caches, telegram subscriptions |
-| `my_fullstack_prosth` | Prosthetics Manufacturing | Patients, orders, flow templates, flow instances & step executions, quality gates & decisions, failure snapshots, evidence files |
+| `my_fullstack_prosth` | Prosthetics Manufacturing | Patients, orders, flow templates, flow instances & step executions, failure snapshots, evidence files, defect (brak) events & branches |
 | `my_fullstack_db` | — (bootstrap only, **not used by the app**) | Default database auto-created by the PostgreSQL Docker service container in CI (`POSTGRES_DB` env var, required by the image); the application never connects to it — all CI jobs create the 4 real databases above inside that container |
 
 Create the 4 application databases:
@@ -413,8 +411,6 @@ java -jar app/target/app-*.jar
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/evidence/{fileId}` | PROSTHETIST, PROSTHETICS_ADMIN | Download evidence file |
 | `DELETE` | `/api/prosthesis-manufacturing/instances/{id}/evidence/{fileId}` | PROSTHETIST | Delete evidence file (IN_PROGRESS only) |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/fail` | PROSTHETIST | Fail instance (allowlisted category: defect, materials, component_damage, order_cancelled, patient, other) |
-| `GET` | `/api/prosthesis-manufacturing/instances/{id}/quality-gates` | PROSTHETIST, PROSTHETICS_ADMIN | Get quality gates for instance |
-| `POST` | `/api/prosthesis-manufacturing/gate-decisions` | PROSTHETICS_ADMIN | Make gate decision (PASS/REWORK/FAIL) |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/pause` | PROSTHETIST | Pause instance (reason: operative intervention, VLC passing, went abroad, reamputation) |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/resume` | PROSTHETIST | Resume instance |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/replacement` | PROSTHETIST | Create replacement after FAIL |
@@ -485,8 +481,8 @@ icu-patient-chart/
 │   │   │                         security config, multi-DB wiring, platform controllers (auth/user/patient/admin/audit/
 │   │   │                         settings/mock-MIS), `entity/base` + `entity/core` (User, Permission, RolePermission,
 │   │   │                         AuditLog, ...), `repository/core`, exception handlers, MIS client, services (Auth,
-│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 15
-│   │   │                         SQL changesets in `db/changelog/{core,icu,med,prosth}/`)
+│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 21
+│   │   │                         SQL files in `db/changelog/{core (6), icu (6), med (1), prosth (8)}/`)
 │   ├── icu-chart/              ← ICU chart feature: `com.superhumans.icu.*` (entities + repositories) + ICU domain
 │   │                             packages (controller ×13, service ×16, dto, mapper); depends on common
 │   ├── medication-sheet/       ← medication sheet feature (`com.superhumans.medicationsheet.*`); depends on common
@@ -508,8 +504,8 @@ icu-patient-chart/
 │       ├── services/           # AuthContext
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
-│       └── test/               # Vitest tests (90 files)
-├── tests/                      # Playwright E2E (88 spec files, 11 projects)
+│       └── test/               # Vitest tests (89 files)
+├── tests/                      # Playwright E2E (83 spec files, 11 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -530,7 +526,7 @@ icu-patient-chart/
 | `mvn -pl app spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (142 test files) |
+| `mvn test` | Run unit tests (140 test files) |
 | `mvn test -Pintegration-test` | Run integration tests (85) — requires Docker/PostgreSQL |
 
 #### Frontend
@@ -540,12 +536,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (781 across 90 files) |
+| `npm t` | Run Vitest tests (770 across 89 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (88 spec files, 369 tests: 365 passed, 4 pre-existing skips) |
+| `npx playwright test` | Run all E2E tests (83 spec files, 397 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -561,16 +557,16 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (88 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (83 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend tests**: 142 test files across the multi-module reactor — common (19) + icu-chart (68) + medication-sheet (17) + prosthesis-manufacturing (37) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
+- **Backend tests**: 140 test files across the multi-module reactor — common (19) + icu-chart (68) + medication-sheet (17) + prosthesis-manufacturing (35) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 94 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 781 tests (90 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 88 spec files (369 tests: 365 passed, 4 pre-existing prosthetics skips), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Frontend Vitest tests**: 770 tests (89 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 83 spec files (397 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
@@ -596,7 +592,7 @@ chore: maintenance tasks
 
 ### Role Permissions
 
-Access is enforced by a **dynamic role-permission matrix** (25 permission codes across 8 categories in `PermissionCatalog`). The table below lists each permission (code and label) and the roles **granted it by default** via `PermissionCatalog.defaultMatrix()`. Administrators can change these grants at runtime through the admin UI («Доступи та ролі»), and the changes take effect immediately.
+Access is enforced by a **dynamic role-permission matrix** (24 permission codes across 8 categories in `PermissionCatalog`). The table below lists each permission (code and label) and the roles **granted it by default** via `PermissionCatalog.defaultMatrix()`. Administrators can change these grants at runtime through the admin UI («Доступи та ролі»), and the changes take effect immediately.
 
 | Permission (code → label) | DOCTOR | NURSE | HOD | ADMIN | AUDITOR | ADJ. SPECIALIST | PROSTHETIST | PROSTH. ADMIN |
 |---|---|---|---|---|---|---|---|---|
@@ -618,7 +614,6 @@ Access is enforced by a **dynamic role-permission matrix** (25 permission codes 
 | `PROSTHETICS_INSTANCE_CREATE` — Створення процесу (Wizard) | — | — | — | — | — | — | ✓ | ✓ |
 | `PROSTHETICS_STEP_COMPLETE` — Виконання кроків / файли | — | — | — | — | — | — | ✓ | ✓ |
 | `PROSTHETICS_PAUSE_RESUME` — Пауза / відновлення | — | — | — | — | — | — | ✓ | ✓ |
-| `PROSTHETICS_GATE_DECISION` — Рішення quality gate | — | — | — | — | — | — | — | ✓ |
 | `PROSTHETICS_TEMPLATE_MANAGE` — Керування шаблонами | — | — | — | — | — | — | — | ✓ |
 | `PROSTHETICS_ORDER_MANAGE` — Пацієнти та замовлення | — | — | — | — | — | — | — | ✓ |
 | `MODULE_ICU_ACCESS` — Модуль: Карта інтенсивної терапії | ✓ | ✓ | ✓ | — | — | — | — | — |

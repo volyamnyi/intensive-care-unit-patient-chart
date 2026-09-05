@@ -239,6 +239,8 @@ erDiagram
 
 `StepExecution` старої гілки — append-only, не видаляється; нова гілка — свої `StepExecution` з `attemptNumber=1` для `firstStepOf(returnStage)`.
 
+> **Note (QG-Removal, issues #229–#234):** статуси `WAITING_REVIEW` / `CORRECTION` / `FAILED_QC` та колонка `rework_count` у діаграмі вище видалено з продукту; потік лінійний.
+
 ---
 
 ## 4. UI design (§3, §5, §8) — Wireframe

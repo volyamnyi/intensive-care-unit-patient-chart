@@ -1,5 +1,10 @@
 # План доопрацювання процесу «Етапи технологічного процесу нижніх кінцівок» (TP-LL-02)
 
+> **Note (QG-Removal, issues #229–#234):** the Quality Gate subsystem referenced below
+> (`QualityGateService`, `quality_gate` failure marker, `FAILED_QC`, gate E2E specs such as
+> `tp-ll-02-no-gate-regression.spec.ts`) has since been fully deleted from code, schema,
+> tests and E2E. This plan is retained as history.
+
 > **Статус:** ПЛАН — 10 фаз, GitHub Issues [#211–#220](https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues?q=is%3Aissue%20is%3Aopen%20lower-limb%20workflow) створено (див. §3)
 > **Модуль:** `prosthesis-manufacturing` (backend) + `frontend/src/{pages/prosthetics,prosthetics,components/prosthetics,api}` + `tests/specs/prosthetics`
 > **Шаблон:** `TP-LL-02` (`c0000003-…`, 10 етапів `d0000012–d0000021`, 14 кроків `e0000020–e0000033`), статус `ACTIVE`
@@ -54,7 +59,7 @@
 - **Root cause = дані шаблону (seed), а не код.** `e0000032.allow_backward = false` та `e0000033.allow_backward = false` у `data-prosth.sql:211–212`.
 - Frontend: `WizardScreen.canGoBack = !!prevStep?.allowBackward` (рядок 1540) → для етапу 10/кроку 1 `prevStep = e0000032` → `false` → кнопка `disabled`.
 - Backend: `FlowInstanceService.backward()` (рядки 274–324) перевіряє `target.isAllowBackward()` → повернув би 400 «Повернення до кроку … заборонено правилами шаблону». Тобто блокування двостороннє і походить з конфігурації.
-- `requires_approval=true` на `d0000021` — це sign-off «Видача протеза» (див. E2E `tp-ll-02-no-gate-regression.spec.ts`), він НЕ блокує `backward` і не є Quality Gate.
+- `requires_approval=true` на `d0000021` — це sign-off «Видача протеза», він НЕ блокує `backward` і не є Quality Gate (див. видалений у QG-Removal E2E `tp-ll-02-no-gate-regression.spec.ts`).
 - **Фікс без workaround:** змінити seed `allow_backward=true` для `e0000032` (ціль повернення з етапу 10; `e0000033` залишається false — повернення НА нього неможливе, він останній) та змінити conflict-клаузу steps-INSERT на `DO UPDATE SET` (інакше правка не дійде до існуючих БД). Код backend/frontend **не змінюється** — логіка вже правильна, працює конфігурація.
 
 ### 1.5 Примітки та файли (Функціонал №4) — поточний стан

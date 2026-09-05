@@ -4,6 +4,8 @@
 
 ## Current Session
 
+**2026-09-05: Quality Gate full removal — milestone complete (issues #229–#234, all CLOSED, CI GREEN)** — the entire QC subsystem is gone from code, schema, tests, E2E and live docs; the prosthetics flow is linear (NEW→IN_PROGRESS→[PAUSED]→COMPLETED/FAILED, plus BRANCHED). Backend (`6c90888`, 29 files +10/−732): deleted `QualityGateService`, `QualityGate`/`GateDecision`/`GateDecisionType`/`ReworkLoop`/`ReworkType`, all 3 gate repositories, 4 gate DTOs; stripped `FlowInstanceService` (WAITING_REVIEW arm, `markQcFailed`, `enterStage`, `listGateDecisions`, FAILED_QC paths), `FlowTemplateService`, `TemplateSnapshotParser` (tolerant to historic snapshots), `ProstheticsPdfService`, controller endpoints, `reworkCount`/`reworkTargetStepId`/`stage.gate`, `PROSTHETICS_GATE_DECISION`. DB (`6fca3cc` + `bd926f2`): new `prosth/008-drop-quality-gate.sql` (status remap + drop 3 tables/2 columns/2 indexes, full rollback) + `core/006-remove-gate-decision-permission.sql`; applied changesets untouched. Tests (`13cedeb` + `9b09a23`): deleted `QualityGateServiceTest`/`ReworkLoopValidationTest`, rewrote 18 backend test files (+ legacy snapshot-tolerance test, endpoint-404 regression test). Frontend (`6b66a4d` + `dcbdac6`): deleted `QualityGatePanel`, stripped types/API/wizard/history/overview/done/failed screens + 9 Vitest files. E2E (`6536f8c` + `bb5d134`): deleted `QualityGatePage` POM + `no-gate-regression` spec + 2 screenshots, linearized 3 wizard specs. Docs (this commit): README/AGENTS/UseManual + E2E plan annotations. Red runs triaged: `33919599282` (test-compile on gate refs), `33920803034` (stale `prosthetist_gateDecision_forbidden` → replaced with nurse 403 guard; 2 E2E specs), `33952269151` (Liquibase forbids comments outside changesets → moved into split-prosth:23). Green run `33958105503` all 6 jobs green. Counts: backend 347 main / 140 test files, frontend 136 sources / 89 test files (770 Vitest), E2E 83 specs / 397 tests, Liquibase 21 SQL files (core 6, icu 6, med 1, prosth 8), RBAC catalog 24 codes. Kept intentionally: `requiresApproval` handover sign-off, `StepExecutionStatus.REWORK` (unused step value, unrelated), AuditLog history, `tests/tmp-templates.json` (stale unreferenced API dump).
+
 **2026-09-03: TP-LL-02 Phase 9 close + Phase 10 final verification (issues #219 CLOSED, #220 in progress)** — Phase 9 matrix closed 100% (commits `f723003` + `83995e6` + `c4b2c6d`): `CrossFeatureRegressionIntegrationTest` (brak stage6/9, 7.1 both ALLOW variants, note verbatim, evidence upload/list, backward 30→29 + 33→32, pause WENT_ABROAD, fail other→replacement NEW + audit) + `tp-ll-02-cross-feature.spec.ts` (3 serial tests). Red runs triaged: `33684392642` (BrakServiceTest NPE from double mock reset → simplified to single D17), `33685162607` (wizard step view has no `<h1>/<h2>` — headings exist only for terminal states → wait for progressbar + Пауза CTA). CI run [33721486258](https://github.com/volyamnyi/intensive-care-unit-patient-chart/actions/runs/33721486258) all 6 jobs green (E2E 20m22s); flake-check repeat waived per user. Counts synced: backend 360 main / 142 test files, frontend 135 sources / 89 test files (~718 tests), E2E 83 spec files / 384 tests. README prosthetics API table gained PATCH step-executions note, backward, brak trio, evidence quad, fail allowlist; pause row documents the 4 Phase-8 reasons.
 
 **2026-08-31: TP-LL-02 «Брак» (defect) branching — integration + Playwright E2E (issues #208, #209, CLOSED, CI GREEN)** — CI run [33535246719](https://github.com/volyamnyi/intensive-care-unit-patient-chart/actions/runs/33535246719) (head `d80a5e9`) all 6 jobs green (E2E 334 passed / 0 failed). **Issue #208 (integration, #208): `BrakIntegrationTest`** (18 scenarios, `prosthesis-manufacturing` integration profile) — `app.seed-data.enabled=false` + `app.mis.embedded-wiremock-enabled=false` to avoid port 9090 contention, `TestEm.ensureFixedTemplate()` pins `c0000003` (TP-LL-02, order `20000000-…-0002`, 6 stages d0000012–d0000017); happy-path `createBrakAndBranch` (original→`BRANCHED` on stage 6 step e0000028, fresh branch on return stage, `parentInstanceId`, `branchSequence`, 1 step-exec, brak event + branch list recorded), per-return-stage (STAGE1/2/3), note-verbatim, both-reasons, undeclared-stage-400, unknown-stage-400, RBAC foreign→404 / non-owner-no-admin→404, `brak-events`/`branches` list shape, append-only original. **Issue #209 (Playwright E2E, #209): `tests/specs/prosthetics/tp-ll-02-brak-branch.spec.ts`** (9 serial tests, `prosthetics-chromium`, shared `tests/helpers/tp-ll-02-flow.ts` `createBrakViaApi`/`completeToStep`): (1) positive flow stage-3 return + `.advanceStepViaUi` → «КРОК 2» + original `BRANCHED`, (2) return-stage-1, (3) return-stage-2, (4) note stored verbatim, (5) both reasons stored, (6) history preserved / branch append-only (original 9 step-exec, fresh 1), (7) undeclared stage not offered + API 400 `BAD_REQUEST`, (8) unknown stage 400 `BAD_REQUEST`, (9) RBAC foreign prosthetist 404 read + 404 brak. **Two real E2E bugs found via CI red runs**: `selectReturnStage` originally read the offered radio's DOM id to recover the return-stage UUID, but Base UI renders `RadioGroupItem` with an **auto-generated** id (`base-ui-_r_10_`/`_r_q_`/`_r_t_`), not the `brak-return-{stageId}` prop → the `/^d000001/` guard threw; fixed by passing the known stage constant + asserting the label is offered. Scenarios 7/8 asserted `code==='BUSINESS_RULE'` but `BrakService` throws `BadRequestException` → `GlobalExceptionHandler` → `BAD_REQUEST`; corrected to `BAD_REQUEST` (confirmed green by `BrakIntegrationTest`). **Docs**: README/AGENTS E2E counts → 80 spec files / 369 tests (+9), spec file table; backend/frontend counts unchanged (E2E-only change). Issues #208 and #209 closed.
@@ -84,7 +86,7 @@ Full role-based access control with an admin-editable matrix. `permissions` + `r
 
 - **Enforcement**: URL ceilings in `ClinicalSecurityRules` widened to `CLINICAL_ROLES` (write endpoints), precise enforcement via `@PreAuthorize("@permissionService.has('CODE')")` on controllers (icu-chart, medication-sheet, prosthesis-manufacturing). 403 (not 500) via the existing `AuthorizationDeniedException` handler.
 - **Module path operations**: the `MODULE_*_ACCESS` checkboxes in the matrix grant the ability to VISIT a module end to end. Frontend: the `Guard` accepts `permissions` (role OR permission); role-scoped sibling sub-views stay exclusive via `excludeRoles` (a DOCTOR holding `MODULE_ICU_ACCESS` still cannot land on `/icu/nurse`; a NURSE cannot land on `/icu/doctor`; a non-clinical role granted `MODULE_ICU_ACCESS`/`MODULE_MEDICATION_ACCESS` enters via `/icu/doctor`/`/prescriptions/doctor`). Backend: `ClinicalSecurityRules` read rules accept the module permission for the module's GET paths (`access("hasAnyRole(CLINICAL_CORE) or @permissionService.has('MODULE_*_ACCESS')")`) — `CLINICAL_CORE` = DOCTOR/NURSE/HEAD_OF_DEPARTMENT/ADJACENT_SPECIALIST, so ADMINISTRATOR/PROSTHETIST/PROSTHETICS_ADMINISTRATOR read clinical modules only when the checkbox is checked; `GET /api/users/me/**` is `authenticated()` (AuthContext), `GET /api/users/**` needs clinical core or `MODULE_ADMIN_ACCESS`; writes stay ceiling+`@PreAuthorize` gated.
-- **Matrix** (defaults): DOCTOR/HOD — episode, clinical day, prescriptions, sign doctor, APACHE II/SOFA + CAM-ICU/Браден/RASS, patient view, modules ICU + medication; NURSE — sign nurse, execute prescriptions, vitals, CAM-ICU/Браден/RASS, patient view, modules ICU + medication; HOD — reopen day (only); ADMIN — patient view + audit access + module «Адміністрування» only (clinical modules are NOT granted by default — the checkbox opens them); PROSTHETIST — dashboard/instance/step/pause + module prosthetics; PROSTHETICS_ADMIN — prosthetics + gate + templates + orders + module prosthetics. HOD removed from prosthetics guards (backend + `App.tsx` routes).
+- **Matrix** (defaults): DOCTOR/HOD — episode, clinical day, prescriptions, sign doctor, APACHE II/SOFA + CAM-ICU/Браден/RASS, patient view, modules ICU + medication; NURSE — sign nurse, execute prescriptions, vitals, CAM-ICU/Браден/RASS, patient view, modules ICU + medication; HOD — reopen day (only); ADMIN — patient view + audit access + module «Адміністрування» only (clinical modules are NOT granted by default — the checkbox opens them); PROSTHETIST — dashboard/instance/step/pause + module prosthetics; PROSTHETICS_ADMIN — prosthetics + templates + orders + module prosthetics. HOD removed from prosthetics guards (backend + `App.tsx` routes).
 - **Admin UI**: `AdminPage` new tab «Доступи та ролі» — matrix editor (checkbox grid grouped by category, dirty tracking, «Зберегти зміни» diff-saves via `PUT /api/admin/permissions`). Audit tab «Переглянути» gated by `AUDIT_ACCESS` permission. Role dropdown extended with PROSTHETIST / PROSTHETICS_ADMINISTRATOR.
 - **API**: `GET /api/admin/permissions` (matrix), `PUT /api/admin/permissions` (grant/revoke, body `{role, permissionCode, granted}`), `GET /api/users/me/permissions` (effective codes for current role). `AuthContext` loads effective permissions and `hasPermission` is matrix-based.
 - **Tests**: `PermissionServiceTest` (common unit), `AdminPermissionsIntegrationTest` (grant → 403→400→403 enforcement cycle), E2E `tests/specs/admin/permissions.spec.ts` (UI matrix view + grant/revoke enforcement, serialized).
@@ -185,7 +187,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
   | `my_fullstack_core` | COMMON (single-deployment core) | Users & authentication, dynamic RBAC (`permissions` + `role_permissions` matrix), audit log (`audit_logs`), system settings and reference values |
   | `my_fullstack_icu` | ICU Chart | Episodes, clinical days, hourly records, medical orders & executions, notes, clinical scale results, signatures, generated PDFs, labs, ventilation, patient state, fluid balance |
   | `my_fullstack_med` | Medication Sheet | Prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/allergy/drug-interaction caches, telegram subscriptions |
-  | `my_fullstack_prosth` | Prosthetics Manufacturing | Patients, orders, flow templates, flow instances & step executions, quality gates & decisions, failure snapshots, evidence files |
+  | `my_fullstack_prosth` | Prosthetics Manufacturing | Patients, orders, flow templates, flow instances & step executions, failure snapshots, evidence files, defect (brak) events & branches |
   | `my_fullstack_db` | — (bootstrap only, **not used by the app**) | Default database auto-created by the PostgreSQL Docker service container in CI (`POSTGRES_DB` env var, required by the image); the application never connects to it — all CI DB-using jobs create the 4 real databases above inside that container (`CREATE DATABASE` ×4) |
 
   - Datasources configured in `application.yml` under `app.datasource.{core,icu,med,prosth}.{url,username,password}` (env override: `APP_DATASOURCE_*_URL/USERNAME/PASSWORD`); multi-DB bootstrap in `com.superhumans.config.multidb` (per-DB `DataSource`/EMF/`SpringLiquibase`/`JpaTransactionManager`, chained `transactionManager`).
@@ -277,7 +279,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (781 tests across 90 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (770 tests across 89 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
@@ -288,9 +290,9 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 ## Testing
 
-- **Backend**: 360 main sources / 142 test files across the multi-module reactor (common 124/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 91/37, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 781 Vitest tests across 90 test files (136 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 83 Playwright spec files (384 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Backend**: 347 main sources / 140 test files across the multi-module reactor (common 124/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 78/35, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 770 Vitest tests across 89 test files (136 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **E2E**: 83 Playwright spec files (397 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -304,7 +306,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | hod-chromium | setup, api-error-mode | `.auth/hod.json` | Dashboard, clinical day reopen |
 | admin-chromium | setup, api-error-mode | `.auth/admin.json` | User tables, RBAC matrix, audit log |
 | api-chromium | api-error-mode | none | Patient search API, error handling, scales access control |
-| prosthetics-chromium | setup | `.auth/prosthetist.json` | Prosthetics workflow, quality gates |
+| prosthetics-chromium | setup | `.auth/prosthetist.json` | Prosthetics workflow (linear: wizard → done/failed) |
 | responsive-mobile-chromium | setup | `.auth/doctor.json` | Mobile 360px smoke (iPhone 13 emulation): nav sheet, touch targets, wizard smoke; `fullyParallel: false` |
 | responsive-tablet-chromium | setup | `.auth/doctor.json` | Tablet 768×1024 (`hasTouch`): no-horizontal-scroll audits, sidebar rail expand, 2-col stats; `fullyParallel: false` |
 
@@ -345,7 +347,7 @@ Prosthetics seed patients (demographics served by the MIS Integration Layer wire
 **Prosthetics E2E isolation** (separate mock tables, no cross-module interference):
 - `prosthetist1` → owns `Сніжко` / `ПВ-26-0413` / instance from `TP-UL-01`
 - `prosthetist2` → owns `Гаврилюк` / `ПВ-26-0414` / instance from `TP-LL-01`
-- `prosthetics_admin1` → quality gate decisions, template admin
+- `prosthetics_admin1` → template + order admin
 - Each spec uses fixed seed IDs (no `.first()`)
 
 ## Data Model
@@ -530,8 +532,6 @@ All endpoints prefixed with `/api`.
 | POST | `/api/prosthesis-manufacturing/instances` | Yes (PROSTHETIST) | Create instance from order + template |
 | GET | `/api/prosthesis-manufacturing/instances/{id}/step-executions` | Yes | Get step executions for instance |
 | POST | `/api/prosthesis-manufacturing/step-executions/{id}/complete` | Yes (PROSTHETIST) | Complete step execution |
-| GET | `/api/prosthesis-manufacturing/instances/{id}/quality-gates` | Yes | Get quality gates for instance |
-| POST | `/api/prosthesis-manufacturing/gate-decisions` | Yes (PROSTHETICS_ADMINISTRATOR) | Make gate decision (PASS/REWORK/FAIL) |
 | POST | `/api/prosthesis-manufacturing/instances/{id}/pause` | Yes (PROSTHETIST) | Pause instance |
 | POST | `/api/prosthesis-manufacturing/instances/{id}/resume` | Yes (PROSTHETIST) | Resume instance |
 | POST | `/api/prosthesis-manufacturing/instances/{id}/replacement` | Yes (PROSTHETIST) | Create replacement after FAIL |
@@ -587,7 +587,7 @@ All endpoints prefixed with `/api`.
 | `components/monitoring/` | `HourlyGrid` (24-h grid, therapy cells, plan/execute, critical flash), `HourlyGridDialog` (fullscreen modal with undo/status/critical chip), `IntensiveCareCard` (central ICU card), `DoctorDashboard`, `NurseDashboard`, `PatientSidebar`, `criticalRanges.ts` (alarm thresholds), `dashboardTypes.ts` |
 | `components/prescription/` | `PrescriptionGrid`, `PrescriptionSpreadsheet`, `PrescriptionTable`, `PrescriptionItemTable`, `PrescriptionItemForm`, `PrescriptionExecutionPanel`, `VitalSignGrid`, `VitalSignForm`, `DayPartPlanner`, `MedicineSearchInput`, `AllergyWarning`, `ClosePrescriptionDialog`, `DeleteConfirmPopover`, `ExecuteDosePopover`, `prescriptionDayParts.ts` |
 | `components/common/` | `PatientSearch.tsx`, `ThemeToggle.tsx`, `AuditLogTable.tsx` (shared, feature-free) |
-| `components/prosthetics/` | `StatusBadge`, `SetupSteps`, `QualityGatePanel`, `ProcessStat` |
+| `components/prosthetics/` | `StatusBadge`, `SetupSteps`, `ProcessStat` |
 | `components/navigation/` | `AppSidebar.tsx`, `Breadcrumbs.tsx` |
 | `components/ui/` | shadcn-style Base UI primitives: `button`, `input`, `card`, `dialog`, `table`, `select`, `tabs`, `switch`, `checkbox`, `radio-group`, `dropdown-menu`, `popover`, `tooltip`, `progress`, `skeleton`, `sonner`, … |
 
@@ -616,7 +616,7 @@ All endpoints prefixed with `/api`.
 | `AuthService` | Login with password verification + JWT generation |
 | `AuditService` | Create/query audit log entries with pagination |
 | `PermissionService` | Dynamic RBAC: `has/hasAny/hasForRole` (SpEL for `@PreAuthorize`), matrix read, grant/revoke with cache invalidation + audit, first-boot seeding of defaults |
-| `PermissionCatalog` | RBAC catalog: 25 permission codes across 8 categories, role defaults for seeding |
+| `PermissionCatalog` | RBAC catalog: 24 permission codes across 8 categories, role defaults for seeding |
 
 ### ICU chart (`icu-chart`, 16)
 | Service | Responsibility |
@@ -643,13 +643,12 @@ All endpoints prefixed with `/api`.
 | `MedicineCatalogService`, `DrugInteractionService` | Medicine catalog + allergy/drug-interaction checks |
 | `NotificationService`, `LogNotificationService`, `LogEmailService`, `EmailService` | Telegram/e-mail notifications (logging fallbacks in tests) |
 
-### Prosthetics manufacturing (`prosthesis-manufacturing`, 11)
+### Prosthetics manufacturing (`prosthesis-manufacturing`, 10)
 | Service | Responsibility |
 |---|---|
 | `ProstheticsPatientService`, `ProstheticsOrderService`, `ProstheticsPdfService` | Patient/order CRUD + PDF generation |
 | `FlowTemplateService` | Template CRUD + stages/steps/elements |
 | `FlowInstanceService` | Instance lifecycle (create, pause, resume, complete steps) |
-| `QualityGateService` | Gate decisions (PASS/REWORK/FAIL), rework loops |
 | `FailureSnapshotService` | Failure capture + PDF report |
 | `EvidenceFileService` | File upload (images/PDFs, 10MB limit) |
 | `MisOrderTemplateDataService`, `TemplateSnapshotParser`, `MisOrderTemplateData` | Template parsing from MIS order data |
@@ -673,7 +672,7 @@ All endpoints prefixed with `/api`.
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer status tracking | `GeneratedPdf.transferStatus` + `TransferStatus` enum (PENDING/SENT/FAILED) + `GET /clinical-days/{id}/pdf/status` |
 | §98 | MIS calls audited | `WireMockMisServiceImpl` methods call `auditService.logAction()` including `sendPdf()` |
-| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (15 SQL changesets: core 4, icu 6, med 1, prosth 4); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
+| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (21 SQL files: core 6, icu 6, med 1, prosth 8); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
 
 ## Key Patterns
 
@@ -710,7 +709,7 @@ All endpoints prefixed with `/api`.
 - **TypeScript**: `erasableSyntaxOnly: true` — no enums, no namespaces
 - **Roles**: Gate in backend (Spring Security `@PreAuthorize`) and frontend (`Guard` component)
 - **Routing**: `/icu/doctor/*` for DOCTOR/HOD, `/icu/nurse/*` for NURSE, `/prescriptions/*` for medication sheet, `/prosthetics/*` for prosthetics, `/admin/*` for ADMINISTRATOR
-- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 15 SQL changesets); never write manual DDL
+- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 21 SQL files); never write manual DDL
 - **Data seeding**: Only via `SeedDataInitializer` — one script per module: `data-core.sql`, `data-icu.sql`, `data-med.sql`, `data-prosth.sql` (in `backend/common/src/main/resources/`), executed on the matching datasource; gated by `app.seed-data.enabled: true`. Never write manual seed DDL.
 - **Test seed data**: Integration tests use `data-test-core.sql` / `data-test-icu.sql` / `data-test-med.sql` (in `backend/icu-chart/src/test/resources/`) with plain INSERTs, routed per-datasource via `@Sql` + `@SqlConfig(dataSource = ...)` (plus `data-prescription.sql` with `@SqlConfig(dataSource = "medDataSource", separator = "GO")`) on a fresh PostgreSQL database. The production seed files keep `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). The `users` inserts in `data-core.sql` use `ON CONFLICT (login) DO NOTHING` — a demo password is **never** overwritten on restart (A2, CWE-798). Modified data may persist across restarts. Reset each DB with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 
@@ -735,21 +734,21 @@ UseManual.md           ← User manual (Ukrainian)
 .gitignore             ← Global ignore rules
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire (5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
-  src/main/java/       ← 360 Java source files
+  src/main/java/       ← 347 Java source files
   src/main/resources/  ← application.yml, data-{core,icu,med,prosth}.sql, PDF template, db/changelog/ (Liquibase)
-  src/test/java/       ← 142 test files
+  src/test/java/       ← 140 test files
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 136 TS/TSX source + 90 test files
+  src/                 ← 136 TS/TSX source + 89 test files
 tests/
   playwright.config.ts ← Playwright config with 11 projects
   package.json         ← Test dependencies
   specs/               ← 83 spec files
-  pages/               ← Page Object Model (7 files)
+  pages/               ← Page Object Model (6 files)
   fixtures/            ← Test fixtures
 docs/
   Технічне завдання карта Інтенсивної терапії.md  ← Full technical specification (3026 lines)
