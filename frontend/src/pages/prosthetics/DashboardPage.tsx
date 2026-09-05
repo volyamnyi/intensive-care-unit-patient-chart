@@ -19,9 +19,6 @@ const STATUS_LABELS: Record<FlowInstanceStatus, { label: string; variant: 'defau
   PAUSED: { label: 'Призупинено', variant: 'outline' },
   BLOCKED_PATIENT: { label: 'Заблоковано (пацієнт)', variant: 'destructive' },
   BLOCKED_MATERIAL: { label: 'Заблоковано (матеріали)', variant: 'destructive' },
-  WAITING_REVIEW: { label: 'Очікує перевірки', variant: 'outline' },
-  CORRECTION: { label: 'Корекція', variant: 'outline' },
-  FAILED_QC: { label: 'Не пройшов QA', variant: 'destructive' },
   COMPLETED: { label: 'Завершено', variant: 'default' },
   FAILED: { label: 'Завершено з помилкою', variant: 'destructive' },
   BRANCHED: { label: 'Розгалужено', variant: 'outline' },
@@ -34,9 +31,9 @@ const STATUS_FILTERS: { value: FlowInstanceStatus; label: string }[] = [
   { value: 'FAILED', label: 'Провалені' },
 ];
 
-const ACTIVE_STATUSES: FlowInstanceStatus[] = ['NEW', 'IN_PROGRESS', 'WAITING_REVIEW', 'CORRECTION'];
+const ACTIVE_STATUSES: FlowInstanceStatus[] = ['NEW', 'IN_PROGRESS'];
 const PAUSED_STATUSES: FlowInstanceStatus[] = ['PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL'];
-const FAILED_STATUSES: FlowInstanceStatus[] = ['FAILED', 'FAILED_QC', 'BRANCHED'];
+const FAILED_STATUSES: FlowInstanceStatus[] = ['FAILED', 'BRANCHED'];
 
 function matchesFilter(instance: FlowInstance, filter: FlowInstanceStatus | 'all'): boolean {
   if (filter === 'all') return true;
@@ -112,7 +109,7 @@ export default function DashboardPage() {
   const openInstance = (instance: FlowInstance) => {
     if (instance.status === 'COMPLETED') {
       navigate(`/prosthetics/process/${instance.id}/done`);
-    } else if (instance.status === 'FAILED' || instance.status === 'FAILED_QC' || instance.status === 'BRANCHED') {
+    } else if (instance.status === 'FAILED' || instance.status === 'BRANCHED') {
       navigate(`/prosthetics/process/${instance.id}/failed`);
     } else {
       navigate(`/prosthetics/process/${instance.id}/wizard`);

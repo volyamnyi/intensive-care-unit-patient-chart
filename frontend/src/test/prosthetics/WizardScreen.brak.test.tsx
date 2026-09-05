@@ -22,7 +22,6 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   listExecutions: vi.fn(),
   pause: vi.fn(),
   resume: vi.fn(),
-  decideGate: vi.fn(),
   uploadEvidence: vi.fn(),
   listEvidence: vi.fn().mockResolvedValue({ data: [] }),
   deleteEvidence: vi.fn().mockResolvedValue({}),
@@ -78,7 +77,6 @@ const brakInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance => ({
   endTime: null,
   totalActiveSeconds: 600,
   totalIdleSeconds: 0,
-  reworkCount: 0,
   failReason: null,
   pausedAt: null,
   resumedAt: null,
@@ -102,7 +100,6 @@ const brakSnapshot = (): SnapshotTemplate => ({
       stageType: 'TECHNICAL',
       canSkip: false,
       requiresApproval: false,
-      gate: null,
       steps: [{ id: 'e0000020-0000-0000-0000-000000000020', name: 'Зняття та внесення об’ємних розмірів', stepType: 'MEASUREMENT', mandatory: true, allowBackward: true, autoStartTimer: true, normDurationMin: 20, elements: [] }],
     },
     {
@@ -111,7 +108,6 @@ const brakSnapshot = (): SnapshotTemplate => ({
       stageType: 'TECHNICAL',
       canSkip: false,
       requiresApproval: false,
-      gate: null,
       steps: [{ id: 'e0000022-0000-0000-0000-000000000022', name: 'Виготовлення гіпсового позитива', stepType: 'INFORMATION', mandatory: true, allowBackward: true, autoStartTimer: false, normDurationMin: 15, elements: [] }],
     },
     {
@@ -120,7 +116,6 @@ const brakSnapshot = (): SnapshotTemplate => ({
       stageType: 'TECHNICAL',
       canSkip: false,
       requiresApproval: false,
-      gate: null,
       steps: [{ id: 'e0000024-0000-0000-0000-000000000024', name: 'Виготовлення тренувальної гільзи', stepType: 'INFORMATION', mandatory: true, allowBackward: true, autoStartTimer: false, normDurationMin: 25, elements: [] }],
     },
     {
@@ -129,7 +124,6 @@ const brakSnapshot = (): SnapshotTemplate => ({
       stageType: 'CLINICAL',
       canSkip: false,
       requiresApproval: false,
-      gate: null,
       steps: [
         {
           id: STEP_E0028,
@@ -183,7 +177,7 @@ describe('WizardScreen — Брак', () => {
     const otherSnapshot: SnapshotTemplate = {
       ...brakSnapshot(),
       stages: [
-        { id: STAGE_D12, name: 'Виготовлення гіпсового негатива', stageType: 'TECHNICAL', canSkip: false, requiresApproval: false, gate: null, steps: [{ id: 'e0000020-0000-0000-0000-000000000020', name: 'Зняття', stepType: 'MEASUREMENT', mandatory: true, allowBackward: true, autoStartTimer: true, normDurationMin: 20, elements: [] }] },
+        { id: STAGE_D12, name: 'Виготовлення гіпсового негатива', stageType: 'TECHNICAL', canSkip: false, requiresApproval: false, steps: [{ id: 'e0000020-0000-0000-0000-000000000020', name: 'Зняття', stepType: 'MEASUREMENT', mandatory: true, allowBackward: true, autoStartTimer: true, normDurationMin: 20, elements: [] }] },
       ],
     };
     flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: otherSnapshot });

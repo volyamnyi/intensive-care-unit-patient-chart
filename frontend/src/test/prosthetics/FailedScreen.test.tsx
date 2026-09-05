@@ -45,7 +45,6 @@ const failedInstance: FlowInstance = {
   endTime: '2026-01-01T09:00:00Z',
   totalActiveSeconds: 3600,
   totalIdleSeconds: 0,
-  reworkCount: 2,
   failReason: 'Деформація гільзи при полімеризації',
   pausedAt: null,
   resumedAt: null,
@@ -91,21 +90,6 @@ describe('FailedScreen', () => {
     expect(screen.getByText(/Причина провалу/)).toBeInTheDocument();
     expect(screen.getByText('Деформація гільзи при полімеризації')).toBeInTheDocument();
     expect(screen.getByText('Виробничий дефект')).toBeInTheDocument();
-  });
-
-  it('shows rework count before failure', async () => {
-    render(
-      <MemoryRouter initialEntries={['/prosthetics/process/inst-1/failed']}>
-        <Routes>
-          <Route path="/prosthetics/process/:id/failed" element={<FailedScreen />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Доопрацювань')).toBeInTheDocument();
-    });
-    expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   it('shows lock banner and export button', async () => {

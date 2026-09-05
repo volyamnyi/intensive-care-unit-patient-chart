@@ -5,10 +5,8 @@ import {
   ChevronLeft,
   Circle,
   Clock,
-  Diamond,
   PauseCircle,
   Play,
-  RotateCcw,
   XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,12 +18,11 @@ import { getErrorMessage } from '@/utils/errorMessage';
 import type {
   BrakEvent,
   FlowInstance,
-  GateDecisionResponse,
   SnapshotTemplate,
   StepExecution,
 } from '@/prosthetics/types';
 
-type HistoryEventKind = 'created' | 'start' | 'step' | 'gate' | 'pause' | 'resume' | 'brak' | 'end';
+type HistoryEventKind = 'created' | 'start' | 'step' | 'pause' | 'resume' | 'brak' | 'end';
 
 interface HistoryEvent {
   id: string;
@@ -40,7 +37,6 @@ const KIND_LABELS: Record<string, string> = {
   created: 'Процес створено',
   start: 'Процес розпочато',
   step: 'Крок',
-  gate: 'Контрольна точка',
   pause: 'Пауза',
   resume: 'Відновлення',
   brak: 'Брак',
@@ -53,11 +49,6 @@ function eventIcon(kind: HistoryEventKind, detail?: string) {
     return <Play className="size-4" />;
   }
   if (kind === 'pause') return <PauseCircle className="size-4" />;
-  if (kind === 'gate') {
-    if (detail === 'PASS') return <CheckCircle2 className="size-4" />;
-    if (detail === 'REWORK') return <RotateCcw className="size-4" />;
-    return <XCircle className="size-4" />;
-  }
   if (kind === 'end') {
     return detail === 'COMPLETED' ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />;
   }
@@ -72,11 +63,9 @@ function eventIcon(kind: HistoryEventKind, detail?: string) {
 function eventColor(kind: HistoryEventKind, detail?: string) {
   if (kind === 'brak') return 'bg-destructive/10 text-destructive border-destructive/40';
   if (kind === 'step' && detail === 'COMPLETED') return 'bg-success/10 text-success border-success/40';
-  if (kind === 'gate' && detail === 'PASS') return 'bg-success/10 text-success border-success/40';
-  if (kind === 'gate' && detail === 'REWORK') return 'bg-accent/10 text-accent border-accent/40';
   if (kind === 'pause') return 'bg-warning/10 text-warning border-warning/40';
   if (kind === 'end' && detail === 'COMPLETED') return 'bg-success/10 text-success border-success/40';
-  if (kind === 'end' || (kind === 'gate' && detail === 'FAIL')) return 'bg-destructive/10 text-destructive border-destructive/40';
+  if (kind === 'end') return 'bg-destructive/10 text-destructive border-destructive/40';
   return 'bg-muted text-muted-foreground border-border';
 }
 
@@ -93,7 +82,6 @@ function toStepMap(snapshot: SnapshotTemplate): Map<string, string> {
 function buildEvents(
   instance: FlowInstance,
   executions: StepExecution[],
-  decisions: GateDecisionResponse[],
   stepNames: Map<string, string>,
   brakEvents: BrakEvent[] = [],
 ): HistoryEvent[] {
@@ -139,22 +127,6 @@ function buildEvents(
         timestamp: execution.completedAt,
       });
     }
-  }
-  for (const decision of decisions) {
-    const label =
-      decision.decision === 'PASS'
-        ? 'Контрольна точка пройдена'
-        : decision.decision === 'REWORK'
-          ? 'Контрольна точка: повернення на доопрацювання'
-          : 'Контрольна точка: процес провалено';
-    events.push({
-      id: `gate-${decision.id}`,
-      kind: 'gate',
-      title: `${label}: ${decision.gateName ?? 'без назви'}`,
-      description: decision.comment ?? undefined,
-      detail: decision.decision,
-      timestamp: decision.decidedAt,
-    });
   }
   for (const brak of brakEvents) {
     const parts: string[] = [];
@@ -205,7 +177,6 @@ function buildEvents(
 const FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: 'Всі події' },
   { value: 'step', label: 'Кроки' },
-  { value: 'gate', label: 'Контрольні точки' },
   { value: 'brak', label: 'Брак' },
   { value: 'pause', label: 'Паузи / відновлення' },
   { value: 'end', label: 'Завершення' },
@@ -217,7 +188,6 @@ export default function ProcessHistoryPage() {
   const [instance, setInstance] = useState<FlowInstance | null>(null);
   const [snapshot, setSnapshot] = useState<SnapshotTemplate | null>(null);
   const [executions, setExecutions] = useState<StepExecution[]>([]);
-  const [decisions, setDecisions] = useState<GateDecisionResponse[]>([]);
   const [brakEvents, setBrakEvents] = useState<BrakEvent[]>([]);
   const [filter, setFilter] = useState<string | null>('all');
   const [loading, setLoading] = useState(true);
@@ -230,16 +200,14 @@ export default function ProcessHistoryPage() {
       setLoading(true);
       setError(null);
       try {
-        const [instRes, snapRes, execRes, decRes] = await Promise.all([
+        const [instRes, snapRes, execRes] = await Promise.all([
           flowInstanceApi.getById(id),
           flowInstanceApi.getSnapshot(id),
           flowInstanceApi.listExecutions(id),
-          flowInstanceApi.listGateDecisions(id),
         ]);
         setInstance(instRes.data);
         setSnapshot(snapRes.data);
         setExecutions(execRes.data);
-        setDecisions(decRes.data);
         try {
           const brakRes = await flowInstanceApi.getBrakEvents(id);
           setBrakEvents(brakRes.data);
@@ -257,8 +225,8 @@ export default function ProcessHistoryPage() {
 
   const events = useMemo(() => {
     if (!instance || !snapshot) return [];
-    return buildEvents(instance, executions, decisions, toStepMap(snapshot), brakEvents);
-  }, [instance, snapshot, executions, decisions, brakEvents]);
+    return buildEvents(instance, executions, toStepMap(snapshot), brakEvents);
+  }, [instance, snapshot, executions, brakEvents]);
 
   const visible = useMemo(
     () => {
@@ -371,10 +339,6 @@ export default function ProcessHistoryPage() {
       </Card>
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <Diamond className="size-3" /> Ромб — контрольні точки
-        </span>
-        <span>·</span>
         <span>Події сортуються від найстарішої до найновішої</span>
       </div>
     </div>

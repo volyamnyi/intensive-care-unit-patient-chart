@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Circle, Diamond, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Circle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -112,12 +112,6 @@ export default function ProcessOverview() {
                       <span>{step.name}</span>
                     </li>
                   ))}
-                  {stage.gate && (
-                    <li className="flex items-start gap-2 text-accent">
-                      <Diamond className="mt-0.5 size-3.5" />
-                      <span>{stage.gate.name}</span>
-                    </li>
-                  )}
                 </ul>
               </div>
             ))}
@@ -137,20 +131,10 @@ export default function ProcessOverview() {
                     <div className="font-medium">{stage.name}</div>
                     <div className="mt-1 text-xs text-muted-foreground">{stage.steps.length} кроків</div>
                   </div>
-                  {stage.gate && (
-                    <div className="rotate-45 border-2 border-accent bg-accent/10 p-4">
-                      <span className="block -rotate-45 text-center text-[10px] leading-tight font-semibold text-accent">
-                        QG
-                        <br />
-                        {stage.type}
-                      </span>
-                    </div>
-                  )}
                 </div>
                 {idx < template.stages.length - 1 && (
                   <div className="flex items-center gap-2 pl-4 text-xs text-muted-foreground">
                     <span className="h-6 w-px bg-border" />
-                    <RotateCcw className="size-3.5" /> петля повернення (rework) на етап {stage.type}
                   </div>
                 )}
               </div>
@@ -195,7 +179,7 @@ export default function ProcessOverview() {
           <ArrowLeft className="mr-2 size-4" />
           Назад
         </Button>
-        {instance.status === 'FAILED' || instance.status === 'FAILED_QC' ? (
+        {instance.status === 'FAILED' ? (
           <Button
             variant="destructive"
             onClick={() => navigate(`/prosthetics/process/${instance.id}/failed`)}

@@ -18,7 +18,6 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   getById: vi.fn(),
   getSnapshot: vi.fn(),
   listExecutions: vi.fn(),
-  listGateDecisions: vi.fn(),
   listResources: vi.fn(),
   generateReport: vi.fn(),
 }));
@@ -46,7 +45,6 @@ const completedInstance: FlowInstance = {
   endTime: '2026-01-01T11:30:00Z',
   totalActiveSeconds: 12600,
   totalIdleSeconds: 1800,
-  reworkCount: 1,
   failReason: null,
   pausedAt: null,
   resumedAt: null,
@@ -69,7 +67,6 @@ const snapshot: SnapshotTemplate = {
       stageType: 'TECHNICAL',
       canSkip: false,
       requiresApproval: false,
-      gate: null,
       steps: [{ id: 's1', name: 'Мірки', stepType: 'MEASUREMENT', mandatory: true, allowBackward: false, autoStartTimer: true, normDurationMin: 30, elements: [] }],
     },
   ],
@@ -97,7 +94,6 @@ describe('DoneScreen', () => {
         },
       ],
     });
-    flowInstanceApiMock.listGateDecisions.mockResolvedValue({ data: [] });
     flowInstanceApiMock.listResources.mockResolvedValue({ data: [] });
   });
 
@@ -115,9 +111,6 @@ describe('DoneScreen', () => {
     });
     expect(screen.getByText(/Протез гомілки \(v3\)/)).toBeInTheDocument();
     expect(screen.getByText('3 год 30 хв')).toBeInTheDocument();
-    expect(screen.getByText('Доопрацювань')).toBeInTheDocument();
-    const reworkCard = screen.getByText('Доопрацювань').parentElement;
-    expect(reworkCard?.firstElementChild?.textContent).toBe('1');
     expect(screen.getByText(/Етапи виготовлення/)).toBeInTheDocument();
     expect(screen.getByText('1. Виготовлення')).toBeInTheDocument();
     expect(screen.getByText('1/1 кроків')).toBeInTheDocument();

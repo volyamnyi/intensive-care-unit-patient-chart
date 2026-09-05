@@ -23,7 +23,6 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   listExecutions: vi.fn(),
   pause: vi.fn(),
   resume: vi.fn(),
-  decideGate: vi.fn(),
   uploadEvidence: vi.fn(),
   listEvidence: vi.fn().mockResolvedValue({ data: [] }),
   deleteEvidence: vi.fn().mockResolvedValue({}),
@@ -72,7 +71,6 @@ const inProgressInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance
   endTime: null,
   totalActiveSeconds: 120,
   totalIdleSeconds: 0,
-  reworkCount: 0,
   failReason: null,
   pausedAt: null,
   resumedAt: null,
@@ -96,7 +94,6 @@ const baseSnapshot = (): SnapshotTemplate => ({
       stageType: 'TECHNICAL',
       canSkip: false,
       requiresApproval: false,
-      gate: null,
       steps: [
         {
           id: 'step-1',
@@ -306,8 +303,8 @@ describe('WizardScreen', () => {
     });
   });
 
-  it('shows "Контроль якості →" CTA before a gated stage', async () => {
-    const gatedSnapshot: SnapshotTemplate = {
+  it('shows plain "Готово →" CTA on the last step of a non-final stage (no gates)', async () => {
+    const twoStageSnapshot: SnapshotTemplate = {
       ...baseSnapshot(),
       stages: [
         {
@@ -316,27 +313,31 @@ describe('WizardScreen', () => {
         },
         {
           id: 'stage-2',
-          name: 'Контроль якості',
-          stageType: 'ADMINISTRATIVE',
+          name: 'Складання',
+          stageType: 'TECHNICAL',
           canSkip: false,
-          requiresApproval: true,
-          gate: {
-            id: 'gate-1',
-            name: 'Контрольна точка якості',
-            requiredApproverRole: 'PROSTHETICS_ADMINISTRATOR',
-            checklist: ['Розмір', 'Функціональність'],
-            attachmentsRequired: false,
-            reworkLoops: [],
-          },
-          steps: [],
+          requiresApproval: false,
+          steps: [
+            {
+              id: 'step-3',
+              name: 'Фінальна збірка',
+              stepType: 'CHECKLIST',
+              mandatory: true,
+              allowBackward: true,
+              autoStartTimer: false,
+              normDurationMin: 10,
+              elements: [],
+            },
+          ],
         },
       ],
     };
-    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: gatedSnapshot });
+    flowInstanceApiMock.getSnapshot.mockResolvedValue({ data: twoStageSnapshot });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Контроль якості →/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Готово →$/ })).toBeInTheDocument();
     });
+    expect(screen.queryByRole('button', { name: /Контроль якості/ })).not.toBeInTheDocument();
   });
 
   it('opens pause dialog and calls pause API', async () => {
@@ -462,7 +463,6 @@ describe('WizardScreen', () => {
           stageType: 'TECHNICAL',
           canSkip: false,
           requiresApproval: false,
-          gate: null,
           steps: [
             {
               id: 'e0000029-0000-0000-0000-000000000029',

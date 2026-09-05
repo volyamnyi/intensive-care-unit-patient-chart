@@ -16,7 +16,7 @@ interface OrderWithPatient extends ProstheticsOrder {
   patient: ProstheticsPatient | null;
 }
 
-const ACTIVE_DUPLICATE_STATUSES = ['NEW', 'IN_PROGRESS', 'PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL', 'WAITING_REVIEW', 'CORRECTION'];
+const ACTIVE_DUPLICATE_STATUSES = ['NEW', 'IN_PROGRESS', 'PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL'];
 
 function parseMaterials(raw: string | null | undefined): string[] {
   if (!raw) return [];

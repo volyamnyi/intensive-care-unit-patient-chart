@@ -183,9 +183,8 @@ export default function FailedScreen() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <ProcessStat label="Кроків виконано" value={`${completedSteps}/${totalSteps}`} />
-        <ProcessStat label="Доопрацювань" value={String(instance.reworkCount ?? 0)} />
         <ProcessStat label="Активний час" value={formatHours(instance.totalActiveSeconds)} />
       </div>
 

@@ -18,14 +18,6 @@ describe('Tablet prosthetics & admin — Phase 4 contract', () => {
     expect(s).toContain('lg:block');
   });
 
-  it('QualityGatePanel decision buttons transition col→row at sm', async () => {
-    const src = await import('../../components/prosthetics/QualityGatePanel?raw');
-    const s = (src as { default: string }).default;
-    expect(s).toContain('flex flex-col gap-3 sm:flex-row sm:flex-wrap');
-    expect(s).toContain('w-full sm:w-auto');
-    expect(s).toContain('min-h-11');
-  });
-
   it('SetupSteps hides inactive step labels below md', async () => {
     const src = await import('../../components/prosthetics/SetupSteps?raw');
     expect((src as { default: string }).default).toContain('hidden md:inline');

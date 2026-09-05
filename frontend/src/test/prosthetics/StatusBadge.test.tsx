@@ -10,9 +10,6 @@ describe('StatusBadge', () => {
     ['PAUSED', 'Призупинено'],
     ['BLOCKED_PATIENT', 'Заблоковано (пацієнт)'],
     ['BLOCKED_MATERIAL', 'Заблоковано (матеріали)'],
-    ['WAITING_REVIEW', 'Очікує перевірки'],
-    ['CORRECTION', 'Корекція'],
-    ['FAILED_QC', 'Не пройшов QA'],
     ['COMPLETED', 'Завершено'],
     ['FAILED', 'Провалено'],
   ])('renders %s status label', (status, label) => {

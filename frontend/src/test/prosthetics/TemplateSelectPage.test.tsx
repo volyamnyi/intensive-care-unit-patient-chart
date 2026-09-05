@@ -80,7 +80,7 @@ describe('TemplateSelectPage', () => {
         {
           id: 't1', name: 'Протез гомілки', description: 'Стандартний', productType: 'протез',
           amputationLevel: 'above', limbSide: 'both', status: 'ACTIVE', templateVersion: 1,
-          estimatedDurationMin: 1800, stages: [{ id: 's1', name: 'Етап 1', stageType: 'TECH', canSkip: false, requiresApproval: false, gate: null, steps: [] }],
+          estimatedDurationMin: 1800, stages: [{ id: 's1', name: 'Етап 1', stageType: 'TECH', canSkip: false, requiresApproval: false, steps: [] }],
           createdAt: '', updatedAt: '',
         },
       ],
@@ -97,7 +97,7 @@ describe('TemplateSelectPage', () => {
         {
           id: 't1', name: 'Протез гомілки', description: '', productType: 'протез',
           amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', templateVersion: 1,
-          estimatedDurationMin: 1800, stages: [{ id: 's1', name: 'Етап 1', stageType: 'TECH', canSkip: false, requiresApproval: false, gate: null, steps: [] }],
+          estimatedDurationMin: 1800, stages: [{ id: 's1', name: 'Етап 1', stageType: 'TECH', canSkip: false, requiresApproval: false, steps: [] }],
           createdAt: '', updatedAt: '',
         },
       ],
@@ -118,7 +118,7 @@ describe('TemplateSelectPage', () => {
         {
           id: 't1', name: 'Протез гомілки', description: '', productType: 'протез',
           amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', templateVersion: 1,
-          estimatedDurationMin: 1800, stages: [{ id: 's1', name: 'Етап 1', stageType: 'TECH', canSkip: false, requiresApproval: false, gate: null, steps: [] }],
+          estimatedDurationMin: 1800, stages: [{ id: 's1', name: 'Етап 1', stageType: 'TECH', canSkip: false, requiresApproval: false, steps: [] }],
           createdAt: '', updatedAt: '',
         },
       ],

@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/prosthetics/StatusBadge';
 import type { FlowInstance } from '@/prosthetics/types';
 import { flowInstanceApi } from '@/api/prosthetics';
 
-const RESUMABLE_STATUSES = ['IN_PROGRESS', 'PAUSED', 'WAITING_REVIEW', 'CORRECTION', 'NEW'];
+const RESUMABLE_STATUSES = ['IN_PROGRESS', 'PAUSED', 'NEW'];
 
 export default function ProcessDetail() {
   const { id } = useParams<{ id: string }>();

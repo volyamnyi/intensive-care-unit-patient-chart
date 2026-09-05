@@ -45,7 +45,6 @@ const baseInstance = (overrides: Partial<FlowInstance> = {}): FlowInstance => ({
   endTime: null,
   totalActiveSeconds: null,
   totalIdleSeconds: null,
-  reworkCount: null,
   failReason: null,
   pausedAt: null,
   resumedAt: null,

@@ -4,16 +4,11 @@ export type FlowInstanceStatus =
   | 'PAUSED'
   | 'BLOCKED_PATIENT'
   | 'BLOCKED_MATERIAL'
-  | 'WAITING_REVIEW'
-  | 'CORRECTION'
-  | 'FAILED_QC'
   | 'COMPLETED'
   | 'FAILED'
   | 'BRANCHED';
 
 export type TemplateStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
-
-export type GateDecision = 'PASS' | 'REWORK' | 'FAIL';
 
 export type PauseCategory =
   | 'OPERATIVE_INTERVENTION'
@@ -38,22 +33,6 @@ export interface ProstheticsOrder {
   status: string;
   materials: string | null;
   createdAt: string;
-}
-
-export interface ReworkLoop {
-  targetStepId: string;
-  reworkType: string;
-  maxAttempts: number;
-}
-
-export interface QualityGate {
-  id: string;
-  name: string;
-  description: string;
-  requiredApproverRole: string;
-  checklist: string;
-  attachmentsRequired: boolean;
-  reworkLoops: ReworkLoop[];
 }
 
 export interface TemplateElement {
@@ -89,7 +68,6 @@ export interface TemplateStage {
   type: string;
   canSkip: boolean;
   requiresApproval: boolean;
-  gate: QualityGate | null;
   steps: TemplateStep[];
 }
 
@@ -127,7 +105,6 @@ export interface FlowInstance {
   endTime: string | null;
   totalActiveSeconds: number | null;
   totalIdleSeconds: number | null;
-  reworkCount: number | null;
   failReason: string | null;
   pausedAt: string | null;
   resumedAt: string | null;
@@ -155,18 +132,6 @@ export interface StepExecution {
   values: string | null;
   note: string | null;
   completedBy: number | null;
-}
-
-export interface GateDecisionResponse {
-  id: string;
-  instanceId: string;
-  gateId: string;
-  gateName: string | null;
-  decision: GateDecision;
-  criteriaConfirmed: string[] | null;
-  comment: string | null;
-  decidedBy: number | null;
-  decidedAt: string;
 }
 
 export interface ResourceUsageResponse {
@@ -207,12 +172,6 @@ export interface ResourceUsageRequest {
   quantity: number | null;
   unit: string | null;
   minutes: number | null;
-}
-
-export interface GateDecisionRequest {
-  decision: GateDecision;
-  criteriaConfirmed?: string[];
-  comment?: string;
 }
 
 export interface PauseRequest {
@@ -265,23 +224,7 @@ export interface TemplateStageCreateRequest {
   type: string;
   canSkip: boolean;
   requiresApproval: boolean;
-  gate: GateCreateRequest | null;
   steps: TemplateStepCreateRequest[];
-}
-
-export interface GateCreateRequest {
-  name: string;
-  description: string;
-  requiredApproverRole: string;
-  checklist: string[];
-  attachmentsRequired: boolean;
-  reworkLoops: ReworkLoopCreateRequest[];
-}
-
-export interface ReworkLoopCreateRequest {
-  targetStepIndex: number;
-  reworkType: string;
-  maxAttempts: number;
 }
 
 export interface TemplateStepCreateRequest {
@@ -366,23 +309,7 @@ export interface SnapshotStage {
   stageType: string;
   canSkip: boolean;
   requiresApproval: boolean;
-  gate: SnapshotGate | null;
   steps: SnapshotStep[];
-}
-
-export interface SnapshotGate {
-  id: string;
-  name: string;
-  requiredApproverRole: string | null;
-  checklist: string[];
-  attachmentsRequired: boolean;
-  reworkLoops: SnapshotReworkLoop[];
-}
-
-export interface SnapshotReworkLoop {
-  targetStepId: string;
-  reworkType: string;
-  maxAttempts: number;
 }
 
 export interface SnapshotStep {

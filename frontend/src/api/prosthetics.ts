@@ -6,7 +6,6 @@ import type {
   FlowInstance,
   InstanceCreateRequest,
   StepCompleteRequest,
-  GateDecisionRequest,
   PauseRequest,
   FailRequest,
   EvidenceFile,
@@ -16,7 +15,6 @@ import type {
   TemplateCreateRequest,
   TemplatePatchRequest,
   SnapshotTemplate,
-  GateDecisionResponse,
   ResourceUsageResponse,
   FailureSnapshot,
   BrakCreateRequest,
@@ -65,8 +63,6 @@ export const flowInstanceApi = {
   backward: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/backward`),
   listExecutions: (id: string) =>
     client.get<StepExecution[]>(`${BASE}/instances/${id}/step-executions`),
-  listGateDecisions: (id: string) =>
-    client.get<GateDecisionResponse[]>(`${BASE}/instances/${id}/gate-decisions`),
   listResources: (id: string) =>
     client.get<ResourceUsageResponse[]>(`${BASE}/instances/${id}/resources`),
   getFailureSnapshot: (id: string) =>
@@ -78,8 +74,6 @@ export const flowInstanceApi = {
     client.post<FlowInstance>(`${BASE}/instances/${id}/fail`, data),
   replacement: (id: string) =>
     client.post<FlowInstance>(`${BASE}/instances/${id}/replacement`),
-  decideGate: (id: string, gateId: string, data: GateDecisionRequest) =>
-    client.post<FlowInstance>(`${BASE}/instances/${id}/gates/${gateId}/decision`, data),
   uploadEvidence: (id: string, executionId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);

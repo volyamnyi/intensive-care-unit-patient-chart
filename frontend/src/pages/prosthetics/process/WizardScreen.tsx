@@ -7,7 +7,6 @@ import {
   Camera,
   Check,
   CircleAlert,
-  ClipboardCheck,
   Home,
   PauseCircle,
   PenLine,
@@ -41,9 +40,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { flowInstanceApi, prostheticsOrderApi, prostheticsPatientApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/services/AuthContext';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
-import { QualityGatePanel } from '@/components/prosthetics/QualityGatePanel';
 import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
 import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
 import {
@@ -63,7 +60,6 @@ import {
 } from '@/prosthetics/softLinerRules';
 import type {
   FlowInstance,
-  GateDecision,
   PauseCategory,
   SnapshotElement,
   SnapshotStage,
@@ -1350,7 +1346,6 @@ function renderElements(
 export default function WizardScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
 
   const [instance, setInstance] = useState<FlowInstance | null>(null);
   const [snapshot, setSnapshot] = useState<SnapshotTemplate | null>(null);
@@ -1392,7 +1387,7 @@ export default function WizardScreen() {
       if (next.status === 'COMPLETED') {
         toast.success('Процес успішно завершено');
         navigate(`/prosthetics/process/${next.id}/done`, { replace: true });
-      } else if (next.status === 'FAILED' || next.status === 'FAILED_QC' || next.status === 'BRANCHED') {
+      } else if (next.status === 'FAILED' || next.status === 'BRANCHED') {
         navigate(`/prosthetics/process/${next.id}/failed`, { replace: true });
       }
     },
@@ -1534,8 +1529,6 @@ export default function WizardScreen() {
   const progress = computeProgress(stepsDone, totalSteps);
 
   const isLastStepOfStage = stepIndexInStage === (stage?.steps.length ?? 0) - 1 && stage != null;
-  const isLastStage = stageIndex === (snapshot?.stages.length ?? 1) - 1;
-  const nextStageHasGate = !isLastStage && !!snapshot?.stages[stageIndex + 1]?.gate;
   const prevStep = useMemo(() => {
     if (stepIndexInStage > 0) {
       return stage?.steps[stepIndexInStage - 1];
@@ -1548,11 +1541,9 @@ export default function WizardScreen() {
     return undefined;
   }, [stepIndexInStage, stage, stageIndex, snapshot]);
   const canGoBack = !!prevStep?.allowBackward;
-  const ctaLabel = isLastStepOfStage && isLastStage
+  const ctaLabel = isLastStepOfStage && stageIndex === (snapshot?.stages.length ?? 1) - 1
     ? 'Завершити процес'
-    : isLastStepOfStage && nextStageHasGate
-      ? 'Контроль якості →'
-      : 'Готово →';
+    : 'Готово →';
   const isBrakStep =
     instance?.status === 'IN_PROGRESS' &&
     ((instance?.currentStageId === 'd0000017-0000-0000-0000-000000000017' &&
@@ -1651,30 +1642,6 @@ export default function WizardScreen() {
       toast.info('Повернуто до попереднього кроку');
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося повернутися до попереднього кроку'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const decideGate = async (
-    decision: GateDecision,
-    comment?: string,
-    criteriaConfirmed?: string[],
-  ) => {
-    if (!instance || !stage?.gate) return;
-    setSubmitting(true);
-    try {
-      const res = await flowInstanceApi.decideGate(instance.id, stage.gate.id, {
-        decision,
-        criteriaConfirmed,
-        comment,
-      });
-      if (decision === 'PASS') toast.success('Контрольну точку пройдено');
-      else if (decision === 'REWORK') toast.warning('Створено петлю повернення на доопрацювання');
-      else toast.error('Процес позначено як провалений');
-      applyInstance(res.data);
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Не вдалося зберегти рішення контрольної точки'));
     } finally {
       setSubmitting(false);
     }
@@ -1840,7 +1807,7 @@ export default function WizardScreen() {
     );
   }
 
-  if (instance.status === 'FAILED' || instance.status === 'FAILED_QC' || instance.status === 'BRANCHED') {
+  if (instance.status === 'FAILED' || instance.status === 'BRANCHED') {
     return (
       <div className="py-16 text-center">
         <h1 className="font-display text-xl font-semibold">Процес зупинено (брак)</h1>
@@ -1873,31 +1840,6 @@ export default function WizardScreen() {
           Розпочати процес
         </Button>
       </div>
-    );
-  }
-
-  if (instance.status === 'WAITING_REVIEW') {
-    if (!stage?.gate) {
-      return (
-        <div className="py-16 text-center">
-          <h1 className="font-display text-xl font-semibold">Очікування перевірки</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Контрольна точка не знайдена.</p>
-          <Button className="mt-4" onClick={() => navigate(`/prosthetics/process/${instance.id}`)}>
-            До огляду процесу
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <QualityGatePanel
-        instance={instance}
-        stage={stage}
-        isApprover={hasRole('PROSTHETICS_ADMINISTRATOR')}
-        submitting={submitting}
-        onPass={(criteriaConfirmed) => void decideGate('PASS', undefined, criteriaConfirmed)}
-        onRework={(comment) => void decideGate('REWORK', comment)}
-        onFail={(comment) => void decideGate('FAIL', comment)}
-      />
     );
   }
 
@@ -1950,7 +1892,6 @@ export default function WizardScreen() {
                 i === stageIndex ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
               }`}
             >
-              {s.gate != null && <ClipboardCheck className="size-3" />}
               {i + 1}. {s.name}
             </span>
           ))}

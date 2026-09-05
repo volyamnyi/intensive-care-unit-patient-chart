@@ -216,16 +216,6 @@ describe('flowInstanceApi', () => {
     expect(clientMock.post).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/replacement');
   });
 
-  it('decides a gate', async () => {
-    clientMock.post.mockReturnValue(ok({ id: 'i1' }));
-    const body = { decision: 'PASS' as const, criteriaConfirmed: ['c1'] };
-    await flowInstanceApi.decideGate('i1', 'g1', body);
-    expect(clientMock.post).toHaveBeenCalledWith(
-      '/prosthesis-manufacturing/instances/i1/gates/g1/decision',
-      body,
-    );
-  });
-
   it('uploads evidence with multipart headers and FormData', async () => {
     clientMock.post.mockReturnValue(ok({ id: 'ev1' }));
     const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
