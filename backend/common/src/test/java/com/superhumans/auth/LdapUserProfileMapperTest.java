@@ -69,6 +69,8 @@ class LdapUserProfileMapperTest {
     void longTitle_isTruncatedToColumnWidth() {
         when(context.getStringAttribute("sAMAccountName")).thenReturn("jdoe");
         when(context.getStringAttribute("displayName")).thenReturn("John Doe");
+        when(context.getStringAttribute("mail")).thenReturn(null);
+        when(context.getStringAttribute("telephoneNumber")).thenReturn(null);
         when(context.getStringAttribute("title")).thenReturn("T".repeat(300));
 
         LdapUserProfile profile = LdapUserProfileMapper.mapFromContext(context, "jdoe");
