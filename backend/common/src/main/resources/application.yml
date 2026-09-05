@@ -40,7 +40,7 @@ spring:
 
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:cGF0aWVudC1jaGFydC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi0yMDI2}
+    secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000
 
   datasource:
@@ -78,11 +78,15 @@ app:
     wiremock-url: ${APP_MIS_WIREMOCK_URL:http://localhost:9090}
 
   api:
-    title: ICU Patient Chart API
-    description: API for Intensive Care Unit Patient Chart - Form 003-15/о electronic medical record system
+    title: MIS Doctor Eleks API
+    description: API for interacting with MIS Doctor Eleks records
 
   ldap:
     enabled: false
+    urls: ${APP_LDAP_URLS}
+    base: ${APP_LDAP_BASE}
+    username: ${APP_LDAP_USERNAME}
+    password: ${APP_LPAD_PASSWORD}
 
   scheduling:
     day-close-hour: 7
