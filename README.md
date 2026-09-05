@@ -55,7 +55,7 @@
 - **Setup Wizard** — Patient search (from local mock DB) → Order selection → Order review (recipe PDF) → Template selection → Instance creation
 - **Execution Wizard** — Step-by-step guided workflow with validation (measurements, anamnesis, manufacturing, file uploads)
 - **Pause/Resume** — Timer-aware pausing with categorized reasons (operative intervention, VLC passing, went abroad, reamputation)
-- **Failure Handling** — Failure snapshot capture (allowlisted category, description, attachments) + replacement instance creation
+- **Failure Handling** — Failure snapshot capture (allowlisted category, description, attachments); FAILED is terminal (no replacement)
 - **PDF Reports** — Recipe PDF (order review), Instance PDF (Done screen), Failure PDF (Failed screen)
 - **Evidence Upload** — Image/PDF uploads (10 MB limit) per step
 
@@ -413,7 +413,6 @@ java -jar app/target/app-*.jar
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/fail` | PROSTHETIST | Fail instance (allowlisted category: defect, materials, component_damage, order_cancelled, patient, other) |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/pause` | PROSTHETIST | Pause instance (reason: operative intervention, VLC passing, went abroad, reamputation) |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/resume` | PROSTHETIST | Resume instance |
-| `POST` | `/api/prosthesis-manufacturing/instances/{id}/replacement` | PROSTHETIST | Create replacement after FAIL |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | PROSTHETIST, PROSTHETICS_ADMIN | Get failure snapshot |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/pdf` | PROSTHETIST, PROSTHETICS_ADMIN | Generate PDF report for instance |
 | `POST` | `/api/prosthesis-manufacturing/evidence-files` | PROSTHETIST | Upload evidence file |
@@ -505,7 +504,7 @@ icu-patient-chart/
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
 │       └── test/               # Vitest tests (89 files)
-├── tests/                      # Playwright E2E (83 spec files, 11 projects)
+├── tests/                      # Playwright E2E (88 spec files, 11 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -541,7 +540,7 @@ icu-patient-chart/
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (83 spec files, 397 tests) |
+| `npx playwright test` | Run all E2E tests (88 spec files, 367 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -557,7 +556,7 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (83 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (88 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
@@ -565,8 +564,8 @@ Push → CI runs jobs in parallel → if any fails, fix and repeat until every c
 ### Testing Summary
 - **Backend tests**: 140 test files across the multi-module reactor — common (19) + icu-chart (68) + medication-sheet (17) + prosthesis-manufacturing (35) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 94 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 770 tests (89 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 83 spec files (397 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Frontend Vitest tests**: 769 tests (89 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 88 spec files (367 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)

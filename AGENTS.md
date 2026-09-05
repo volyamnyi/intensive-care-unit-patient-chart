@@ -284,7 +284,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 ### Playwright (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (83 spec files) |
+| `npx playwright test` | Run all E2E tests (88 spec files) |
 | `npx playwright test --list` | List tests without running |
 | `npx playwright show-report` | View HTML report |
 
@@ -292,7 +292,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 - **Backend**: 347 main sources / 140 test files across the multi-module reactor (common 124/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 78/35, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: 770 Vitest tests across 89 test files (136 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 83 Playwright spec files (397 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **E2E**: 88 Playwright spec files (367 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -534,7 +534,6 @@ All endpoints prefixed with `/api`.
 | POST | `/api/prosthesis-manufacturing/step-executions/{id}/complete` | Yes (PROSTHETIST) | Complete step execution |
 | POST | `/api/prosthesis-manufacturing/instances/{id}/pause` | Yes (PROSTHETIST) | Pause instance |
 | POST | `/api/prosthesis-manufacturing/instances/{id}/resume` | Yes (PROSTHETIST) | Resume instance |
-| POST | `/api/prosthesis-manufacturing/instances/{id}/replacement` | Yes (PROSTHETIST) | Create replacement after FAIL |
 | GET | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | Yes | Get failure snapshot |
 | GET | `/api/prosthesis-manufacturing/instances/{id}/pdf` | Yes | Generate PDF report for instance |
 | POST | `/api/prosthesis-manufacturing/evidence-files` | Yes (PROSTHETIST) | Upload evidence file |
@@ -747,7 +746,7 @@ frontend/
 tests/
   playwright.config.ts ← Playwright config with 11 projects
   package.json         ← Test dependencies
-  specs/               ← 83 spec files
+  specs/               ← 88 spec files
   pages/               ← Page Object Model (6 files)
   fixtures/            ← Test fixtures
 docs/
