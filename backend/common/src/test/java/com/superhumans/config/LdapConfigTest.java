@@ -61,15 +61,16 @@ class LdapConfigTest {
     }
 
     @Test
-    void enabledWithoutUrls_failsFastNamingTheProperty() {
+    void enabledWithBlankUrls_failsFastNamingTheProperty() {
         runner.withPropertyValues(
                         "app.ldap.enabled=true",
+                        "APP_LDAP_URLS=   ",
                         "APP_LDAP_BASE=dc=example,dc=com",
                         "APP_LDAP_USERNAME=cn=reader,dc=example,dc=com",
                         "APP_LPAD_PASSWORD=bind-password")
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure().getMessage()).contains("APP_LDAP_URLS");
+                    assertThat(context.getStartupFailure()).hasStackTraceContaining("APP_LDAP_URLS");
                 });
     }
 

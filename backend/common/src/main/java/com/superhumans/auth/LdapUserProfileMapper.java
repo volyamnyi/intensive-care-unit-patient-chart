@@ -46,10 +46,15 @@ public final class LdapUserProfileMapper {
             throw new IllegalArgumentException(
                     "Cannot resolve a stable login from the directory context");
         }
-        String fullName = firstNonBlank(
-                ctx.getStringAttribute("displayName"),
-                combine(ctx.getStringAttribute("givenName"), ctx.getStringAttribute("sn")),
-                login);
+        String displayName = emptyToNull(ctx.getStringAttribute("displayName"));
+        String fullName;
+        if (displayName != null) {
+            fullName = displayName;
+        } else {
+            fullName = firstNonBlank(
+                    combine(ctx.getStringAttribute("givenName"), ctx.getStringAttribute("sn")),
+                    login);
+        }
         return new LdapUserProfile(
                 login,
                 fullName.trim(),
