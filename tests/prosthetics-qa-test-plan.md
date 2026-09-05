@@ -280,7 +280,7 @@ This test plan covers the complete workflow for creating a prosthetist's technic
 |------|--------|-----------------|
 | 13.1 | Verify Failure Snapshot displays | Process info, date, cause, completed stages, audit log, resources |
 | 13.2 | Click "Експорт звіту (PDF)" | Failure report downloads |
-| 13.3 | Click "Створити Замінювальний процес" | New process pre-filled with same order data |
+| 13.3 | Verify "Створити замінювальний процес" is absent (removed) | No replacement button or dialog on the failed-process report |
 | 13.4 | Click "Повернутися на Dashboard" | Redirect to Dashboard, process in "Провалені" filter |
 
 ---
