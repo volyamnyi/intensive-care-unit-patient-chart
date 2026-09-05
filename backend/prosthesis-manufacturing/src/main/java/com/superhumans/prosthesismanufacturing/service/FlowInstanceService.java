@@ -439,29 +439,6 @@ public class FlowInstanceService {
     }
 
     @Transactional
-    public FlowInstanceResponse replacement(UUID instanceId, Long userId) {
-        FlowInstance original = requireOwner(instanceId, userId);
-        if (original.getStatus() != FlowInstanceStatus.FAILED) {
-            throw new BadRequestException("Replacement is allowed only for failed instances");
-        }
-        ProstheticsOrder order = orderRepository.findById(original.getOrderId())
-                .orElseThrow(() -> new NotFoundException("Order not found: " + original.getOrderId()));
-        FlowInstance instance = FlowInstance.builder()
-                .templateId(original.getTemplateId())
-                .patientId(order.getPatient().getId())
-                .orderId(original.getOrderId())
-                .assignedUserId(userId)
-                .status(FlowInstanceStatus.NEW)
-                .totalActiveSeconds(0L)
-                .totalIdleSeconds(0L)
-                .templateSnapshot(original.getTemplateSnapshot())
-                .build();
-        instanceRepository.save(instance);
-        auditService.logAction("FlowInstance", instance.getId(), "REPLACEMENT", userId);
-        return toResponse(instance);
-    }
-
-    @Transactional
     public FlowInstanceResponse fail(UUID instanceId, String category, String description, String snapshotJson,
                                      Long userId) {
         FlowInstance instance = requireOwner(instanceId, userId);

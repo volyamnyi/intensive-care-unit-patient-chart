@@ -6,18 +6,16 @@ import {
   findTemplateByIdName,
   createFreeLowerInstance,
   completeOneStep,
-  completeToCompleted,
-  instanceStatus,
 } from '../../helpers/tp-ll-02-flow';
 
-test.describe('TP-LL-02 — Failure & Replacement (Фаза 5)', () => {
+test.describe('TP-LL-02 — Failure terminal state (issue #238)', () => {
   let prosthetistToken: string;
 
   test.beforeAll(async ({ request }) => {
     prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
   });
 
-  test('FAILED (materials) → failure PDF → replacement NEW → COMPLETED', async ({ request }) => {
+  test('FAILED (materials) → failure PDF → terminal, no replacement', async ({ request }) => {
     const headers = headersFor(prosthetistToken);
     const templateId = await findTemplateByIdName(request, headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, headers, templateId);
@@ -47,16 +45,10 @@ test.describe('TP-LL-02 — Failure & Replacement (Фаза 5)', () => {
     const pdfText = Buffer.from(await pdfRes.body()).toString('latin1');
     expect(pdfText).toContain('%PDF');
 
-    // A replacement instance is created for the same order (201, NEW status).
-    const replacementRes = await request.post(`${PROSTH}/instances/${instance.id}/replacement`, { headers });
-    expect(replacementRes.status()).toBe(201);
-    const replacement = await replacementRes.json();
-    expect(replacement.status).toBe('NEW');
-    expect(replacement.orderId).toBe(instance.orderId);
-
-    // Drive the replacement to COMPLETED (leaves the order free for other specs).
-    await request.post(`${PROSTH}/instances/${replacement.id}/start`, { headers });
-    await completeToCompleted(request, headers, replacement.id);
-    expect(await instanceStatus(request, headers, replacement.id)).toBe('COMPLETED');
+    // FAILED is terminal (issue #238 — no replacement): the failed instance
+    // no longer blocks the order (FAILED is not an active status), so no
+    // cleanup is needed for other specs.
+    const statusRes = await request.get(`${PROSTH}/instances/${instance.id}`, { headers });
+    expect((await statusRes.json()).status).toBe('FAILED');
   });
 });

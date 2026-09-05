@@ -13,10 +13,10 @@ import { WizardExecutionPage } from '../../pages/prosthetics/WizardExecutionPage
 
 /**
  * TP-LL-02 cross-feature regression (§12.3 braking + §7.1 soft-liner + notes/files
- * + backward + pause + fail → replacement). Runs under the serial
+ * + backward + pause + fail). Runs under the serial
  * `prosthetics-chromium` project (storageState .auth/prosthetist.json — already
  * prosthetist1). Single order chain: original → BRANCHED → branch (IN_PROGRESS)
- * → notes/files → backward → PAUSED → resumed → FAILED → replacement NEW.
+ * → notes/files → backward → PAUSED → resumed → FAILED (terminal, no replacement).
  *
  * Order / template are the seeded lower-limb fixtures, shared across the
  * prosthetics-chromium project which runs with workers:1, fullyParallel:false.
@@ -47,7 +47,6 @@ test.describe.serial('TP-LL-02 cross-feature', () => {
   let templateId: string;
   let originalId: string;
   let branchId: string;
-  let replacementId: string;
   let orderId: string;
 
   const h = () => headersFor(prosthetistToken);
@@ -61,12 +60,11 @@ test.describe.serial('TP-LL-02 cross-feature', () => {
     // Free the shared lower-limb order for subsequent prosthetics specs.
     // originalId is BRANCHED (inactive) — no need to fail it. branchId may be
     // FAILED already (test 3) or still IN_PROGRESS/PAUSED if earlier tests failed.
-    // replacementId is NEW → must be failed. terminateInstance handles NEW/PAUSED → start/resume → fail.
+    // terminateInstance handles NEW/PAUSED → start/resume → fail.
     const headers = h();
-    for (const id of [branchId, replacementId]) {
-      if (!id) continue;
+    if (branchId) {
       try {
-        await terminateInstance(request, headers, id);
+        await terminateInstance(request, headers, branchId);
       } catch {
         // Best-effort cleanup — ignore if instance already terminal or missing.
       }
@@ -264,7 +262,7 @@ test.describe.serial('TP-LL-02 cross-feature', () => {
     expect(resumed.currentStepId).toBe(STEP_E0032);
   });
 
-  test('3 — fail (allowlist) → replacement NEW', async ({ page }) => {
+  test('3 — fail (allowlist), FAILED is terminal', async ({ page }) => {
     const req = page.request;
     expect(branchId, 'branchId missing').toBeTruthy();
     expect(orderId, 'orderId missing').toBeTruthy();
@@ -289,16 +287,10 @@ test.describe.serial('TP-LL-02 cross-feature', () => {
     expect(snapshot.category).toBe('other');
     expect(snapshot.description).toBe('Cross E2E fail');
 
-    // Replacement creates a fresh NEW instance for the same order.
-    const replRes = await req.post(`${PROSTH}/instances/${branchId}/replacement`, { headers });
-    expect(replRes.status()).toBe(201);
-    const repl = (await replRes.json()) as any;
-    replacementId = repl.id as string;
-    expect(replacementId).toBeTruthy();
-    expect(replacementId).not.toBe(branchId);
-    expect(repl.status).toBe('NEW');
-    expect(repl.orderId).toBe(orderId);
-    // Template is preserved.
-    expect(repl.templateId).toBeTruthy();
+    // No replacement (issue #238): FAILED is the end of the workflow.
+    // Template is preserved on the failed instance.
+    const failedAgain = (await (await req.get(`${PROSTH}/instances/${branchId}`, { headers })).json()) as any;
+    expect(failedAgain.status).toBe('FAILED');
+    expect(failedAgain.templateId).toBeTruthy();
   });
 });

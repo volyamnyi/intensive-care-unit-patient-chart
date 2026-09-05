@@ -78,7 +78,6 @@ class FlowInstanceControllerTest {
         when(instanceService.pause(eq(instanceId), any(), eq(1L))).thenReturn(response());
         when(instanceService.resume(eq(instanceId), eq(1L))).thenReturn(response());
         when(instanceService.fail(eq(instanceId), any(), any(), any(), eq(1L))).thenReturn(response());
-        when(instanceService.replacement(eq(instanceId), eq(1L))).thenReturn(response());
         when(evidenceFileService.upload(eq(instanceId), eq(executionId), any(), eq(1L))).thenReturn(
                 EvidenceFileResponse.builder().id(fileId).stepExecutionId(executionId).fileName("photo.png").mimeType("image/png").sizeBytes(3L).checksum("abc123").build());
         when(evidenceFileService.download(eq(fileId), eq(1L), eq(false))).thenReturn(
@@ -164,10 +163,10 @@ class FlowInstanceControllerTest {
     }
 
     @Test
-    void replacement_returnsCreated() throws Exception {
+    void replacementEndpointIsGone() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/replacement", instanceId))
-                .andExpect(status().isCreated());
+                .andExpect(status().isNotFound());
     }
 
     @Test

@@ -1,7 +1,7 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 
 /**
- * Shared helpers for the TP-LL-02 E2E specs (full-lifecycle, failure-replacement).
+ * Shared helpers for the TP-LL-02 E2E specs (full-lifecycle, failure).
  * API-driven so they run under the serial `prosthetics-chromium`
  * project (storageState `.auth/prosthetist.json`).
  *

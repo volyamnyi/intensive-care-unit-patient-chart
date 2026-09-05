@@ -165,14 +165,6 @@ public class FlowInstanceController {
                 request.getSnapshot(), currentUser.userId());
     }
 
-    @PostMapping("/{id}/replacement")
-    @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a replacement instance for a failed one")
-    public FlowInstanceResponse replacement(@PathVariable UUID id) {
-        return instanceService.replacement(id, currentUser.userId());
-    }
-
     @PostMapping(value = "/{id}/evidence", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @ResponseStatus(HttpStatus.CREATED)

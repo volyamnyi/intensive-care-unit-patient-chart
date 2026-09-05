@@ -133,7 +133,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     });
   });
 
-  test('State machine: pause/resume and fail/replacement (linear, no review state)', async ({ request }) => {
+  test('State machine: pause/resume and fail (linear, no review state, no replacement)', async ({ request }) => {
     const headers = { Authorization: `Bearer ${prosthetistToken}` };
     const templates = await (await request.get(`${PROSTH}/templates?productType=LOWER_LIMB&status=ACTIVE`, { headers })).json();
     const tp = templates.find((t: any) => t.name === 'TP-LL-02');
@@ -176,18 +176,6 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     });
     expect(failed.ok()).toBeTruthy();
     expect((await failed.json()).status).toBe('FAILED');
-
-    // Replacement should create NEW with same orderId/snapshot
-    const repl = await request.post(`${PROSTH}/instances/${inst.id}/replacement`, { headers });
-    expect(repl.ok()).toBeTruthy();
-    const replBody = await repl.json();
-    expect(replBody.status).toBe('NEW');
-    expect(replBody.orderId).toBe(orderId);
-
-    // Cleanup replacement
-    await request.post(`${PROSTH}/instances/${replBody.id}/fail`, {
-      headers,
-      data: { category: 'other', description: 'replacement cleanup' },
-    });
+    // No replacement (issue #238): FAILED is terminal and no longer blocks the order.
   });
 });

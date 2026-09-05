@@ -46,7 +46,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * Audit trail for TP-LL-02 process mutations: every mutation
- * (CREATE/START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL/REPLACEMENT)
+ * (CREATE/START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL)
  * writes an immutable AuditLog with entity=FlowInstance (or StepExecution),
  * entityId, action and userId.
  */
@@ -208,23 +208,6 @@ class AuditServiceTest {
             assertThat(log.getEntity()).isEqualTo("FlowInstance");
             assertThat(log.getEntityId()).isEqualTo(instanceId);
             assertThat(log.getAction()).isEqualTo("FAIL");
-            assertThat(log.getUserId()).isEqualTo(prosthetistId);
-        }
-
-        @Test
-        void replacementLogsAuditForTheNewInstance() {
-            current.setStatus(FlowInstanceStatus.FAILED);
-            stubOwnerLookup();
-            stubOrder();
-            when(instanceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-
-            service.replacement(instanceId, prosthetistId);
-
-            AuditLog log = captureAuditLog();
-            assertThat(log.getEntity()).isEqualTo("FlowInstance");
-            assertThat(log.getAction()).isEqualTo("REPLACEMENT");
-            // the audit entry targets the newly created replacement instance
-            assertThat(log.getEntityId()).isNotEqualTo(current.getId());
             assertThat(log.getUserId()).isEqualTo(prosthetistId);
         }
     }

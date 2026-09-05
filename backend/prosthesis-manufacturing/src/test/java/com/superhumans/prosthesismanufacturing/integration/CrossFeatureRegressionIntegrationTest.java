@@ -56,7 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Phase 9 cross-feature regression — chains brak → branch → 7.1 soft-liner
  * both ALLOW variants → note/file → stage10 backward → pause (4-value enum)
- * → resume → fail (allowlist) → replacement.
+ * → resume → fail (allowlist, terminal).
  *
  * Mirrors BrakIntegrationTest (ensureFixedTemplate, TestEm, seed-data disabled)
  * and TpLl02BusinessRulesIntegrationTest soft-liner structure (e0000029 with
@@ -677,7 +677,7 @@ class CrossFeatureRegressionIntegrationTest {
         assertThat(resumedEntity.getPausedAt()).isNull();
         assertThat(resumedEntity.getTotalIdleSeconds()).isGreaterThanOrEqualTo(0L);
 
-        // --- fail (allowlist) → replacement ---
+        // --- fail (allowlist): FAILED is terminal, no replacement ---
         String failCategory = "materials";
         String failDesc = "Test materials defect for cross-feature";
         var failed = instanceService.fail(branchId, failCategory, failDesc, null, PROSTHETIST);
@@ -693,25 +693,13 @@ class CrossFeatureRegressionIntegrationTest {
         assertThatThrownBy(() -> instanceService.fail(freshForFailCheck, "invalid_category", "desc", null, PROSTHETIST))
                 .isInstanceOf(BadRequestException.class);
 
-        // replacement
-        var replacement = instanceService.replacement(branchId, PROSTHETIST);
-        assertThat(replacement.getStatus()).isEqualTo(FlowInstanceStatus.NEW.name());
-        assertThat(replacement.getOrderId()).isEqualTo(branchEntity.getOrderId());
-        assertThat(replacement.getTemplateId()).isEqualTo(TEMPLATE_ID);
-        assertThat(replacement.getId()).isNotEqualTo(branchId);
-        var replacementEntity = instanceRepository.findById(replacement.getId()).orElseThrow();
-        assertThat(replacementEntity.getTemplateSnapshot()).isEqualTo(branchEntity.getTemplateSnapshot());
-        assertThat(replacementEntity.getOrderId()).isEqualTo(branchEntity.getOrderId());
-
-        // --- verify audit logs: PAUSE, RESUME, FAIL, REPLACEMENT ---
+        // --- verify audit logs: PAUSE, RESUME, FAIL ---
         var pauseLogs = auditService.getAuditLogs(null, "FlowInstance", branchId, null, null, null, page);
         assertThat(pauseLogs.getContent()).extracting(AuditLogResponse::getAction).contains("PAUSE");
         var resumeLogs = auditService.getAuditLogs(null, "FlowInstance", branchId, null, null, null, page);
         assertThat(resumeLogs.getContent()).extracting(AuditLogResponse::getAction).contains("RESUME");
         var failLogs = auditService.getAuditLogs(null, "FlowInstance", branchId, null, null, null, page);
         assertThat(failLogs.getContent()).extracting(AuditLogResponse::getAction).contains("FAIL");
-        var replLogs = auditService.getAuditLogs(null, "FlowInstance", replacement.getId(), null, null, null, page);
-        assertThat(replLogs.getContent()).extracting(AuditLogResponse::getAction).contains("REPLACEMENT");
 
         // backward audit
         var backwardLogs = auditService.getAuditLogs(null, "FlowInstance", branchId, null, null, null, page);

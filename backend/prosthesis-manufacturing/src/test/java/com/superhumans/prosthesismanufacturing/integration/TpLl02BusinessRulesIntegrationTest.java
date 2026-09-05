@@ -184,7 +184,7 @@ class TpLl02BusinessRulesIntegrationTest {
     }
 
     @Test
-    void pauseResumeAndFailReplacementFlow() {
+    void pauseResumeAndFailFlow() {
         ProstheticsPatient patient = ProstheticsPatient.builder().pib("Пацієнт Пауза").build();
         em.persistAndFlush(patient);
         ProstheticsOrder order = ProstheticsOrder.builder()
@@ -211,10 +211,5 @@ class TpLl02BusinessRulesIntegrationTest {
         // Fail (Phase 7: only 6 categories allowed)
         var failed = instanceService.fail(started.getId(), "materials", "Тест брак", null, 20L);
         assertThat(failed.getStatus()).isEqualTo(FlowInstanceStatus.FAILED.name());
-
-        // Replacement
-        var replacement = instanceService.replacement(failed.getId(), 20L);
-        assertThat(replacement.getStatus()).isEqualTo(FlowInstanceStatus.NEW.name());
-        assertThat(replacement.getOrderId()).isEqualTo(order.getId());
     }
 }

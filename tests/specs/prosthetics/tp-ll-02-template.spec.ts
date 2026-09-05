@@ -216,7 +216,7 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
     expect(started.currentStageId).toBeTruthy();
     expect(started.currentStepId).toBeTruthy();
 
-    // Cleanup: fail instance to avoid blocking future runs (IN_PROGRESS → FAILED allows replacement)
+    // Cleanup: fail instance to avoid blocking future runs (IN_PROGRESS → FAILED is terminal)
     await request.post(`${PROSTH}/instances/${instance.id}/fail`, {
       headers: { Authorization: `Bearer ${prosthetistToken}` },
       data: { category: 'other', description: 'Phase 1 E2E cleanup' },

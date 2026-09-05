@@ -3,13 +3,11 @@ package com.superhumans.prosthesismanufacturing.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.TemplateCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.TemplatePatchRequest;
 import com.superhumans.prosthesismanufacturing.entity.ElementType;
-import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.OrderStatus;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
@@ -32,18 +30,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * TP-LL-02 — owner-scoped RBAC + replacement (Фаза 5).
+ * TP-LL-02 — owner-scoped instance access (Фаза 5).
  *
- * Covers the issue test-plan's Rbac/Replacement integration gaps at the service level
+ * Covers the issue test-plan's RBAC integration gaps at the service level
  * (the same rules that @PreAuthorize + requireOwner enforce over HTTP):
  *  - a non-owner prosthetist cannot read an instance (NotFoundException, mapped to 404)
  *  - an allowAll caller (PROSTHETICS_ADMINISTRATOR) can read any instance
- *  - FAILED → replacement → NEW instance reusing the same immutable template snapshot
- *  - COMPLETED → replacement is rejected (BadRequestException, mapped to 400)
  */
 @SpringBootTest(properties = "app.seed-data.enabled=false")
 @Transactional("prosthTransactionManager")
-class TpLl02RbacReplacementIntegrationTest {
+class TpLl02RequireOwnerIntegrationTest {
 
     @Autowired
     private FlowInstanceService instanceService;
@@ -74,37 +70,6 @@ class TpLl02RbacReplacementIntegrationTest {
 
         // An allowAll caller (PROSTHETICS_ADMINISTRATOR flag) reads any instance.
         assertThat(instanceService.get(instanceId, PROSTHETIST_B, true)).isNotNull();
-    }
-
-    @Test
-    void replacement_failedInstance_producesNewInstanceWithSameSnapshot() {
-        UUID templateId = createTpLl02Template();
-        UUID instanceId = createInstance(templateId);
-
-        instanceService.start(instanceId, PROSTHETIST_A);
-        instanceService.fail(instanceId, "materials", "Гільза тріснула", null, PROSTHETIST_A);
-
-        var original = instanceService.get(instanceId, PROSTHETIST_A, false);
-        assertThat(original.getStatus()).isEqualTo(FlowInstanceStatus.FAILED.name());
-
-        var replacement = instanceService.replacement(instanceId, PROSTHETIST_A);
-
-        assertThat(replacement.getId()).isNotEqualTo(instanceId);
-        assertThat(replacement.getStatus()).isEqualTo(FlowInstanceStatus.NEW.name());
-        assertThat(replacement.getTemplateId()).isEqualTo(templateId);
-        assertThat(replacement.getOrderId()).isEqualTo(original.getOrderId());
-    }
-
-    @Test
-    void replacement_nonFailedInstance_isRejected() {
-        UUID templateId = createTpLl02Template();
-        UUID instanceId = createInstance(templateId);
-
-        instanceService.start(instanceId, PROSTHETIST_A);
-        // Replacement is only allowed for FAILED — an in-flight instance is
-        // rejected (BadRequestException, mapped to HTTP 400).
-        assertThatThrownBy(() -> instanceService.replacement(instanceId, PROSTHETIST_A))
-                .isInstanceOf(BadRequestException.class);
     }
 
     private UUID createTpLl02Template() {
