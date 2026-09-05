@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.superhumans.auth.LdapAuthService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.security.ldap.authentication.LdapAuthenticationProvider;
@@ -13,7 +14,14 @@ import org.springframework.security.ldap.authentication.LdapAuthenticationProvid
  * Tests for the {@link LdapConfig} LDAP infrastructure: conditional bean
  * creation, environment-driven wiring, and fail-fast behavior without any
  * live directory server.
+ *
+ * <p>Local-only suite: the corporate directory is unreachable from CI
+ * runners, so every LDAP test runs exclusively locally and is skipped
+ * otherwise. Run with
+ * {@code mvn test -pl common -Dldap.local.tests=true -Dtest='Ldap*Test'}
+ * from the {@code backend} directory.
  */
+@EnabledIfSystemProperty(named = "ldap.local.tests", matches = "true")
 class LdapConfigTest {
 
     private final ApplicationContextRunner runner =

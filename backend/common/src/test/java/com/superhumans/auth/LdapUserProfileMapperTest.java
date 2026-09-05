@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -13,7 +14,14 @@ import org.springframework.ldap.core.DirContextOperations;
 /**
  * Tests for the {@link LdapUserProfileMapper} directory-to-profile mapping
  * contract (decision D5 of issue #244).
+ *
+ * <p>Local-only suite: the corporate directory is unreachable from CI
+ * runners, so every LDAP test runs exclusively locally and is skipped
+ * otherwise. Run with
+ * {@code mvn test -pl common -Dldap.local.tests=true -Dtest='Ldap*Test'}
+ * from the {@code backend} directory.
  */
+@EnabledIfSystemProperty(named = "ldap.local.tests", matches = "true")
 @ExtendWith(MockitoExtension.class)
 class LdapUserProfileMapperTest {
 

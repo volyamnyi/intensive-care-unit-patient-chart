@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -19,7 +20,14 @@ import org.springframework.security.ldap.authentication.LdapAuthenticationProvid
 /**
  * Tests for the {@link LdapAuthService} closed-result authentication contract:
  * success yields a profile, any failure yields empty without leaking details.
+ *
+ * <p>Local-only suite: the corporate directory is unreachable from CI
+ * runners, so every LDAP test runs exclusively locally and is skipped
+ * otherwise. Run with
+ * {@code mvn test -pl common -Dldap.local.tests=true -Dtest='Ldap*Test'}
+ * from the {@code backend} directory.
  */
+@EnabledIfSystemProperty(named = "ldap.local.tests", matches = "true")
 @ExtendWith(MockitoExtension.class)
 class LdapAuthServiceTest {
 
