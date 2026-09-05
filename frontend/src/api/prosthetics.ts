@@ -72,8 +72,6 @@ export const flowInstanceApi = {
   resume: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/resume`),
   fail: (id: string, data: FailRequest) =>
     client.post<FlowInstance>(`${BASE}/instances/${id}/fail`, data),
-  replacement: (id: string) =>
-    client.post<FlowInstance>(`${BASE}/instances/${id}/replacement`),
   uploadEvidence: (id: string, executionId: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);

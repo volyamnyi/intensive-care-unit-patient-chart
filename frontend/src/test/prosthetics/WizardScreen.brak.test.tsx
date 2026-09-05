@@ -29,7 +29,6 @@ const flowInstanceApiMock = vi.hoisted(() => ({
   list: vi.fn(),
   create: vi.fn(),
   fail: vi.fn(),
-  replacement: vi.fn(),
   brak: vi.fn(),
   getBrakEvents: vi.fn(),
   getBranches: vi.fn(),

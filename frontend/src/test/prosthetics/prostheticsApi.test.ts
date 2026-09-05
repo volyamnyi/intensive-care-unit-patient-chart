@@ -210,12 +210,6 @@ describe('flowInstanceApi', () => {
     expect(clientMock.post).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/fail', body);
   });
 
-  it('creates a replacement instance', async () => {
-    clientMock.post.mockReturnValue(ok({ id: 'i2' }));
-    await flowInstanceApi.replacement('i1');
-    expect(clientMock.post).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/replacement');
-  });
-
   it('uploads evidence with multipart headers and FormData', async () => {
     clientMock.post.mockReturnValue(ok({ id: 'ev1' }));
     const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });

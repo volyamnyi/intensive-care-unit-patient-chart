@@ -105,6 +105,7 @@ describe('FailedScreen', () => {
       expect(screen.getByText(/Незмінний запис — лише для читання/)).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /Експортувати PDF/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Створити замінювальний процес/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Створити замінювальний процес/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

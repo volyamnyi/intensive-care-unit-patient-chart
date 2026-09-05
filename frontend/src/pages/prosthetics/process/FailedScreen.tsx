@@ -1,18 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { XCircle, Lock, Download, RefreshCcw, ClipboardList, AlertTriangle, Info, Package } from 'lucide-react';
+import { XCircle, Lock, Download, ClipboardList, AlertTriangle, Info, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProcessStat } from '@/components/prosthetics/ProcessStat';
 import { flowInstanceApi } from '@/api/prosthetics';
@@ -44,8 +36,6 @@ export default function FailedScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [creatingReplacement, setCreatingReplacement] = useState(false);
-  const [replacementOpen, setReplacementOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Процес зупинено — звіт про брак';
@@ -105,21 +95,6 @@ export default function FailedScreen() {
       toast.error(getErrorMessage(err, 'Не вдалося сформувати PDF-звіт'));
     } finally {
       setExporting(false);
-    }
-  };
-
-  const createReplacement = async () => {
-    if (!instance) return;
-    setCreatingReplacement(true);
-    try {
-      const res = await flowInstanceApi.replacement(instance.id);
-      setReplacementOpen(false);
-      toast.success('Створено замінювальний процес');
-      navigate(`/prosthetics/process/${res.data.id}`, { replace: true });
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Не вдалося створити замінювальний процес'));
-    } finally {
-      setCreatingReplacement(false);
     }
   };
 
@@ -297,31 +272,8 @@ export default function FailedScreen() {
         <Button variant="outline" className="gap-2" disabled={exporting} onClick={() => void exportPdf()}>
           <Download className="size-4" /> Експортувати PDF
         </Button>
-        <Button variant="destructive" className="gap-2" onClick={() => setReplacementOpen(true)}>
-          <RefreshCcw className="size-4" /> Створити замінювальний процес
-        </Button>
         <Button onClick={() => navigate('/prosthetics')}>До панелі управління</Button>
       </div>
-
-      <Dialog open={replacementOpen} onOpenChange={setReplacementOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Замінювальний процес</DialogTitle>
-            <DialogDescription>
-              Буде створено новий процес для замовлення {instance.orderNumber ?? instance.orderId} з
-              тим самим шаблоном. Провалений процес залишиться в історії як незмінний запис.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReplacementOpen(false)}>
-              Скасувати
-            </Button>
-            <Button variant="destructive" disabled={creatingReplacement} onClick={() => void createReplacement()}>
-              {creatingReplacement ? 'Створення…' : 'Створити замінювальний процес'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
