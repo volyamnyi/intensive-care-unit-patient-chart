@@ -71,9 +71,9 @@ default List<String> parseOptions(String options) {
 }
 ```
 
-### BUG-003 - Quality Gate Checklist Not Parsed
+### BUG-003 - Quality Gate Checklist Not Parsed (historical — subsystem removed in QG-Removal Phase 1)
 **Root Cause:** Same as BUG-002 - JSON string vs string[]
-**File Modified:** `backend/prosthesis-manufacturing/src/main/java/.../dto/QualityGateResponse.java`
+**File Modified:** `backend/prosthesis-manufacturing/src/main/java/.../dto/QualityGateResponse.java` _(deleted)_
 
 **Fix:** Changed `checklist` from `String` to `List<String>` with custom mapping
 
@@ -93,7 +93,7 @@ default List<String> parseOptions(String options) {
 | Template Selection (Screen 6) | ✅ Fixed | Should show templates |
 | Process Overview (Screen 7) | ⏸️ Not tested | Depends on previous screens |
 | Wizard Execution (Screen 8) | ⏸️ Not tested | Depends on previous screens |
-| Quality Gate (Screen 9) | ⏸️ Not tested | Depends on previous screens |
+| Quality Gate (Screen 9) | ➖ Removed | Subsystem deleted in QG-Removal (Phases 1–5) |
 | Completion (Screen 15) | ⏸️ Not tested | Depends on previous screens |
 
 ## How to Test
@@ -128,7 +128,7 @@ npx playwright test --config=playwright-spec-verification.config.ts --headed --t
 7. Select template → process created
 8. View process overview
 9. Start process → wizard execution
-10. Complete steps through quality gates
+10. Complete steps through all stages (linear flow)
 11. Complete process
 
 ## Mock Project Reference
@@ -137,7 +137,7 @@ The mock project at `Prosthetics-Process-Management` shows the expected UI/UX:
 - Clean linear workflow
 - Progress indicators
 - Form validation
-- Quality checkpoints with pass/rework/fail options
+- Step checkpoints (linear flow; former pass/rework/fail gate removed)
 - Pause/resume functionality
 - Failure snapshots
 - Process history

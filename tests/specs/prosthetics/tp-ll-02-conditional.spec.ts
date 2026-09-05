@@ -133,7 +133,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     });
   });
 
-  test('State machine: pause/resume and fail/replacement without WAITING_REVIEW', async ({ request }) => {
+  test('State machine: pause/resume and fail/replacement (linear, no review state)', async ({ request }) => {
     const headers = { Authorization: `Bearer ${prosthetistToken}` };
     const templates = await (await request.get(`${PROSTH}/templates?productType=LOWER_LIMB&status=ACTIVE`, { headers })).json();
     const tp = templates.find((t: any) => t.name === 'TP-LL-02');
@@ -169,7 +169,7 @@ test.describe.skip('TP-LL-02 — Conditional insert skip & state machine (Фаз
     expect(resumed.ok()).toBeTruthy();
     expect((await resumed.json()).status).toBe('IN_PROGRESS');
 
-    // Fail (should not go to WAITING_REVIEW)
+    // Fail goes straight to FAILED (linear flow, no review state)
     const failed = await request.post(`${PROSTH}/instances/${inst.id}/fail`, {
       headers,
       data: { category: 'material_defect', description: 'test fail' },

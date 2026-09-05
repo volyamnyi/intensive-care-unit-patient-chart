@@ -51,8 +51,8 @@ prosthetics one (`tests/pages/prosthetics/*`, used by `prosthetics-e2e.spec.ts` 
 | `pages/prosthetics/WizardExecutionPage.ts` | ~15 | timer tick, step-complete round-trip, dropdown popup, signature toggle, pause dialog close, resource row, back-step, draft toast | condition waits: `expect.poll` on timer text; `waitForResponse` on `POST …/steps/…/complete`; popup row visible; «Підпис отримано» label; dialog hidden; resource row visible; progress text change |
 | `pages/prosthetics/SetupWizardPage.ts` | 6 | patient-search debounce, order-list refetch, PDF load, template card/select | `waitForResponse` on `/patients` GET; `waitForResponse` on `/orders` GET in the retry loop; «Старт» enabled (PDF-gated); template card visible + «Обрати» enabled |
 | `helpers/prosthetics-flow.ts:133` | 1 | post-«Розпочати процес» settle | `expect(startButton).toBeHidden()` — the start screen unmounts when the instance starts |
-| `pages/prosthetics/QualityGatePage.ts` | 4 | pass/clickFail/rework/fail decision settles | `waitForResponse` on `POST …/gates/…/decision`; fail dialog visible; decision round-trip |
-| `specs/prosthetics/prosthetics-e2e.spec.ts` | 27 | legacy verification harness (dashboard filters/search, template load, wizard navigation, URL-state checks) | surgical: URL waits (`/process/`, `/quality-gate|done|failed`), response waiters (step-complete POST), tolerant row/heading waits, removed redundant sleeps before auto-waiting assertions |
+| `pages/prosthetics/QualityGatePage.ts` | — | _deleted in QG-Removal Phase 5 (no Quality Gate)_ | — |
+| `specs/prosthetics/prosthetics-e2e.spec.ts` | 27 | legacy verification harness (dashboard filters/search, template load, wizard navigation, URL-state checks) | surgical: URL waits (`/process/`, `/done|failed`), response waiters (step-complete POST), tolerant row/heading waits, removed redundant sleeps before auto-waiting assertions; Quality Gate phase removed in QG-Removal Phase 5 |
 | `specs/prosthetics/prosthetics-workflow.spec.ts` | ~8 | legacy verification harness | surgical: URL waits (`/process/`, `/done|/failed`), results-row wait, remove throttles inside bounded poll loops |
 | `specs/prosthetics/prosthetics-spec-verification.spec.ts` | ~7 | legacy verification harness | surgical: response-waiter + `countCompleted` hybrid in the step-completion retry loop, remove throttles inside bounded checks |
 | `specs/doctor/dashboard-table.spec.ts` | 9 | client-side search filter re-render; post-Tab focus | auto-waiting assertions (`toContainText` on first row, `not.toBeVisible` for hidden table), `expect.poll` on row count after clear; Tab focus is synchronous |
@@ -123,8 +123,7 @@ UI form-fill + result assertions is valuable but medium-priority (see §3).
    poll loops.
 10. `specs/prosthetics/prosthetics-e2e.spec.ts` — all 27 `waitForTimeout` sites converted
     (URL waits, step-complete response waiters, tolerant row/heading waits).
-11. `pages/prosthetics/QualityGatePage.ts` — gate-decision response waiters replace the
-    4 sleeps (`passGate`, `clickFail`, `failWithRework`, `failPermanently`).
+11. ~~`pages/prosthetics/QualityGatePage.ts` — gate-decision response waiters~~ — file deleted in QG-Removal Phase 5 (no Quality Gate).
 12. `specs/doctor/dashboard-table.spec.ts`, `specs/admin/audit-log.spec.ts`,
     `specs/doctor/prescription-add-drug.spec.ts` — modern hard-assertion specs: sleeps
     replaced with auto-waiting assertions, `expect.poll`, and `waitForResponse` (search

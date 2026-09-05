@@ -1,20 +1,20 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 
 /**
- * Shared helpers for the TP-LL-02 E2E specs (full-lifecycle, failure-replacement,
- * no-gate-regression). API-driven so they run under the serial `prosthetics-chromium`
+ * Shared helpers for the TP-LL-02 E2E specs (full-lifecycle, failure-replacement).
+ * API-driven so they run under the serial `prosthetics-chromium`
  * project (storageState `.auth/prosthetist.json`).
  *
  * The seeded data has NO active flow instances and the order registry is read-only
  * (GET only), so every spec frees the order it touches by driving its instance to a
- * terminal state (COMPLETED or FAILED). `fail` only accepts IN_PROGRESS /
- * WAITING_REVIEW, so a NEW instance must be started (PAUSED resumed) first.
+ * terminal state (COMPLETED or FAILED). `fail` only accepts IN_PROGRESS,
+ * so a NEW instance must be started (PAUSED resumed) first.
  */
 
 export const PROSTH = 'http://localhost:8085/api/prosthesis-manufacturing';
 export const API = 'http://localhost:8085/api';
 export const ACTIVE_STATUSES = ['NEW', 'IN_PROGRESS', 'PAUSED'];
-export const TERMINAL_STATUSES = ['COMPLETED', 'FAILED', 'FAILED_QC'];
+export const TERMINAL_STATUSES = ['COMPLETED', 'FAILED', 'BRANCHED'];
 
 export async function login(request: APIRequestContext, loginName: string, password: string): Promise<string> {
   const res = await request.post(`${API}/auth/login`, { data: { login: loginName, password } });
@@ -134,7 +134,7 @@ export async function completeToCompleted(request: APIRequestContext, headers, i
   for (let i = 0; i < max; i++) {
     const status = await instanceStatus(request, headers, instanceId);
     if (status === 'COMPLETED') return;
-    if (status === 'FAILED' || status === 'FAILED_QC') throw new Error(`Instance ${instanceId} ${status} before COMPLETED`);
+    if (status === 'FAILED') throw new Error(`Instance ${instanceId} ${status} before COMPLETED`);
     if (status !== 'IN_PROGRESS') throw new Error(`Instance ${instanceId} in ${status}, cannot advance`);
     await completeOneStep(request, headers, instanceId);
   }
@@ -151,7 +151,7 @@ export async function completeToStep(request: APIRequestContext, headers, instan
     if (inst.currentStepId === targetStepId) return inst;
     const status = inst.status;
     if (status !== 'IN_PROGRESS') throw new Error(`Instance ${instanceId} in ${status}, expected IN_PROGRESS at step ${targetStepId}`);
-    if (status === 'FAILED' || status === 'FAILED_QC' || status === 'COMPLETED' || status === 'BRANCHED') throw new Error(`Instance ${instanceId} in ${status} before reaching ${targetStepId}`);
+    if (status === 'FAILED' || status === 'COMPLETED' || status === 'BRANCHED') throw new Error(`Instance ${instanceId} in ${status} before reaching ${targetStepId}`);
     await completeOneStep(request, headers, instanceId);
   }
   throw new Error(`Instance ${instanceId} did not reach step ${targetStepId} in ${max} completions`);

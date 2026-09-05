@@ -3,11 +3,10 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test';
 /**
  * Shared API helpers for the prosthetics E2E specs.
  *
- * The prosthetics specs run as prosthetist1, but the quality gate requires a
- * PROSTHETICS_ADMINISTRATOR decision and the wizard UI only offers the gate to
- * approvers. These helpers drive an instance to COMPLETED through the backend
- * API so that a test leaves no active instance behind (the "new process" review
- * screen blocks orders that already have an active process).
+ * The flow is linear (no Quality Gate): these helpers drive an instance to
+ * COMPLETED through the backend API so that a test leaves no active instance
+ * behind (the "new process" review screen blocks orders that already have
+ * an active process).
  */
 
 const BASE = 'http://localhost:8085/api/prosthesis-manufacturing';
@@ -62,7 +61,7 @@ export function buildValues(
 /**
  * Drives an instance to COMPLETED via the backend API:
  * resume when paused → complete pending step executions (as prosthetist1) →
- * pass quality gates (as prosthetics_admin1) → repeat until COMPLETED.
+ * repeat until COMPLETED.
  */
 export async function completeInstanceViaApi(request: APIRequestContext, instanceId: string): Promise<void> {
   const prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
@@ -81,11 +80,6 @@ export async function completeInstanceViaApi(request: APIRequestContext, instanc
       if (!resumeRes.ok()) {
         throw new Error(`Resume failed: HTTP ${resumeRes.status()}`);
       }
-      continue;
-    }
-
-    if (instance.status === 'WAITING_REVIEW' || instance.status === 'CORRECTION') {
-      await passPendingGateViaApi(request, instanceId);
       continue;
     }
 
@@ -140,27 +134,6 @@ export async function completeCurrentStepViaApi(
   });
   if (!completeRes.ok()) {
     throw new Error(`Step complete failed: HTTP ${completeRes.status()}: ${await completeRes.text()}`);
-  }
-}
-
-export async function passPendingGateViaApi(request: APIRequestContext, instanceId: string): Promise<void> {
-  const adminToken = await login(request, 'prosthetics_admin1', 'doctor123');
-  const headers = { Authorization: `Bearer ${adminToken}` };
-  const snapshotRes = await request.get(`${BASE}/instances/${instanceId}/snapshot`, { headers });
-  const snapshot = await snapshotRes.json();
-  const gate = (snapshot.stages ?? []).find((stage: { gate?: unknown }) => stage.gate)?.gate as
-    | { id: string; criteria?: Array<{ id: string }> }
-    | undefined;
-  if (!gate) {
-    throw new Error(`No quality gate in snapshot for instance ${instanceId}`);
-  }
-  const criteriaIds = (gate.criteria ?? []).map((criterion) => criterion.id);
-  const passRes = await request.post(`${BASE}/instances/${instanceId}/gates/${gate.id}/decision`, {
-    headers,
-    data: { decision: 'PASS', criteriaConfirmed: criteriaIds, comment: '' },
-  });
-  if (!passRes.ok()) {
-    throw new Error(`Gate PASS failed: HTTP ${passRes.status()}: ${await passRes.text()}`);
   }
 }
 

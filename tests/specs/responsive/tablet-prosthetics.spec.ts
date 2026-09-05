@@ -17,8 +17,6 @@ const ACTIVE_DUPLICATE_STATUSES = [
   'PAUSED',
   'BLOCKED_PATIENT',
   'BLOCKED_MATERIAL',
-  'WAITING_REVIEW',
-  'CORRECTION',
 ];
 
 async function createInstance(request: APIRequestContext): Promise<string> {

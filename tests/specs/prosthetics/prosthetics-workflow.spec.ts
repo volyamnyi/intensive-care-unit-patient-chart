@@ -63,7 +63,7 @@ test.describe('Prosthetics Workflow Verification', () => {
     log(`  Minor: ${bugs.filter(b => b.severity === 'Minor').length}`);
   });
 
-  test('Full prosthetics workflow: Dashboard → Patient → Order → Template → Wizard → Quality Gate → Done', async ({ page, request }) => {
+  test('Full prosthetics workflow: Dashboard → Patient → Order → Template → Wizard → Done', async ({ page }) => {
     test.setTimeout(300000);
     
     // ===== QUICK LOGIN =====
@@ -201,18 +201,9 @@ test.describe('Prosthetics Workflow Verification', () => {
       logStep('Execute wizard');
       
       let completed = 0;
-      let qualityGate = false;
       let done = false;
       
       for (let i = 0; i < CONFIG.maxWizardSteps; i++) {
-        // Check for quality gate
-        const qgBtn = page.getByRole('button', { name: /Прийнято \(Pass\)|Схвалити|Пройдено/i }).first();
-        if (await qgBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-          log('Quality Gate detected');
-          qualityGate = true;
-          break;
-        }
-        
         // Check for completion
         if (page.url().includes('/done') || await page.getByText(/завершено|Completed/i).isVisible({ timeout: 1000 }).catch(() => false)) {
           log('Process completed');
@@ -255,76 +246,40 @@ test.describe('Prosthetics Workflow Verification', () => {
       await screenshot(page, '04-wizard-complete');
     });
 
-    // ===== PHASE 6: QUALITY GATE (Screen 9) =====
-    currentPhase = 'QUALITY GATE';
+    // ===== PHASE 6: FINAL STEPS (linear flow) =====
+    currentPhase = 'FINAL STEPS';
     log(`\n--- ${currentPhase} ---`);
 
-    await test.step('Handle Quality Gate (Spec 2.5.1)', async () => {
-      logStep('Pass quality gate');
-      
-      // Check all criteria
-      const checkboxes = page.locator('input[type="checkbox"]');
-      const cbCount = await checkboxes.count();
-      for (let i = 0; i < cbCount; i++) {
-        await checkboxes.nth(i).check({ force: true });
-      }
-      log(`  Checked ${cbCount} criteria`);
-      
-      // The gate requires a PROSTHETICS_ADMINISTRATOR decision; the wizard runs as prosthetist1,
-      // so pass the gate via API with an admin token, then continue the wizard.
+    await test.step('Continue the linear wizard to completion (Spec 2.5+)', async () => {
+      logStep('Continue linear steps');
+
       const instanceId = page.url().match(/\/process\/([0-9a-f-]+)\//)?.[1];
       if (!instanceId) {
         reportBug('Critical', 'Cannot resolve instance id from wizard URL', 'Wizard URL should contain instance id', page.url());
       } else {
-        const adminLogin = await request.post('/api/auth/login', {
-          data: { login: 'prosthetics_admin1', password: 'doctor123' },
-        });
-        if (!adminLogin.ok()) {
-          reportBug('Critical', 'Admin API login failed', 'Admin login should succeed', `HTTP ${adminLogin.status()}`);
-        } else {
-          const adminToken = (await adminLogin.json()).token;
-          const headers = { Authorization: `Bearer ${adminToken}` };
-          const snapRes = await request.get(`/api/prosthesis-manufacturing/instances/${instanceId}/snapshot`, { headers });
-          const snapshot = await snapRes.json();
-          const gate = (snapshot.stages ?? []).find((s: any) => s.gate)?.gate;
-          if (!gate) {
-            reportBug('Critical', 'No quality gate in template snapshot', 'Gated stage should exist', 'Gate not found');
+        await page.reload();
+        // The wizard (or /done) renders after reload — wait for
+        // either signal instead of a sleep.
+        await page.waitForURL('**/done**', { timeout: 5000 }).catch(() => {});
+        await page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first()
+          .waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+        for (let i = 0; i < 6; i++) {
+          if (page.url().includes('/done')) break;
+          await fillFields(page);
+          const continueBtn = page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first();
+          if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+            const stepResp = page.waitForResponse(
+              (r) => r.request().method() === 'POST' && r.url().includes('/step-executions/') && r.url().endsWith('/complete'),
+              { timeout: 1500 },
+            ).catch(() => {});
+            await continueBtn.click({ force: true });
+            await stepResp;
+            log(`  Step ${i + 1} completed`);
           } else {
-            const criteriaIds = (gate.criteria ?? []).map((c: any) => c.id);
-            const passRes = await request.post(
-              `/api/prosthesis-manufacturing/instances/${instanceId}/gates/${gate.id}/decision`,
-              { headers, data: { decision: 'PASS', criteriaConfirmed: criteriaIds, comment: '' } },
-            );
-            if (!passRes.ok()) {
-              reportBug('Major', 'Gate PASS via API failed', 'Admin PASS should advance the instance', `HTTP ${passRes.status()}: ${await passRes.text()}`);
-            } else {
-              log('✓ Quality gate passed by administrator (API)');
-              await page.reload();
-              // The post-gate wizard (or /done) renders after reload — wait for
-              // either signal instead of a sleep.
-              await page.waitForURL('**/done**', { timeout: 5000 }).catch(() => {});
-              await page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first()
-                .waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-              for (let i = 0; i < 6; i++) {
-                if (page.url().includes('/done')) break;
-                await fillFields(page);
-                const continueBtn = page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first();
-                if (await continueBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-                  const stepResp = page.waitForResponse(
-                    (r) => r.request().method() === 'POST' && r.url().includes('/step-executions/') && r.url().endsWith('/complete'),
-                    { timeout: 1500 },
-                  ).catch(() => {});
-                  await continueBtn.click({ force: true });
-                  await stepResp;
-                  log(`  Post-gate step ${i + 1} completed`);
-                } else {
-                  await continueBtn.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
-                }
-              }
-              await screenshot(page, '05-post-gate-continue');
-            }
+            await continueBtn.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
           }
         }
+        await screenshot(page, '05-post-stage-continue');
       }
     });
 

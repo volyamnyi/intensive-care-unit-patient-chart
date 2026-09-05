@@ -1,5 +1,5 @@
 ﻿import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import { completeCurrentStepViaApi, completeInstanceViaApi, passPendingGateViaApi } from '../../helpers/prosthetics-flow';
+import { completeCurrentStepViaApi, completeInstanceViaApi } from '../../helpers/prosthetics-flow';
 
 // Wizard checkbox whole-surface clickability: every parent checkbox row in the
 // «Операційна карта» wizard (WizardScreen.tsx) must be clickable across its
@@ -21,8 +21,6 @@ const ACTIVE_DUPLICATE_STATUSES = [
   'PAUSED',
   'BLOCKED_PATIENT',
   'BLOCKED_MATERIAL',
-  'WAITING_REVIEW',
-  'CORRECTION',
 ];
 
 async function login(request: APIRequestContext): Promise<string> {
@@ -204,10 +202,6 @@ test.describe('wizard checkbox whole-surface clickability', () => {
       const status = await getStatus(request, instanceId);
       if (status === 'COMPLETED') {
         break;
-      }
-      if (status === 'WAITING_REVIEW' || status === 'CORRECTION') {
-        await passPendingGateViaApi(request, instanceId);
-        continue;
       }
       expect(status, 'the walk must stay IN_PROGRESS').toBe('IN_PROGRESS');
 

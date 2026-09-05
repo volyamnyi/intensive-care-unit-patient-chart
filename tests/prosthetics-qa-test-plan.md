@@ -1,6 +1,12 @@
 # QA Test Plan: Prosthetics Process Control System
 ## Система управління технологічним процесом виготовлення протезів
 
+> **Note (QG-Removal Phase 5):** the Quality Gate subsystem (Screen 9, Screen 10
+> rejection dialog, rework loops, `WAITING_REVIEW` / `CORRECTION` / `FAILED_QC`
+> statuses) was deleted from the product. The Phase 5 / Screen 9–10 sections,
+> rework-loop verification, and related status-color rows below are retained as
+> history and no longer apply.
+
 ---
 
 ## Executive Summary
@@ -21,8 +27,8 @@ This test plan covers the complete workflow for creating a prosthetist's technic
 - All screens (Screens 1-15) as documented
 - Session context management across Phase 3 screens
 - Hard Block validation mechanisms
-- Quality Gate decision logic
-- Rework loop functionality
+- ~~Quality Gate decision logic~~ (removed)
+- ~~Rework loop functionality~~ (removed)
 - Failure handling and snapshot creation
 
 ### Out of Scope

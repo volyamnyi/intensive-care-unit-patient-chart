@@ -2,7 +2,6 @@ import { test, expect, Page } from '@playwright/test';
 import { ProstheticsDashboardPage } from '../../pages/prosthetics/ProstheticsDashboardPage';
 import { SetupWizardPage } from '../../pages/prosthetics/SetupWizardPage';
 import { WizardExecutionPage } from '../../pages/prosthetics/WizardExecutionPage';
-import { QualityGatePage } from '../../pages/prosthetics/QualityGatePage';
 import { mkdirSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { completeInstanceViaApi, startProcessIfNeeded } from '../../helpers/prosthetics-flow';
 
@@ -114,7 +113,6 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
   let dashboardPage: ProstheticsDashboardPage;
   let setupWizardPage: SetupWizardPage;
   let wizardExecutionPage: WizardExecutionPage;
-  let qualityGatePage: QualityGatePage;
   let consoleErrors: string[];
   let networkErrors: string[];
 
@@ -141,14 +139,13 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
   // ================================================================
   // MAIN E2E TEST: Complete workflow from Dashboard to Completion
   // ================================================================
-  test('Full workflow: Dashboard → Patient Selection → Order Selection → Template → Wizard → Quality Gate → Completion', async ({ page, request }) => {
+  test('Full workflow: Dashboard → Patient Selection → Order Selection → Template → Wizard → Completion', async ({ page, request }) => {
     test.setTimeout(300000);
     let createdInstanceId: string | undefined;
     // Initialize
     dashboardPage = new ProstheticsDashboardPage(page);
     setupWizardPage = new SetupWizardPage(page);
     wizardExecutionPage = new WizardExecutionPage(page);
-    qualityGatePage = new QualityGatePage(page);
     consoleErrors = [];
     networkErrors = [];
     setupPageMonitoring(page, consoleErrors, networkErrors);
@@ -495,19 +492,11 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       logStep('Execute wizard steps');
       
       let stepsCompleted = 0;
-      let qualityGateFound = false;
       let processComplete = false;
       
       for (let i = 0; i < CONFIG.maxWizardSteps; i++) {
         log(`\n--- Wizard iteration ${i + 1} ---`);
         await takeScreenshot(page, `13-wizard-iteration-${i + 1}`);
-        
-        // Check if we're at a quality gate
-        if (await page.getByRole('button', { name: /Схвалити|Пройдено/ }).isVisible({ timeout: 2000 }).catch(() => false)) {
-          log('Quality Gate detected');
-          qualityGateFound = true;
-          break;
-        }
         
         // Check if process is complete
         if (page.url().includes('/done') || await page.getByText(/успішно завершено|Процес завершено/).isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -524,12 +513,8 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
           log(`✓ Step ${i + 1} completed (${stepsCompleted} total)`);
         } else {
           // Check if page changed (auto-advanced) — wait for the URL signal
-          await page.waitForURL(/\/(quality-gate|done|failed)/, { timeout: 5000 }).catch(() => {});
+          await page.waitForURL(/\/(done|failed)/, { timeout: 5000 }).catch(() => {});
           const newUrl = page.url();
-          if (newUrl.includes('/quality-gate')) {
-            qualityGateFound = true;
-            break;
-          }
           if (newUrl.includes('/done') || newUrl.includes('/failed')) {
             processComplete = true;
             break;
@@ -555,51 +540,29 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       }
       
       log(`✓ Completed ${stepsCompleted} wizard steps`);
-      log(`Quality Gate found: ${qualityGateFound}`);
       log(`Process complete: ${processComplete}`);
     });
 
-    // ============== PHASE 6: QUALITY GATE (Screen 9) ==============
-    currentPhase = 'PHASE 6: QUALITY GATE';
+    // ============== PHASE 6: FINAL STEPS (linear flow) ==============
+    currentPhase = 'PHASE 6: FINAL STEPS';
     log(`\n--- ${currentPhase} ---`);
     
-    await test.step('6.1 Handle Quality Gate (Spec 2.5.1)', async () => {
-      logStep('Handle quality gate decision');
+    await test.step('6.1 Verify linear progress', async () => {
+      logStep('Confirm the flow stays linear');
       
-      await takeScreenshot(page, '14-quality-gate');
+      await takeScreenshot(page, '14-final-approach');
       
-      // Check if at quality gate
-      const passButton = page.getByRole('button', { name: /Схвалити|Пройдено/ });
-      
-      if (await passButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        log('✓ Quality gate detected');
-        
-        // Count criteria
-        const criteriaCount = await page.locator('input[type="checkbox"]').count();
-        log(`✓ ${criteriaCount} criteria checkboxes found`);
-        
-        // Check all criteria
-        await qualityGatePage.checkAllCriteria();
-        log('✓ All criteria checked');
-        
-        await takeScreenshot(page, '15-quality-gate-checked');
-        
-        // Pass the gate
-        await qualityGatePage.passGate();
-        log('✓ Quality gate passed');
-        
-      } else if (page.url().includes('/done')) {
-        log('Process completed directly (no quality gate encountered)');
+      const url = page.url();
+      log(`Current URL: ${url}`);
+      if (url.includes('/done')) {
+        log('Process completed directly through the linear wizard');
       } else {
-        log('⚠ No quality gate detected — checking current state');
-        const url = page.url();
-        log(`Current URL: ${url}`);
+        log('Wizard still in progress — API completion follows');
       }
     });
 
-    await test.step('6.2 Complete the process via API (gate + remaining steps)', async () => {
-      // The gate decision requires PROSTHETICS_ADMINISTRATOR and the wizard runs as
-      // prosthetist1 — drive the instance to COMPLETED through the backend API so the
+    await test.step('6.2 Complete the process via API (remaining steps)', async () => {
+      // Drive the instance to COMPLETED through the backend API so the
       // test leaves no active process behind for the next spec.
       if (createdInstanceId) {
         await completeInstanceViaApi(request, createdInstanceId);
@@ -835,7 +798,7 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
 
     await test.step('Resume and complete the process via API (cleanup)', async () => {
       // Leave no active process behind: resume the paused instance and drive it to
-      // COMPLETED through the backend API (gate decision requires the admin role).
+      // COMPLETED through the backend API.
       if (pausedInstanceId) {
         await completeInstanceViaApi(request, pausedInstanceId);
         log('✓ Paused instance resumed and completed via API');

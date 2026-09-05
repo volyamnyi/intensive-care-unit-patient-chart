@@ -20,8 +20,6 @@ const ACTIVE_DUPLICATE_STATUSES = [
   'PAUSED',
   'BLOCKED_PATIENT',
   'BLOCKED_MATERIAL',
-  'WAITING_REVIEW',
-  'CORRECTION',
 ];
 
 async function login(request: APIRequestContext): Promise<string> {

@@ -715,19 +715,10 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
       logStep('Execute wizard steps per spec 2.4.2');
 
       let stepsCompleted = 0;
-      let qualityGateFound = false;
       let processComplete = false;
 
       for (let i = 0; i < CONFIG.maxWizardSteps; i++) {
         log(`\n--- Wizard iteration ${i + 1} ---`);
-
-        // Check if at quality gate (the gate panel shows «Прийнято (Pass)», disabled for non-approvers)
-        const qualityGateButton = page.getByRole('button', { name: /Схвалити|Пройдено|Прийнято/i }).first();
-        if (await qualityGateButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-          log('Quality Gate detected');
-          qualityGateFound = true;
-          break;
-        }
 
         // Check if process is complete
         const completeText = await page.getByText(/успішно завершено|Процес завершено|Завершено/i).isVisible({ timeout: 2000 }).catch(() => false);
@@ -738,8 +729,8 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
           break;
         }
 
-        // Try to complete current step (CTA is «Готово →» or «Контроль якості →» when the next stage has a gate)
-        const completeButton = page.getByRole('button', { name: /Готово|Завершити крок|Контроль якості/i }).first();
+        // Try to complete current step (CTA is «Готово →» or «Завершити процес» on the final step)
+        const completeButton = page.getByRole('button', { name: /Готово|Завершити процес|Завершити крок/i }).first();
         if (await completeButton.isVisible({ timeout: 3000 }).catch(() => false)) {
           const enabled = await completeButton.isEnabled({ timeout: 2000 }).catch(() => false);
           // The completion POST can be lost (proxy hiccup) leaving the UI stuck in "submitting".
@@ -802,52 +793,31 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
       }
 
       log(`✓ Completed ${stepsCompleted} wizard steps`);
-      log(`Quality Gate found: ${qualityGateFound}`);
       log(`Process complete: ${processComplete}`);
     });
 
-    // ============== PHASE 5: QUALITY GATE (Screen 9) ==============
-    currentPhase = 'PHASE 5: QUALITY GATE (Screen 9)';
+    // ============== PHASE 5: FINAL STEPS (linear flow) ==============
+    currentPhase = 'PHASE 5: FINAL STEPS';
     log(`\n--- ${currentPhase} ---`);
 
-    await test.step('5.1 Handle Quality Gate (Spec 2.5.1)', async () => {
-      logStep('Handle quality gate decision per spec 2.5.1');
+    await test.step('5.1 Confirm linear progress', async () => {
+      logStep('Confirm the flow stays linear');
 
-      // Check if at quality gate
-      const passButton = page.getByRole('button', { name: /Схвалити|Пройдено/i }).first();
-      const passVisible = await passButton.isVisible({ timeout: 5000 }).catch(() => false);
-
-      if (passVisible) {
-        log('✓ Quality gate detected');
-
-        // Count criteria checkboxes
-        const checkboxes = await page.locator('input[type="checkbox"]').count();
-        log(`  ${checkboxes} criteria checkboxes found`);
-
-        // Check all criteria
-        const allCheckboxes = page.locator('input[type="checkbox"]');
-        for (let i = 0; i < checkboxes; i++) {
-          await allCheckboxes.nth(i).check({ force: true });
-        }
-        log('✓ All criteria checked');
-
-        await takeScreenshot(page, '27-quality-gate-checked');
-
-        // Pass the gate
-        await passButton.click();
-        log('✓ Quality gate passed');
-      } else if (page.url().includes('/done')) {
-        log('Process completed directly (no quality gate encountered)');
+      await takeScreenshot(page, '27-mid-flow');
+      const url = page.url();
+      log(`Current URL: ${url}`);
+      if (url.includes('/done')) {
+        log('Process completed directly through the linear wizard');
       } else {
-        log('⚠ No quality gate detected - checking current state');
+        log('Wizard still in progress — API completion follows');
       }
 
-      await takeScreenshot(page, '28-after-quality-gate');
+      await takeScreenshot(page, '28-mid-flow-done');
     });
 
     await test.step('5.2 Complete the process via API (cleanup)', async () => {
-      // The gate decision requires PROSTHETICS_ADMINISTRATOR — drive the instance to
-      // COMPLETED through the backend API so no active process is left behind.
+      // Drive the instance to COMPLETED through the backend API
+      // so no active process is left behind.
       const instanceId = page.url().match(/\/process\/([0-9a-f-]+)/)?.[1];
       if (instanceId) {
         await completeInstanceViaApi(request, instanceId);
