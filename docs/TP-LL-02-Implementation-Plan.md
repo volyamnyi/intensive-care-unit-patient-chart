@@ -191,7 +191,7 @@
 **Backend:**
 - `ProstheticsPdfService` — `generateFinalReport` (`COMPLETED`) / `generateFailureReport` (`FAILED`) з `FlowInstance`, `ProstheticsOrder`, `SnapshotTemplate`, `StepExecution[]`, `ResourceUsage[]`; `GET /instances/{id}/pdf` → `application/pdf`, `sendPdf()` в МІС.
 - `FlowInstance` — `fail`/`replacement` без gate; `requireOwner` (404, не 403), `@PreAuthorize` для `fail`/`replacement`/`evidence`.
-- Аудит — `auditService.logAction` для всіх мутацій (`CREATE/START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL/REPLACEMENT/ARCHIVE`).
+- Аудит — `auditService.logAction` для всіх мутацій (`CREATE/START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL/ARCHIVE`).
 
 **Frontend:**
 - `DoneScreen` (`COMPLETED` → «Виріб готовий», «Експорт PDF») / `FailedScreen` (`FAILED` → «Брак», `replacement` CTA).
@@ -203,7 +203,7 @@
 
 **Unit:**
 - `ProstheticsPdfServiceTest.TP_LL_02` — `generateFinalReport` містить всі 10 етапів, `normDurationMin`, `totalActiveSeconds`; `generateFailureReport` містить `failReason`/`category`.
-- `AuditServiceTest.TP_LL_02` — кожна мутація (`START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL/REPLACEMENT`) створює `AuditLog` з `entity=FlowInstance`, `entityId`, `action`, `userId`, `ipAddress`.
+- `AuditServiceTest.TP_LL_02` — кожна мутація (`START/COMPLETE/PAUSE/RESUME/BACKWARD/FAIL`) створює `AuditLog` з `entity=FlowInstance`, `entityId`, `action`, `userId`, `ipAddress`.
 
 **Integration:**
 - `PdfIntegrationTest.TP_LL_02` — `COMPLETED` інстанс → `GET /pdf` → `200 application/pdf` (iText, не порожній); `FAILED` → failure-PDF з `failReason`; `GET /pdf` для `NEW` → `404` або порожній.
