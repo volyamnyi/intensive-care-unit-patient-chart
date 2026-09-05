@@ -488,6 +488,20 @@ class FlowInstanceServiceTest {
     }
 
     @Test
+    void fail_fromNonInProgressStatusRejected() {
+        for (FlowInstanceStatus status : List.of(FlowInstanceStatus.NEW, FlowInstanceStatus.PAUSED,
+                FlowInstanceStatus.COMPLETED, FlowInstanceStatus.FAILED, FlowInstanceStatus.BRANCHED)) {
+            FlowInstance instance = newInstance(status, snapshotJson());
+            when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+            assertThatThrownBy(() -> service.fail(instance.getId(), "other", "desc", null, 1L))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("current status");
+            assertThat(instance.getStatus()).isEqualTo(status);
+        }
+    }
+
+    @Test
     void pauseOperativeIntervention() {
         FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
         when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
