@@ -806,6 +806,17 @@ APP_MIS_WIREMOCK-URL=https://mis.internal/api
 APP_MIS_INSTALLATION-GUID=<GUID>
 APP_MIS_LOGIN=integration
 
+# --- LDAP / Active Directory (read-only bind; вимкнено за замовчуванням) ---
+# Увімкнути тільки якщо застосунок повинен приймати корпоративні обліковки.
+# Каталог використовується лише для bind/search/read; записів у AD немає.
+# TLS — через системний JVM truststore; service account потребує лише прав
+# на пошук і bind (без прав на запис). Значення — тільки з vault.
+APP_LDAP_ENABLED=true
+APP_LDAP_URLS=ldaps://ad.corp:636
+APP_LDAP_BASE=dc=corp,dc=local
+APP_LDAP_USERNAME=<bind-DN з vault>
+APP_LDAP_PASSWORD=<з vault>
+
 # --- Mail ---
 SPRING_MAIL_HOST=smtp.internal
 SPRING_MAIL_PORT=587

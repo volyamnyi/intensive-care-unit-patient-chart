@@ -154,6 +154,20 @@ Updated `docs/Технічне завдання карта Інтенсивно�
 
 **Rule:** The `MisApiClient` only supports GET-style calls to `/api/run`. Any MIS write endpoint must never be implemented or called. Violating this policy will corrupt MIS data integrity.
 
+## Active Directory Safety Directive (DO NOT VIOLATE)
+
+**The corporate directory is READ/VERIFY ONLY.** Bind authentication, user search, and profile-attribute reads are the only permitted LDAP operations. Forbidden: user/group create/update/delete, attribute writes, membership changes, password resets/changes, enable/disable/lock/unlock, OU moves, ACL changes — no LDAP write API may exist in the codebase (verified by grep-audit in #251).
+
+| Rule | Contract |
+|---|---|
+| Auth sources | `users.auth_provider`: `LOCAL` (BCrypt check) / `LDAP` (bind on every login). The branch is selected by the stored row; unknown logins attempt a bind (D1). `LOCAL` rows never touch AD; `LDAP` rows never check the local hash |
+| Provisioning | First successful bind creates an `LDAP`/`GUEST` row with NULL `password_hash` (AD passwords are never stored); a normalized-login collision with a `LOCAL` row fails closed with 401 |
+| Authorization | Local role + permission matrix only. `GUEST` holds zero grants and sits outside all URL ceilings (`CLINICAL_ROLES`, `CLINICAL_CORE_SPEL`); AD groups never authorize; stored roles never change on LDAP success |
+| Session | Same JWT/cookie contract for both sources (`JwtTokenProvider.generateToken`, httpOnly `jwt`, `TokenRevocationService`); the login UI is a single `login`/`password` form with generic errors |
+| Config | `app.ldap.enabled` (default `false` — local-only installs never touch AD); `APP_LDAP_URLS` / `APP_LDAP_BASE` / `APP_LDAP_USERNAME` / `APP_LDAP_PASSWORD` via environment only, no defaults; TLS via JVM truststore, never TrustAll |
+| Tests | LDAP suites run **exclusively locally** — backend with `-Dldap.local.tests=true` (unit + hermetic UnboundID-double integration), Playwright with `APP_TEST_USERNAME1..9` / `APP_TEST_PASSWORD1..9`; corporate AD is unreachable from CI runners, where these suites report SKIPPED |
+| Secrets | AI agents never read environment values — names / `${...}` references only. Nothing secret in code, logs, tests, fixtures, screenshots, traces, reports, Issues, PRs, or CI artifacts |
+
 ## Architecture
 
 ```
@@ -182,7 +196,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 - JWT auth delivered via an **httpOnly `jwt` cookie** (SameSite=Lax) set on login and cleared on logout; axios uses `withCredentials: true` with no Authorization header. `localStorage` holds only a lightweight `auth:session` flag - never the token.
 - Backend port: **8085** (`application.yml`).
-- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (15 SQL changesets total: core 4, icu 6, med 1, prosth 4 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`):
+- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (18 SQL files total: core 7, icu 6, med 1, prosth 4 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`; `core/007-ldap-auth-provider.sql` adds `users.auth_provider` and relaxes `password_hash` nullability with a guarded rollback):
 
   | Database | Module | Purpose / contents |
   |---|---|---|
