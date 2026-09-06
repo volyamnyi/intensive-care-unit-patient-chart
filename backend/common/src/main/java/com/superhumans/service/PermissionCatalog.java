@@ -145,7 +145,9 @@ public final class PermissionCatalog {
                     PROSTHETICS_DASHBOARD, PROSTHETICS_INSTANCE_CREATE,
                     PROSTHETICS_STEP_COMPLETE, PROSTHETICS_PAUSE_RESUME,
                     PROSTHETICS_TEMPLATE_MANAGE,
-                    PROSTHETICS_ORDER_MANAGE, MODULE_PROSTHETICS_ACCESS)));
+                    PROSTHETICS_ORDER_MANAGE, MODULE_PROSTHETICS_ACCESS)),
+            // First-login directory role: authenticated with zero permissions (decision D4).
+            Map.entry(UserRole.GUEST, Set.of()));
 
     public static List<Def> definitions() {
         return DEFINITIONS;

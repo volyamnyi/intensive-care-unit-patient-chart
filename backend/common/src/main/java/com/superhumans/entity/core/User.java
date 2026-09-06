@@ -21,8 +21,13 @@ public class User {
     String login;
 
     @JsonIgnore
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false, length = 10)
+    @Builder.Default
+    AuthProvider authProvider = AuthProvider.LOCAL;
 
     @Column(name = "full_name", nullable = false, length = 200)
     String fullName;

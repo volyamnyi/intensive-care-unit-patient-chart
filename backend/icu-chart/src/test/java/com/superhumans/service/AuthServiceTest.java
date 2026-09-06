@@ -1,5 +1,6 @@
 package com.superhumans.service;
 
+import com.superhumans.auth.LdapAuthService;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.entity.core.User;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,6 +39,9 @@ class AuthServiceTest {
 
     @Mock
     private AuditService auditService;
+
+    @Mock
+    private ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
 
     @InjectMocks
     private AuthService authService;

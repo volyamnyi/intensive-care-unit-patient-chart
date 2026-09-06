@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/006-remove-gate-decision-permission.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/007-ldap-auth-provider.sql

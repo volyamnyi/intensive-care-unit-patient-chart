@@ -60,7 +60,8 @@ public class LdapAuthService {
         try {
             Authentication authentication = ldapAuthenticationProvider.authenticate(
                     new UsernamePasswordAuthenticationToken(login, password));
-            if (authentication != null && authentication.getPrincipal() instanceof LdapUserDetails details) {
+            if (authentication != null
+                    && authentication.getPrincipal() instanceof LdapUserDetails details) {
                 return Optional.of(details.getProfile());
             }
             return Optional.empty();
