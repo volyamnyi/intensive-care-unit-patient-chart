@@ -22,6 +22,12 @@ export default defineConfig({
       name: 'setup',
       testMatch: '**/*.setup.ts',
       timeout: 60000,
+      // AD setup authenticates via API with real corporate-test passwords:
+      // tracing stays off here so request payloads never land in trace files.
+      // Screenshots (only-on-failure) show masked password dots at most.
+      use: {
+        trace: 'off',
+      },
     },
     {
       name: 'login-chromium',
@@ -31,7 +37,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
       },
-      testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts', '**/auth/access-control.spec.ts', '**/auth/role-redirects.spec.ts'],
+      testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts', '**/auth/access-control.spec.ts', '**/auth/role-redirects.spec.ts', '**/auth/ad-login.spec.ts'],
     },
     {
       name: 'api-error-mode-chromium',
