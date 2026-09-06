@@ -45,10 +45,10 @@ class LdapConfigTest {
     void enabled_createsLdapBeansFromEnvironmentReferences() {
         runner.withPropertyValues(
                         "app.ldap.enabled=true",
-                        "APP_LDAP_URLS=ldap://directory.example:389",
-                        "APP_LDAP_BASE=dc=example,dc=com",
-                        "APP_LDAP_USERNAME=cn=reader,dc=example,dc=com",
-                        "APP_LPAD_PASSWORD=bind-password")
+                        "app.ldap.urls=ldap://directory.example:389",
+                        "app.ldap.base=dc=example,dc=com",
+                        "app.ldap.username=cn=reader,dc=example,dc=com",
+                        "app.ldap.password=bind-password")
                 .run(context -> assertThat(context)
                         .hasSingleBean(LdapContextSource.class)
                         .hasSingleBean(LdapAuthenticationProvider.class)
@@ -59,10 +59,10 @@ class LdapConfigTest {
     void enabled_supportsMultipleCommaSeparatedUrls() {
         runner.withPropertyValues(
                         "app.ldap.enabled=true",
-                        "APP_LDAP_URLS=ldap://one.example:389, ldap://two.example:389",
-                        "APP_LDAP_BASE=dc=example,dc=com",
-                        "APP_LDAP_USERNAME=cn=reader,dc=example,dc=com",
-                        "APP_LPAD_PASSWORD=bind-password")
+                        "app.ldap.urls=ldap://one.example:389, ldap://two.example:389",
+                        "app.ldap.base=dc=example,dc=com",
+                        "app.ldap.username=cn=reader,dc=example,dc=com",
+                        "app.ldap.password=bind-password")
                 .run(context -> assertThat(context)
                         .hasSingleBean(LdapContextSource.class)
                         .hasSingleBean(LdapAuthenticationProvider.class));
@@ -72,10 +72,10 @@ class LdapConfigTest {
     void enabledWithBlankUrls_failsFastNamingTheProperty() {
         runner.withPropertyValues(
                         "app.ldap.enabled=true",
-                        "APP_LDAP_URLS=   ",
-                        "APP_LDAP_BASE=dc=example,dc=com",
-                        "APP_LDAP_USERNAME=cn=reader,dc=example,dc=com",
-                        "APP_LPAD_PASSWORD=bind-password")
+                        "app.ldap.urls=   ",
+                        "app.ldap.base=dc=example,dc=com",
+                        "app.ldap.username=cn=reader,dc=example,dc=com",
+                        "app.ldap.password=bind-password")
                 .run(context -> {
                     assertThat(context).hasFailed();
                     assertThat(context.getStartupFailure()).hasStackTraceContaining("APP_LDAP_URLS");

@@ -86,7 +86,7 @@ app:
     urls: ${APP_LDAP_URLS}
     base: ${APP_LDAP_BASE}
     username: ${APP_LDAP_USERNAME}
-    password: ${APP_LPAD_PASSWORD}
+    password: ${APP_LDAP_PASSWORD}
 
   scheduling:
     day-close-hour: 7

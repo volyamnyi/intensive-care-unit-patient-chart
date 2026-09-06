@@ -234,6 +234,8 @@ class PermissionServiceTest {
                 .doesNotContain(PermissionCatalog.MODULE_ICU_ACCESS);
         assertThat(matrix.get(UserRole.PROSTHETICS_ADMINISTRATOR))
                 .contains(PermissionCatalog.MODULE_PROSTHETICS_ACCESS);
+        // First-login directory role: authenticated with zero permissions (decision D4).
+        assertThat(matrix.get(UserRole.GUEST)).isEmpty();
     }
 
     @Test

@@ -71,6 +71,16 @@ class LdapAuthServiceTest {
     }
 
     @Test
+    void directoryTimeout_returnsEmptyWithoutPropagating() {
+        when(provider.authenticate(any())).thenThrow(
+                new AuthenticationServiceException("LDAP bind timed out after 5000 ms"));
+
+        Optional<LdapUserProfile> result = service.authenticate("jdoe", "secret");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void blankCredentials_shortCircuitWithoutProviderCall() {
         assertThat(service.authenticate("  ", "secret")).isEmpty();
         assertThat(service.authenticate("jdoe", null)).isEmpty();

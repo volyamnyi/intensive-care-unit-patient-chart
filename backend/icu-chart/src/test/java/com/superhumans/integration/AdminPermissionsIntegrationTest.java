@@ -68,6 +68,8 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         assertThat(body.getGrants().get("PROSTHETIST"))
                 .contains("PROSTHETICS_DASHBOARD")
                 .doesNotContain("PROSTHETICS_TEMPLATE_MANAGE");
+        // First-login directory role holds no grants on a fresh seed (decision D4).
+        assertThat(body.getGrants().containsKey("GUEST")).isFalse();
     }
 
     @Test

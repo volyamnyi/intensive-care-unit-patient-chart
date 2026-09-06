@@ -37,8 +37,7 @@ import org.springframework.security.ldap.userdetails.UserDetailsContextMapper;
  * <p>Configuration contract (names only, values come from the environment):
  * {@code APP_LDAP_URLS} (comma-separated {@code ldap://} or {@code ldaps://}
  * URLs), {@code APP_LDAP_BASE}, {@code APP_LDAP_USERNAME} (service bind DN),
- * {@code APP_LPAD_PASSWORD} (service bind password, name is verbatim per the
- * approved contract). No default secret values exist anywhere.
+ * {@code APP_LDAP_PASSWORD} (service bind password). No default secret values exist anywhere.
  *
  * <p>Transport security relies on the standard JVM truststore: {@code ldaps://}
  * URLs verify the server certificate and hostname by default. This
@@ -80,18 +79,23 @@ public class LdapConfig {
     /**
      * Builds the pooled directory context source from environment properties.
      *
-     * @param urls comma-separated directory URLs from {@code APP_LDAP_URLS}
-     * @param base directory base DN from {@code APP_LDAP_BASE}
-     * @param bindDn service bind DN from {@code APP_LDAP_USERNAME}
-     * @param bindPassword service bind password from {@code APP_LPAD_PASSWORD}
+     * <p>Values arrive through the {@code app.ldap.*} properties, which the
+     * YAML maps from the environment ({@code APP_LDAP_URLS},
+     * {@code APP_LDAP_BASE}, {@code APP_LDAP_USERNAME},
+     * {@code APP_LDAP_PASSWORD}); tests override the properties directly.
+     *
+     * @param urls comma-separated directory URLs
+     * @param base directory base DN
+     * @param bindDn service bind DN
+     * @param bindPassword service bind password
      * @return initialized context source, never {@code null}
      */
     @Bean
     public LdapContextSource ldapContextSource(
-            @Value("${APP_LDAP_URLS}") String urls,
-            @Value("${APP_LDAP_BASE}") String base,
-            @Value("${APP_LDAP_USERNAME}") String bindDn,
-            @Value("${APP_LPAD_PASSWORD}") String bindPassword) {
+            @Value("${app.ldap.urls}") String urls,
+            @Value("${app.ldap.base}") String base,
+            @Value("${app.ldap.username}") String bindDn,
+            @Value("${app.ldap.password}") String bindPassword) {
         LdapContextSource contextSource = new LdapContextSource();
         contextSource.setUrls(parseUrls(urls));
         contextSource.setBase(base);
