@@ -107,6 +107,8 @@ describe('AuthContext', () => {
       data: { userId: '9', login: 'ad.newbie', fullName: 'Ad Newbie', role: 'GUEST', email: '' },
     });
     render(<AuthProvider><TestComponent /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('no'));
+    await userEvent.click(screen.getByTestId('login-btn'));
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('yes'));
     expect(screen.getByTestId('role')).toHaveTextContent('GUEST');
     expect(screen.getByTestId('hasRoleDoc')).toHaveTextContent('false');
@@ -120,6 +122,8 @@ describe('AuthContext', () => {
       data: { userId: '1', login: 'doctor1', fullName: 'Doc', role: 'DOCTOR', email: 'doc@test.com' },
     });
     render(<AuthProvider><TestComponent /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('no'));
+    await userEvent.click(screen.getByTestId('login-btn'));
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('yes'));
     expect(screen.getByTestId('hasPermIcu')).toHaveTextContent('false');
   });
