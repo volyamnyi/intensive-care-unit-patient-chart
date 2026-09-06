@@ -434,7 +434,7 @@ java -jar app/target/app-*.jar
 
 ## Seed Data
 
-9 users seeded via `backend/common/src/main/resources/data-{core,icu,med,prosth}.sql` (executed per-datasource by `SeedDataInitializer` at boot):
+9 users provisioned at boot from environment variables (`APP_TEST_USERNAME1..9` / `APP_TEST_PASSWORD1..9` plus profile/role metadata) by `UserSeedService` — `data-core.sql` carries no user values. The conventional dev set (also exported in the CI E2E job):
 
 | Login | Password | Role |
 |---|---|---|
@@ -446,7 +446,7 @@ java -jar app/target/app-*.jar
 | `prosthetics_admin1` | `doctor123` | PROSTHETICS_ADMINISTRATOR |
 | *(backend-only)* | — | AUDITOR |
 
-> ⚠️ **Production (A2):** first-boot seeding creates these well-known demo credentials. They must be **rotated or disabled before go-live**. Seeding is disabled under the `prod` profile (`app.seed-data.enabled: false`) and the `SeedDataGuard` boot guard refuses to start if `prod` + seeding are somehow enabled. `data-core.sql` user inserts are `ON CONFLICT (login) DO NOTHING`, so a restart never reverts an operator-rotated password to the demo value.
+> ⚠️ **Production (A2):** first-boot provisioning creates these well-known demo credentials. They must be **rotated or disabled before go-live**. Seeding is disabled under the `prod` profile (`app.seed-data.enabled: false`) and the `SeedDataGuard` boot guard refuses to start if `prod` + seeding are somehow enabled. `UserSeedService` never overwrites an existing login, so a restart never reverts an operator-rotated password to the demo value.
 
 5 mock patients (from MIS mock):
 

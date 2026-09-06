@@ -28,7 +28,18 @@ class SeedDataSqlTripwireTest {
     void coreSeed_userInsertsAreIdempotent() throws Exception {
         String sql = sqlText();
 
-        assertThat(sql).contains("ON CONFLICT (login) DO NOTHING");
+        assertThat(sql).describedAs("data-core.sql must not seed users at all")
+                .doesNotContain("INSERT INTO users")
+                .doesNotContain("password_hash")
+                .doesNotContain("$2a$")
+                .doesNotContain("APP_TEST_");
+    }
+
+    @Test
+    void coreSeed_stillSeedsSystemSettings() throws Exception {
+        String sql = sqlText();
+
+        assertThat(sql).contains("system_settings");
     }
 
     private static String sqlText() throws Exception {

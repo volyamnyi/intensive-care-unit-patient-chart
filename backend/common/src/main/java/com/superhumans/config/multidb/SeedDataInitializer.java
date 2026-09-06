@@ -1,5 +1,6 @@
 package com.superhumans.config.multidb;
 
+import com.superhumans.service.UserSeedService;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 
@@ -23,15 +24,18 @@ public class SeedDataInitializer implements InitializingBean {
     private final DataSource icuDataSource;
     private final DataSource medDataSource;
     private final DataSource prosthDataSource;
+    private final UserSeedService userSeedService;
 
     public SeedDataInitializer(@Qualifier("coreDataSource") DataSource coreDataSource,
             @Qualifier("icuDataSource") DataSource icuDataSource,
             @Qualifier("medDataSource") DataSource medDataSource,
-            @Qualifier("prosthDataSource") DataSource prosthDataSource) {
+            @Qualifier("prosthDataSource") DataSource prosthDataSource,
+            UserSeedService userSeedService) {
         this.coreDataSource = coreDataSource;
         this.icuDataSource = icuDataSource;
         this.medDataSource = medDataSource;
         this.prosthDataSource = prosthDataSource;
+        this.userSeedService = userSeedService;
     }
 
     @Override
@@ -40,6 +44,9 @@ public class SeedDataInitializer implements InitializingBean {
         execute(icuDataSource, "data-icu.sql");
         execute(medDataSource, "data-med.sql");
         execute(prosthDataSource, "data-prosth.sql");
+        // Application users come from APP_TEST_* environment variables
+        // (UserSeedService), never from SQL scripts.
+        userSeedService.seedFromEnvironment();
     }
 
     private static void execute(DataSource dataSource, String script) throws Exception {

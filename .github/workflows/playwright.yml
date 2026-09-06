@@ -313,6 +313,62 @@ jobs:
           APP_DATASOURCE_PROSTH_USERNAME: postgres
           APP_DATASOURCE_PROSTH_PASSWORD: admin
           APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
+          # Seed users come from APP_TEST_* (UserSeedService); values below are the
+          # long-public dev credentials already hardcoded across the E2E specs.
+          APP_TEST_USERNAME1: doctor1
+          APP_TEST_PASSWORD1: doctor123
+          APP_TEST_USERFULLNAME: Олександр Мельник
+          APP_TEST_PHONE1: +380501111111
+          APP_TEST_PROFESSION1: Лікар-хірург
+          APP_TEST_USERROLE1: DOCTOR
+          APP_TEST_USERNAME2: doctor2
+          APP_TEST_PASSWORD2: doctor123
+          APP_TEST_USERFULLNAME2: Наталія Бойко
+          APP_TEST_PHONE2: +380502222222
+          APP_TEST_PROFESSION2: Лікар-хірург
+          APP_TEST_USERROLE2: DOCTOR
+          APP_TEST_USERNAME3: nurse1
+          APP_TEST_PASSWORD3: nurse123
+          APP_TEST_USERFULLNAME3: Олена Ткаченко
+          APP_TEST_PHONE3: +380503333333
+          APP_TEST_PROFESSION3: Медична сестра стаціонару
+          APP_TEST_USERROLE3: NURSE
+          APP_TEST_USERNAME4: nurse2
+          APP_TEST_PASSWORD4: nurse123
+          APP_TEST_USERFULLNAME4: Марія Кравчук
+          APP_TEST_PHONE4: +380504444444
+          APP_TEST_PROFESSION4: Медична сестра стаціонару
+          APP_TEST_USERROLE4: NURSE
+          APP_TEST_USERNAME5: head1
+          APP_TEST_PASSWORD5: head123
+          APP_TEST_USERFULLNAME5: Василь Гончарук
+          APP_TEST_PHONE5: +380505555555
+          APP_TEST_PROFESSION5: Завідувач
+          APP_TEST_USERROLE5: HEAD_OF_DEPARTMENT
+          APP_TEST_USERNAME6: admin
+          APP_TEST_PASSWORD6: admin123
+          APP_TEST_USERFULLNAME6: Адмін Системи
+          APP_TEST_PHONE6: +380506666666
+          APP_TEST_PROFESSION6: Адміністратор
+          APP_TEST_USERROLE6: ADMINISTRATOR
+          APP_TEST_USERNAME7: prosthetist1
+          APP_TEST_PASSWORD7: doctor123
+          APP_TEST_USERFULLNAME7: Олег Романюк
+          APP_TEST_PHONE7: +380507777777
+          APP_TEST_PROFESSION7: Протезист
+          APP_TEST_USERROLE7: PROSTHETIST
+          APP_TEST_USERNAME8: prosthetist2
+          APP_TEST_PASSWORD8: doctor123
+          APP_TEST_USERFULLNAME8: Ірина Шевчук
+          APP_TEST_PHONE8: +380508888888
+          APP_TEST_PROFESSION8: Протезист
+          APP_TEST_USERROLE8: PROSTHETIST
+          APP_TEST_USERNAME9: prosthetics_admin1
+          APP_TEST_PASSWORD9: doctor123
+          APP_TEST_USERFULLNAME9: Тарас Мельник
+          APP_TEST_PHONE9: +380509999999
+          APP_TEST_PROFESSION9: Адміністратор протезування
+          APP_TEST_USERROLE9: PROSTHETICS_ADMINISTRATOR
 
       - name: Install frontend dependencies
         run: npm ci
