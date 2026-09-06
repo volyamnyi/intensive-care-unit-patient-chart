@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Hospital, Shield, Wrench } from 'lucide-react';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '../services/AuthContext';
 
 const cards = [
@@ -51,6 +52,10 @@ export default function AppSelectorPage() {
     navigate(target, { replace: true });
   };
 
+  const visibleCards = cards.filter((card) => hasPermission(card.permission));
+  const showAdminCard = hasPermission('MODULE_ADMIN_ACCESS');
+  const hasNoModules = visibleCards.length === 0 && !showAdminCard;
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-3">
       <h1 className="font-rubik mb-1 text-2xl font-extrabold">
@@ -63,7 +68,7 @@ export default function AppSelectorPage() {
         Оберіть додаток для роботи
       </h2>
       <div className="flex max-w-[700px] flex-wrap justify-center gap-3">
-        {cards.filter((card) => hasPermission(card.permission)).map((card) => (
+        {visibleCards.map((card) => (
           <Card key={card.app} className="w-[300px] cursor-pointer" onClick={() => handleSelect(card)}>
             <CardContent className="flex flex-col items-center p-4 text-center">
               <div className="mb-1" style={{ color: card.color }}>{card.icon}</div>
@@ -72,7 +77,7 @@ export default function AppSelectorPage() {
             </CardContent>
           </Card>
         ))}
-        {hasPermission('MODULE_ADMIN_ACCESS') && (
+        {showAdminCard && (
           <Card className="w-[300px] cursor-pointer" onClick={() => navigate('/admin', { replace: true })}>
             <CardContent className="flex flex-col items-center p-4 text-center">
               <div className="mb-1" style={{ color: '#7b1fa2' }}>
@@ -84,6 +89,13 @@ export default function AppSelectorPage() {
           </Card>
         )}
       </div>
+      {hasNoModules && (
+        <Alert className="mt-4 max-w-[700px]">
+          <AlertDescription>
+            Ваш обліковий запис не має доступу до жодного модуля. Зверніться до адміністратора для надання прав.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }
