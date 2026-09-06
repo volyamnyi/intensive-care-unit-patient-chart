@@ -2,9 +2,8 @@
 -- Source: data.sql (split by module, DO NOT EDIT BY HAND)
 
 -- Application users are NOT seeded here. They are provisioned from environment
--- variables (APP_TEST_USERNAME1..9 / APP_TEST_PASSWORD1..9 plus profile and role
--- metadata) by UserSeedService, so no user values — and no password material —
--- ever live in this file.
+-- variables by UserSeedService (see its javadoc for the variable contract),
+-- so no user values — and no password material — ever live in this file.
 
 -- System settings
 INSERT INTO system_settings (id, key, value, description, created_at, created_by, updated_at, updated_by, version)
