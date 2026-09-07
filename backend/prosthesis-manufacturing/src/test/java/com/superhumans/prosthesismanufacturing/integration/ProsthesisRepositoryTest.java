@@ -94,7 +94,6 @@ class ProsthesisRepositoryTest {
                 .prescriptionDate(LocalDate.of(2026, 7, 10))
                 .materials("[{\"name\":\"термопласт\",\"qty\":2}]")
                 .status(OrderStatus.NEW)
-                .recipePdfData(new byte[]{1, 2, 3})
                 .build();
         em.persistAndFlush(order);
 
@@ -107,7 +106,6 @@ class ProsthesisRepositoryTest {
         ProstheticsOrder found = foundOrders.get(0);
         assertThat(found.getOrderNumber()).isEqualTo("ПВ-26-0413");
         assertThat(found.getProductType()).isEqualTo(ProductType.UPPER_LIMB);
-        assertThat(found.getRecipePdfData()).containsExactly(1, 2, 3);
         assertThat(found.getMaterials()).isEqualTo("[{\"name\":\"термопласт\",\"qty\":2}]");
     }
 

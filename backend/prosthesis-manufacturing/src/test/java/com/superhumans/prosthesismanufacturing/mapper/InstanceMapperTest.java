@@ -100,7 +100,7 @@ class InstanceMapperTest {
     }
 
     @Test
-    void shouldMapOrderWithRecipePdf() {
+    void shouldMapOrderToResponse() {
         ProstheticsPatient patient = ProstheticsPatient.builder()
                 .pib("Сніжко Оксана Володимирівна")
                 .build();
@@ -115,7 +115,6 @@ class InstanceMapperTest {
                 .doctorName("Бондаренко І.П.")
                 .prescriptionDate(LocalDate.of(2026, 7, 10))
                 .status(OrderStatus.NEW)
-                .recipePdfData(new byte[]{1, 2, 3})
                 .build();
         order.setId(UUID.randomUUID());
 
@@ -126,25 +125,5 @@ class InstanceMapperTest {
         assertThat(response.getProductType()).isEqualTo("UPPER_LIMB");
         assertThat(response.getLimbSide()).isEqualTo("RIGHT");
         assertThat(response.getStatus()).isEqualTo("NEW");
-        assertThat(response.getHasRecipePdf()).isTrue();
-    }
-
-    @Test
-    void shouldMapOrderWithoutRecipePdf() {
-        ProstheticsPatient patient = ProstheticsPatient.builder()
-                .pib("Гаврилюк Тарас Олексійович")
-                .build();
-        patient.setId("90001");
-
-        ProstheticsOrder order = ProstheticsOrder.builder()
-                .orderNumber("ПВ-26-0414")
-                .patient(patient)
-                .status(OrderStatus.NEW)
-                .build();
-        order.setId(UUID.randomUUID());
-
-        ProstheticsOrderResponse response = orderMapper.toResponse(order);
-
-        assertThat(response.getHasRecipePdf()).isFalse();
     }
 }

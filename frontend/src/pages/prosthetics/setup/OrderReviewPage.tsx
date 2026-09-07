@@ -40,6 +40,7 @@ export default function OrderReviewPage() {
   const { draft } = useProsthetics();
   const [order, setOrder] = useState<OrderWithPatient | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [docTemplateName, setDocTemplateName] = useState<string | null>(null);
   const [docLoaded, setDocLoaded] = useState(false);
   const [docError, setDocError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +65,7 @@ export default function OrderReviewPage() {
       setDocumentUrl(null);
       try {
         const orderRes = await prostheticsOrderApi.getById(draft.orderId!);
-        
+
         let patient: ProstheticsPatient | null = null;
         if (orderRes.data.patientId) {
           try {
@@ -74,14 +75,13 @@ export default function OrderReviewPage() {
             // ignore patient fetch errors
           }
         }
-        
+
         setOrder({ ...orderRes.data, patient });
-        
-        // Auto-load document
+
         try {
-          const blob = await prostheticsOrderApi.getDocument(draft.orderId!);
-          const url = window.URL.createObjectURL(blob.data);
-          setDocumentUrl(url);
+          const urlRes = await prostheticsOrderApi.getDocumentUrl(draft.orderId!);
+          setDocumentUrl(urlRes.data.documentUrl);
+          setDocTemplateName(urlRes.data.documentTemplateName ?? null);
           setDocLoaded(true);
         } catch (err: unknown) {
           const axiosError = err as { response?: { data?: { message?: string } } };
@@ -217,20 +217,22 @@ export default function OrderReviewPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Замовлення на протез</CardTitle>
-              <CardDescription>Технічні вимоги до виготовлення</CardDescription>
+              <CardDescription>
+                {docTemplateName ? `MIS: ${docTemplateName}` : 'Технічні вимоги до виготовлення'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {docLoaded && documentUrl ? (
                 <div className="space-y-3">
                   <iframe
                     src={documentUrl}
-                    title="Замовлення на протез (PDF)"
+                    title="Замовлення на протез (MIS)"
                     className="w-full min-h-[520px] rounded-md border bg-white"
                   />
                   <a href={documentUrl} target="_blank" rel="noopener noreferrer" className="block">
                     <Button variant="outline" className="w-full">
                       <FileText className="mr-2 size-4" />
-                      Завантажити замовлення на протез
+                      Відкрити замовлення на протез у MIS
                     </Button>
                   </a>
                 </div>

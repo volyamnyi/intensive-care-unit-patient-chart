@@ -13,6 +13,5 @@ import org.mapstruct.ReportingPolicy;
 public interface ProstheticsOrderMapper {
 
     @Mapping(target = "patientId", source = "patient.id")
-    @Mapping(target = "hasRecipePdf", expression = "java(entity.hasRecipePdf())")
     ProstheticsOrderResponse toResponse(ProstheticsOrder entity);
 }

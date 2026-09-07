@@ -23,3 +23,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/008-drop-quality-gate.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/009-drop-order-recipe-pdf.sql

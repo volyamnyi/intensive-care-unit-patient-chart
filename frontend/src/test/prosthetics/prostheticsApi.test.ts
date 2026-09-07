@@ -77,12 +77,10 @@ describe('prostheticsOrderApi', () => {
     expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/orders/o1');
   });
 
-  it('downloads the order document as a blob', async () => {
-    clientMock.get.mockReturnValue(ok(new Blob()));
-    await prostheticsOrderApi.getDocument('o1');
-    expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/orders/o1/document', {
-      responseType: 'blob',
-    });
+  it('resolves the MIS-hosted order document URL', async () => {
+    clientMock.get.mockReturnValue(ok({ documentId: 1, documentTemplateName: 'TP-LL-01', documentUrl: 'https://mis.example/doc' }));
+    await prostheticsOrderApi.getDocumentUrl('o1');
+    expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/orders/o1/document-url');
   });
 });
 

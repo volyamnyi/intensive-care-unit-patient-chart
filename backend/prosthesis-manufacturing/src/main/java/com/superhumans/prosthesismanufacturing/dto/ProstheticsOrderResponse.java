@@ -25,7 +25,6 @@ public class ProstheticsOrderResponse {
     String approvalRegistry;
     String approvalSeq;
     String status;
-    Boolean hasRecipePdf;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }

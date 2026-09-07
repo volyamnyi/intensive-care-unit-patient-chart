@@ -6,7 +6,7 @@ import type { ProstheticsDraft } from '@/prosthetics/types';
 
 const prostheticsOrderApiMock = vi.hoisted(() => ({
   getById: vi.fn(),
-  getDocument: vi.fn(),
+  getDocumentUrl: vi.fn(),
 }));
 
 const prostheticsPatientApiMock = vi.hoisted(() => ({
@@ -47,18 +47,19 @@ function mockUseProsthetics(draft: ProstheticsDraft = { patientId: null, orderId
 }
 
 const orderMock = { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' };
+const documentUrlMock = 'https://mis.example/document?request=abc';
 
 describe('OrderReviewPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prostheticsOrderApiMock.getById.mockResolvedValue({ data: orderMock });
-    prostheticsOrderApiMock.getDocument.mockResolvedValue({ data: new Blob(['x']) });
+    prostheticsOrderApiMock.getDocumentUrl.mockResolvedValue({
+      data: { documentId: 1, documentTemplateName: 'Замовлення на протез', documentUrl: documentUrlMock },
+    });
     prostheticsPatientApiMock.getById.mockResolvedValue({
       data: { id: 'p1', pib: 'Іван Іванов', birthDate: '1980-01-01' },
     });
     flowInstanceApiMock.list.mockResolvedValue({ data: [] });
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ pib: 'Іван Іванов' }) } as unknown as Response));
-    vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
   });
 
   it('renders the page title in redirect state', () => {
@@ -149,7 +150,7 @@ describe('OrderReviewPage', () => {
     });
   });
 
-  it('renders embedded PDF viewer in the document tab', async () => {
+  it('renders the MIS-hosted document URL in an iframe', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
@@ -157,9 +158,12 @@ describe('OrderReviewPage', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByTitle('Замовлення на протез (PDF)')).toBeInTheDocument();
+      const frame = screen.getByTitle('Замовлення на протез (MIS)');
+      expect(frame).toBeInTheDocument();
+      expect(frame.getAttribute('src')).toBe(documentUrlMock);
     });
-    expect(screen.getByRole('link', { name: /Завантажити замовлення на протез/ })).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /Відкрити замовлення на протез у MIS/ });
+    expect(link).toHaveAttribute('href', documentUrlMock);
   });
 
   it('disables start button until document is loaded', async () => {
@@ -170,7 +174,7 @@ describe('OrderReviewPage', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByTitle('Замовлення на протез (PDF)')).toBeInTheDocument();
+      expect(screen.getByTitle('Замовлення на протез (MIS)')).toBeInTheDocument();
     });
   });
 

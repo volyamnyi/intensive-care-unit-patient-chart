@@ -9,7 +9,6 @@ import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "prosthetics_orders")
@@ -67,14 +66,4 @@ public class ProstheticsOrder extends BaseEntity {
     @Column(name = "status", nullable = false, length = 32)
     @Builder.Default
     OrderStatus status = OrderStatus.NEW;
-
-    @Column(name = "recipe_pdf_data")
-    byte[] recipePdfData;
-
-    @Column(name = "recipe_pdf_generated_at")
-    LocalDateTime recipePdfGeneratedAt;
-
-    public boolean hasRecipePdf() {
-        return recipePdfData != null;
-    }
 }
