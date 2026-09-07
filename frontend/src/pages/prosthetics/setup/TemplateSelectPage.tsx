@@ -35,11 +35,14 @@ export default function TemplateSelectPage() {
   }, []);
 
   useEffect(() => {
-    if (creating) return;
     if (!draft.orderId) {
       navigate('/prosthetics/new/select-order');
       return;
     }
+    // NOTE: `creating` is intentionally NOT a dependency here. Refetching when
+    // creation finishes would wipe a just-set submission error (setError(null)
+    // below) before the user ever sees it — a failed «Обрати» looked like
+    // nothing happened even though the backend answered 400.
     const fetchTemplates = async () => {
       setLoading(true);
       setError(null);
@@ -67,7 +70,7 @@ export default function TemplateSelectPage() {
       }
     };
     fetchTemplates();
-  }, [creating, draft.orderId, navigate]);
+  }, [draft.orderId, navigate]);
 
   const handleSelect = async () => {
     if (!selectedTemplateId || !draft.orderId) return;
