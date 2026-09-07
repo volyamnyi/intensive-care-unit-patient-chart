@@ -172,3 +172,17 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   RhFactor` раніше губилися; толерантний fallback-масив `patients`).
 - Контракт токен-ендпоїнта лишається припущенням (блокер (a) відкритий) — зміниться
   лише DTO-мапінг, шов готовий.
+
+### Phase 4 — documents (issue #257, DONE)
+
+- `getPatientDocuments(patientId)` у real-режимі викликає `spiDocumentProsthesCheck`
+  (константа `SPI_DOCUMENT_PROCEDURE`) з параметром `PatientID`; wiremock —
+  `spzIBDocumentList` до cutover.
+- `DocumentMisDTO` розширено до цільової форми: `documentUrl`, `patientId`,
+  `orderDate`, `patientFullName/Address`, `productCode/Name`, `mobilityLevel`,
+  `patientGender`, `age/height/weight`, `note` (усі nullable; аліаси ключів і fallback-
+  масив `documents` — толерантно, бо спека (a) відкрита).
+- Рішення «верхні кінцівки»: окремого existing-методу для template 120 не знайдено —
+  діє універсальний retrieval (обидва шаблони одним викликом); фільтр 120/121 — Phase 6.
+- Рішення `documentUrl`: поле прокинуто до DTO для Phase 9 (iframe/download + fallback
+  на локальний рецепт); одноразовість/інтранет-доступність — перевірити у Phase 9.

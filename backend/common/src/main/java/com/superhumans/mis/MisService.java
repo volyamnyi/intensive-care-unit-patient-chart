@@ -73,7 +73,7 @@ public interface MisService {
     List<BookingMisDTO> getPatientBookings(Long patientId);
 
     /**
-     * Retrieves patient documents from MIS — spzIBDocumentList.
+     * Retrieves patient documents from MIS (real mode: {@code spiDocumentProsthesCheck}).
      * Used to link order templates with MIS patient documents.
      */
     List<DocumentMisDTO> getPatientDocuments(Long patientId);

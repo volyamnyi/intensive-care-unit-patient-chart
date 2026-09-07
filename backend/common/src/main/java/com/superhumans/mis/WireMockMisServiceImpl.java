@@ -36,6 +36,15 @@ public class WireMockMisServiceImpl implements MisService {
      */
     static final String SPI_PATIENT_PROCEDURE = "spiPatientProsthesCheck";
 
+    /**
+     * Real MIS document procedure (#257). Replaces {@code spzIBDocumentList} in
+     * real mode. A single universal retrieval covers both template 120 and 121 —
+     * no separate upper-limb method exists; eligibility filtering lives in Phase 6.
+     * Field names beyond the legacy envelope are assumptions (epic blocker (a)
+     * is still open) and are parsed tolerantly — absent means null.
+     */
+    static final String SPI_DOCUMENT_PROCEDURE = "spiDocumentProsthesCheck";
+
     private boolean useSpi() {
         return properties != null && properties.isRealMode();
     }
@@ -275,8 +284,9 @@ public class WireMockMisServiceImpl implements MisService {
         if (patientId == null) {
             return List.of();
         }
+        String procedure = useSpi() ? SPI_DOCUMENT_PROCEDURE : "spzIBDocumentList";
         JsonNode response = misApiClient.callMethod(
-                "spzIBDocumentList",
+                procedure,
                 new MisApiClient.Param("PatientID", String.valueOf(patientId))
         );
         auditService.logAction("MIS", null, "GET_PATIENT_DOCUMENTS", getUserId());
@@ -350,25 +360,39 @@ public class WireMockMisServiceImpl implements MisService {
 
     private List<DocumentMisDTO> parseDocumentList(JsonNode response) {
         JsonNode list = response.get("documentList");
+        if ((list == null || !list.isArray()) && response.has("documents")) {
+            list = response.get("documents");
+        }
         if (list == null || !list.isArray()) {
             return List.of();
         }
         List<DocumentMisDTO> result = new ArrayList<>();
         for (JsonNode node : list) {
             result.add(DocumentMisDTO.builder()
-                    .documentId(node.has("documentID") ? node.get("documentID").asLong() : null)
-                    .documentName(node.has("documentName") ? node.get("documentName").asText() : null)
+                    .documentId(longOrNull(node, "documentID"))
+                    .documentName(textOrNull(node, "documentName"))
                     .documentCreationDate(parseDateTime(node, "documentCreationDate"))
-                    .documentUserLogin(node.has("documentUserLogin") ? node.get("documentUserLogin").asText() : null)
-                    .documentTemplateId(node.has("documentTemplateID") ? node.get("documentTemplateID").asLong() : null)
-                    .documentTemplateName(node.has("documentTemplateName") ? node.get("documentTemplateName").asText() : null)
-                    .documentKindCode(node.has("documentKindCode") ? node.get("documentKindCode").asText() : null)
-                    .documentKindName(node.has("documentKindName") ? node.get("documentKindName").asText() : null)
-                    .documentApproveStatusCode(node.has("documentApproveStatusCode")
-                            ? node.get("documentApproveStatusCode").asText() : null)
-                    .documentApproveStatusName(node.has("documentApproveStatusName")
-                            ? node.get("documentApproveStatusName").asText() : null)
-                    .documentExternalId(node.has("documentExternalID") ? node.get("documentExternalID").asText() : null)
+                    .documentUserLogin(textOrNull(node, "documentUserLogin"))
+                    .documentTemplateId(longOrNull(node, "documentTemplateID"))
+                    .documentTemplateName(textOrNull(node, "documentTemplateName"))
+                    .documentKindCode(textOrNull(node, "documentKindCode"))
+                    .documentKindName(textOrNull(node, "documentKindName"))
+                    .documentApproveStatusCode(textOrNull(node, "documentApproveStatusCode"))
+                    .documentApproveStatusName(textOrNull(node, "documentApproveStatusName"))
+                    .documentExternalId(textOrNull(node, "documentExternalID", "documentExternalId"))
+                    .documentUrl(textOrNull(node, "documentUrl", "documentURL"))
+                    .patientId(longOrNull(node, "patientID", "patientId"))
+                    .orderDate(parseFlexibleDateTime(node, "orderDate"))
+                    .patientFullName(textOrNull(node, "patientFullName", "patientName"))
+                    .patientAddress(textOrNull(node, "patientAddress"))
+                    .productCode(textOrNull(node, "productCode"))
+                    .productName(textOrNull(node, "productName"))
+                    .mobilityLevel(textOrNull(node, "mobilityLevel", "mobilityLevelCode"))
+                    .patientGender(textOrNull(node, "patientGender", "patientSexCode"))
+                    .age(intOrNull(node, "age", "patientAge"))
+                    .height(intOrNull(node, "height", "patientHeight"))
+                    .weight(intOrNull(node, "weight", "patientWeight"))
+                    .note(textOrNull(node, "note"))
                     .build());
         }
         return result;
@@ -509,11 +533,62 @@ public class WireMockMisServiceImpl implements MisService {
     }
 
     private static Integer intOrNull(JsonNode node, String field) {
-        if (!node.has(field) || node.get(field).isNull()) {
+        return intOrNull(node, new String[]{field});
+    }
+
+    private static Integer intOrNull(JsonNode node, String... fields) {
+        for (String field : fields) {
+            if (!node.has(field) || node.get(field).isNull()) {
+                continue;
+            }
+            try {
+                return node.get(field).asInt();
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static Long longOrNull(JsonNode node, String... fields) {
+        for (String field : fields) {
+            if (!node.has(field) || node.get(field).isNull()) {
+                continue;
+            }
+            try {
+                return node.get(field).asLong();
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static String textOrNull(JsonNode node, String... fields) {
+        for (String field : fields) {
+            if (!node.has(field) || node.get(field).isNull()) {
+                continue;
+            }
+            String text = node.get(field).asText();
+            if (text != null && !text.isBlank()) {
+                return text;
+            }
+        }
+        return null;
+    }
+
+    private LocalDateTime parseFlexibleDateTime(JsonNode node, String field) {
+        if (!node.has(field) || node.get(field).isNull()
+                || node.get(field).asText().isBlank()) {
             return null;
         }
+        String raw = node.get(field).asText().trim().replace(' ', 'T');
         try {
-            return node.get(field).asInt();
+            if (raw.length() >= 19) {
+                return LocalDateTime.parse(raw.substring(0, 19),
+                        DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
+            return LocalDate.parse(raw.substring(0, 10)).atStartOfDay();
         } catch (Exception e) {
             return null;
         }
