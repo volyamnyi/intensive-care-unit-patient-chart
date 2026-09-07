@@ -56,7 +56,7 @@ class MisWireMockIntegrationTest {
         setField(client, "login", "integration");
 
         service = new WireMockMisServiceImpl(client,
-                org.mockito.Mockito.mock(AuditService.class));
+                org.mockito.Mockito.mock(AuditService.class), new MisApiProperties());
     }
 
     @AfterAll

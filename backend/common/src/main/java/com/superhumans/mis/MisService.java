@@ -34,6 +34,14 @@ public interface MisService {
     List<PatientDTO> searchPatients(String query);
 
     /**
+     * Returns every patient currently under treatment — the single base source
+     * of patient data for all modules (real MIS: {@code spiPatientProsthesCheck}).
+     * Module use-cases apply their own department rules on top of this list and
+     * must not implement alternative patient sources.
+     */
+    List<PatientDTO> getAllPatientsUnderTreatment();
+
+    /**
      * Sends generated PDF to MIS patient document repository.
      * This is the ONLY allowed write operation to MIS.
      * The PDF is immutable — no existing MIS records are modified.

@@ -25,7 +25,20 @@ public class WireMockMisServiceImpl implements MisService {
 
     private final MisApiClient misApiClient;
     private final AuditService auditService;
+    private final MisApiProperties properties;
     private final MisErrorSimulator errorSimulator = new MisErrorSimulator();
+
+    /**
+     * Real MIS patient procedure (#256). Replaces {@code spzIBPatientSearch} in
+     * real mode; the request/response envelope is assumed identical to the legacy
+     * one (epic blocker (a) — real MIS spec — is still open; only the DTO mapping
+     * will change once it is confirmed).
+     */
+    static final String SPI_PATIENT_PROCEDURE = "spiPatientProsthesCheck";
+
+    private boolean useSpi() {
+        return properties != null && properties.isRealMode();
+    }
 
     @Override
     public void setErrorMode(String mode) {
@@ -39,6 +52,11 @@ public class WireMockMisServiceImpl implements MisService {
     @Override
     public Optional<PatientDTO> getPatient(Long patientId) {
         checkErrors();
+        if (useSpi()) {
+            return getAllPatientsUnderTreatment().stream()
+                    .filter(patient -> patient.getId() != null && patient.getId().equals(patientId))
+                    .findFirst();
+        }
         JsonNode response = misApiClient.callMethod(
                 "spzIBPatientSearch",
                 new MisApiClient.Param("PatientID", String.valueOf(patientId))
@@ -125,9 +143,24 @@ public class WireMockMisServiceImpl implements MisService {
     @Override
     public List<PatientDTO> searchPatients(String query) {
         checkErrors();
+        if (useSpi()) {
+            return filterPatients(getAllPatientsUnderTreatment(), query);
+        }
         JsonNode response = misApiClient.callMethod("spzIBPatientSearch");
         auditService.logAction("MIS", null, "SEARCH_PATIENTS", getUserId());
-        List<PatientDTO> patients = parsePatientList(response);
+        return filterPatients(parsePatientList(response), query);
+    }
+
+    @Override
+    public List<PatientDTO> getAllPatientsUnderTreatment() {
+        checkErrors();
+        String procedure = useSpi() ? SPI_PATIENT_PROCEDURE : "spzIBPatientSearch";
+        JsonNode response = misApiClient.callMethod(procedure);
+        auditService.logAction("MIS", null, "GET_ALL_PATIENTS", getUserId());
+        return parsePatientList(response);
+    }
+
+    private static List<PatientDTO> filterPatients(List<PatientDTO> patients, String query) {
         if (query == null || query.isBlank()) {
             return patients;
         }
@@ -442,6 +475,9 @@ public class WireMockMisServiceImpl implements MisService {
 
     private List<PatientDTO> parsePatientList(JsonNode response) {
         JsonNode patientList = response.get("patientList");
+        if ((patientList == null || !patientList.isArray()) && response.has("patients")) {
+            patientList = response.get("patients");
+        }
         if (patientList == null || !patientList.isArray()) {
             return List.of();
         }
@@ -458,6 +494,10 @@ public class WireMockMisServiceImpl implements MisService {
                     .email(node.has("patientEmail") ? node.get("patientEmail").asText() : null)
                     .externalId1(node.has("patientExternalID1") ? node.get("patientExternalID1").asText() : null)
                     .externalId2(node.has("patientExternalID2") ? node.get("patientExternalID2").asText() : null)
+                    .height(intOrNull(node, "patientHeight"))
+                    .weight(intOrNull(node, "patientWeight"))
+                    .bloodGroup(node.has("patientBloodGroup") ? node.get("patientBloodGroup").asText() : null)
+                    .rhFactor(node.has("patientRhFactor") ? node.get("patientRhFactor").asText() : null)
                     .room(node.has("patientRoomNumber") ? node.get("patientRoomNumber").asText() : null)
                     .bed(node.has("patientBedNumber") ? node.get("patientBedNumber").asText() : null)
                     .doctorName(node.has("patientDoctor") ? node.get("patientDoctor").asText() : null)
@@ -466,6 +506,17 @@ public class WireMockMisServiceImpl implements MisService {
             result.add(patient);
         }
         return result;
+    }
+
+    private static Integer intOrNull(JsonNode node, String field) {
+        if (!node.has(field) || node.get(field).isNull()) {
+            return null;
+        }
+        try {
+            return node.get(field).asInt();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private List<UserMisDTO> parseUserList(JsonNode response) {

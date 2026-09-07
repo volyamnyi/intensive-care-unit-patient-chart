@@ -42,7 +42,7 @@ class WireMockMisServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new WireMockMisServiceImpl(misApiClient, auditService);
+        service = new WireMockMisServiceImpl(misApiClient, auditService, new MisApiProperties());
     }
 
     private JsonNode json(String raw) {

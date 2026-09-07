@@ -159,3 +159,16 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   → #262, #263 (medicine UI) ┘
   → #265 (unit) → #266 (integration) → #267 (E2E) → #268 (regression/CI)
 ```
+
+### Phase 3 — patients (issue #256, DONE)
+
+- `MisService.getAllPatientsUnderTreatment()` — єдине базове джерело; real-режим
+  викликає `spiPatientProsthesCheck` (константа `SPI_PATIENT_PROCEDURE`), wiremock —
+  `spzIBPatientSearch` до cutover.
+- Адаптери (рішення): у real-режимі `searchPatients`/`getPatient` делегують
+  `getAllPatientsUnderTreatment()` з тією самою клієнтською фільтрацією, що й раніше
+  (семантика `query` незмінна); `spzIBPatientSearch` у real-гілці мертвий.
+- Мапінг: усі 12 полів цілі; парсер добудовано (`patientHeight/Weight/BloodGroup/
+  RhFactor` раніше губилися; толерантний fallback-масив `patients`).
+- Контракт токен-ендпоїнта лишається припущенням (блокер (a) відкритий) — зміниться
+  лише DTO-мапінг, шов готовий.
