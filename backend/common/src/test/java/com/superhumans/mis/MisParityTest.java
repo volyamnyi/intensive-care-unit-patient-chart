@@ -146,26 +146,6 @@ class MisParityTest {
         });
     }
 
-    // ---- allergy fixture ----
-
-    @Test
-    void allergyFixture_matchesExpectedData() throws Exception {
-        var fx = MAPPER.readTree(MisParityTest.class.getResourceAsStream(
-                "/mis-wiremock/__files/patient_allergy.json"));
-        var allergies = streamList(fx.get("allergyList"));
-
-        var p1001 = allergies.stream()
-                .filter(a -> a.get("patientID").asLong() == 1001L).toList();
-        assertThat(p1001).hasSize(2);
-        assertThat(p1001.get(0).get("allergenName").asText()).isEqualTo("Penicillin");
-        assertThat(p1001.get(1).get("allergenName").asText()).isEqualTo("Aspirin");
-
-        var p1002 = allergies.stream()
-                .filter(a -> a.get("patientID").asLong() == 1002L).toList();
-        assertThat(p1002).hasSize(1);
-        assertThat(p1002.get(0).get("allergenName").asText()).isEqualTo("Iodine");
-    }
-
     private static List<JsonNode> streamList(JsonNode array) {
         List<JsonNode> result = new java.util.ArrayList<>();
         array.forEach(result::add);

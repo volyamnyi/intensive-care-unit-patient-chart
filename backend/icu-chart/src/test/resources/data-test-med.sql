@@ -3,7 +3,7 @@
 
 -- Integration test seed data
 -- Clean slate: truncate all tables so every test class starts from a known state
-TRUNCATE prescription_executions, prescription_day_parts, prescription_item_days, prescription_items, prescription_lists, prescription_signatures, vital_sign_entries, vital_sign_days, vital_sign_lists, medicine_catalog_cache, allergy_cache, drug_interaction_rules, telegram_subscriptions RESTART IDENTITY CASCADE;
+TRUNCATE prescription_executions, prescription_day_parts, prescription_item_days, prescription_items, prescription_lists, prescription_signatures, vital_sign_entries, vital_sign_days, vital_sign_lists, drug_interaction_rules, telegram_subscriptions RESTART IDENTITY CASCADE;
 
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted)
 VALUES
