@@ -54,3 +54,108 @@
   розширити patients_52.json або звузити mock.
 - **#193** — ✅ WireMock дефолт; fail-fast; embedded-режим; matchIfMissing=false.
 - **#194** — ✅ MockMisServiceImpl видалено; тести мігровано; pom-гігієна виконана.
+
+## Real-API gap — перехід на справжній MIS API (епік, issues #254–#268)
+
+**Дата:** 2026-09-07 · **Статус:** планування завершено, виконання йде (трекінг — issues #254–#268).
+
+### Поточна архітектура (факт станом на старт епіка)
+
+```text
+Controllers (PatientController, PrescriptionController, Prosthetics*Controller, …)
+   ↓
+MisService (14 методів — спільний контракт, backend/common/.../mis/MisService.java)
+   ↓
+WireMockMisServiceImpl (ЄДИНА реалізація, 546 рядків)
+   ↓
+MisApiClient.callMethod() → POST {app.mis.wiremock-url}/api/run
+   {name: "spzIB*", params: [... + {Login: "integration"}], installationId: "0000…"}
+   ↓
+Embedded WireMock :9090 (MisEmbeddedWireMockConfig, 14 стабів) або зовнішній URL
+```
+
+Автентифікації до MIS немає взагалі: статичні `app.mis.login=integration` +
+`app.mis.installation-guid=00000000-0000-0000-0000-000000000000` у кожному запиті
+(`MisApiClient.java:32-60`). Єдиний MIS env — `APP_MIS_WIREMOCK_URL`. `spi*`-процедур
+у коді немає (лише FORBIDDEN-згадки в `stub_mapping.json`).
+
+### Цільова архітектура
+
+```text
+MIS API (real)
+   ↓  Bearer-токен (MisAuthService, APP_MIS_API_* — тільки імена env, без значень)
+Patient Integration Service: getAllPatientsUnderTreatment() — ЄДИНЕ джерело patient data
+   ↓
+Application Use Cases
+   ├── Prosthetics: departmentId ∈ {19,27,37} AND EXISTS document.templateId ∈ {120,121}
+   ├── Doctor's Orders Sheet: departmentId ∈ {19,37} (27 — ніколи)
+   └── Intensive Care: departmentId = 19
+   ↓
+React Frontend (repo Shadcn-примітиви, без нових runtime-залежностей)
+   ↓
+Unit + Integration + Playwright E2E → Green CI (6/6)
+```
+
+### Ключові розбіжності плану з реальністю (враховано в issues)
+
+- `departmentId` 19/27/37 **немає ніде в репозиторії**: реальні companyID 1–6
+  (`company_details.json`), локальний mock `patientDepartmentID` 1/2, `prescription_lists.department_id`
+  1/2. Єдиний department-фільтр — клієнтський `p.departmentId === 2/1` у
+  `PrescriptionPage.tsx:48-93` та `NursePrescriptionPage.tsx:43-69`. Мапінг 19/27/37 —
+  блокер (питання (b)), відповідь очікується від власника MIS.
+- `documentTemplateId` 120/121 — лише у `mis-wiremock/__files/document_list.json`
+  (120 = «Замовлення на протези верхніх кінцівок», **121 = «Висновок лікаря», НЕ «нижні
+  кінцівки»**). Frontend про 120/121 нічого не знає; REST їх не віддає. Фікстурну
+  семантику в прод-код не копіювати до підтвердження (питання (c)).
+- `documentUrl` — лише локальний `URL.createObjectURL(blob)` згенерованого сервером
+  рецепта (`OrderReviewPage.tsx:42,223-230`); бекенд-поля немає.
+- Замовлення протезування — локальна БД (`data-prosth.sql`: `PR-2026-0001/0002`,
+  пацієнти 900001/900002); MIS дає лише збагачення PDF-рецепта
+  (`MisOrderTemplateDataService.load()` — 6 викликів на пацієнта, прототип N+1).
+- Читання каталогу ліків іде повз кеш (`PrescriptionController:285` напряму в MIS;
+  `MedicineCatalogService` ніхто не читає); у `MedicineSearchInput.tsx:8-25` —
+  hardcoded fallback-каталог (прод-мок).
+- Allergy-флоу (`spzIBPatientAllergy`) не має `spi`-еквівалента в плані — рішення
+  власника: **видалити без винятків** (Phase 5, #258; потрібен sign-off власника
+  продукту — клінічна безпека).
+
+### Таблиця «spz → рішення» (чинна; рішення: видалити всі `spz` без винятків)
+
+| `spz`-метод | `MisService`-метод | Рішення | Фаза |
+|---|---|---|---|
+| `spzIBPatientSearch` | `searchPatients/getPatient` | Заміна → `spiPatientProsthesCheck` | #256 |
+| `spzIBDocumentList` | `getPatientDocuments` | Заміна → `spiDocumentProsthesCheck` | #257 |
+| `spzIBMedicineDictionary` | `searchMedicineCatalog` | Заміна → `spiMedicineItemKindDetails` | #258 |
+| `spzIBUserDetails` | `getUser/getDepartmentUsers` | Видалення + споживачі (`GET /api/users/{id}`, `resolveUserName`, `UserMisDTO`) | #264 (підготовка #257) |
+| `spzIBCompanyDetails` | `getDepartments` | Видалення + споживачі (`company[0]`, `DepartmentDTO`) | #264 |
+| `spzIBPatientScheduleList` | `getHospitalization` | Видалення + споживачі (`HospitalizationDTO`) | #264 |
+| `spzIBPatientAllergy` | `getPatientAllergies` | Видалення цілого allergy-флоу | #258 |
+| `spzIBServiceList/BookingList/PatientInfo` | `getServices/getPatientBookings/getPatientInfo` | Видалення + збагачення рецепта | #259 |
+| 3 словники статусів | `getDictionary(name)` | Видалення фікстурних гілок | #264 |
+| `spzIBVenueDetails` | — (без споживача) | Видалення без заміни | #264 |
+
+Підсумковий `MisService`: `getAllPatientsUnderTreatment/searchPatients/getPatient/
+getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, лишається
+як єдиний дозволений write). Критерій Phase 11: `grep -r "spzIB"` — 0 збігів у живому коді.
+
+### Відкриті питання до власника MIS (блокери)
+
+(a) спека real API: base URL, `/token`+`/run`, формати `spiPatientProsthesCheck` /
+`spiDocumentProsthesCheck` / `spiMedicineItemKindDetails`, помилки, таймаути, rate limits;
+(b) мапінг відділень 19/27/37 проти реальних ID; (c) семантика 120/121, окремий метод
+для 120, URL-vs-байти; (d) dual-mode vs hard cutover + credentials у CI (раннери
+корпоративний MIS не бачать — real-сюїти локально з `SKIPPED`, прецедент LDAP);
+(e) кеш ліків — читати з TTL чи видалити; (f) batch-метод документів / TTL кешу eligibility.
+
+### Послідовність
+
+```text
+#254 (audit, docs) → #255 (dual-mode config+auth)
+  → #256 (patients) ─┐
+  → #257 (documents) ─┼──→ #259 (eligibility) ──→ #262 (prosthetics UI)
+  → #258 (medicines) ─┘
+  → #260 (orders-sheet UI) ─┐
+  → #261 (ICU UI) ──────────┼──→ #264 (cutover/cleanup)
+  → #262, #263 (medicine UI) ┘
+  → #265 (unit) → #266 (integration) → #267 (E2E) → #268 (regression/CI)
+```
