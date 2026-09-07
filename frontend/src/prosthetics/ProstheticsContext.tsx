@@ -35,25 +35,6 @@ const STORAGE_KEY = 'prosthetics:draft';
 
 const ProstheticsContext = createContext<ProstheticsContextType | null>(null);
 
-function tryParseDraft(raw: string | null): ProstheticsDraft | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as ProstheticsDraft;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Reads the persisted draft synchronously so the state is complete on the
- * very first render. (A post-mount restore arrived one effect too late: page
- * guards saw an empty draft and bounced away from deep-linked steps.)
- */
-function restoreDraft(): ProstheticsDraft | null {
-  return tryParseDraft(sessionStorage.getItem(STORAGE_KEY))
-    ?? tryParseDraft(localStorage.getItem(STORAGE_KEY));
-}
-
 const initialDraft: ProstheticsDraft = {
   patientId: null,
   orderId: null,
@@ -62,12 +43,33 @@ const initialDraft: ProstheticsDraft = {
 };
 
 export function ProstheticsProvider({ children }: { children: ReactNode }) {
-  const [draft, setDraft] = useState<ProstheticsDraft>(() => restoreDraft() ?? initialDraft);
+  const [draft, setDraft] = useState<ProstheticsDraft>(initialDraft);
   const [patient, setPatient] = useState<ProstheticsPatient | null>(null);
   const [orders, setOrders] = useState<ProstheticsOrder[]>([]);
   const [templates, setTemplates] = useState<FlowTemplate[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  useEffect(() => {
+    // Try sessionStorage first (survives F5), then localStorage (survives tab close), then initial
+    const tryParse = (raw: string | null) => {
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw) as ProstheticsDraft;
+      } catch {
+        return null;
+      }
+    };
+    const fromSession = tryParse(sessionStorage.getItem(STORAGE_KEY));
+    const fromLocal = tryParse(localStorage.getItem(STORAGE_KEY));
+    const restored = fromSession ?? fromLocal;
+    if (restored) {
+      setDraft(restored);
+      // Ensure both storages are in sync
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+    }
+  }, []);
 
   const persist = (updated: ProstheticsDraft) => {
     const raw = JSON.stringify(updated);
