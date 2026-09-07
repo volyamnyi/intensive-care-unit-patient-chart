@@ -43,9 +43,7 @@ ON CONFLICT (id) DO UPDATE SET
   manufacturing_approach = EXCLUDED.manufacturing_approach,
   approval_number = EXCLUDED.approval_number,
   approval_registry = EXCLUDED.approval_registry,
-  approval_seq = EXCLUDED.approval_seq,
-  recipe_pdf_data = NULL,
-  recipe_pdf_generated_at = NULL;
+  approval_seq = EXCLUDED.approval_seq;
 
 INSERT INTO prosthetics_flow_templates (id, created_at, created_by, updated_at, updated_by, version, name, description, template_version, product_type, amputation_level, limb_side, status, estimated_duration_min)
 VALUES
