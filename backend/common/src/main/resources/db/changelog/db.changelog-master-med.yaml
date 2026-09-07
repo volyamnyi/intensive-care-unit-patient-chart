@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: med/001-prescription-module.sql
+  - include:
+      relativeToChangelogFile: true
+      file: med/002-drop-allergy-and-medicine-cache.sql

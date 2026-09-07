@@ -12,7 +12,7 @@ import PrescriptionGrid, { type GridProps } from '../../components/prescription/
 import VitalSignGrid from '../../components/prescription/VitalSignGrid'
 import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog'
 import { getErrorMessage } from '../../utils/errorMessage'
-import type { PrescriptionList, PrescriptionItem, AllergyItem } from '../../types/medication';
+import type { PrescriptionList, PrescriptionItem } from '../../types/medication';
 
 export default function PrescriptionDetailPage() {
   useEffect(() => { document.title = 'Призначення — Деталі' }, [])
@@ -22,7 +22,6 @@ export default function PrescriptionDetailPage() {
 
   const [prescription, setPrescription] = useState<PrescriptionList | null>(null)
   const [items, setItems] = useState<PrescriptionItem[]>([])
-  const [allergies, setAllergies] = useState<AllergyItem[]>([])
   const [vitalDays, setVitalDays] = useState<{ id: string; dayDate: string; entries: import('../../types/medication').VitalSignEntry[] }[]>([])
   const [loading, setLoading] = useState(false)
   const [vitalLoading, setVitalLoading] = useState(false)
@@ -38,15 +37,6 @@ export default function PrescriptionDetailPage() {
       setItems(res.data)
     } catch (err) {
       setError(getErrorMessage(err, 'Не вдалося завантажити препарати'))
-    }
-  }, [])
-
-  const loadAllergies = useCallback(async (patientId: number) => {
-    try {
-      const res = await prescriptionApi.getAllergies(patientId)
-      setAllergies(res.data)
-    } catch {
-      // allergies are optional
     }
   }, [])
 
@@ -69,12 +59,11 @@ export default function PrescriptionDetailPage() {
       .then((res) => {
         setPrescription(res.data)
         void loadItems(res.data.id)
-        void loadAllergies(res.data.patientId)
         void loadVitalGrid(res.data.id)
       })
       .catch((err) => setError(getErrorMessage(err, 'Не вдалося завантажити листок призначень')))
       .finally(() => setLoading(false))
-  }, [id, loadItems, loadAllergies, loadVitalGrid])
+  }, [id, loadItems, loadVitalGrid])
 
   const handlePlan = async (dayPartId: string, dose: string) => {
     setError(null)
@@ -255,7 +244,6 @@ export default function PrescriptionDetailPage() {
         onAddItem={isNurseUser ? async () => {} : handleAddItem}
         onRemoveItem={isNurseUser ? async () => {} : handleRemoveItem}
         onSearchMedicine={(keyword) => prescriptionApi.getMedicineCatalog(keyword).then(r => r.data)}
-        allergies={isNurseUser ? [] : allergies}
         loading={loading}
       />
 

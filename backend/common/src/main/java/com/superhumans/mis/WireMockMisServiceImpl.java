@@ -45,6 +45,15 @@ public class WireMockMisServiceImpl implements MisService {
      */
     static final String SPI_DOCUMENT_PROCEDURE = "spiDocumentProsthesCheck";
 
+    /**
+     * Real MIS medicine catalog procedure (#258). Replaces
+     * {@code spzIBMedicineDictionary} in real mode. The response envelope and
+     * field names beyond the legacy one are assumptions (epic blocker (a) is
+     * still open); the parser tolerates both shapes — only the DTO mapping
+     * will change once the spec is confirmed.
+     */
+    static final String SPI_MEDICINE_PROCEDURE = "spiMedicineItemKindDetails";
+
     private boolean useSpi() {
         return properties != null && properties.isRealMode();
     }
@@ -227,7 +236,8 @@ public class WireMockMisServiceImpl implements MisService {
     @Override
     public List<MedicineMisDTO> searchMedicineCatalog(String keyword) {
         checkErrors();
-        JsonNode response = misApiClient.callMethod("spzIBMedicineDictionary");
+        String procedure = useSpi() ? SPI_MEDICINE_PROCEDURE : "spzIBMedicineDictionary";
+        JsonNode response = misApiClient.callMethod(procedure);
         auditService.logAction("MIS", null, "SEARCH_MEDICINE_CATALOG", getUserId());
         List<MedicineMisDTO> catalog = parseMedicineList(response);
         if (keyword == null || keyword.isBlank()) {
@@ -237,22 +247,6 @@ public class WireMockMisServiceImpl implements MisService {
         return catalog.stream()
                 .filter(m -> m.getName() != null
                         && m.getName().toLowerCase().contains(lower))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<AllergyMisDTO> getPatientAllergies(Long patientId) {
-        checkErrors();
-        if (patientId == null) {
-            return List.of();
-        }
-        JsonNode response = misApiClient.callMethod(
-                "spzIBPatientAllergy",
-                new MisApiClient.Param("PatientID", String.valueOf(patientId))
-        );
-        auditService.logAction("MIS", null, "GET_ALLERGIES", getUserId());
-        return parseAllergyList(response).stream()
-                .filter(a -> a.getPatientId() != null && a.getPatientId().equals(patientId))
                 .collect(Collectors.toList());
     }
 
@@ -463,38 +457,65 @@ public class WireMockMisServiceImpl implements MisService {
 
     private List<MedicineMisDTO> parseMedicineList(JsonNode response) {
         JsonNode list = response.get("medicineList");
+        if ((list == null || !list.isArray()) && response.has("medicines")) {
+            list = response.get("medicines");
+        }
+        if ((list == null || !list.isArray()) && response.has("items")) {
+            list = response.get("items");
+        }
         if (list == null || !list.isArray()) {
             return List.of();
         }
         List<MedicineMisDTO> result = new ArrayList<>();
         for (JsonNode node : list) {
-            result.add(new MedicineMisDTO(
-                    node.has("medicineID") ? node.get("medicineID").asLong() : null,
-                    node.has("medicineName") ? node.get("medicineName").asText() : null,
-                    node.has("medicineCategoryRef") && !node.get("medicineCategoryRef").isNull()
-                            ? node.get("medicineCategoryRef").asInt() : null,
-                    node.has("medicinePtgCode") && !node.get("medicinePtgCode").isNull()
-                            ? node.get("medicinePtgCode").asText() : null
-            ));
+            result.add(MedicineMisDTO.builder()
+                    .id(longOrNull(node, "medicineID", "itemKindID"))
+                    .name(textOrNull(node, "medicineName", "itemKindName"))
+                    .categoryRef(intOrNull(node, "medicineCategoryRef"))
+                    .ptgCode(textOrNull(node, "medicinePtgCode"))
+                    .itemKindCode(textOrNull(node, "itemKindCode"))
+                    .itemKindAtc(textOrNull(node, "itemKindATC", "itemKindAtc"))
+                    .itemKindUnit(textOrNull(node, "itemKindUnit"))
+                    .itemKindManufacturer(textOrNull(node, "itemKindManufacturer"))
+                    .itemKindIsDisabled(booleanOrNull(node, "itemKindIsDisabled"))
+                    .itemKindEan(textOrNull(node, "itemKindEAN", "itemKindEan"))
+                    .itemKindIsDivisible(booleanOrNull(node, "itemKindIsDivisible"))
+                    .itemKindDlc(textOrNull(node, "itemKindDLC", "itemKindDlc"))
+                    .medicineCategoryId(longOrNull(node, "medicineCategoryID", "medicineCategoryId"))
+                    .medicineCategoryName(textOrNull(node, "medicineCategoryName"))
+                    .medicinePackageId(longOrNull(node, "medicinePackageID", "medicinePackageId"))
+                    .medicinePackageName(textOrNull(node, "medicinePackageName"))
+                    .build());
         }
         return result;
     }
 
-    private List<AllergyMisDTO> parseAllergyList(JsonNode response) {
-        JsonNode list = response.get("allergyList");
-        if (list == null || !list.isArray()) {
-            return List.of();
+    private static Boolean booleanOrNull(JsonNode node, String... fields) {
+        for (String field : fields) {
+            if (!node.has(field) || node.get(field).isNull()) {
+                continue;
+            }
+            JsonNode value = node.get(field);
+            if (value.isBoolean()) {
+                return value.asBoolean();
+            }
+            if (value.isNumber()) {
+                return value.asInt() != 0;
+            }
+            String text = value.asText();
+            if (text != null && !text.isBlank()) {
+                String normalized = text.trim().toLowerCase();
+                if (normalized.equals("true") || normalized.equals("1")
+                        || normalized.equals("y") || normalized.equals("yes")) {
+                    return true;
+                }
+                if (normalized.equals("false") || normalized.equals("0")
+                        || normalized.equals("n") || normalized.equals("no")) {
+                    return false;
+                }
+            }
         }
-        List<AllergyMisDTO> result = new ArrayList<>();
-        for (JsonNode node : list) {
-            result.add(new AllergyMisDTO(
-                    node.has("patientID") ? node.get("patientID").asLong() : null,
-                    node.has("allergenName") ? node.get("allergenName").asText() : null,
-                    node.has("sourceDocumentId") && !node.get("sourceDocumentId").isNull()
-                            ? node.get("sourceDocumentId").asInt() : null
-            ));
-        }
-        return result;
+        return null;
     }
 
     private List<PatientDTO> parsePatientList(JsonNode response) {

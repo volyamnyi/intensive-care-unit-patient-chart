@@ -3,37 +3,17 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { MedicineCatalogItem, AllergyItem } from '../../types/medication';
-
-const fallbackCatalog: MedicineCatalogItem[] = [
-  { id: 1, name: 'Paracetamol', categoryRef: 1, ptgCode: '1', isHighRisk: false },
-  { id: 3, name: 'Morphine', categoryRef: 14, ptgCode: '4', isHighRisk: true },
-  { id: 5, name: 'Ceftriaxone', categoryRef: 2, ptgCode: '6', isHighRisk: false },
-  { id: 6, name: 'Metronidazole', categoryRef: 2, ptgCode: '2,3', isHighRisk: false },
-  { id: 7, name: 'Omeprazole', categoryRef: 3, ptgCode: '1', isHighRisk: false },
-  { id: 8, name: 'Heparin', categoryRef: 5, ptgCode: '5', isHighRisk: false },
-  { id: 9, name: 'Norepinephrine', categoryRef: 13, ptgCode: '3', isHighRisk: true },
-  { id: 10, name: 'Dopamine', categoryRef: 13, ptgCode: '3', isHighRisk: true },
-  { id: 11, name: 'NaCl 0.9%', categoryRef: 8, ptgCode: null, isHighRisk: false },
-  { id: 12, name: 'Glucose 5%', categoryRef: 8, ptgCode: null, isHighRisk: false },
-  { id: 13, name: 'Midazolam', categoryRef: 14, ptgCode: '4', isHighRisk: true },
-  { id: 14, name: 'Propofol', categoryRef: 14, ptgCode: '4', isHighRisk: true },
-  { id: 15, name: 'Dexamethasone', categoryRef: 1, ptgCode: '1', isHighRisk: false },
-  { id: 16, name: 'Insulin', categoryRef: 6, ptgCode: null, isHighRisk: false },
-  { id: 19, name: 'Ondansetron', categoryRef: 4, ptgCode: '2', isHighRisk: false },
-  { id: 20, name: 'Pantoprazole', categoryRef: 3, ptgCode: '1', isHighRisk: false },
-];
+import type { MedicineCatalogItem } from '../../types/medication';
 
 export interface MedicineSearchInputProps {
   canEdit: boolean;
   isDoctor: boolean;
-  allergies: AllergyItem[];
   onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
   onSearchMedicine: (keyword: string) => Promise<MedicineCatalogItem[]>;
 }
 
 export default function MedicineSearchInput({
-  canEdit, isDoctor, allergies, onAddItem, onSearchMedicine,
+  canEdit, isDoctor, onAddItem, onSearchMedicine,
 }: MedicineSearchInputProps) {
   const [medSearch, setMedSearch] = useState('');
   const [medOptions, setMedOptions] = useState<MedicineCatalogItem[]>([]);
@@ -42,6 +22,7 @@ export default function MedicineSearchInput({
   const [newRegime, setNewRegime] = useState('');
   const [addingDrug, setAddingDrug] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
@@ -49,18 +30,16 @@ export default function MedicineSearchInput({
 
   const handleMedSearch = useCallback(async (q: string) => {
     setMedSearch(q);
-    if (q.length < 2) { setMedOptions([]); setShowSuggestions(false); return; }
+    if (q.length < 2) { setMedOptions([]); setShowSuggestions(false); setSearchError(false); return; }
+    setSearchError(false);
     try {
       const res = await onSearchMedicine(q);
-      const opts = res.length > 0 ? res : fallbackCatalog.filter(m =>
-        m.name.toLowerCase().includes(q.toLowerCase()));
-      setMedOptions(opts);
-      setShowSuggestions(opts.length > 0);
+      setMedOptions(res);
+      setShowSuggestions(res.length > 0);
     } catch {
-      const opts = fallbackCatalog.filter(m =>
-        m.name.toLowerCase().includes(q.toLowerCase()));
-      setMedOptions(opts);
-      setShowSuggestions(opts.length > 0);
+      setMedOptions([]);
+      setShowSuggestions(false);
+      setSearchError(true);
     }
   }, [onSearchMedicine]);
 
@@ -71,17 +50,8 @@ export default function MedicineSearchInput({
   };
 
   const handleAddDrug = async () => {
-    // Resolve the drug name: prefer the selected suggestion, else fall back to
-    // the user-typed text so «Додати» is not locked behind a dropdown click.
     const medName = selectedMed?.name?.trim() || medSearch.trim();
     if (!medName) return;
-    const allergy = allergies.find(a =>
-      a.allergenName.toLowerCase() === medName.toLowerCase()
-    );
-    if (allergy) {
-      alert(`У пацієнта алергія на препарат "${allergy.allergenName}"!`);
-      return;
-    }
     setAddingDrug(true);
     try {
       await onAddItem({
@@ -95,6 +65,7 @@ export default function MedicineSearchInput({
       setNewRegime('');
       setMedOptions([]);
       setShowSuggestions(false);
+      setSearchError(false);
     } finally {
       setAddingDrug(false);
     }
@@ -138,6 +109,11 @@ export default function MedicineSearchInput({
               </button>
             ))}
           </div>
+        )}
+        {searchError && !showSuggestions && (
+          <p className="text-destructive text-xs mt-1 px-1">
+            Не вдалося завантажити каталог ліків з MIS
+          </p>
         )}
       </div>
       <Input placeholder="Спосіб" value={newMethod}

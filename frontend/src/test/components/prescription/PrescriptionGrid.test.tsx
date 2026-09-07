@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import PrescriptionGrid from '../../../components/prescription/PrescriptionGrid';
-import type { PrescriptionItem, PrescriptionDayPart, AllergyItem } from '../../../types/medication';
+import type { PrescriptionItem, PrescriptionDayPart } from '../../../types/medication';
 
 const mockItems: PrescriptionItem[] = [
   {
@@ -32,8 +32,6 @@ const mockItems: PrescriptionItem[] = [
   },
 ];
 
-const mockAllergies: AllergyItem[] = [];
-
 function renderGrid(props: Partial<React.ComponentProps<typeof PrescriptionGrid>> = {}) {
   return render(
     <ThemeModeProvider>
@@ -50,7 +48,6 @@ function renderGrid(props: Partial<React.ComponentProps<typeof PrescriptionGrid>
         onAddItem={props.onAddItem ?? vi.fn()}
         onRemoveItem={props.onRemoveItem ?? vi.fn()}
         onSearchMedicine={props.onSearchMedicine ?? vi.fn().mockResolvedValue([])}
-        allergies={props.allergies ?? mockAllergies}
         loading={props.loading}
       />
     </ThemeModeProvider>

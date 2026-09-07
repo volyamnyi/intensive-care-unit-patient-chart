@@ -117,45 +117,6 @@ class PrescriptionRepositoryTest {
     }
 
     @Test
-    void shouldCreateMedicineCatalogCache() {
-        MedicineCatalogCache med = MedicineCatalogCache.builder()
-                .id(1L)
-                .name("Paracetamol")
-                .categoryRef(1)
-                .ptgCode("1")
-                .build();
-        med = em.persistFlushFind(med);
-
-        assertThat(med.getIsHighRisk()).isFalse();
-    }
-
-    @Test
-    void shouldDetectHighRiskMedicine() {
-        MedicineCatalogCache med = MedicineCatalogCache.builder()
-                .id(3L)
-                .name("Morphine")
-                .categoryRef(14)
-                .build();
-        med = em.persistFlushFind(med);
-
-        assertThat(med.getIsHighRisk()).isTrue();
-    }
-
-    @Test
-    void shouldCreateAllergyCache() {
-        AllergyCache allergy = AllergyCache.builder()
-                .patientId(1001L)
-                .allergenName("Penicillin")
-                .sourceDocumentId(100)
-                .cachedAt(LocalDateTime.now())
-                .build();
-        allergy = em.persistFlushFind(allergy);
-
-        assertThat(allergy.getId()).isNotNull();
-        assertThat(allergy.getAllergenName()).isEqualTo("Penicillin");
-    }
-
-    @Test
     void shouldCreateDrugInteractionRule() {
         DrugInteractionRule rule = DrugInteractionRule.builder()
                 .ptgCodeA("1")

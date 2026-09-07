@@ -49,16 +49,14 @@ public interface MisService {
     boolean sendPdf(UUID clinicalDayId, byte[] pdfContent, String fileName, int version);
 
     /**
-     * Searches medicine catalog from MIS.
-     * Results are cached locally in medicine_catalog_cache table.
+     * Searches the medicine catalog from MIS (real mode:
+     * {@code spiMedicineItemKindDetails}). Read live on every call — no local
+     * cache. Pre-#258 the result was denormalised into
+     * {@code medicine_catalog_cache}; that table is dropped in
+     * {@code med/002-drop-allergy-and-medicine-cache.sql} and the legacy
+     * {@code spzIBMedicineDictionary} call site is replaced by the SPI call.
      */
     List<MedicineMisDTO> searchMedicineCatalog(String keyword);
-
-    /**
-     * Retrieves patient allergies from MIS.
-     * Results are cached locally in allergy_cache table.
-     */
-    List<AllergyMisDTO> getPatientAllergies(Long patientId);
 
     /**
      * Retrieves the list of services (послуги) from MIS — spzIBServiceList.

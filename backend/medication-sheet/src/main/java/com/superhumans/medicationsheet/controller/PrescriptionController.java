@@ -40,7 +40,6 @@ public class PrescriptionController {
     PrescriptionListMapper prescriptionListMapper;
     PrescriptionItemMapper prescriptionItemMapper;
     PrescriptionDayPartMapper prescriptionDayPartMapper;
-    AllergyMapper allergyMapper;
     MedicineCatalogMapper medicineCatalogMapper;
 
     @GetMapping
@@ -263,22 +262,10 @@ public class PrescriptionController {
                 req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword());
     }
 
-    @GetMapping("/allergies")
-    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
-    @Operation(summary = "Get patient allergies", description = "Retrieves allergy information from MIS for a specific patient")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved allergies")
-    })
-    public List<AllergyResponse> getAllergies(
-            @Parameter(description = "Patient ID from MIS") @RequestParam Long patientId) {
-        return misService.getPatientAllergies(patientId).stream()
-                .map(allergyMapper::toResponse)
-                .toList();
-    }
-
     @GetMapping("/medicine-catalog")
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
-    @Operation(summary = "Search medicine catalog", description = "Searches the medicine catalog from MIS. Returns empty list if no keyword provided.")
+    @Operation(summary = "Search medicine catalog",
+            description = "Reads the live medicine catalog from MIS (real mode: spiMedicineItemKindDetails). No local cache; see #258.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved medicine catalog")
     })

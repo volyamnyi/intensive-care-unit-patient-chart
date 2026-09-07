@@ -56,7 +56,6 @@ function renderGrid(props: Partial<GridProps> = {}) {
         onAddItem={props.onAddItem ?? vi.fn()}
         onRemoveItem={props.onRemoveItem ?? vi.fn()}
         onSearchMedicine={props.onSearchMedicine ?? vi.fn().mockResolvedValue([])}
-        allergies={props.allergies ?? []}
         loading={props.loading}
       />
     </ThemeModeProvider>

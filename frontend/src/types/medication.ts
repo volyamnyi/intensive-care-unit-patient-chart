@@ -63,13 +63,6 @@ export interface MedicineCatalogItem {
   isHighRisk: boolean | null;
 }
 
-export interface AllergyItem {
-  id: string;
-  patientId: number;
-  allergenName: string;
-  sourceDocumentId: number | null;
-}
-
 export interface VitalSignEntry {
   id: string;
   dayId: string;

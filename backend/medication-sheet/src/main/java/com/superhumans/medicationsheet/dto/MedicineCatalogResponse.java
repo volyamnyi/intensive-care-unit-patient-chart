@@ -4,7 +4,7 @@ import lombok.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class MedicineCatalogResponse {
     Long id;
@@ -12,4 +12,16 @@ public class MedicineCatalogResponse {
     Integer categoryRef;
     String ptgCode;
     Boolean isHighRisk;
+    String itemKindCode;
+    String itemKindAtc;
+    String itemKindUnit;
+    String itemKindManufacturer;
+    Boolean itemKindIsDisabled;
+    String itemKindEan;
+    Boolean itemKindIsDivisible;
+    String itemKindDlc;
+    Long medicineCategoryId;
+    String medicineCategoryName;
+    Long medicinePackageId;
+    String medicinePackageName;
 }

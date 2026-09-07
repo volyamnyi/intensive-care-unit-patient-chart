@@ -2,17 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import type { MedicineCatalogItem, PrescriptionItemAddRequest, AllergyItem } from '../../types/medication';
-import AllergyWarning from './AllergyWarning';
+import type { MedicineCatalogItem, PrescriptionItemAddRequest } from '../../types/medication';
 
 interface PrescriptionItemFormProps {
   onSubmit: (data: PrescriptionItemAddRequest) => void;
   onSearchMedicine: (keyword: string) => Promise<MedicineCatalogItem[]>;
-  allergies?: AllergyItem[];
   disabled?: boolean;
 }
 
-export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, allergies, disabled }: PrescriptionItemFormProps) {
+export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, disabled }: PrescriptionItemFormProps) {
   const [medicine, setMedicine] = useState<MedicineCatalogItem | null>(null);
   const [medicineMethod, setMedicineMethod] = useState('');
   const [regime, setRegime] = useState('');
@@ -76,8 +74,6 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, aller
     setOptions([]);
   };
 
-  const medicineName = medicine?.name || '';
-
   return (
     <div>
       <div className="grid grid-cols-12 gap-2 items-start">
@@ -134,7 +130,6 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, aller
           </Button>
         </div>
       </div>
-      <AllergyWarning medicineName={medicineName} allergies={allergies ?? []} />
     </div>
   );
 }

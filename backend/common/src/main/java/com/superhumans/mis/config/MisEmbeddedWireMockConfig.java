@@ -38,7 +38,6 @@ public class MisEmbeddedWireMockConfig {
     private void registerStubs(WireMockServer server) {
         stubForDictionary(server, "spzIBPatientSearch", "patients_92.json");
         stubForDictionary(server, "spzIBMedicineDictionary", "medicine_dictionary.json");
-        stubForDictionary(server, "spzIBPatientAllergy", "patient_allergy.json");
         stubForDictionary(server, "spzIBUserDetails", "user_details.json");
         stubForDictionary(server, "spzIBCompanyDetails", "company_details.json");
         stubForDictionary(server, "spzIBBookingStatusDictionary", "booking_status_dictionary.json");

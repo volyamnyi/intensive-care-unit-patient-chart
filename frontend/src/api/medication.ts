@@ -3,7 +3,7 @@ import type {
   PrescriptionList, PrescriptionListCreateRequest,
   PrescriptionItem, PrescriptionItemAddRequest,
   PrescriptionDayPart, PrescriptionExecutionCreateRequest,
-  MedicineCatalogItem, AllergyItem,
+  MedicineCatalogItem,
   VitalSignEntry, VitalSignDay, VitalSignEntryCreateRequest, VitalGridDay,
 } from '../types/medication';
 
@@ -40,8 +40,6 @@ export const prescriptionApi = {
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/cancel-assignment`),
   executeDose: (dayPartId: string, data: PrescriptionExecutionCreateRequest) =>
     client.post<void>(`/prescriptions/day-parts/${dayPartId}/execute`, data),
-  getAllergies: (patientId: number) =>
-    client.get<AllergyItem[]>('/prescriptions/allergies', { params: { patientId } }),
   getMedicineCatalog: (keyword?: string, signal?: AbortSignal) =>
     client.get<MedicineCatalogItem[]>('/prescriptions/medicine-catalog', { params: { keyword }, signal }),
 };

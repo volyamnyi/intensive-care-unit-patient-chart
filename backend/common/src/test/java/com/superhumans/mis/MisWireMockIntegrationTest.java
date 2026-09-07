@@ -39,9 +39,6 @@ class MisWireMockIntegrationTest {
                 .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBMedicineDictionary')]"))
                 .willReturn(okJson(readFixture("medicine_dictionary.json"))));
         wireMockServer.stubFor(post(urlEqualTo("/api/run"))
-                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBPatientAllergy')]"))
-                .willReturn(okJson(readFixture("patient_allergy.json"))));
-        wireMockServer.stubFor(post(urlEqualTo("/api/run"))
                 .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBUserDetails')]"))
                 .willReturn(okJson(readFixture("user_details.json"))));
         wireMockServer.stubFor(post(urlEqualTo("/api/run"))
@@ -116,33 +113,6 @@ class MisWireMockIntegrationTest {
     @Test
     void searchMedicineCatalog_noMatch_returnsEmptyList() {
         assertThat(service.searchMedicineCatalog("nonexistent-drug-xyz")).isEmpty();
-    }
-
-    // ---- patient allergies ----
-
-    @Test
-    void getPatientAllergies_patient1001_returnsTwoAllergies() {
-        List<AllergyMisDTO> result = service.getPatientAllergies(1001L);
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getAllergenName()).isEqualTo("Penicillin");
-        assertThat(result.get(1).getAllergenName()).isEqualTo("Aspirin");
-    }
-
-    @Test
-    void getPatientAllergies_patient1002_returnsOneAllergy() {
-        List<AllergyMisDTO> result = service.getPatientAllergies(1002L);
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getAllergenName()).isEqualTo("Iodine");
-    }
-
-    @Test
-    void getPatientAllergies_unknownPatient_returnsEmptyList() {
-        assertThat(service.getPatientAllergies(99999L)).isEmpty();
-    }
-
-    @Test
-    void getPatientAllergies_nullPatientId_returnsEmptyList() {
-        assertThat(service.getPatientAllergies(null)).isEmpty();
     }
 
     // ---- patients (92 total incl. prosthetics pair) ----

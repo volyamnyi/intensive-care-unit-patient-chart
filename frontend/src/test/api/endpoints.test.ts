@@ -244,11 +244,6 @@ describe('prescriptionApi', () => {
     expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/execute', { actualDose: '5mg', secondPersonLogin: 'nurse2', secondPersonPassword: 'nurse123' });
   });
 
-  it('getAllergies calls /prescriptions/allergies', () => {
-    prescriptionApi.getAllergies(1001);
-    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/allergies', { params: { patientId: 1001 } });
-  });
-
   it('getMedicineCatalog calls /prescriptions/medicine-catalog', () => {
     prescriptionApi.getMedicineCatalog('Penicillin');
     expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/medicine-catalog', { params: { keyword: 'Penicillin' }, signal: undefined });

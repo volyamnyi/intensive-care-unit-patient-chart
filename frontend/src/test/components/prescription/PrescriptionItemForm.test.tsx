@@ -16,7 +16,6 @@ function renderForm(props: Partial<React.ComponentProps<typeof PrescriptionItemF
       <PrescriptionItemForm
         onSubmit={props.onSubmit ?? vi.fn()}
         onSearchMedicine={props.onSearchMedicine ?? vi.fn(() => Promise.resolve(mockMedicines))}
-        allergies={props.allergies ?? []}
         disabled={props.disabled}
       />
     </ThemeModeProvider>

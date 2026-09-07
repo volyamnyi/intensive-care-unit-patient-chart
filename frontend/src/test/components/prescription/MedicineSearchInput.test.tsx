@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../../styles/ThemeContext';
 import MedicineSearchInput from '../../../components/prescription/MedicineSearchInput';
-import type { MedicineCatalogItem, AllergyItem } from '../../../types/medication';
+import type { MedicineCatalogItem } from '../../../types/medication';
 
 const mockCatalog: MedicineCatalogItem[] = [
   { id: 1, name: 'Paracetamol', categoryRef: 1, ptgCode: '1', isHighRisk: false },
@@ -16,7 +16,6 @@ function renderSearchInput(props: Partial<React.ComponentProps<typeof MedicineSe
       <MedicineSearchInput
         canEdit={props.canEdit ?? true}
         isDoctor={props.isDoctor ?? true}
-        allergies={props.allergies ?? []}
         onAddItem={props.onAddItem ?? vi.fn().mockResolvedValue(undefined)}
         onSearchMedicine={props.onSearchMedicine ?? vi.fn(() => Promise.resolve(mockCatalog))}
       />
@@ -84,21 +83,19 @@ describe('MedicineSearchInput — «Додати» button enablement (in-progres
     expect(screen.queryByRole('button', { name: 'Додати' })).toBeNull();
   });
 
-  it('shows an allergy alert for an allergic drug typed by name', async () => {
+  it('surfaces a fetch error without blocking submit', async () => {
     const user = userEvent.setup();
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    const onSearchMedicine = vi.fn(() => Promise.reject(new Error('network')));
     const onAddItem = vi.fn().mockResolvedValue(undefined);
-    const allergies: AllergyItem[] = [
-      { id: 'al-1', patientId: 1001, allergenName: 'Ondansetron', sourceDocumentId: null },
-    ];
-    renderSearchInput({ onAddItem, allergies });
+    renderSearchInput({ onSearchMedicine, onAddItem });
     const input = screen.getByPlaceholderText('Препарат');
     await user.type(input, 'Ondansetron');
+    expect(await screen.findByText(/Не вдалося завантажити каталог ліків з MIS/)).toBeInTheDocument();
     const add = screen.getByRole('button', { name: 'Додати' });
     await waitFor(() => expect(add).toBeEnabled());
     await user.click(add);
-    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
-    expect(onAddItem).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
+    await waitFor(() => expect(onAddItem).toHaveBeenCalledWith(
+      expect.objectContaining({ medicineName: 'Ondansetron' }),
+    ));
   });
 });

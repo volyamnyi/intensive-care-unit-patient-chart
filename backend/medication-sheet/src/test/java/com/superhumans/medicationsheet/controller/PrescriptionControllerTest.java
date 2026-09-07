@@ -5,7 +5,6 @@ import com.superhumans.medicationsheet.dto.*;
 import com.superhumans.medicationsheet.entity.*;
 import com.superhumans.medicationsheet.mapper.*;
 import com.superhumans.mis.MisService;
-import com.superhumans.mis.dto.AllergyMisDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.ErrorCode;
@@ -47,7 +46,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     PrescriptionListMapperImpl.class,
     PrescriptionItemMapperImpl.class,
     PrescriptionDayPartMapperImpl.class,
-    AllergyMapperImpl.class,
     MedicineCatalogMapperImpl.class
 })
 class PrescriptionControllerTest {
@@ -421,23 +419,13 @@ class PrescriptionControllerTest {
     }
 
     @Test
-    void getAllergies_returnsList() throws Exception {
-        AllergyMisDTO allergy = new AllergyMisDTO();
-        allergy.setPatientId(1001L);
-        allergy.setAllergenName("Penicillin");
-        allergy.setSourceDocumentId(42);
-        when(misService.getPatientAllergies(1001L)).thenReturn(List.of(allergy));
-
-        mockMvc.perform(get("/api/prescriptions/allergies")
-                        .param("patientId", "1001")
-                        .header("Authorization", "Bearer test-token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].allergenName").value("Penicillin"));
-    }
-
-    @Test
     void searchMedicineCatalog_returnsList() throws Exception {
-        MedicineMisDTO med = new MedicineMisDTO(1L, "Aspirin", 1, "N01");
+        MedicineMisDTO med = MedicineMisDTO.builder()
+                .id(1L)
+                .name("Aspirin")
+                .categoryRef(1)
+                .ptgCode("N01")
+                .build();
         when(misService.searchMedicineCatalog("Asp")).thenReturn(List.of(med));
 
         mockMvc.perform(get("/api/prescriptions/medicine-catalog")

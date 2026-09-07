@@ -6,7 +6,6 @@ import { ThemeModeProvider } from '../../styles/ThemeContext';
 const mockUseParams = vi.fn();
 const mockGetById = vi.fn();
 const mockGetItems = vi.fn();
-const mockGetAllergies = vi.fn().mockResolvedValue({ data: [] });
 const mockGetGrid = vi.fn().mockResolvedValue({ data: [] });
 const mockAddItemDay = vi.fn();
 const mockRemoveItemDay = vi.fn();
@@ -26,7 +25,6 @@ vi.mock('../../api/medication', () => ({
   prescriptionApi: {
     getById: (...a: unknown[]) => mockGetById(...a),
     getItems: (...a: unknown[]) => mockGetItems(...a),
-    getAllergies: (...a: unknown[]) => mockGetAllergies(...a),
     addItemDay: (...a: unknown[]) => mockAddItemDay(...a),
     removeItemDay: (...a: unknown[]) => mockRemoveItemDay(...a),
     planDose: vi.fn(), completeDose: vi.fn(),

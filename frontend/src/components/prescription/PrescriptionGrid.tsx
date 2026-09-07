@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { PrescriptionItem, PrescriptionDayPart, MedicineCatalogItem, AllergyItem } from '../../types/medication';
+import type { PrescriptionItem, PrescriptionDayPart, MedicineCatalogItem } from '../../types/medication';
 import MedicineSearchInput from './MedicineSearchInput';
 import PrescriptionSpreadsheet from './PrescriptionSpreadsheet';
 import ExecuteDosePopover from './ExecuteDosePopover';
@@ -24,7 +24,6 @@ export interface GridProps {
   onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
   onRemoveItem: (itemId: string) => Promise<void>;
   onSearchMedicine: (keyword: string) => Promise<MedicineCatalogItem[]>;
-  allergies: AllergyItem[];
   loading?: boolean;
 }
 
@@ -32,7 +31,7 @@ export default function PrescriptionGrid({
   items, canEdit, isDoctor, isNurse,
   onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onAddDay, onRemoveDay, onExecute,
   onAddItem, onRemoveItem,
-  onSearchMedicine, allergies, loading,
+  onSearchMedicine, loading,
 }: GridProps) {
 
   const allDates = useMemo(() => {
@@ -142,7 +141,6 @@ export default function PrescriptionGrid({
       <MedicineSearchInput
         canEdit={canEdit}
         isDoctor={isDoctor}
-        allergies={allergies}
         onAddItem={onAddItem}
         onSearchMedicine={onSearchMedicine}
       />
