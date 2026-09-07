@@ -76,13 +76,25 @@ app:
     embedded-wiremock-enabled: true
     wiremock-port: 9090
     wiremock-url: ${APP_MIS_WIREMOCK_URL:http://localhost:9090}
+    # MIS source selection: wiremock (default, legacy spzIB stubs) or real (Bearer auth, #255).
+    mode: ${APP_MIS_MODE:wiremock}
+    api:
+      base-url: ${APP_MIS_API_BASE_URL:}
+      token-path: ${APP_MIS_API_TOKEN_PATH:/token}
+      run-path: ${APP_MIS_API_RUN_PATH:/api/run}
+      login: ${APP_MIS_API_LOGIN:}
+      password: ${APP_MIS_API_PASSWORD:}
+      installation-guid: ${APP_MIS_API_INSTALLATION_GUID:}
+      connect-timeout-ms: 5000
+      read-timeout-ms: 15000
+      token-skew-sec: 60
 
   api:
     title: MIS Doctor Eleks API
     description: API for interacting with MIS Doctor Eleks records
 
   ldap:
-    enabled: false
+    enabled: true
     urls: ${APP_LDAP_URLS}
     base: ${APP_LDAP_BASE}
     username: ${APP_LDAP_USERNAME}

@@ -37,4 +37,29 @@ class MisMutualExclusionTest {
                         "app.mis.embedded-wiremock-enabled=true")
                 .run(context -> assertThat(context.getStartupFailure()).isNotNull());
     }
+
+    @Test
+    void realMode_bootsSuccessfully() {
+        runner.withPropertyValues(
+                        "app.mis.mode=real",
+                        "app.mis.embedded-wiremock-enabled=false")
+                .run(context -> {
+                    assertThat(context).hasSingleBean(RestTemplate.class);
+                    assertThat(context.getStartupFailure()).isNull();
+                });
+    }
+
+    @Test
+    void unknownMode_contextFails() {
+        runner.withPropertyValues("app.mis.mode=bogus")
+                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
+    }
+
+    @Test
+    void realModeWithEmbedded_contextFails() {
+        runner.withPropertyValues(
+                        "app.mis.mode=real",
+                        "app.mis.embedded-wiremock-enabled=true")
+                .run(context -> assertThat(context.getStartupFailure()).isNotNull());
+    }
 }

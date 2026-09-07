@@ -144,6 +144,13 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_MIS_WIREMOCK-URL` | `https://mis.internal/api` | Реальний endpoint MIS (з `MisApiClient.java:32` `app.mis.wiremock-url`) |
 | `APP_MIS_INSTALLATION-GUID` | *(GUID інсталяції)* | `MisApiClient.java:35` |
 | `APP_MIS_LOGIN` | *(integration user)* | `MisApiClient.java:38` |
+| `APP_MIS_MODE` | `wiremock` (дефолт) або `real` | Вибір джерела MIS (#255): `wiremock` — legacy-стаби, `real` — справжній MIS API з Bearer-автентифікацією |
+| `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Real-режим: `app.mis.api.base-url`, без дефолту — fail-fast на старті, якщо порожньо |
+| `APP_MIS_API_TOKEN_PATH` | `/token` | Real-режим: `app.mis.api.token-path` (має починатись з `/`) |
+| `APP_MIS_API_RUN_PATH` | `/api/run` | Real-режим: `app.mis.api.run-path` (має починатись з `/`) |
+| `APP_MIS_API_LOGIN` | *(з vault)* | Real-режим: логін MIS API, не в yml, не в git |
+| `APP_MIS_API_PASSWORD` | *(з vault)* | Real-режим: пароль MIS API, не в yml, не в git, ніколи в логи |
+| `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Real-режим: installationId, не в yml, не в git |
 | `SPRING_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` | реальний SMTP | `application.yml:21-24` має локальний демо |
 | `LOGGING_LEVEL_ROOT` | `INFO` | `application.yml:99` = DEBUG — забагато для прод |
 | `LOGGING_LEVEL_COM_SUPERHUMANS` | `INFO` | `application.yml:102` = TRACE |
@@ -189,6 +196,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ictc_app;
 4. Додати `RealMisServiceImpl` — новий `@ConditionalOnProperty(real-enabled=true, matchIfMissing=false)`.
 
 Ця частина **залишається TODO для продакшну** — якщо MIS ще не готовий, працюйте на `WireMockMisServiceImpl` (`APP_MIS_WIREMOCK_ENABLED=true`) і не забудьте, що відповіді — від WireMock `__files/*.json`, не реальні.
+
+**Real-режим (#255, доступний):** встановіть `APP_MIS_MODE=real` та заповніть `APP_MIS_API_BASE_URL / APP_MIS_API_LOGIN / APP_MIS_API_PASSWORD / APP_MIS_API_INSTALLATION_GUID` (шляхи — за потреби `APP_MIS_API_TOKEN_PATH / APP_MIS_API_RUN_PATH`). Клієнт сам отримує й кешує Bearer-токен (`MisAuthService`: reuse до `expires_in − skew`, один re-auth на 401); пароль/токен ніколи не потрапляють у логи чи винятки. Неповний конфіг валить старт (fail-fast, у повідомленні — лише імена ключів). Поки корпоративний MIS недосяжний з CI-раннерів, real-сюїти виконуються лише локально. Read-only policy чинна і для real-режиму: тільки читання + `sendPdf`.
 
 ### 1.6 Перший запуск
 
