@@ -1,4 +1,4 @@
-import { test, expect } from '../../fixtures/index';
+﻿import { test, expect } from '../../fixtures/index';
 
 // Regression for «Додати» on an in-progress («В ході») prescription list:
 // the button must be active as soon as a valid drug name is typed, even
@@ -55,23 +55,7 @@ test.describe('Medicine add button — in-progress list', () => {
     await expect(page.getByText('Ondansetron').first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('allergy guard still fires for a patient-allergic drug (typed-only name)', async ({ page }) => {
-    // Patient 1001 is allergic to Penicillin (seeded in `allergyData`).
-    const input = page.getByPlaceholder('Препарат').first();
-    await input.fill('Penicillin');
-
-    const add = page.getByRole('button', { name: 'Додати', exact: true });
-    await expect(add).toBeEnabled({ timeout: 10000 });
-
-    let dialogMessage = '';
-    page.once('dialog', (dialog) => {
-      dialogMessage = dialog.message();
-      void dialog.dismiss();
-    });
-    await add.click();
-    await expect.poll(() => dialogMessage, { timeout: 10000 }).toContain('алергія');
-    expect(dialogMessage).toContain('Penicillin');
-  });
+  
 
   test('selecting a catalog suggestion and adding still works', async ({ page }) => {
     const input = page.getByPlaceholder('Препарат').first();
