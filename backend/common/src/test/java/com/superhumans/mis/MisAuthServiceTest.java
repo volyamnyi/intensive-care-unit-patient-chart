@@ -37,6 +37,7 @@ class MisAuthServiceTest {
         ReflectionTestUtils.setField(properties, "mode", "real");
         ReflectionTestUtils.setField(properties, "baseUrl", "http://mis.test");
         ReflectionTestUtils.setField(properties, "tokenPath", "/token");
+        ReflectionTestUtils.setField(properties, "runPath", "/api/run");
         ReflectionTestUtils.setField(properties, "login", "api-login");
         ReflectionTestUtils.setField(properties, "password", PASSWORD);
         ReflectionTestUtils.setField(properties, "installationGuid", "test-guid");

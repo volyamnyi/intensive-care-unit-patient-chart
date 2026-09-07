@@ -94,7 +94,7 @@ app:
     description: API for interacting with MIS Doctor Eleks records
 
   ldap:
-    enabled: true
+    enabled: false
     urls: ${APP_LDAP_URLS}
     base: ${APP_LDAP_BASE}
     username: ${APP_LDAP_USERNAME}
