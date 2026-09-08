@@ -9,6 +9,7 @@ import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepo
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +76,7 @@ public class ProstheticsEligibilityService {
     /**
      * Primary constructor used by Spring (system clock).
      */
+    @Autowired
     public ProstheticsEligibilityService(MisService misService,
                                          ProstheticsOrderService orderService,
                                          ProstheticsPatientService patientService,
