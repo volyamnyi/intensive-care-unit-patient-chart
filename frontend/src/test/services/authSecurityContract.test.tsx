@@ -23,7 +23,7 @@ const { mockLoginFn, mockGetMe, mockLogoutFn, mockGetMyPermissions, mockPatientS
 vi.mock('../../api/platform', () => ({
   authApi: { login: mockLoginFn, logout: mockLogoutFn },
   userApi: { getMe: mockGetMe, getMyPermissions: mockGetMyPermissions },
-  patientApi: { search: mockPatientSearch },
+  patientApi: { search: mockPatientSearch, searchByModule: mockPatientSearch },
 }));
 
 vi.mock('../../api/medication', () => ({
@@ -144,7 +144,7 @@ describe('PrescriptionPage list-create gating', () => {
     weight: 80,
     bloodGroup: 'A',
     rhFactor: '+',
-    departmentId: 2,
+    departmentId: 19,
     room: '12',
     bed: '3',
   };
