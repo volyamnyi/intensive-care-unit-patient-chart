@@ -50,8 +50,8 @@ class PatientModuleFilterTest {
 
     @Test
     void unknownModule_failsFast() {
-        assertThatThrownBy(() -> PatientModuleFilter.filter("icu", List.of(patient(1L, 19L))))
+        assertThatThrownBy(() -> PatientModuleFilter.filter("surgery", List.of(patient(1L, 19L))))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("icu");
+                .hasMessageContaining("surgery");
     }
 }

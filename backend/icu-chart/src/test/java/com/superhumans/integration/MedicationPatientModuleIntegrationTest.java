@@ -62,7 +62,8 @@ class MedicationPatientModuleIntegrationTest extends AbstractIntegrationTest {
         stubMixedRoster();
 
         // A 400 carries the ErrorResponse object, not the patient array.
-        ResponseEntity<String> res = restTemplate.exchange("/api/patients?module=icu", HttpMethod.GET,
+        // ("icu" is a known module since #261 — "surgery" is not a module.)
+        ResponseEntity<String> res = restTemplate.exchange("/api/patients?module=surgery", HttpMethod.GET,
                 authGet(getDoctorToken()), String.class);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
