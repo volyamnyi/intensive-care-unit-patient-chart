@@ -23,6 +23,22 @@ export interface ProstheticsPatient {
   gender: string;
 }
 
+/** MIS document attached to a candidate (template 120/121, Phase 6 contract). */
+export interface ProstheticsCandidateDocument {
+  documentId?: number;
+  documentTemplateId?: number;
+  documentTemplateName?: string;
+  documentUrl?: string;
+}
+
+/** Ready-to-render worklist entry from `GET .../patients/candidates` (#259). */
+export interface ProstheticsCandidate {
+  patient: ProstheticsPatient;
+  orders: ProstheticsOrder[];
+  documents: ProstheticsCandidateDocument[];
+  documentsUnknown: boolean;
+}
+
 export interface ProstheticsOrder {
   id: string;
   patientId: string;

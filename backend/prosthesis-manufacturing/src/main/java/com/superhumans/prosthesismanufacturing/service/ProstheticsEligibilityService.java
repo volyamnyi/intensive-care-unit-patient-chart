@@ -109,13 +109,31 @@ public class ProstheticsEligibilityService {
      */
     @Transactional(readOnly = true)
     public List<ProstheticsCandidateResponse> getCandidates() {
+        return getCandidates(null);
+    }
+
+    /**
+     * Returns eligible candidates whose merged patient name or MIS id contains
+     * {@code query} (case-insensitive; blank matches all). Powers the setup
+     * search box (Phase 9, #262) without downloading the roster twice.
+     */
+    @Transactional(readOnly = true)
+    public List<ProstheticsCandidateResponse> getCandidates(String query) {
+        String needle = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
         return misService.getAllPatientsUnderTreatment().parallelStream()
                 .filter(p -> p.getId() != null && p.getDepartmentId() != null
                         && ELIGIBLE_DEPARTMENT_IDS.contains(p.getDepartmentId()))
                 .map(this::assess)
                 .flatMap(Optional::stream)
+                .filter(c -> needle.isEmpty() || matchesQuery(c, needle))
                 .sorted(Comparator.comparing(c -> Long.valueOf(c.getPatient().getId())))
                 .toList();
+    }
+
+    private static boolean matchesQuery(ProstheticsCandidateResponse candidate, String needle) {
+        String name = candidate.getPatient().getPib();
+        return (name != null && name.toLowerCase(java.util.Locale.ROOT).contains(needle))
+                || candidate.getPatient().getId().contains(needle);
     }
 
     private Optional<ProstheticsCandidateResponse> assess(PatientDTO mis) {

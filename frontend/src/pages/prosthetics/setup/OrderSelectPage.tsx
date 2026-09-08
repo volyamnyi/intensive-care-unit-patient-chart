@@ -8,14 +8,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { useProsthetics } from '@/prosthetics/ProstheticsContext';
-import { prostheticsOrderApi } from '@/api/prosthetics';
-import type { ProstheticsOrder } from '@/prosthetics/types';
+import { prostheticsOrderApi, prostheticsPatientApi } from '@/api/prosthetics';
+import type { ProstheticsCandidateDocument, ProstheticsOrder } from '@/prosthetics/types';
 import { SetupSteps } from '@/components/prosthetics/SetupSteps';
 
 export default function OrderSelectPage() {
   const navigate = useNavigate();
   const { draft, setDraftField } = useProsthetics();
   const [orders, setOrders] = useState<ProstheticsOrder[]>([]);
+  const [documents, setDocuments] = useState<ProstheticsCandidateDocument[]>([]);
+  const [documentsUnknown, setDocumentsUnknown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +41,22 @@ export default function OrderSelectPage() {
         setLoading(false);
       }
     };
+    // MIS document badges (Phase 9, #262): best-effort enrichment from the
+    // candidates worklist — the order list stays usable without it.
+    const fetchDocuments = async () => {
+      try {
+        const candRes = await prostheticsPatientApi.listCandidates();
+        const mine = candRes.data.find((c) => c.patient.id === draft.patientId);
+        if (mine) {
+          setDocuments(mine.documents);
+          setDocumentsUnknown(mine.documentsUnknown);
+        }
+      } catch {
+        // ignore — badges are decorative
+      }
+    };
     fetchOrders();
+    fetchDocuments();
   }, [draft.patientId, navigate]);
 
   return (
@@ -73,6 +90,22 @@ export default function OrderSelectPage() {
           <AlertTitle>Помилка</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+
+      {documents.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-1.5" data-testid="mis-documents">
+          <span className="text-xs text-muted-foreground">Документи MIS:</span>
+          {documents.map((d) => (
+            <Badge key={d.documentId ?? d.documentTemplateId} variant="secondary">
+              {d.documentTemplateName ?? `Шаблон ${d.documentTemplateId}`}
+            </Badge>
+          ))}
+        </div>
+      )}
+      {documentsUnknown && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          Документи MIS недоступні — показано локальні замовлення.
+        </p>
       )}
 
       {loading ? (

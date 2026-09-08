@@ -243,6 +243,27 @@ class ProstheticsEligibilityServiceTest {
     }
 
     @Test
+    void query_filtersCandidatesByNameOrMisId() {
+        when(misService.getAllPatientsUnderTreatment()).thenReturn(
+                List.of(misPatient(900001L, 19L), misPatient(900002L, 19L)));
+        when(orderService.list(eq("900001"), isNull())).thenReturn(List.of(order("PR-1")));
+        when(orderService.list(eq("900002"), isNull())).thenReturn(List.of(order("PR-2")));
+        when(misService.getPatientDocuments(anyLong()))
+                .thenReturn(List.of(misDocument(120L, "u")));
+        when(patientRepository.findById("900001")).thenReturn(Optional.empty());
+        when(patientRepository.findById("900002")).thenReturn(Optional.empty());
+
+        assertThat(service.getCandidates("900001"))
+                .extracting(c -> c.getPatient().getId())
+                .containsExactly("900001");
+        assertThat(service.getCandidates("пацієнт 900002"))
+                .extracting(c -> c.getPatient().getId())
+                .containsExactly("900002");
+        assertThat(service.getCandidates("nobody")).isEmpty();
+        assertThat(service.getCandidates("  ")).hasSize(2);
+    }
+
+    @Test
     void emptyBaseList_returnsEmptyWithoutFurtherCalls() {
         when(misService.getAllPatientsUnderTreatment()).thenReturn(List.of());
 

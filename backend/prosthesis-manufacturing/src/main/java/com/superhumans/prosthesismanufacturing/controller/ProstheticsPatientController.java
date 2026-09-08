@@ -39,8 +39,9 @@ public class ProstheticsPatientController {
     @GetMapping("/candidates")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List prosthetics candidates (eligible patients with orders and documents)")
-    public List<ProstheticsCandidateResponse> candidates() {
-        return eligibilityService.getCandidates();
+    public List<ProstheticsCandidateResponse> candidates(
+            @RequestParam(required = false) String query) {
+        return eligibilityService.getCandidates(query);
     }
 
     @GetMapping

@@ -7,8 +7,13 @@ const prostheticsOrderApiMock = vi.hoisted(() => ({
   listByPatient: vi.fn(),
 }));
 
+const prostheticsPatientApiMock = vi.hoisted(() => ({
+  listCandidates: vi.fn(),
+}));
+
 vi.mock('@/api/prosthetics', () => ({
   prostheticsOrderApi: prostheticsOrderApiMock,
+  prostheticsPatientApi: prostheticsPatientApiMock,
 }));
 
 const useProsthetics = vi.hoisted(() => vi.fn());
@@ -37,6 +42,7 @@ function renderPage() {
 describe('OrderSelectPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [] });
   });
 
   it('renders the page title and patient card', async () => {
@@ -83,6 +89,47 @@ describe('OrderSelectPage', () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByText(/Не вдалося завантажити замовлення/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows MIS document badges for the selected patient candidate', async () => {
+    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({
+      data: [
+        {
+          patient: { id: 'p1', pib: 'Іван', birthDate: '1990-01-01', gender: 'Чоловіча' },
+          orders: [],
+          documents: [
+            { documentId: 120, documentTemplateId: 120, documentTemplateName: 'Замовлення на протези' },
+            { documentId: 121, documentTemplateId: 121, documentTemplateName: 'Висновок лікаря' },
+          ],
+          documentsUnknown: false,
+        },
+      ],
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByTestId('mis-documents')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Замовлення на протези')).toBeInTheDocument();
+    expect(screen.getByText('Висновок лікаря')).toBeInTheDocument();
+  });
+
+  it('shows a hint when candidate documents are unknown', async () => {
+    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({
+      data: [
+        {
+          patient: { id: 'p1', pib: 'Іван', birthDate: '1990-01-01', gender: 'Чоловіча' },
+          orders: [],
+          documents: [],
+          documentsUnknown: true,
+        },
+      ],
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Документи MIS недоступні/)).toBeInTheDocument();
     });
   });
 

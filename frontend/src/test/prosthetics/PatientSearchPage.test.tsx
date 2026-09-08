@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PatientSearchPage from '@/pages/prosthetics/setup/PatientSearchPage';
-import type { ProstheticsPatient } from '@/prosthetics/types';
+import type { ProstheticsCandidate, ProstheticsPatient } from '@/prosthetics/types';
 
 const prostheticsPatientApiMock = vi.hoisted(() => ({
-  search: vi.fn(),
+  listCandidates: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
@@ -26,6 +26,13 @@ function mockUseProsthetics(draft = { patientId: null, orderId: null, templateId
   });
 }
 
+function candidate(p: ProstheticsPatient): ProstheticsCandidate {
+  return { patient: p, orders: [], documents: [], documentsUnknown: false };
+}
+
+const patientA: ProstheticsPatient = { id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01', gender: 'Чоловіча' };
+const patientB: ProstheticsPatient = { id: 'p2', pib: 'Олена Коваленко', birthDate: '1985-11-22', gender: 'Жіноча' };
+
 function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/prosthetics/new/select-patient']}>
@@ -37,7 +44,7 @@ function renderPage() {
 describe('PatientSearchPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    prostheticsPatientApiMock.search.mockResolvedValue({ data: [] });
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [] });
     mockUseProsthetics();
   });
 
@@ -47,42 +54,35 @@ describe('PatientSearchPage', () => {
     expect(screen.getByPlaceholderText(/пошук пацієнта/i)).toBeInTheDocument();
   });
 
-  it('loads all patients on mount and shows them in a table', async () => {
-    const patients: ProstheticsPatient[] = [
-      { id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01', gender: 'Чоловіча' },
-      { id: 'p2', pib: 'Олена Коваленко', birthDate: '1985-11-22', gender: 'Жіноча' },
-    ];
-    prostheticsPatientApiMock.search.mockResolvedValue({ data: patients });
+  it('loads candidates on mount and shows their patients in a table', async () => {
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [candidate(patientA), candidate(patientB)] });
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Іван Іванов')).toBeInTheDocument();
     });
     expect(screen.getByText('Олена Коваленко')).toBeInTheDocument();
+    expect(prostheticsPatientApiMock.listCandidates).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the full list visible when the query is shorter than 2 characters', async () => {
-    prostheticsPatientApiMock.search.mockResolvedValue({
-      data: [{ id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01', gender: 'Чоловіча' }],
-    });
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [candidate(patientA)] });
     renderPage();
     await waitFor(() => expect(screen.getByText('Іван Іванов')).toBeInTheDocument());
     fireEvent.change(screen.getByPlaceholderText(/пошук пацієнта/i), { target: { value: 'i' } });
     await waitFor(() => expect(screen.getByText('Іван Іванов')).toBeInTheDocument());
   });
 
-  it('refines the list via the debounced server search', async () => {
-    prostheticsPatientApiMock.search.mockResolvedValue({
-      data: [{ id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01', gender: 'Чоловіча' }],
-    });
+  it('refines the list via the debounced candidates search', async () => {
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [candidate(patientA)] });
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/пошук пацієнта/i), { target: { value: 'Іван' } });
     await waitFor(() => {
-      expect(prostheticsPatientApiMock.search).toHaveBeenCalledWith('Іван', expect.any(AbortSignal));
+      expect(prostheticsPatientApiMock.listCandidates).toHaveBeenCalledWith('Іван', expect.any(AbortSignal));
     });
   });
 
-  it('shows empty state when no patients match the search', async () => {
-    prostheticsPatientApiMock.search.mockResolvedValue({ data: [] });
+  it('shows empty state when no candidates match the search', async () => {
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [] });
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/пошук пацієнта/i), { target: { value: 'nobody' } });
     await waitFor(() => {
@@ -91,9 +91,7 @@ describe('PatientSearchPage', () => {
   });
 
   it('renders patient table with results', async () => {
-    prostheticsPatientApiMock.search.mockResolvedValue({
-      data: [{ id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01', gender: 'Чоловіча' }],
-    });
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [candidate(patientA)] });
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/пошук пацієнта/i), { target: { value: 'Іван' } });
     await waitFor(() => {
@@ -108,9 +106,7 @@ describe('PatientSearchPage', () => {
       setDraftField,
       resetDraft: vi.fn(),
     });
-    prostheticsPatientApiMock.search.mockResolvedValue({
-      data: [{ id: 'p1', pib: 'Іван Іванов', birthDate: '1990-01-01', gender: 'Чоловіча' }],
-    });
+    prostheticsPatientApiMock.listCandidates.mockResolvedValue({ data: [candidate(patientA)] });
     renderPage();
     await waitFor(() => expect(screen.getByText('Іван Іванов')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /Обрати/i }));
@@ -118,7 +114,7 @@ describe('PatientSearchPage', () => {
   });
 
   it('shows error on search failure', async () => {
-    prostheticsPatientApiMock.search.mockRejectedValue(new Error('network'));
+    prostheticsPatientApiMock.listCandidates.mockRejectedValue(new Error('network'));
     renderPage();
     fireEvent.change(screen.getByPlaceholderText(/пошук пацієнта/i), { target: { value: 'ivan' } });
     await waitFor(() => {

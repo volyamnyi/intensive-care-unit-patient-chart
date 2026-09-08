@@ -1017,7 +1017,8 @@
                             "patientRhFactor":  "Rh+",
                             "patientRoomNumber":  "Палата 501",
                             "patientBedNumber":  "Ліжко №1",
-                            "patientDoctor":  "Ходирєва І."
+                            "patientDoctor":  "Ходирєва І.",
+                            "patientDepartmentID":  19
                         },
                         {
                             "patientID":  900002,
@@ -1036,7 +1037,8 @@
                             "patientRhFactor":  "Rh+",
                             "patientRoomNumber":  "Палата 502",
                             "patientBedNumber":  "Ліжко №2",
-                            "patientDoctor":  "Ходирєва І."
+                            "patientDoctor":  "Ходирєва І.",
+                            "patientDepartmentID":  19
                         },
                         {
                             "patientID":  2001,

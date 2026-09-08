@@ -50,6 +50,16 @@ describe('prostheticsPatientApi', () => {
     await prostheticsPatientApi.getById('p1');
     expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/patients/p1');
   });
+
+  it('lists candidates with optional query', async () => {
+    clientMock.get.mockReturnValue(ok([]));
+    const signal = new AbortController().signal;
+    await prostheticsPatientApi.listCandidates('сніжко', signal);
+    expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/patients/candidates', {
+      params: { query: 'сніжко' },
+      signal,
+    });
+  });
 });
 
 describe('prostheticsOrderApi', () => {

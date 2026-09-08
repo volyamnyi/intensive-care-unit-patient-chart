@@ -36,15 +36,19 @@ export default function PatientSearchPage() {
     document.title = 'Вибір пацієнта — Виробництво протезів';
   }, []);
 
+  // Source: the backend eligibility worklist (Phase 9, #262) — only
+  // candidates (department 19/27/37 with 120/121 documents and local
+  // orders) are listed; the frontend never filters eligibility itself.
   useEffect(() => {
     let active = true;
     setLoading(true);
     prostheticsPatientApi
-      .search()
+      .listCandidates()
       .then((res) => {
         if (active) {
-          setAllPatients(res.data);
-          setPatients(res.data);
+          const rows = res.data.map((c) => c.patient);
+          setAllPatients(rows);
+          setPatients(rows);
         }
       })
       .catch(() => {
@@ -67,8 +71,8 @@ export default function PatientSearchPage() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await prostheticsPatientApi.search(query, controller.signal);
-        setPatients(res.data);
+        const res = await prostheticsPatientApi.listCandidates(query, controller.signal);
+        setPatients(res.data.map((c) => c.patient));
       } catch {
         setError('Помилка пошуку');
       } finally {

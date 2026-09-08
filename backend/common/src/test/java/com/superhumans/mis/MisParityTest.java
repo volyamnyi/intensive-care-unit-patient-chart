@@ -91,6 +91,16 @@ class MisParityTest {
     }
 
     @Test
+    void candidates900001and900002_carryDepartment19() {
+        var byId = fixturePatients().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        p -> p.get("patientID").asLong(), java.util.function.Function.identity()));
+        // Setup-flow seed rows must pass the candidates department rule (#262).
+        assertThat(byId.get(900001L).get("patientDepartmentID").asLong()).isEqualTo(19L);
+        assertThat(byId.get(900002L).get("patientDepartmentID").asLong()).isEqualTo(19L);
+    }
+
+    @Test
     void surgeryAndRehabPatients2001to2040_haveRoomBedDoctorDepartment() {
         var withDept = fixturePatients().stream()
                 .filter(p -> p.get("patientID").asLong() >= 2001

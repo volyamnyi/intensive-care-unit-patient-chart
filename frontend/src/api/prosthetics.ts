@@ -1,5 +1,6 @@
 import client from './client';
 import type {
+  ProstheticsCandidate,
   ProstheticsPatient,
   ProstheticsOrder,
   FlowTemplate,
@@ -29,6 +30,9 @@ export const prostheticsPatientApi = {
   search: (query?: string, signal?: AbortSignal) =>
     client.get<ProstheticsPatient[]>(`${BASE}/patients`, { params: { query }, signal }),
   getById: (id: string) => client.get<ProstheticsPatient>(`${BASE}/patients/${id}`),
+  /** Eligibility worklist (Phase 9, #262): backend-filtered candidates. */
+  listCandidates: (query?: string, signal?: AbortSignal) =>
+    client.get<ProstheticsCandidate[]>(`${BASE}/patients/candidates`, { params: { query }, signal }),
 };
 
 export const prostheticsOrderApi = {

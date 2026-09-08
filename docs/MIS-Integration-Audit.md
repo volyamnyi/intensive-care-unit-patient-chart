@@ -255,3 +255,22 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   `AbortController`; додано error-стан з retry (раніше помилки ковтались мовчки),
   loading/empty без змін. `CreateCardPage` без змін. `DepartmentDashboardPage` —
   verify-only: скоуп локальною БД епізодів + MIS-резолв імен без фільтра, не чіпано.
+
+### Phase 9 — prosthetics order selection (issue #262, in progress)
+
+- `PatientSearchPage` — джерело замінено на кандидати Phase 6
+  (`prostheticsPatientApi.listCandidates`, `GET .../patients/candidates` з
+  необов'язковим `?query=` — фільтр по ПІБ/ID на бекенді; структура
+  debounce + `AbortController` + loading/empty/error збережена). Фронтенд
+  eligibility не фільтрує. POM `searchPatient` не чіпано — кандидати збігаються
+  з його URL-предикатом як підрядок.
+- `OrderSelectPage` — бейджі документів MIS (template-імена з кандидата;
+  `documentsUnknown` — приглушений хінт); список ордерів/empty/error без змін.
+  Прямої зв'язки локальний ордер↔документ у моделі немає — мітки рівня пацієнта,
+  чесно.
+- Без змін: `OrderReviewPage` (MIS-`documentUrl` + fallback-банер + лейбл джерела
+  + гейт дублікатів — уже з #257 follow-up), `TemplateSelectPage`,
+  `ProstheticsContext.loadOrders` (мертвий, рішення — Phase 11), мертві `*Step`
+  (рішення — Phase 11), витік object-URL (verify-only: залишки коректно revoke'ають).
+- Фікстура: 900001/900002 отримали `patientDepartmentID: 19` (setup-флоу E2E
+  йде через кандидати; локальні ордери PR-2026-* на місці); `MisParityTest` пінить.
