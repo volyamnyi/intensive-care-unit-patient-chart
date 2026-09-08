@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 import tools.jackson.databind.JsonNode;
@@ -29,6 +30,10 @@ class MisApiClientTest {
         mapper = new tools.jackson.databind.ObjectMapper();
 
         client = new MisApiClient(clientTransport, mapper);
+        ReflectionTestUtils.setField(client, "baseUrl", "http://localhost:9090");
+        ReflectionTestUtils.setField(client, "runPath", "/api/run");
+        ReflectionTestUtils.setField(client, "login", "integration");
+        ReflectionTestUtils.setField(client, "installationGuid", "00000000-0000-0000-0000-000000000000");
     }
 
     @Test
