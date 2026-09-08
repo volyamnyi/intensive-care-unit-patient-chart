@@ -42,7 +42,7 @@ class MisApiClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(headerDoesNotExist("Authorization"))
                 .andExpect(content().string(
-                        java.util.regex.Matcher.quoteReplacement("{\"params\":[{\"name\":\"q\",\"value\":\"x\"},{\"name\":\"Login\",\"value\":\"integration\"}],\"installationId\":\"00000000-0000-0000-0000-000000000000\"}")
+                        java.util.regex.Matcher.quoteReplacement("{\"name\":\"spzIBPatientSearch\",\"params\":[{\"name\":\"q\",\"value\":\"x\"},{\"name\":\"Login\",\"value\":\"integration\"}],\"installationId\":\"00000000-0000-0000-0000-000000000000\"}")
                 ))
                 .andRespond(withSuccess("{\"ok\":true}", MediaType.APPLICATION_JSON));
 
