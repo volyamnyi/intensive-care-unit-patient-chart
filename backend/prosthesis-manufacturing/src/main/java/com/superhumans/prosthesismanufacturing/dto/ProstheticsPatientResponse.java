@@ -25,4 +25,10 @@ public class ProstheticsPatientResponse {
     String healthStatus;
     String clinicalState;
     String stump;
+    /**
+     * MIS department id (single source: {@code PatientDTO.departmentId}).
+     * Drives prosthetics eligibility (departments 19/27/37, #259); null when
+     * the response is built from the local registry only.
+     */
+    Long departmentId;
 }

@@ -204,3 +204,26 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   Sign-off власника відстежується на issue #258 (клінічна безпека).
 - `spzIBMedicineDictionary` + `spzIBPatientAllergy` у real-гілці мертві; контракт
   `medicine-catalog` не зламаний (CI run `34152000037` all 6 jobs green).
+
+### Phase 6 — eligibility (issue #259, in progress)
+
+- Новий `ProstheticsEligibilityService` (orchestration — тут, не в контролері/фронті):
+  `getAllPatientsUnderTreatment()` (Phase 3) → dept-фільтр {19,27,37} → локальні ордери
+  (`ProstheticsOrderService.list`, без ордерів — мовчки повз) → документи (Phase 4) →
+  template-фільтр {120,121} → готові кандидати `{patient, orders[], documents[]`
+  (з `documentUrl`), `documentsUnknown}`. Нові ендпоїнт `GET .../patients/candidates`
+  (той самий `@PreAuthorize`, старі без змін) та поле `departmentId` у
+  `ProstheticsPatientResponse` (джерело — `PatientDTO.departmentId`).
+- Правила деградації: помилка документів одного пацієнта — `documentsUnknown=true`
+  з порожніми документами (fail-open з явною позначкою, debug-лог без PII), список живе.
+- N+1: batch-метода в MIS немає — обмежений паралелізм (common pool, детермінований
+  порядок за MIS id) + TTL-кеш документів 5 хв (невдалі fetchі не кешуються).
+  Усі три константи — припущення (b)/(c)/(f) в одному місці, клас задокументовано.
+- П.6 Scope (від'єднання `MisOrderTemplateDataService`): виконувати нічого —
+  сервіс і збагачення рецепта вже видалено у #257 follow-up; верифіковано grep-ом
+  (нуль споживачів `getServices/getPatientBookings/getPatientInfo`). Ті три методи,
+  парсери, DTO (`ServiceMisDTO`, `BookingMisDTO`, `PatientInfoMisDTO`) та їхні
+  unit-тести видалено тут; runtime-стаби/фікстури лишаються до #264 (cutover),
+  `stub_mapping.json` позначено `removed`.
+- Без змін: інстанс-лайфсайкл, черги, PDF-трансфер, RBAC, фронтенд (споживання — Phase 9),
+  E2E — немає (UI — Phase 9, повна міграція — Phase 14).

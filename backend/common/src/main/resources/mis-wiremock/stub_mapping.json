@@ -7,7 +7,7 @@
     "policy":  "ICU Chart is READ-ONLY client of MIS. The ONLY exception is sendPdf(). All MIS write methods MUST NEVER be called.",
     "summary":  {
                     "totalMisApiMethods":  50,
-                    "totalStubbed":  10,
+                    "totalStubbed":  9,
                     "totalReadOnlyNotStubbed":  0,
                     "totalForbiddenWriteMethods":  30,
                     "driftedStubs":  0
@@ -169,9 +169,9 @@
                          "wiremockBody":  "mis-wiremock/__files/service_list.json",
                          "misServiceMethod":  "getServices()",
                          "misServiceClass":  "WireMockMisServiceImpl.java",
-                         "status":  "stubbed",
+                         "status":  "removed (#259)",
                          "direction":  "READ",
-                         "description":  "Returns services (послуги) with ISO 9999 codes. Used by prosthetics order templates for product code.",
+                         "description":  "REMOVED (#259): no consumers since the recipe-enrichment detachment (MisOrderTemplateDataService deleted in #257 follow-up); the MisService method, parser, DTO and unit tests are deleted. Runtime stub fixture dies in #264.",
                          "responseRoot":  "serviceList",
                          "fields":  [
                                         "serviceID",
@@ -190,9 +190,9 @@
                          "wiremockBody":  "mis-wiremock/__files/booking_list.json",
                          "misServiceMethod":  "getPatientBookings()",
                          "misServiceClass":  "WireMockMisServiceImpl.java",
-                         "status":  "stubbed",
+                         "status":  "removed (#259)",
                          "direction":  "READ",
-                         "description":  "Returns patient bookings (бронювання послуг). Used by prosthetics order templates for materials.",
+                         "description":  "REMOVED (#259): no consumers since the recipe-enrichment detachment; the MisService method, parsers, DTO and unit tests are deleted. Runtime stub fixture dies in #264.",
                          "responseRoot":  "bookingList",
                          "fields":  [
                                         "bookingID",
@@ -239,9 +239,9 @@
                          "wiremockBody":  "mis-wiremock/__files/patient_info.json",
                          "misServiceMethod":  "getPatientInfo()",
                          "misServiceClass":  "WireMockMisServiceImpl.java",
-                         "status":  "stubbed",
+                         "status":  "removed (#259)",
                          "direction":  "READ",
-                         "description":  "Returns extended patient info (account, bookings, debt). Used by prosthetics order templates for the personal data section.",
+                         "description":  "REMOVED (#259): no consumers since the recipe-enrichment detachment; the MisService method, parser, DTO and unit tests are deleted. Runtime stub fixture dies in #264.",
                          "responseRoot":  "patientInfo",
                          "fields":  [
                                         "patientID",

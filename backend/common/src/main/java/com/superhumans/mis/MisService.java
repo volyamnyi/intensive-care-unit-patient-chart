@@ -59,28 +59,10 @@ public interface MisService {
     List<MedicineMisDTO> searchMedicineCatalog(String keyword);
 
     /**
-     * Retrieves the list of services (послуги) from MIS — spzIBServiceList.
-     * Services carry ISO 9999 / product codes used by prosthetics order templates.
-     */
-    List<ServiceMisDTO> getServices();
-
-    /**
-     * Retrieves patient bookings (бронювання послуг) from MIS — spzIBBookingList.
-     * Bookings carry service codes, names and dates used by prosthetics order templates.
-     */
-    List<BookingMisDTO> getPatientBookings(Long patientId);
-
-    /**
      * Retrieves patient documents from MIS (real mode: {@code spiDocumentProsthesCheck}).
      * Used to link order templates with MIS patient documents.
      */
     List<DocumentMisDTO> getPatientDocuments(Long patientId);
-
-    /**
-     * Retrieves extended patient info (account, bookings, debt) from MIS — spzIBPatientInfo.
-     * Used by prosthetics order templates for the "Загальні відомості про особу" section.
-     */
-    Optional<PatientInfoMisDTO> getPatientInfo(Long patientId);
 
     /**
      * Sets the MIS error-simulation mode (testing hook) on the active MIS implementation.

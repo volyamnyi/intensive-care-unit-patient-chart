@@ -388,6 +388,7 @@ java -jar app/target/app-*.jar
 |---|---|---|---|
 | `GET` | `/api/prosthesis-manufacturing/patients` | PROSTHETIST, PROSTHETICS_ADMIN | Search patients |
 | `GET` | `/api/prosthesis-manufacturing/patients/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get patient by ID |
+| `GET` | `/api/prosthesis-manufacturing/patients/candidates` | PROSTHETIST, PROSTHETICS_ADMIN | Eligible worklist: dept 19/27/37 + 120/121 docs + orders (#259) |
 | `POST` | `/api/prosthesis-manufacturing/patients` | PROSTHETICS_ADMIN | Create patient |
 | `GET` | `/api/prosthesis-manufacturing/orders` | PROSTHETIST, PROSTHETICS_ADMIN | List orders |
 | `GET` | `/api/prosthesis-manufacturing/orders/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get order by ID |

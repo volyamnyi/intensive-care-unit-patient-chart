@@ -251,28 +251,6 @@ public class WireMockMisServiceImpl implements MisService {
     }
 
     @Override
-    public List<ServiceMisDTO> getServices() {
-        checkErrors();
-        JsonNode response = misApiClient.callMethod("spzIBServiceList");
-        auditService.logAction("MIS", null, "GET_SERVICES", getUserId());
-        return parseServiceList(response);
-    }
-
-    @Override
-    public List<BookingMisDTO> getPatientBookings(Long patientId) {
-        checkErrors();
-        if (patientId == null) {
-            return List.of();
-        }
-        JsonNode response = misApiClient.callMethod(
-                "spzIBBookingList",
-                new MisApiClient.Param("PatientID", String.valueOf(patientId))
-        );
-        auditService.logAction("MIS", null, "GET_PATIENT_BOOKINGS", getUserId());
-        return parseBookingList(response);
-    }
-
-    @Override
     public List<DocumentMisDTO> getPatientDocuments(Long patientId) {
         checkErrors();
         if (patientId == null) {
@@ -285,71 +263,6 @@ public class WireMockMisServiceImpl implements MisService {
         );
         auditService.logAction("MIS", null, "GET_PATIENT_DOCUMENTS", getUserId());
         return parseDocumentList(response);
-    }
-
-    @Override
-    public Optional<PatientInfoMisDTO> getPatientInfo(Long patientId) {
-        checkErrors();
-        if (patientId == null) {
-            return Optional.empty();
-        }
-        JsonNode response = misApiClient.callMethod(
-                "spzIBPatientInfo",
-                new MisApiClient.Param("PatientID", String.valueOf(patientId))
-        );
-        auditService.logAction("MIS", null, "GET_PATIENT_INFO", getUserId());
-        return parsePatientInfo(response);
-    }
-
-    private List<ServiceMisDTO> parseServiceList(JsonNode response) {
-        JsonNode list = response.get("serviceList");
-        if (list == null || !list.isArray()) {
-            return List.of();
-        }
-        List<ServiceMisDTO> result = new ArrayList<>();
-        for (JsonNode node : list) {
-            result.add(ServiceMisDTO.builder()
-                    .serviceId(node.has("serviceID") ? node.get("serviceID").asLong() : null)
-                    .serviceName(node.has("serviceName") ? node.get("serviceName").asText() : null)
-                    .serviceDesc(node.has("serviceDesc") ? node.get("serviceDesc").asText() : null)
-                    .serviceCode(node.has("serviceCode") ? node.get("serviceCode").asText() : null)
-                    .serviceParentId(node.has("serviceParentID") ? node.get("serviceParentID").asLong() : null)
-                    .serviceDuration(node.has("serviceDuration") ? node.get("serviceDuration").asInt() : null)
-                    .serviceExternalId(node.has("serviceExternalID") ? node.get("serviceExternalID").asText() : null)
-                    .servicePrice(node.has("servicePrice") && !node.get("servicePrice").isNull()
-                            ? node.get("servicePrice").asDouble() : null)
-                    .build());
-        }
-        return result;
-    }
-
-    private List<BookingMisDTO> parseBookingList(JsonNode response) {
-        JsonNode list = response.get("bookingList");
-        if (list == null || !list.isArray()) {
-            return List.of();
-        }
-        List<BookingMisDTO> result = new ArrayList<>();
-        for (JsonNode node : list) {
-            result.add(BookingMisDTO.builder()
-                    .bookingId(node.has("bookingID") ? node.get("bookingID").asLong() : null)
-                    .bookingName(node.has("bookingName") ? node.get("bookingName").asText() : null)
-                    .bookingDate(parseDateTime(node, "bookingDate"))
-                    .patientId(node.has("patientID") ? node.get("patientID").asLong() : null)
-                    .serviceId(node.has("serviceID") ? node.get("serviceID").asLong() : null)
-                    .serviceCode(node.has("serviceCode") ? node.get("serviceCode").asText() : null)
-                    .bookingServicePriceValue(node.has("bookingServicePriceValue")
-                            && !node.get("bookingServicePriceValue").isNull()
-                            ? node.get("bookingServicePriceValue").asDouble() : null)
-                    .bookingQuantity(node.has("bookingQuantity") ? node.get("bookingQuantity").asInt() : null)
-                    .bookingStatusCode(node.has("bookingStatusCode") ? node.get("bookingStatusCode").asText() : null)
-                    .bookingPaymentStatusCode(node.has("bookingPaymentStatusCode")
-                            ? node.get("bookingPaymentStatusCode").asText() : null)
-                    .bookingCreationDate(parseDateTime(node, "bookingCreationDate"))
-                    .bookingExecutionUserLogin(node.has("bookingExecutionUserLogin")
-                            ? node.get("bookingExecutionUserLogin").asText() : null)
-                    .build());
-        }
-        return result;
     }
 
     private List<DocumentMisDTO> parseDocumentList(JsonNode response) {
@@ -387,49 +300,6 @@ public class WireMockMisServiceImpl implements MisService {
                     .height(intOrNull(node, "height", "patientHeight"))
                     .weight(intOrNull(node, "weight", "patientWeight"))
                     .note(textOrNull(node, "note"))
-                    .build());
-        }
-        return result;
-    }
-
-    private Optional<PatientInfoMisDTO> parsePatientInfo(JsonNode response) {
-        JsonNode info = response.get("patientInfo");
-        if (info == null || !info.isObject()) {
-            return Optional.empty();
-        }
-        PatientInfoMisDTO.PatientInfoMisDTOBuilder builder = PatientInfoMisDTO.builder()
-                .patientId(info.has("patientID") ? info.get("patientID").asLong() : null)
-                .patientName(info.has("patientName") ? info.get("patientName").asText() : null)
-                .patientBirthDate(parseDate(info, "patientBirthDate"))
-                .patientAddress(info.has("patientAddress") ? info.get("patientAddress").asText() : null)
-                .patientPhone(info.has("patientPhone") ? info.get("patientPhone").asText() : null)
-                .patientEmail(info.has("patientEmail") ? info.get("patientEmail").asText() : null)
-                .patientSexCode(info.has("patientSexCode") ? info.get("patientSexCode").asText() : null)
-                .accountValue(info.has("accountValue") && !info.get("accountValue").isNull()
-                        ? info.get("accountValue").asDouble() : null)
-                .patientBookingSum(info.has("patientBookingSum") && !info.get("patientBookingSum").isNull()
-                        ? info.get("patientBookingSum").asDouble() : null)
-                .patientDebtSum(info.has("patientDebtSum") && !info.get("patientDebtSum").isNull()
-                        ? info.get("patientDebtSum").asDouble() : null);
-        if (info.has("patientBookingAct") && info.get("patientBookingAct").isArray()) {
-            builder.patientBookingAct(parseBookingListFromAct(info.get("patientBookingAct")));
-        }
-        return Optional.of(builder.build());
-    }
-
-    private List<BookingMisDTO> parseBookingListFromAct(JsonNode act) {
-        List<BookingMisDTO> result = new ArrayList<>();
-        for (JsonNode node : act) {
-            result.add(BookingMisDTO.builder()
-                    .bookingId(node.has("bookingID") ? node.get("bookingID").asLong() : null)
-                    .bookingName(node.has("bookingName") ? node.get("bookingName").asText() : null)
-                    .bookingDate(parseDateTime(node, "bookingDate"))
-                    .serviceId(node.has("serviceID") ? node.get("serviceID").asLong() : null)
-                    .serviceCode(node.has("serviceCode") ? node.get("serviceCode").asText() : null)
-                    .bookingServicePriceValue(node.has("bookingServicePriceValue")
-                            && !node.get("bookingServicePriceValue").isNull()
-                            ? node.get("bookingServicePriceValue").asDouble() : null)
-                    .bookingQuantity(node.has("bookingQuantity") ? node.get("bookingQuantity").asInt() : null)
                     .build());
         }
         return result;

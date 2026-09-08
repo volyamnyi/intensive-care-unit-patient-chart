@@ -1,6 +1,8 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
+import com.superhumans.prosthesismanufacturing.dto.ProstheticsCandidateResponse;
 import com.superhumans.prosthesismanufacturing.dto.ProstheticsPatientResponse;
+import com.superhumans.prosthesismanufacturing.service.ProstheticsEligibilityService;
 import com.superhumans.prosthesismanufacturing.service.ProstheticsPatientService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +29,19 @@ import java.util.List;
 public class ProstheticsPatientController {
 
     ProstheticsPatientService patientService;
+    ProstheticsEligibilityService eligibilityService;
+
+    /**
+     * Prosthetics worklist candidates (Phase 6, #259): patients under
+     * treatment in departments 19/27/37 holding a 120/121 MIS document,
+     * with local orders attached. Consumed by the frontend in Phase 9.
+     */
+    @GetMapping("/candidates")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
+    @Operation(summary = "List prosthetics candidates (eligible patients with orders and documents)")
+    public List<ProstheticsCandidateResponse> candidates() {
+        return eligibilityService.getCandidates();
+    }
 
     @GetMapping
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")

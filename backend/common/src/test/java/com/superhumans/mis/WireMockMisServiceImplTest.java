@@ -310,62 +310,7 @@ class WireMockMisServiceImplTest {
         assertThat(service.getDictionary("no-such-dictionary")).isEmpty();
     }
 
-    // ---- prosthetics support methods ----
-
-    @Test
-    void getServices_parsesServiceList() {
-        when(misApiClient.callMethod("spzIBServiceList")).thenReturn(json("""
-                {"serviceList":[
-                  {"serviceID":500,"serviceName":"Протез передпліччя",
-                   "serviceDesc":"Косметичний","serviceCode":"ISO-9999",
-                   "serviceParentID":100,"serviceDuration":60,
-                   "serviceExternalID":"SE-1","servicePrice":12000.5}
-                ]}
-                """));
-
-        List<ServiceMisDTO> result = service.getServices();
-
-        assertThat(result).hasSize(1);
-        ServiceMisDTO svc = result.get(0);
-        assertThat(svc.getServiceId()).isEqualTo(500L);
-        assertThat(svc.getServicePrice()).isEqualTo(12000.5);
-        assertThat(svc.getServiceCode()).isEqualTo("ISO-9999");
-    }
-
-    @Test
-    void getServices_missingList_returnsEmptyList() {
-        when(misApiClient.callMethod("spzIBServiceList")).thenReturn(json("{}"));
-
-        assertThat(service.getServices()).isEmpty();
-    }
-
-    @Test
-    void getPatientBookings_parsesDatesAndNullSafeFields() {
-        when(misApiClient.callMethod(anyString(), any(MisApiClient.Param[].class)))
-                .thenReturn(json("""
-                        {"bookingList":[
-                          {"bookingID":900,"bookingName":"Прийом",
-                           "bookingDate":"2026-08-24 10:30:00","patientID":900001,
-                           "serviceID":500,"serviceCode":"ISO-9999",
-                           "bookingServicePriceValue":1500.0,"bookingQuantity":1,
-                           "bookingStatusCode":"DONE",
-                           "bookingCreationDate":"2026-08-01 08:00:00",
-                           "bookingExecutionUserLogin":"doctor1"}
-                        ]}
-                        """));
-
-        List<BookingMisDTO> result = service.getPatientBookings(900001L);
-
-        assertThat(result).hasSize(1);
-        BookingMisDTO booking = result.get(0);
-        assertThat(booking.getBookingDate().toString()).startsWith("2026-08-24T10:30");
-        assertThat(booking.getBookingQuantity()).isEqualTo(1);
-    }
-
-    @Test
-    void getPatientBookings_nullPatientId_returnsEmptyList() {
-        assertThat(service.getPatientBookings(null)).isEmpty();
-    }
+    // ---- prosthetics documents ----
 
     @Test
     void getPatientDocuments_parsesDocumentFields() {
@@ -394,49 +339,6 @@ class WireMockMisServiceImplTest {
     @Test
     void getPatientDocuments_nullPatientId_returnsEmptyList() {
         assertThat(service.getPatientDocuments(null)).isEmpty();
-    }
-
-    @Test
-    void getPatientInfo_parsesAccountBookingsAndDebt() {
-        when(misApiClient.callMethod(anyString(), any(MisApiClient.Param[].class)))
-                .thenReturn(json("""
-                        {"patientInfo":{
-                          "patientID":900001,"patientName":"Сніжко Іван Петрович",
-                          "patientBirthDate":"1991-03-14","patientAddress":"м. Київ",
-                          "patientPhone":"380501112222","patientEmail":"s@i.ua",
-                          "patientSexCode":"MAL","accountValue":2500.0,
-                          "patientBookingSum":800.0,"patientDebtSum":null,
-                          "patientBookingAct":[
-                            {"bookingID":910,"bookingName":"Примірка",
-                             "bookingDate":"2026-09-01 09:00:00","serviceID":501,
-                             "serviceCode":"ISO-9998","bookingServicePriceValue":400.0,
-                             "bookingQuantity":2}
-                          ]
-                        }}
-                        """));
-
-        Optional<PatientInfoMisDTO> result = service.getPatientInfo(900001L);
-
-        assertThat(result).isPresent();
-        PatientInfoMisDTO info = result.get();
-        assertThat(info.getPatientId()).isEqualTo(900001L);
-        assertThat(info.getAccountValue()).isEqualTo(2500.0);
-        assertThat(info.getPatientDebtSum()).isNull();
-        assertThat(info.getPatientBookingAct()).hasSize(1);
-        assertThat(info.getPatientBookingAct().get(0).getBookingQuantity()).isEqualTo(2);
-    }
-
-    @Test
-    void getPatientInfo_missingPatientInfoNode_returnsEmpty() {
-        when(misApiClient.callMethod(anyString(), any(MisApiClient.Param[].class)))
-                .thenReturn(json("{}"));
-
-        assertThat(service.getPatientInfo(900001L)).isEmpty();
-    }
-
-    @Test
-    void getPatientInfo_nullPatientId_returnsEmpty() {
-        assertThat(service.getPatientInfo((Long) null)).isEmpty();
     }
 
     // ---- hospitalization ----

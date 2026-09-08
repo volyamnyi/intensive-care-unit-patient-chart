@@ -82,10 +82,14 @@ public class ProstheticsPatientService {
      * MIS is the single source of truth for demographics; the local record only
      * contributes prosthesis-specific clinical fields (cause, amputation, stump,
      * clinical state) that MIS does not provide.
+     * <p>
+     * Package-visible for reuse by {@code ProstheticsEligibilityService} (same
+     * package, #259) so candidacy assessment shares the exact merge semantics.
      */
-    private ProstheticsPatientResponse merge(PatientDTO mis, Optional<ProstheticsPatient> local) {
+    ProstheticsPatientResponse merge(PatientDTO mis, Optional<ProstheticsPatient> local) {
         ProstheticsPatientResponse.ProstheticsPatientResponseBuilder b = ProstheticsPatientResponse.builder()
                 .id(mis.getId() == null ? null : String.valueOf(mis.getId()))
+                .departmentId(mis.getDepartmentId())
                 .pib(mis.getFullName())
                 .birthDate(mis.getBirthDate())
                 .gender(misSexToLabel(mis.getSexCode()))
