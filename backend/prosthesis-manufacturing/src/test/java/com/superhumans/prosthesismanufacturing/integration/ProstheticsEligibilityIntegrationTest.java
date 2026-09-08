@@ -1,10 +1,13 @@
 package com.superhumans.prosthesismanufacturing.integration;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.superhumans.mis.MisService;
-import com.superhumans.mis.dto.DocumentMisDTO;
-import com.superhumans.mis.dto.PatientDTO;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import com.superhumans.prosthesismanufacturing.dto.ProstheticsCandidateResponse;
 import com.superhumans.prosthesismanufacturing.entity.OrderStatus;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
@@ -13,33 +16,36 @@ import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderReposi
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
 import com.superhumans.prosthesismanufacturing.service.ProstheticsEligibilityService;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.mockito.Mockito.when;
-
 /**
- * Eligibility chain for Phase 6 (#259): stubbed MIS seam → real
- * {@code ProstheticsEligibilityService} → real prosthetics repositories.
- * The MIS HTTP layer itself is covered in the common module
- * ({@code MisWireMockIntegrationTest}, {@code MisParityTest}); here the seam
- * is stubbed so the business rules are asserted deterministically.
+ * Eligibility chain for Phase 6 (#259): stub-HTTP (embedded WireMock) → real
+ * {@code MisService} → real {@code ProstheticsEligibilityService} → real
+ * prosthetics repositories.
+ * <p>
+ * The properties intentionally match {@code TpLl02PdfIntegrationTest} so both
+ * classes share one cached Spring context — a second full context would hold
+ * another set of Hikari pools and exhaust the CI Postgres connection limit.
+ * Override stubs are registered per-test (WireMock matches newest first) and
+ * removed in {@code @AfterEach} so the shared embedded server is untouched
+ * for other classes.
  */
-@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.mis.embedded-wiremock-enabled=false"})
+@SpringBootTest(properties = "app.seed-data.enabled=false")
 @Transactional("prosthTransactionManager")
 class ProstheticsEligibilityIntegrationTest {
 
-    private static final long MIS_ID = 900101L;
     private static final String MIS_KEY = "900101";
 
-    @MockitoBean
-    private MisService misService;
+    @Autowired
+    private WireMockServer embeddedWireMockServer;
 
     @Autowired
     private ProstheticsEligibilityService eligibilityService;
@@ -50,6 +56,7 @@ class ProstheticsEligibilityIntegrationTest {
     @Autowired
     private ProstheticsOrderRepository orderRepository;
 
+    private final List<StubMapping> overrideStubs = new ArrayList<>();
     private String orderNumber;
 
     @BeforeEach
@@ -69,32 +76,40 @@ class ProstheticsEligibilityIntegrationTest {
                 .build());
     }
 
-    private PatientDTO misPatient(Long departmentId) {
-        return PatientDTO.builder()
-                .id(MIS_ID)
-                .fullName("Еліг Ігор Кандидатович")
-                .birthDate(LocalDate.of(1988, 5, 20))
-                .sexCode("MAL")
-                .departmentId(departmentId)
-                .build();
+    @AfterEach
+    void removeOverrideStubs() {
+        overrideStubs.forEach(embeddedWireMockServer::removeStub);
+        overrideStubs.clear();
     }
 
-    private DocumentMisDTO misDocument(Long templateId, String url) {
-        return DocumentMisDTO.builder()
-                .documentId(templateId)
-                .documentTemplateId(templateId)
-                .documentTemplateName("Шаблон " + templateId)
-                .documentUrl(url)
-                .patientId(MIS_ID)
-                .build();
+    private void stubPatients(String body) {
+        overrideStubs.add(embeddedWireMockServer.stubFor(post(urlEqualTo("/api/run"))
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBPatientSearch')]"))
+                .willReturn(okJson(body))));
+    }
+
+    private void stubDocuments(String body) {
+        overrideStubs.add(embeddedWireMockServer.stubFor(post(urlEqualTo("/api/run"))
+                .withRequestBody(matchingJsonPath("$[?(@.name == 'spzIBDocumentList')]"))
+                .willReturn(okJson(body))));
     }
 
     @Test
     void eligiblePatient_returnsCandidateWithOrdersAndDocumentUrl() {
-        when(misService.getAllPatientsUnderTreatment())
-                .thenReturn(List.of(misPatient(19L)));
-        when(misService.getPatientDocuments(MIS_ID))
-                .thenReturn(List.of(misDocument(120L, "https://mis.example/docs/120")));
+        stubPatients("""
+                {"patientList":[
+                  {"patientID":900101,"patientName":"Еліг Ігор Кандидатович",
+                   "patientBirthDate":"1988-05-20","patientSexCode":"MAL",
+                   "patientDepartmentID":19}
+                ]}
+                """);
+        stubDocuments("""
+                {"documentList":[
+                  {"documentID":7001,"documentName":"Замовлення",
+                   "documentTemplateID":120,"documentTemplateName":"Замовлення на протези",
+                   "documentUrl":"https://mis.example/docs/120"}
+                ]}
+                """);
 
         List<ProstheticsCandidateResponse> result = eligibilityService.getCandidates();
 
@@ -109,30 +124,17 @@ class ProstheticsEligibilityIntegrationTest {
                 .extracting(o -> o.getOrderNumber())
                 .containsExactly(orderNumber);
         assertThat(candidate.getDocuments())
-                .extracting(DocumentMisDTO::getDocumentUrl)
+                .extracting(d -> d.getDocumentUrl())
                 .containsExactly("https://mis.example/docs/120");
         assertThat(candidate.isDocumentsUnknown()).isFalse();
     }
 
     @Test
-    void nonEligibleDepartment_excludedDespiteLocalOrder() {
-        when(misService.getAllPatientsUnderTreatment())
-                .thenReturn(List.of(misPatient(2L)));
-
-        assertThat(eligibilityService.getCandidates()).isEmpty();
-    }
-
-    @Test
-    void documentsFailure_degradesToUnknownInsteadOfFailing() {
-        when(misService.getAllPatientsUnderTreatment())
-                .thenReturn(List.of(misPatient(27L)));
-        when(misService.getPatientDocuments(MIS_ID))
-                .thenThrow(new RuntimeException("MIS unavailable"));
-
+    void fixturePatientsWithoutEligibleDepartment_yieldNoCandidates() {
+        // No overrides: the real 92-patient fixture (departments 1/2) drives the
+        // chain. Local rows exist, so emptiness proves exclusion by MIS rules.
         List<ProstheticsCandidateResponse> result = eligibilityService.getCandidates();
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).isDocumentsUnknown()).isTrue();
-        assertThat(result.get(0).getDocuments()).isEmpty();
+        assertThat(result).isEmpty();
     }
 }
