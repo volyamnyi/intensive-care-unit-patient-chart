@@ -39,6 +39,13 @@ describe('patientApi', () => {
     patientApi.getById('1001');
     expect(mockClient.get).toHaveBeenCalledWith('/patients/1001');
   });
+
+  it('searchByModule calls /patients with module param', () => {
+    patientApi.searchByModule('medication', '');
+    expect(mockClient.get).toHaveBeenCalledWith('/patients', {
+      params: { query: '', module: 'medication' },
+    });
+  });
 });
 
 describe('episodeApi', () => {

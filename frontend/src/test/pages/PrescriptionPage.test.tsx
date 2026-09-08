@@ -5,7 +5,7 @@ import { ThemeModeProvider } from '../../styles/ThemeContext';
 import PrescriptionPage from '../../pages/prescription/PrescriptionPage';
 
 const mockNavigate = vi.fn();
-const mockSearch = vi.fn();
+const mockSearchByModule = vi.fn();
 const mockGetByPatient = vi.fn();
 const mockCreate = vi.fn();
 let mockHasPermission: (code: string) => boolean = () => true;
@@ -17,7 +17,7 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../../api/platform', () => ({
   patientApi: {
-    search: (...args: unknown[]) => mockSearch(...args),
+    searchByModule: (...args: unknown[]) => mockSearchByModule(...args),
     getById: vi.fn(),
   },
 }));
@@ -56,7 +56,7 @@ function makePatient(over: Record<string, unknown> = {}) {
     weight: null,
     bloodGroup: '',
     rhFactor: '',
-    departmentId: 2,
+    departmentId: 19,
     room: '1',
     bed: '2',
     doctorName: '',
@@ -90,8 +90,18 @@ describe('PrescriptionPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockHasPermission = () => true;
-    // surgery department (id 2) is the default; both patients are in surgery
-    mockSearch.mockResolvedValue({ data: [makePatient({ id: 1001 }), makePatient({ id: 1002, fullName: 'Коваленко Олена' })] });
+    localStorage.clear();
+    // surgery department (id 19) is the default; both patients are in surgery
+    mockSearchByModule.mockResolvedValue({ data: [makePatient({ id: 1001 }), makePatient({ id: 1002, fullName: 'Коваленко Олена' })] });
+  });
+
+  it('fetches the medication roster once via searchByModule', async () => {
+    mockGetByPatient.mockResolvedValue({ data: [] });
+    renderPage();
+
+    await screen.findByText('Петренко Іван');
+    expect(mockSearchByModule).toHaveBeenCalledTimes(1);
+    expect(mockSearchByModule).toHaveBeenCalledWith('medication', '');
   });
 
   it('shows Відкрити for every patient, creation lives inside the drawer', async () => {
@@ -108,6 +118,64 @@ describe('PrescriptionPage', () => {
     // the Дії column offers only «Відкрити» for every patient
     expect(screen.getAllByRole('button', { name: /Відкрити/ })).toHaveLength(2);
     expect(screen.queryByRole('button', { name: /Створити/ })).not.toBeInTheDocument();
+  });
+
+  it('toggle splits surgery (19) and rehab (37) and persists the choice', async () => {
+    mockGetByPatient.mockResolvedValue({ data: [] });
+    mockSearchByModule.mockResolvedValue({
+      data: [
+        makePatient({ id: 1001, departmentId: 19 }),
+        makePatient({ id: 1002, fullName: 'Коваленко Олена', departmentId: 37 }),
+      ],
+    });
+
+    renderPage();
+
+    // default toggle is surgery → only the 19-patient is listed
+    expect(await screen.findByText('Петренко Іван')).toBeInTheDocument();
+    expect(screen.queryByText('Коваленко Олена')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Реабілітація' }));
+
+    expect(await screen.findByText('Коваленко Олена')).toBeInTheDocument();
+    expect(screen.queryByText('Петренко Іван')).not.toBeInTheDocument();
+    expect(localStorage.getItem('prescDept')).toBe('rehab');
+  });
+
+  it('shows skeleton rows while loading', async () => {
+    let resolveRoster!: (value: unknown) => void;
+    mockSearchByModule.mockReturnValueOnce(new Promise(resolve => { resolveRoster = resolve; }));
+
+    renderPage();
+
+    expect(await screen.findByTestId('patients-loading')).toBeInTheDocument();
+
+    resolveRoster!({ data: [] });
+    await screen.findByText('Немає пацієнтів у відділенні');
+  });
+
+  it('shows an error with retry that refetches the roster', async () => {
+    mockGetByPatient.mockResolvedValue({ data: [] });
+    mockSearchByModule
+      .mockRejectedValueOnce({ response: { data: { message: 'MIS недоступна' } } })
+      .mockResolvedValueOnce({ data: [makePatient({ id: 1001 })] });
+
+    renderPage();
+
+    expect(await screen.findByText('MIS недоступна')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Спробувати ще/ }));
+
+    expect(await screen.findByText('Петренко Іван')).toBeInTheDocument();
+    expect(mockSearchByModule).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the empty state when the department has no patients', async () => {
+    mockSearchByModule.mockResolvedValue({ data: [] });
+
+    renderPage();
+
+    expect(await screen.findByText('Немає пацієнтів у відділенні')).toBeInTheDocument();
   });
 
   it('creates a list from the drawer and navigates to the detail page', async () => {

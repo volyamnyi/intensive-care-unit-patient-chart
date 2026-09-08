@@ -227,3 +227,17 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   `stub_mapping.json` позначено `removed`.
 - Без змін: інстанс-лайфсайкл, черги, PDF-трансфер, RBAC, фронтенд (споживання — Phase 9),
   E2E — немає (UI — Phase 9, повна міграція — Phase 14).
+
+### Phase 7 — medication roster (issue #260, in progress)
+
+- Backend: `GET /api/patients?module=medication` — той самий `searchPatients(query)`
+  плюс `PatientModuleFilter` (19/37; невідомий модуль — 400, null-dept — повз).
+  `?query=`-контракт без модуля незмінний; порядки фільтрів комутують.
+- Фікстура: seed-пацієнти 1001/1002/1003 перемаплено 2→19/37/19 у `patients_92.json`
+  (решта 1/2-рядків — non-eligible інші); `MisParityTest` пінить depts + `hasSize(92)
+  без змін. `patients_52.json` (заморожений legacy-фікстур) не чіпано.
+- Frontend: обидві сторінки на `patientApi.searchByModule('medication')`, клієнтський
+  фільтр 1/2 видалено, тогл ділить 19|37 локально (`lib/medicationDepartments.ts` —
+  єдине місце, припущення (b)); skeleton-loading, Alert + retry, empty-стани на місці.
+- `Promise.all`/послідовне per-patient довантаження листків — без змін логіки
+  (відомий борг на реальних обсягах, зафіксовано в issue).

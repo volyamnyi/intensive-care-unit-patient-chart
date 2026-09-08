@@ -18,7 +18,7 @@
                             "patientRoomNumber":  "Палата 501",
                             "patientBedNumber":  "Ліжко №1",
                             "patientDoctor":  "Олександр Мельник",
-                            "patientDepartmentID":  2
+                            "patientDepartmentID":  19
                         },
                         {
                             "patientID":  1002,
@@ -38,7 +38,7 @@
                             "patientRoomNumber":  "Палата 502",
                             "patientBedNumber":  "Ліжко №2",
                             "patientDoctor":  "Наталія Бойко",
-                            "patientDepartmentID":  2
+                            "patientDepartmentID":  37
                         },
                         {
                             "patientID":  1003,
@@ -58,7 +58,7 @@
                             "patientRoomNumber":  "Палата 503",
                             "patientBedNumber":  "Ліжко №3",
                             "patientDoctor":  "Василь Гончарук",
-                            "patientDepartmentID":  2
+                            "patientDepartmentID":  19
                         },
                         {
                             "patientID":  1004,

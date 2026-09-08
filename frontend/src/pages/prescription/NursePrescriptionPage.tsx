@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, FileText, X, ExternalLink } from 'lucide-react';
+import { FileText, X, ExternalLink, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -24,10 +25,11 @@ import {
 import { patientApi } from '../../api/platform';
 import { prescriptionApi } from '../../api/medication';
 import { getErrorMessage } from '../../utils/errorMessage';
+import { MEDICATION_DEPARTMENTS, MEDICATION_MODULE, type MedicationDepartment } from '../../lib/medicationDepartments';
 import type { PatientDto } from '../../types/core';
 import type { PrescriptionList } from '../../types/medication';
 
-type Department = 'surgery' | 'rehab';
+type Department = MedicationDepartment;
 
 interface PatientRow {
   patient: PatientDto;
@@ -62,11 +64,10 @@ export default function NursePrescriptionPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await patientApi.search('');
-      const deptPatients = res.data.filter(p => {
-        if (dept === 'surgery') return p.departmentId === 2;
-        return p.departmentId === 1;
-      });
+      // Backend roster (module=medication) already narrows to departments
+      // 19/37; the toggle splits the roster client-side without extra calls.
+      const res = await patientApi.searchByModule(MEDICATION_MODULE, '');
+      const deptPatients = res.data.filter(p => p.departmentId === MEDICATION_DEPARTMENTS[dept]);
 
       setRows(deptPatients.map(p => ({ patient: p, lists: [] })));
 
@@ -239,6 +240,10 @@ export default function NursePrescriptionPage() {
       {error && (
         <Alert variant="destructive" className="mb-2">
           <AlertDescription>{error}</AlertDescription>
+          <Button variant="ghost" size="sm" onClick={() => loadPatients()}>
+            <RotateCcw className="mr-1 size-4" />
+            Спробувати ще
+          </Button>
         </Alert>
       )}
 
@@ -250,7 +255,11 @@ export default function NursePrescriptionPage() {
       />
 
       {loading ? (
-        <Loader2 className="mx-auto mt-4 block size-6 animate-spin text-primary" />
+        <div className="flex flex-col gap-2" data-testid="patients-loading">
+          {[0, 1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
       ) : (
         <Table>
           <TableHeader>

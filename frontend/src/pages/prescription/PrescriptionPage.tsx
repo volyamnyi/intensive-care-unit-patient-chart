@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, X, ExternalLink, FileText, Plus } from 'lucide-react';
+import { X, ExternalLink, FileText, Plus, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -26,10 +27,11 @@ import { prescriptionApi } from '../../api/medication';
 import { useAuth } from '../../services/AuthContext';
 import { useThemeMode } from '../../styles/ThemeContext';
 import { getErrorMessage } from '../../utils/errorMessage';
+import { MEDICATION_DEPARTMENTS, MEDICATION_MODULE, type MedicationDepartment } from '../../lib/medicationDepartments';
 import type { PatientDto } from '../../types/core';
 import type { PrescriptionList } from '../../types/medication';
 
-type Department = 'surgery' | 'rehab';
+type Department = MedicationDepartment;
 
 interface PatientRow {
   patient: PatientDto;
@@ -68,11 +70,10 @@ export default function PrescriptionPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await patientApi.search('');
-      const deptPatients = res.data.filter(p => {
-        if (dept === 'surgery') return p.departmentId === 2;
-        return p.departmentId === 1;
-      });
+      // Backend roster (module=medication) already narrows to departments
+      // 19/37; the toggle splits the roster client-side without extra calls.
+      const res = await patientApi.searchByModule(MEDICATION_MODULE, '');
+      const deptPatients = res.data.filter(p => p.departmentId === MEDICATION_DEPARTMENTS[dept]);
 
       const listResults = await Promise.all(
         deptPatients.map(async (p) => {
@@ -259,6 +260,10 @@ export default function PrescriptionPage() {
       {error && (
         <Alert variant="destructive" className="mb-2">
           <AlertDescription>{error}</AlertDescription>
+          <Button variant="ghost" size="sm" onClick={() => loadPatients()}>
+            <RotateCcw className="mr-1 size-4" />
+            Спробувати ще
+          </Button>
           <Button variant="ghost" size="icon-sm" className="absolute right-2 top-2" onClick={() => setError(null)}>
             <X className="size-4" />
           </Button>
@@ -273,7 +278,11 @@ export default function PrescriptionPage() {
       />
 
       {loading ? (
-        <Loader2 className="mx-auto mt-4 block size-6 animate-spin text-primary" />
+        <div className="flex flex-col gap-2" data-testid="patients-loading">
+          {[0, 1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
       ) : (
         <Table>
           <TableHeader>
