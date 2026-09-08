@@ -13,11 +13,7 @@ async function getToken(request: any) {
 test.describe('Optimistic Locking - 409 Conflict', () => {
   test('returns 409 when updating episode with stale version', async ({ request }) => {
     const token = await getToken(request);
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
 
-    // Get current version of seeded episode (Петренко)
     const getRes = await request.get(`${API}/episodes/a1111111-1111-1111-1111-111111111111`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -50,11 +46,7 @@ test.describe('Optimistic Locking - 409 Conflict', () => {
 
   test('update succeeds with current version', async ({ request }) => {
     const token = await getToken(request);
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
 
-    // Get current version of a different seeded episode (Коваленко, version=0)
     const getRes = await request.get(`${API}/episodes/a2222222-2222-2222-2222-222222222222`, {
       headers: { Authorization: `Bearer ${token}` },
     });

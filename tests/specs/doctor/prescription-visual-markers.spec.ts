@@ -111,9 +111,6 @@ test.describe('Doctor — added/removed day visual distinction', () => {
 
   test.beforeAll(async ({ request }) => {
     doctorToken = await login(request, 'doctor1', 'doctor123');
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${doctorToken}` },
-    });
   });
 
   test('added day: marked header + cells, status wins on planned cell, reload persists, no overflow', async ({ page, request }) => {

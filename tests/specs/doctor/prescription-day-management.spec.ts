@@ -68,9 +68,6 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
     const body = await res.json();
     const token = body.token as string;
     doctorToken = token;
-    await request.post('http://localhost:8085/api/mis/error-mode?mode=none', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
   });
 
   test.beforeEach(async ({ page }) => {

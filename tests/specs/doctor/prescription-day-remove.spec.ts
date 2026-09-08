@@ -101,9 +101,6 @@ test.describe('Doctor — «−» day removal (last day of the row)', () => {
   test.beforeAll(async ({ request }) => {
     doctorToken = await login(request, 'doctor1', 'doctor123');
     nurseToken = await login(request, 'nurse1', 'nurse123');
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${doctorToken}` },
-    });
   });
 
   test('«+» then «−» round-trip removes exactly the added last day', async ({ page, request }) => {

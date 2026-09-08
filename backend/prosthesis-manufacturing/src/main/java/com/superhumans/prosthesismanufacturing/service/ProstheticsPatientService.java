@@ -24,7 +24,7 @@ import java.util.Optional;
  * <p>
  * <b>SINGLE SOURCE OF TRUTH POLICY:</b> all demographic patient data (ПІБ, date
  * of birth, sex, address, phone, email, height, weight) comes from the MIS
- * Integration Layer (common module, wiremock at present) — never from the local
+ * Integration Layer (common module) — never from the local
  * database. The local {@code prosthetics_patients} table stores ONLY
  * prosthesis-specific clinical data (amputation, stump, clinical state) that the
  * MIS API does not expose.

@@ -16,9 +16,6 @@ test.describe('Patient API', () => {
 
   test.beforeAll(async ({ request }) => {
     token = await getToken(request);
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
   });
 
   test('search returns patients', async ({ request }) => {

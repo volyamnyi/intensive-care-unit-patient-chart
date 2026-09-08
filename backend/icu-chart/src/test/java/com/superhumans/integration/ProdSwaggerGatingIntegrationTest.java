@@ -22,7 +22,7 @@ import org.springframework.test.context.TestPropertySource;
         "server.ssl.enabled=false",
         "app.seed-data.enabled=false",
         "app.jwt.secret=cHJvZC10ZXN0LXNlY3JldC12YWx1ZS1mb3Itc3dhZ2dlci1nYXRlLTAwMDAwMDA",
-        "app.mis.embedded-wiremock-enabled=false"
+        "app.mis.api.base-url=http://localhost:9090"
 })
 @ActiveProfiles("prod")
 class ProdSwaggerGatingIntegrationTest extends AbstractIntegrationTest {

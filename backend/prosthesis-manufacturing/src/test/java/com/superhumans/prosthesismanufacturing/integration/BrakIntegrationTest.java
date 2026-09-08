@@ -51,7 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
  * boundary, rejected brak on a PAUSED instance, recursive branch on a new
  * branch, and the three audit records written by a single brak).
  */
-@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.mis.embedded-wiremock-enabled=false"})
+@SpringBootTest(properties = {"app.seed-data.enabled=false"})
 @Transactional("prosthTransactionManager")
 class BrakIntegrationTest {
 

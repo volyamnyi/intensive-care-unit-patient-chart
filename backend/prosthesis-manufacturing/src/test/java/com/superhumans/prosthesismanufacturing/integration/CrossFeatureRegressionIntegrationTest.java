@@ -62,7 +62,7 @@ import org.springframework.transaction.annotation.Transactional;
  * and TpLl02BusinessRulesIntegrationTest soft-liner structure (e0000029 with
  * f0000214, f0000215, f0000240 exclusive rule at FlowInstanceService:620-632).
  */
-@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.mis.embedded-wiremock-enabled=false"})
+@SpringBootTest(properties = {"app.seed-data.enabled=false"})
 @Transactional("prosthTransactionManager")
 class CrossFeatureRegressionIntegrationTest {
 

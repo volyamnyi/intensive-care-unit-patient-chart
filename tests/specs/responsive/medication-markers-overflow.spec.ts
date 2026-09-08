@@ -5,7 +5,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 // visual markers present (issue #226, phase 6). Runs under both
 // responsive-mobile-chromium (360px) and responsive-tablet-chromium (768px).
 // All fixture setup uses local-DB endpoints only (no MIS dependency, no
-// error-mode juggling) to avoid cross-project interference.
+// cross-project interference.
 
 const API = 'http://localhost:8085/api';
 const PATIENT_ID = 1003;

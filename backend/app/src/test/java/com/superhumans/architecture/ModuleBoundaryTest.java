@@ -92,8 +92,7 @@ class ModuleBoundaryTest {
      */
     private static final String[] PLATFORM_CONTROLLER_EXCLUSIONS = {
         "AuthController",
-        "AdminController",
-        "MockMedicalInformationSystemController"
+        "AdminController"
     };
 
     @ArchTest

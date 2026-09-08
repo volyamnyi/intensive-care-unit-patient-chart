@@ -22,17 +22,12 @@ export default defineConfig({
       name: 'setup',
       testMatch: '**/*.setup.ts',
       timeout: 60000,
-      // AD setup authenticates via API with real corporate-test passwords:
-      // tracing stays off here so request payloads never land in trace files.
-      // Screenshots (only-on-failure) show masked password dots at most.
       use: {
         trace: 'off',
       },
     },
     {
       name: 'login-chromium',
-      // access-control.spec.ts runs with per-test storageState (admin/doctor/nurse)
-      // so the .auth/*.json files must exist before this project starts.
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
@@ -40,14 +35,8 @@ export default defineConfig({
       testMatch: ['**/auth/login.spec.ts', '**/auth/logout.spec.ts', '**/auth/access-control.spec.ts', '**/auth/role-redirects.spec.ts', '**/auth/ad-login.spec.ts'],
     },
     {
-      name: 'api-error-mode-chromium',
-      fullyParallel: false,
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: '**/api/mis-error-scenarios.spec.ts',
-    },
-    {
       name: 'doctor-chromium',
-      dependencies: ['setup', 'api-error-mode-chromium'],
+      dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/doctor.json',
@@ -56,7 +45,7 @@ export default defineConfig({
     },
     {
       name: 'nurse-chromium',
-      dependencies: ['setup', 'api-error-mode-chromium'],
+      dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/nurse.json',
@@ -65,7 +54,7 @@ export default defineConfig({
     },
     {
       name: 'hod-chromium',
-      dependencies: ['setup', 'api-error-mode-chromium'],
+      dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/hod.json',
@@ -74,7 +63,7 @@ export default defineConfig({
     },
     {
       name: 'admin-chromium',
-      dependencies: ['setup', 'api-error-mode-chromium'],
+      dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: '.auth/admin.json',
@@ -85,8 +74,6 @@ export default defineConfig({
       name: 'api-chromium',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/api/*.spec.ts',
-      testIgnore: '**/api/mis-error-scenarios.spec.ts',
-      dependencies: ['api-error-mode-chromium'],
     },
     {
       name: 'prosthetics-chromium',
@@ -97,15 +84,8 @@ export default defineConfig({
       },
       testMatch: '**/prosthetics/*.spec.ts',
       fullyParallel: false,
-      // The prosthetics specs share a single seed order and leave active flow instances
-      // behind — they must never run concurrently against the same database.
       workers: 1,
     },
-    // Responsive UI Phase 6 (issue #165): mobile + tablet smoke projects.
-    // Ordered AFTER prosthetics-chromium so mobile-wizard-smoke's runtime flow
-    // instance (created on a seed order) can never race the desktop prosthetics
-    // specs; it is driven to COMPLETED in afterAll so the "new process" review
-    // screen stays unblocked for later projects.
     {
       name: 'responsive-mobile-chromium',
       dependencies: ['setup'],

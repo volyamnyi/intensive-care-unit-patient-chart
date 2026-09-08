@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
  * Verifies the patient registry facade contract: the MIS Integration Layer is the
  * single source of truth for patient demographics; the local registry only
  * contributes prosthesis-specific clinical fields. Sex codes from MIS (MAL/FEM,
- * per the wiremock fixtures in the common module) map to UI labels.
+  * per the MIS integration layer) map to UI labels.
  */
 @ExtendWith(MockitoExtension.class)
 class ProstheticsPatientServiceTest {

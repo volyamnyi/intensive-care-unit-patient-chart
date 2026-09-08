@@ -63,13 +63,4 @@ public interface MisService {
      * Used to link order templates with MIS patient documents.
      */
     List<DocumentMisDTO> getPatientDocuments(Long patientId);
-
-    /**
-     * Sets the MIS error-simulation mode (testing hook) on the active MIS implementation.
-     * Modes: none, timeout, not_found, unavailable. Implementations that do not simulate
-     * errors keep this a no-op.
-     */
-    default void setErrorMode(String mode) {
-        // no-op by default
-    }
 }

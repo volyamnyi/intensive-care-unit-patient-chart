@@ -185,9 +185,6 @@ test.describe('Doctor — «Відмінити це призначення» (si
   test.beforeAll(async ({ request }) => {
     doctorToken = await login(request, 'doctor1', 'doctor123');
     nurseToken = await login(request, 'nurse1', 'nurse123');
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${doctorToken}` },
-    });
   });
 
   test('planned cell → white empty, sibling/day/row untouched, reload persists', async ({ page, request }) => {

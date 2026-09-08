@@ -143,9 +143,6 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
   test.beforeAll(async ({ request }) => {
     doctorToken = await login(request, 'doctor1', 'doctor123');
     nurseToken = await login(request, 'nurse1', 'nurse123');
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${doctorToken}` },
-    });
   });
 
   test('cancel → purple ✕ → restore → blue dose → reload persists', async ({ page, request }) => {

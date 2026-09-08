@@ -34,9 +34,6 @@ type DayPart = {
 test.describe('Prescription-day API access controls', () => {
   test.beforeAll(async ({ request }) => {
     const token = await login(request, 'doctor1', 'doctor123');
-    await request.post(`${API}/mis/error-mode?mode=none`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
   });
 
   test('nurse is rejected (403) on POST /items/{id}/days', async ({ request }) => {

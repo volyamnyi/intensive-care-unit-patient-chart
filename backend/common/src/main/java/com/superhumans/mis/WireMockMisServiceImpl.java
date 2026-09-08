@@ -1,179 +1,77 @@
 package com.superhumans.mis;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 
-import tools.jackson.databind.JsonNode;
 import com.superhumans.mis.dto.*;
 import com.superhumans.service.AuditService;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.mis.wiremock-enabled", havingValue = "true", matchIfMissing = false)
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class WireMockMisServiceImpl implements MisService {
 
     private final MisApiClient misApiClient;
     private final AuditService auditService;
-    private final MisApiProperties properties;
-    private final MisErrorSimulator errorSimulator = new MisErrorSimulator();
 
-    /**
-     * Real MIS patient procedure (#256). Replaces {@code spzIBPatientSearch} in
-     * real mode; the request/response envelope is assumed identical to the legacy
-     * one (epic blocker (a) — real MIS spec — is still open; only the DTO mapping
-     * will change once it is confirmed).
-     */
     static final String SPI_PATIENT_PROCEDURE = "spiPatientProsthesCheck";
-
-    /**
-     * Real MIS document procedure (#257). Replaces {@code spzIBDocumentList} in
-     * real mode. A single universal retrieval covers both template 120 and 121 —
-     * no separate upper-limb method exists; eligibility filtering lives in Phase 6.
-     * Field names beyond the legacy envelope are assumptions (epic blocker (a)
-     * is still open) and are parsed tolerantly — absent means null.
-     */
     static final String SPI_DOCUMENT_PROCEDURE = "spiDocumentProsthesCheck";
-
-    /**
-     * Real MIS medicine catalog procedure (#258). Replaces
-     * {@code spzIBMedicineDictionary} in real mode. The response envelope and
-     * field names beyond the legacy one are assumptions (epic blocker (a) is
-     * still open); the parser tolerates both shapes — only the DTO mapping
-     * will change once the spec is confirmed.
-     */
     static final String SPI_MEDICINE_PROCEDURE = "spiMedicineItemKindDetails";
-
-    private boolean useSpi() {
-        return properties != null && properties.isRealMode();
-    }
-
-    @Override
-    public void setErrorMode(String mode) {
-        errorSimulator.setErrorMode(mode);
-    }
-
-    private void checkErrors() {
-        errorSimulator.checkErrors();
-    }
 
     @Override
     public Optional<PatientDTO> getPatient(Long patientId) {
-        checkErrors();
-        if (useSpi()) {
-            return getAllPatientsUnderTreatment().stream()
-                    .filter(patient -> patient.getId() != null && patient.getId().equals(patientId))
-                    .findFirst();
-        }
-        JsonNode response = misApiClient.callMethod(
-                "spzIBPatientSearch",
-                new MisApiClient.Param("PatientID", String.valueOf(patientId))
-        );
-        auditService.logAction("MIS", null, "GET_PATIENT", getUserId());
-        return parsePatientList(response).stream()
+        return getAllPatientsUnderTreatment().stream()
                 .filter(patient -> patient.getId() != null && patient.getId().equals(patientId))
                 .findFirst();
     }
 
     @Override
     public Optional<HospitalizationDTO> getHospitalization(UUID hospitalizationId) {
-        checkErrors();
-        try {
-            // Hospitalization UUIDs encode the MIS patient id in their last 12 decimal digits
-            // (same convention as MockMisServiceImpl); resolve it so the request targets the
-            // actual patient instead of a literal "0".
-            String patientId = hospitalizationId != null && hospitalizationId.toString().length() >= 36
-                    ? String.valueOf(Long.parseLong(hospitalizationId.toString().substring(24)))
-                    : "0";
-            JsonNode response = misApiClient.callMethod(
-                    "spzIBPatientScheduleList",
-                    new MisApiClient.Param("PatientID", patientId)
-            );
-            auditService.logAction("MIS", null, "GET_HOSPITALIZATION", getUserId());
-
-            JsonNode scheduleList = response.get("scheduleList");
-            if (scheduleList != null && scheduleList.isArray() && scheduleList.size() > 0) {
-                JsonNode first = scheduleList.get(0);
-                return Optional.of(HospitalizationDTO.builder()
-                        .id(hospitalizationId)
-                        .patientId(first.has("patientID") ? first.get("patientID").asLong() : null)
-                        .departmentId(1L)
-                        .admissionDate(LocalDateTime.now().minusDays(3))
-                        .diagnosis("Діагноз при госпіталізації")
-                        .departmentName("Відділення анестезіології та інтенсивної терапії")
-                        .room("101")
-                        .bed("A")
-                        .build());
-            }
-            return Optional.empty();
-        } catch (Exception e) {
-            log.warn("Hospitalization lookup via MIS API failed, using fallback: {}", e.getMessage());
-            return Optional.empty();
-        }
+        return Optional.empty();
     }
 
     @Override
     public Optional<UserMisDTO> getUser(Long userId) {
-        checkErrors();
-        JsonNode response = misApiClient.callMethod(
-                "spzIBUserDetails",
-                new MisApiClient.Param("UserLogin", "user" + userId)
-        );
-        auditService.logAction("MIS", null, "GET_USER", getUserId());
-        return parseUserList(response).stream()
-                .filter(user -> user.getId() != null && user.getId().equals(userId))
-                .findFirst();
+        return Optional.empty();
     }
 
     @Override
     public List<UserMisDTO> getDepartmentUsers(Long departmentId) {
-        checkErrors();
-        JsonNode response = misApiClient.callMethod("spzIBUserDetails");
-        auditService.logAction("MIS", null, "GET_DEPARTMENT_USERS", getUserId());
-        List<UserMisDTO> all = parseUserList(response);
-        if (departmentId == null) {
-            return all;
-        }
-        return all.stream()
-                .filter(u -> u.getDepartmentId() != null
-                        && u.getDepartmentId().equals(departmentId))
-                .collect(Collectors.toList());
+        return List.of();
     }
 
     @Override
     public List<DepartmentDTO> getDepartments() {
-        checkErrors();
-        JsonNode response = misApiClient.callMethod("spzIBCompanyDetails");
-        auditService.logAction("MIS", null, "GET_DEPARTMENTS", getUserId());
-        return parseDepartmentList(response);
+        return List.of();
+    }
+
+    @Override
+    public List<DictionaryItemDTO> getDictionary(String dictionaryName) {
+        return List.of();
     }
 
     @Override
     public List<PatientDTO> searchPatients(String query) {
-        checkErrors();
-        if (useSpi()) {
-            return filterPatients(getAllPatientsUnderTreatment(), query);
-        }
-        JsonNode response = misApiClient.callMethod("spzIBPatientSearch");
-        auditService.logAction("MIS", null, "SEARCH_PATIENTS", getUserId());
-        return filterPatients(parsePatientList(response), query);
+        return filterPatients(getAllPatientsUnderTreatment(), query);
     }
 
     @Override
     public List<PatientDTO> getAllPatientsUnderTreatment() {
-        checkErrors();
-        String procedure = useSpi() ? SPI_PATIENT_PROCEDURE : "spzIBPatientSearch";
-        JsonNode response = misApiClient.callMethod(procedure);
+        JsonNode response = misApiClient.callMethod(SPI_PATIENT_PROCEDURE);
         auditService.logAction("MIS", null, "GET_ALL_PATIENTS", getUserId());
         return parsePatientList(response);
     }
@@ -195,38 +93,6 @@ public class WireMockMisServiceImpl implements MisService {
     }
 
     @Override
-    public List<DictionaryItemDTO> getDictionary(String dictionaryName) {
-        checkErrors();
-        return switch (dictionaryName) {
-            case "orderCategories" -> MisDictionaries.orderCategories();
-            case "noteTypes" -> MisDictionaries.noteTypes();
-            case "consciousness" -> MisDictionaries.consciousness();
-            case "bookingStatus" -> {
-                JsonNode response = misApiClient.callMethod("spzIBBookingStatusDictionary");
-                auditService.logAction("MIS", null, "GET_DICTIONARY", getUserId());
-                yield parseDictionaryList(response, "bookingStatusList",
-                        "bookingStatusCode", "bookingStatusName");
-            }
-            case "paymentStatus" -> {
-                JsonNode response = misApiClient.callMethod("spzIBBookingPaymentStatusDictionary");
-                auditService.logAction("MIS", null, "GET_DICTIONARY", getUserId());
-                yield parseDictionaryList(response, "bookingPaymentStatusList",
-                        "bookingPaymentStatusCode", "bookingPaymentStatusName");
-            }
-            case "scheduleStatus" -> {
-                JsonNode response = misApiClient.callMethod("spzIBScheduleStatusDictionary");
-                auditService.logAction("MIS", null, "GET_DICTIONARY", getUserId());
-                yield parseDictionaryList(response, "scheduleStatusList",
-                        "scheduleStatusCode", "scheduleStatusName");
-            }
-            default -> {
-                log.warn("Unknown dictionary: {}", dictionaryName);
-                yield List.of();
-            }
-        };
-    }
-
-    @Override
     public boolean sendPdf(UUID clinicalDayId, byte[] pdfContent, String fileName, int version) {
         auditService.logAction("MIS", clinicalDayId, "SEND_PDF", getUserId());
         log.info("PDF sent to MIS: clinicalDayId={}, fileName={}, version={}", clinicalDayId, fileName, version);
@@ -235,9 +101,7 @@ public class WireMockMisServiceImpl implements MisService {
 
     @Override
     public List<MedicineMisDTO> searchMedicineCatalog(String keyword) {
-        checkErrors();
-        String procedure = useSpi() ? SPI_MEDICINE_PROCEDURE : "spzIBMedicineDictionary";
-        JsonNode response = misApiClient.callMethod(procedure);
+        JsonNode response = misApiClient.callMethod(SPI_MEDICINE_PROCEDURE);
         auditService.logAction("MIS", null, "SEARCH_MEDICINE_CATALOG", getUserId());
         List<MedicineMisDTO> catalog = parseMedicineList(response);
         if (keyword == null || keyword.isBlank()) {
@@ -252,13 +116,11 @@ public class WireMockMisServiceImpl implements MisService {
 
     @Override
     public List<DocumentMisDTO> getPatientDocuments(Long patientId) {
-        checkErrors();
         if (patientId == null) {
             return List.of();
         }
-        String procedure = useSpi() ? SPI_DOCUMENT_PROCEDURE : "spzIBDocumentList";
         JsonNode response = misApiClient.callMethod(
-                procedure,
+                SPI_DOCUMENT_PROCEDURE,
                 new MisApiClient.Param("PatientID", String.valueOf(patientId))
         );
         auditService.logAction("MIS", null, "GET_PATIENT_DOCUMENTS", getUserId());
@@ -483,71 +345,6 @@ public class WireMockMisServiceImpl implements MisService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private List<UserMisDTO> parseUserList(JsonNode response) {
-        JsonNode userList = response.get("userList");
-        if (userList == null || !userList.isArray()) {
-            return List.of();
-        }
-        List<UserMisDTO> result = new ArrayList<>();
-        for (JsonNode node : userList) {
-            UserMisDTO user = UserMisDTO.builder()
-                    .id(node.has("userID") ? node.get("userID").asLong() : null)
-                    .login(node.has("userLogin") ? node.get("userLogin").asText() : null)
-                    .fullName(node.has("userName") ? node.get("userName").asText() : null)
-                    .shortName(node.has("userShortName") ? node.get("userShortName").asText() : null)
-                    .specialityCode(node.has("userSpecialityCode") ? node.get("userSpecialityCode").asText() : null)
-                    .specialityName(node.has("userSpecialityName") ? node.get("userSpecialityName").asText() : null)
-                    .email(node.has("userEmail") ? node.get("userEmail").asText() : null)
-                    .phone(node.has("userPhone") ? node.get("userPhone").asText() : null)
-                    .departmentId(node.has("userDepartmentID") && !node.get("userDepartmentID").isNull()
-                            ? node.get("userDepartmentID").asLong() : null)
-                    .build();
-            result.add(user);
-        }
-        return result;
-    }
-
-    private List<DepartmentDTO> parseDepartmentList(JsonNode response) {
-        JsonNode companyList = response.get("companyList");
-        if (companyList == null || !companyList.isArray()) {
-            return List.of();
-        }
-        List<DepartmentDTO> result = new ArrayList<>();
-        for (JsonNode node : companyList) {
-            DepartmentDTO dept = DepartmentDTO.builder()
-                    .id(node.has("companyID") && !node.get("companyID").isNull()
-                            ? node.get("companyID").asLong()
-                            : node.has("companyGUID")
-                                    ? (long) node.get("companyGUID").asText().hashCode() : null)
-                    .name(node.has("companyName") ? node.get("companyName").asText() : null)
-                    .code(node.has("companyShortName") ? node.get("companyShortName").asText() : null)
-                    .address(node.has("companyAddress") ? node.get("companyAddress").asText() : null)
-                    .email(node.has("companyEmail") ? node.get("companyEmail").asText() : null)
-                    .phone(node.has("companyPhone") ? node.get("companyPhone").asText() : null)
-                    .externalId1(node.has("companyExternalID1") ? node.get("companyExternalID1").asText() : null)
-                    .externalId2(node.has("companyExternalID2") ? node.get("companyExternalID2").asText() : null)
-                    .build();
-            result.add(dept);
-        }
-        return result;
-    }
-
-    private List<DictionaryItemDTO> parseDictionaryList(JsonNode response, String listField,
-                                                         String codeField, String nameField) {
-        JsonNode list = response.get(listField);
-        if (list == null || !list.isArray()) {
-            return List.of();
-        }
-        List<DictionaryItemDTO> result = new ArrayList<>();
-        for (JsonNode node : list) {
-            result.add(new DictionaryItemDTO(
-                    node.has(codeField) ? node.get(codeField).asText() : null,
-                    node.has(nameField) ? node.get(nameField).asText() : null
-            ));
-        }
-        return result;
     }
 
     private Long getUserId() {

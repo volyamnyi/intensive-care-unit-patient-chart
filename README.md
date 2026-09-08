@@ -223,8 +223,9 @@ app:
     secret: <base64-secret>
     expiration-ms: 86400000
   mis:
-    wiremock-enabled: true
-    embedded-wiremock-enabled: true
+    api:
+      base-url: http://localhost:9090
+      run-path: /api/run
 ```
 
 Every datasource can be overridden with environment variables: `APP_DATASOURCE_<CORE|ICU|MED|PROSTH>_<URL|USERNAME|PASSWORD>`. Schema is managed per DB by Liquibase (`db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml`).
@@ -566,7 +567,7 @@ Push → CI runs jobs in parallel → if any fails, fix and repeat until every c
 - **Backend tests**: 140 test files across the multi-module reactor — common (19) + icu-chart (68) + medication-sheet (17) + prosthesis-manufacturing (35) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 94 tests — `mvn test -Pintegration-test`
 - **Frontend Vitest tests**: 769 tests (89 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 88 spec files (367 tests), 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **E2E Playwright tests**: 87 spec files (367 tests), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
@@ -635,7 +636,7 @@ Access is enforced by a **dynamic role-permission matrix** (24 permission codes 
 - **Password Storage**: BCrypt hashing (local accounts only — directory passwords are verified by bind and never stored; LDAP rows keep a NULL `password_hash`)
 - **Authorization**: Spring Security **method + URL-based** enforcement, layered on a **dynamic permission matrix** — precise rules are `@PreAuthorize("@permissionService.has('CODE')")` (so admin edits to role permissions take effect immediately), module-visit gates via `MODULE_*_ACCESS`, and URL ceilings in `ClinicalSecurityRules`
 - **Active Directory (LDAP/LDAPS, read-only bind)**: the directory is used exclusively for authentication, user search, and profile reads — no user/group/attribute/membership writes exist anywhere. First-time directory users become `GUEST` (zero permissions, outside all URL ceilings); roles are assigned locally only. Configuration is environment-only (`APP_LDAP_ENABLED`, `APP_LDAP_URLS`, `APP_LDAP_BASE`, `APP_LDAP_USERNAME`, `APP_LDAP_PASSWORD`, no defaults; TLS via the JVM truststore). LDAP test suites run exclusively locally (corporate AD is unreachable from CI, where they report SKIPPED)
-- **MIS API (dual-mode)**: `APP_MIS_MODE=wiremock` (default, legacy stubs) or `real` — real mode authenticates with a cached Bearer token (`MisAuthService`: reuse until `expires_in − skew`, single re-auth on 401) using environment-only credentials (`APP_MIS_API_BASE_URL`, `APP_MIS_API_LOGIN`, `APP_MIS_API_PASSWORD`, `APP_MIS_API_INSTALLATION_GUID`, no defaults; paths via `APP_MIS_API_TOKEN_PATH`/`APP_MIS_API_RUN_PATH`). Passwords/tokens never reach logs, exceptions, tests, or fixtures (names only); incomplete real-mode config fails startup listing key names only. The MIS Data Policy (read-only + `sendPdf`) applies to both modes
+- **MIS API (single-mode)**: `POST {app.mis.api.base-url}{app.mis.api.run-path}` with static integration login; environment-only credentials for future real-MIS cutover (`APP_MIS_API_BASE_URL`, `APP_MIS_API_LOGIN`, `APP_MIS_API_PASSWORD`, `APP_MIS_API_INSTALLATION_GUID`, no defaults; path overrides via `APP_MIS_API_RUN_PATH`). The MIS Data Policy (read-only + `sendPdf`) applies.
 - **CORS**: REST API allows `*` origin patterns (with credentials); the **WebSocket** endpoint (`WebSocketConfig`) is restricted to `http://localhost:5173` and `http://localhost:3000`
 - **CSRF**: Disabled (stateless API)
 - **Audit**: `AuditService` logs all entity operations (plus non-GET API calls through the `JwtAuthenticationFilter`)
