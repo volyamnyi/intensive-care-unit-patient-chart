@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -65,7 +66,7 @@ class ProstheticsPatientControllerTest {
 
     @Test
     void candidates_returnsEligibilityServiceResult() throws Exception {
-        when(eligibilityService.getCandidates()).thenReturn(List.of(
+        when(eligibilityService.getCandidates(isNull())).thenReturn(List.of(
                 ProstheticsCandidateResponse.builder()
                         .patient(ProstheticsPatientResponse.builder()
                                 .id("900001")
@@ -81,6 +82,15 @@ class ProstheticsPatientControllerTest {
                 .andExpect(jsonPath("$[0].patient.id").value("900001"))
                 .andExpect(jsonPath("$[0].patient.departmentId").value(19))
                 .andExpect(jsonPath("$[0].documentsUnknown").value(false));
+    }
+
+    @Test
+    void candidates_forwardsQueryToEligibilityService() throws Exception {
+        when(eligibilityService.getCandidates("snizhko")).thenReturn(List.of());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/patients/candidates")
+                        .param("query", "snizhko"))
+                .andExpect(status().isOk());
     }
 
     @Test
