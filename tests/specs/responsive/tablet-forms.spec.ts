@@ -105,6 +105,8 @@ test.describe('Tablet forms & dialogs at 768', () => {
     await page.goto('/prescriptions/doctor');
     await page.waitForLoadState('networkidle');
 
+    // Коваленко (1002) — реабілітація (37): roster change #260
+    await page.getByRole('button', { name: 'Реабілітація' }).click();
     await page.getByPlaceholder('Пошук пацієнта').fill('1002');
     await expect(page.getByRole('cell', { name: 'Коваленко Олена Вікторівна' })).toBeVisible({
       timeout: 10000,

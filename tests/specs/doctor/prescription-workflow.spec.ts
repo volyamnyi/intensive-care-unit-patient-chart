@@ -28,6 +28,8 @@ test.describe('Prescription Workflow (Doctor)', () => {
 
   test('creates a prescription list for a patient from the lists drawer', async ({ page }) => {
     await page.goto('/prescriptions/doctor');
+    // Коваленко (1002) — реабілітація (37): roster change #260
+    await page.getByRole('button', { name: 'Реабілітація' }).click();
     await page.getByPlaceholder('Пошук пацієнта').fill('1002');
     await expect(page.getByRole('cell', { name: 'Коваленко Олена Вікторівна' })).toBeVisible({ timeout: 10000 });
 
@@ -43,6 +45,8 @@ test.describe('Prescription Workflow (Doctor)', () => {
 
   test('opens an existing prescription list via the drawer and navigates to details', async ({ page }) => {
     await page.goto('/prescriptions/doctor');
+    // Коваленко (1002) — реабілітація (37): roster change #260
+    await page.getByRole('button', { name: 'Реабілітація' }).click();
     await page.getByPlaceholder('Пошук пацієнта').fill('1002');
     await expect(page.getByRole('cell', { name: 'Коваленко Олена Вікторівна' })).toBeVisible({ timeout: 10000 });
 
