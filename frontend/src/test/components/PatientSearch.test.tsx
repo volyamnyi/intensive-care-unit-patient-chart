@@ -10,7 +10,7 @@ const mockSearch = vi.fn();
 const onSelect = vi.fn();
 
 vi.mock('../../api/platform', () => ({
-  patientApi: { search: (...args: unknown[]) => mockSearch(...args) },
+  patientApi: { searchByModule: (...args: unknown[]) => mockSearch(...args) },
 }));
 
 const testPatients: PatientDto[] = [
@@ -65,14 +65,30 @@ describe('PatientSearch', () => {
     });
   });
 
-  it('calls patientApi.search with query after debounce', async () => {
+  it('calls patientApi.searchByModule with the icu roster after debounce', async () => {
     mockSearch.mockResolvedValue({ data: [] });
     renderSearch();
     const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
-      expect(mockSearch).toHaveBeenCalledWith('Петр', expect.any(Object));
+      expect(mockSearch).toHaveBeenCalledWith('icu', 'Петр', expect.any(Object));
     });
+  });
+
+  it('shows an error with retry that refetches the roster', async () => {
+    mockSearch
+      .mockRejectedValueOnce({ response: { data: { message: 'MIS недоступна' } } })
+      .mockResolvedValueOnce({ data: testPatients });
+    renderSearch();
+    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    await userEvent.type(input, 'Петр');
+
+    expect(await screen.findByText('MIS недоступна')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Повторити' }));
+
+    expect(await screen.findByText('Петренко Іван')).toBeInTheDocument();
+    expect(mockSearch).toHaveBeenCalledTimes(2);
   });
 
   it('displays patient options in dropdown', async () => {

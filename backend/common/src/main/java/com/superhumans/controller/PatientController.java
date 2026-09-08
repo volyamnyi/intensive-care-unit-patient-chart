@@ -22,7 +22,8 @@ public class PatientController {
     /**
      * Patient search. Without {@code module} the contract is unchanged
      * (MIS search by query). With {@code module=medication} the result is
-     * narrowed to the module roster (departments 19/37, #260) — the query
+     * narrowed to the module roster (departments 19/37, #260), with
+     * {@code module=icu} to intensive care (department 19, #261) — the query
      * still applies first, so both orders commute to the same list.
      */
     @GetMapping

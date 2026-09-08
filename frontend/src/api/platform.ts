@@ -14,9 +14,9 @@ export const authApi = {
 export const patientApi = {
   search: (query?: string, signal?: AbortSignal) =>
     client.get<PatientDto[]>('/patients', { params: { query }, signal }),
-  /** Module roster (Phase 7, #260): backend narrows to the module departments. */
-  searchByModule: (module: string, query?: string) =>
-    client.get<PatientDto[]>('/patients', { params: { query, module } }),
+  /** Module roster (Phases 7–8, #260/#261): backend narrows to the module departments. */
+  searchByModule: (module: string, query?: string, signal?: AbortSignal) =>
+    client.get<PatientDto[]>('/patients', { params: { query, module }, signal }),
   getById: (id: string) =>
     client.get<PatientDto>(`/patients/${id}`),
 };

@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { patientApi } from '../../api/platform';
+import { getErrorMessage } from '../../utils/errorMessage';
 import type { PatientDto } from '../../types/core';
 import { cn } from '@/lib/utils';
+
+/** ICU patient source (Phase 8, #261): the backend roster holds department 19 only. */
+const ICU_MODULE = 'icu';
 
 interface PatientSearchProps {
   onSelect: (patient: PatientDto) => void;
@@ -17,6 +22,7 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
   const [selected, setSelected] = useState<PatientDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const abortRef = useRef<AbortController>(undefined);
@@ -46,12 +52,16 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
     const controller = new AbortController();
     abortRef.current = controller;
     setLoading(true);
+    setError(null);
     try {
-      const res = await patientApi.search(query, controller.signal);
+      const res = await patientApi.searchByModule(ICU_MODULE, query, controller.signal);
       setPatients(res.data);
       setOpen(true);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'CanceledError') return;
+      setPatients([]);
+      setError(getErrorMessage(err, 'Не вдалося знайти пацієнтів'));
+      setOpen(true);
     } finally {
       setLoading(false);
     }
@@ -106,7 +116,12 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
       )}
       {open && search.length >= 2 && patients.length === 0 && !loading && (
         <div className="absolute z-50 mt-1 w-full rounded-lg border bg-popover text-popover-foreground shadow-md px-2 py-1.5 text-sm text-muted-foreground">
-          Пацієнтів не знайдено
+          {error ?? 'Пацієнтів не знайдено'}
+          {error && (
+            <Button variant="ghost" size="sm" className="ml-2" onClick={() => performSearch(search)}>
+              Повторити
+            </Button>
+          )}
         </div>
       )}
       {search.length < 2 && (

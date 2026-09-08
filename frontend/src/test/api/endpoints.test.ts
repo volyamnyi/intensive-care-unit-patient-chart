@@ -44,6 +44,7 @@ describe('patientApi', () => {
     patientApi.searchByModule('medication', '');
     expect(mockClient.get).toHaveBeenCalledWith('/patients', {
       params: { query: '', module: 'medication' },
+      signal: undefined,
     });
   });
 });

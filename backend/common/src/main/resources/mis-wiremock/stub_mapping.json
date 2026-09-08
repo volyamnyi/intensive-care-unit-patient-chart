@@ -63,7 +63,7 @@
                          "misServiceClass":  "WireMockMisServiceImpl.java",
                          "status":  "stubbed",
                          "direction":  "READ",
-                         "description":  "Returns 52 patients (MIS IDs 1001–1050 + special fixtures 900001/900002). Each patient carries mock-only patientDepartmentID (1001–1025 → 2 Хірургія, 1026–1050 → 1 Реабілітація) consumed by the prescription module. Seed patients 1001/1002/1003 remapped to 19/37/19 for the medication roster (#260); remaining 1/2 rows are non-eligible others. Priority 3 (lowest) to allow name-parameter-specific matchers to override.",
+                         "description":  "Returns 52 patients (MIS IDs 1001–1050 + special fixtures 900001/900002). Each patient carries mock-only patientDepartmentID (1001–1025 → 2 Хірургія, 1026–1050 → 1 Реабілітація) consumed by the prescription module. Seed patients 1001/1002/1003 remapped to 19/37/19 for the medication roster (#260); 1004/1005 remapped to 19 for the ICU roster (#261); remaining 1/2 rows are non-eligible others. Priority 3 (lowest) to allow name-parameter-specific matchers to override.",
                          "responseRoot":  "patientList",
                          "fields":  [
                                         "patientID",

@@ -241,3 +241,17 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   єдине місце, припущення (b)); skeleton-loading, Alert + retry, empty-стани на місці.
 - `Promise.all`/послідовне per-patient довантаження листків — без змін логіки
   (відомий борг на реальних обсягах, зафіксовано в issue).
+
+### Phase 8 — ICU roster (issue #261, in progress)
+
+- Backend: той самий `?module=`-контракт, що й Phase 7 — `module=icu` звужує до
+  департаменту 19 (`ICU_DEPARTMENT_IDS` у `PatientModuleFilter`, невідомий модуль —
+  400, null-dept — повз). `PatientController` без нових ендпоїнтів.
+- Фікстура: seed-пацієнти 1004 (Бондаренко, create-card) і 1005 (Ткачук Андрій,
+  HOD + touch-targets) перемаплено 2/1→19 у `patients_92.json`; `MisParityTest`
+  пінить (count лишається 92).
+- Frontend: спільний `PatientSearch` (єдиний споживач — `CreateCardPage`) переведено
+  на `patientApi.searchByModule('icu', …)` зі збереженням debounce 300мс +
+  `AbortController`; додано error-стан з retry (раніше помилки ковтались мовчки),
+  loading/empty без змін. `CreateCardPage` без змін. `DepartmentDashboardPage` —
+  verify-only: скоуп локальною БД епізодів + MIS-резолв імен без фільтра, не чіпано.

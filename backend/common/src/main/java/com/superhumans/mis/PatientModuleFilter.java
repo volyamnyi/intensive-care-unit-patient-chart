@@ -24,9 +24,12 @@ public final class PatientModuleFilter {
     /** Medication sheet roster: surgery + rehabilitation (blocker (b) assumption). */
     public static final Set<Long> MEDICATION_DEPARTMENT_IDS = Set.of(19L, 37L);
 
+    /** Intensive-care roster: surgery only (blocker (b) assumption, #261). */
+    public static final Set<Long> ICU_DEPARTMENT_IDS = Set.of(19L);
+
     /** Module name → eligible department IDs. Single place for the mapping. */
     public static final Map<String, Set<Long>> MODULE_DEPARTMENTS =
-            Map.of("medication", MEDICATION_DEPARTMENT_IDS);
+            Map.of("medication", MEDICATION_DEPARTMENT_IDS, "icu", ICU_DEPARTMENT_IDS);
 
     private PatientModuleFilter() {
     }

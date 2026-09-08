@@ -38,6 +38,17 @@ class PatientModuleFilterTest {
     }
 
     @Test
+    void icu_keepsOnlyDepartment19() {
+        List<PatientDTO> base = List.of(
+                patient(1L, 19L), patient(2L, 27L), patient(3L, 37L),
+                patient(4L, 1L), patient(5L, null));
+
+        List<PatientDTO> result = PatientModuleFilter.filter("icu", base);
+
+        assertThat(result).extracting(PatientDTO::getId).containsExactly(1L);
+    }
+
+    @Test
     void unknownModule_failsFast() {
         assertThatThrownBy(() -> PatientModuleFilter.filter("icu", List.of(patient(1L, 19L))))
                 .isInstanceOf(BadRequestException.class)
