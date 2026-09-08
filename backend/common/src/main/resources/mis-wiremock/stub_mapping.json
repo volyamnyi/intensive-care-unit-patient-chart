@@ -2,12 +2,12 @@
     "$schema":  "stub-mapping/v1",
     "description":  "Cross-reference: MIS_API_SPEC methods → WireMock stubs → MisService API methods",
     "generated":  "2026-07-25",
-    "updated":  "2026-08-24",
+    "updated":  "2026-09-08",
     "wiremockBaseUrl":  "http://localhost:9090/api/run",
     "policy":  "ICU Chart is READ-ONLY client of MIS. The ONLY exception is sendPdf(). All MIS write methods MUST NEVER be called.",
     "summary":  {
                     "totalMisApiMethods":  50,
-                    "totalStubbed":  11,
+                    "totalStubbed":  10,
                     "totalReadOnlyNotStubbed":  0,
                     "totalForbiddenWriteMethods":  30,
                     "driftedStubs":  0
@@ -265,18 +265,16 @@
                          "misServiceClass":  "WireMockMisServiceImpl.java",
                          "status":  "stubbed",
                          "direction":  "READ",
-                         "description":  "Medicine catalog (20 items) matching MockMisServiceImpl.initMedicineCatalog for prescription medicine search and allergy warnings.",
+                         "description":  "Medicine catalog (20 items) for prescription medicine search. Wiremock branch only — real mode uses spiMedicineItemKindDetails (#258).",
                          "responseRoot":  "medicineList"
                      },
                      {
                          "misApiMethod":  "spzIBPatientAllergy",
-                         "wiremockMapping":  "mis-wiremock/mappings/patient_allergy.json",
-                         "wiremockBody":  "mis-wiremock/__files/patient_allergy.json",
                          "misServiceMethod":  "getPatientAllergies(patientId)",
                          "misServiceClass":  "WireMockMisServiceImpl.java",
-                         "status":  "stubbed",
+                         "status":  "removed (#258)",
                          "direction":  "READ",
-                         "description":  "Patient allergies matching MockMisServiceImpl.initAllergies: 1001 Penicillin+Aspirin, 1002 Iodine. Used for allergy warning on medicine add.",
+                         "description":  "Allergy flow deleted end-to-end (endpoint, mapper, DTO, cache tables, frontend guard, fixtures) — no spi equivalent exists. Stub mapping and body fixture deleted; owner sign-off tracked on issue #258.",
                          "responseRoot":  "allergyList"
                      }
                  ],

@@ -145,7 +145,7 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
 (b) мапінг відділень 19/27/37 проти реальних ID; (c) семантика 120/121, окремий метод
 для 120, URL-vs-байти; (d) dual-mode vs hard cutover + credentials у CI (раннери
 корпоративний MIS не бачать — real-сюїти локально з `SKIPPED`, прецедент LDAP);
-(e) кеш ліків — читати з TTL чи видалити; (f) batch-метод документів / TTL кешу eligibility.
+(e) кеш ліків — читати з TTL чи видалити — RESOLVED у #258 (кеш видалено: live-read + `med/002-drop-allergy-and-medicine-cache.sql`); (f) batch-метод документів / TTL кешу eligibility.
 
 ### Послідовність
 
@@ -186,3 +186,21 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   діє універсальний retrieval (обидва шаблони одним викликом); фільтр 120/121 — Phase 6.
 - Рішення `documentUrl`: поле прокинуто до DTO для Phase 9 (iframe/download + fallback
   на локальний рецепт); одноразовість/інтранет-доступність — перевірити у Phase 9.
+
+### Phase 5 — medicines (issue #258, code-complete + CI green, OPEN pending owner sign-off/close)
+
+- `searchMedicineCatalog(keyword)` у real-режимі викликає `spiMedicineItemKindDetails`
+  (константа `SPI_MEDICINE_PROCEDURE`), wiremock — `spzIBMedicineDictionary` до cutover.
+- `MedicineMisDTO` розширено з 4 до 16 полів (legacy `id/name/categoryRef/ptgCode` +
+  `itemKindCode/Atc/Unit/Manufacturer/IsDisabled/Ean/IsDivisible/Dlc` +
+  `medicineCategoryId/Name` + `medicinePackageId/Name`); усі nullable, толерантні аліаси
+  (`itemKindATC`/`itemKindAtc` тощо) + fallback-масиви `medicineList`/`medicines`/`items` +
+  хелпер `booleanOrNull` — бо спека (a) відкрита, точний перелік полів підтвердиться з нею.
+- Рішення (e) виконано: кеш видалено — `med/002-drop-allergy-and-medicine-cache.sql`
+  (DROP `allergy_cache` + `medicine_catalog_cache` + індекси, повний rollback);
+  `MisService.searchMedicineCatalog` читає live без кешу; `MedicineCatalogService` видалено.
+- Allergy-флоу видалено end-to-end (endpoint `GET /allergies`, мапер, DTO, кеш-таблиці,
+  фронтенд-гуард, fallback-каталог, фікстури, E2E-очікування); `spi`-еквівалента немає.
+  Sign-off власника відстежується на issue #258 (клінічна безпека).
+- `spzIBMedicineDictionary` + `spzIBPatientAllergy` у real-гілці мертві; контракт
+  `medicine-catalog` не зламаний (CI run `34152000037` all 6 jobs green).
