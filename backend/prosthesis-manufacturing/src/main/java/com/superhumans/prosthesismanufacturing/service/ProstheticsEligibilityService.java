@@ -110,7 +110,8 @@ public class ProstheticsEligibilityService {
     @Transactional(readOnly = true)
     public List<ProstheticsCandidateResponse> getCandidates() {
         return misService.getAllPatientsUnderTreatment().parallelStream()
-                .filter(p -> p.getId() != null && ELIGIBLE_DEPARTMENT_IDS.contains(p.getDepartmentId()))
+                .filter(p -> p.getId() != null && p.getDepartmentId() != null
+                        && ELIGIBLE_DEPARTMENT_IDS.contains(p.getDepartmentId()))
                 .map(this::assess)
                 .flatMap(Optional::stream)
                 .sorted(Comparator.comparing(c -> Long.valueOf(c.getPatient().getId())))

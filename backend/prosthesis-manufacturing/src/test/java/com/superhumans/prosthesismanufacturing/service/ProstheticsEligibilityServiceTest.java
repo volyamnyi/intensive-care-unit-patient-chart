@@ -145,6 +145,16 @@ class ProstheticsEligibilityServiceTest {
     }
 
     @Test
+    void nullDepartment_excludedSilentlyWithoutDocumentFetch() {
+        when(misService.getAllPatientsUnderTreatment())
+                .thenReturn(List.of(misPatient(900001L, null)));
+
+        assertThat(service.getCandidates()).isEmpty();
+
+        verify(misService, never()).getPatientDocuments(anyLong());
+    }
+
+    @Test
     void otherTemplate_excludedSilently() {
         when(misService.getAllPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(900001L, 19L)));
