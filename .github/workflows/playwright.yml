@@ -430,7 +430,30 @@ jobs:
           sudo sed -Ei 's|https?://azure\.archive\.ubuntu\.com/ubuntu/|https://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list.d/*.sources || true
           sudo sed -Ei 's|https?://azure\.archive\.ubuntu\.com/ubuntu/|https://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list || true
           sudo rm -f /var/lib/apt/lists/partial/mirrorlist-* 2>/dev/null || true
-          sudo apt-get update
+          # GitHub's cached runner image pre-bakes the dl.google.com/linux/
+          # chrome-stable APT index at build time. When Google rotates the
+          # chrome-stable Packages.gz during the run, that baked-in index no
+          # longer matches the live InRelease, so a bare `apt-get update` exits
+          # 100 with "Hash Sum mismatch" (observed on runs 34383881908). Clear
+          # the cached APT mirror index before each attempt so the next
+          # `apt-get update` re-fetches a fresh, self-consistent InRelease +
+          # Packages.gz pair, and retry up to 3 times.
+          update_ok=0
+          for attempt in 1 2 3; do
+            if sudo apt-get update
+            then
+              update_ok=1
+              break
+            fi
+            echo "apt-get update attempt ${attempt} failed; clearing cache and retrying..."
+            sudo rm -f /var/lib/apt/lists/partial/mirrorlist-* 2>/dev/null || true
+            sudo rm -f /var/lib/apt/lists/*/*InRelease /var/lib/apt/lists/partial/* 2>/dev/null || true
+            sleep 5
+          done
+          [ "${update_ok}" -eq 1 ] || {
+            echo "apt-get update failed after 3 attempts"
+            exit 1
+          }
 
       - name: Install Playwright browsers
         run: |
