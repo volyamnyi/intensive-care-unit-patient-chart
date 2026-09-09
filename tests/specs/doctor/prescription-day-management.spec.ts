@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import type { Locator, Page } from '@playwright/test';
-import { getToken, navigateToDetail } from '../../helpers/medication';
+import { getToken, setupDetail } from '../../helpers/medication';
 
 // E2E for per-item prescription day management (issue #169, phase 4;
 // reshaped by issue #223, phase 3: whole-day deletion left the cell menu,
@@ -56,10 +56,11 @@ test.describe('Doctor — prescription day add + remove (UI)', () => {
   });
 
   test.beforeEach(async ({ page, request }) => {
-    await navigateToDetail(request, page, {
-      base: '/prescriptions/doctor',
-      expectPath: /\/prescriptions\/doctor\/[0-9a-f-]{36}$/,
-    });
+    // Direct navigation to the guaranteed-open list: the roster/drawer path
+    // is covered by prescription-workflow; here only the detail grid matters.
+    const { listId } = await setupDetail(request);
+    await page.goto(`/prescriptions/doctor/${listId}`);
+    await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10_000 });
     await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
   });
 

@@ -4,6 +4,7 @@ import { SetupWizardPage } from '../../pages/prosthetics/SetupWizardPage';
 import { WizardExecutionPage } from '../../pages/prosthetics/WizardExecutionPage';
 import { mkdirSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { completeInstanceViaApi, startProcessIfNeeded } from '../../helpers/prosthetics-flow';
+import { testUser } from '../../helpers/test-users';
 
 // ============== CONFIGURATION ==============
 const CONFIG = {
@@ -121,6 +122,28 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     writeFileSync(CONFIG.logFile, `=== Prosthetics E2E Test Log - ${new Date().toISOString()} ===\n\n`);
     log('Test suite started');
+  });
+
+  // This legacy suite drives the full seed-bound journey (mock patients
+  // 900001/900002, seed orders). Under real MIS it is only runnable when at
+  // least one eligible candidate exists (dept 19/27/37 + docs 120/121 + a
+  // local order); otherwise every patient-table gate fails on the empty
+  // state. Skip honestly instead of failing on absent data (see #267).
+  test.beforeAll(async ({ request }) => {
+    const loginRes = await request.post('http://localhost:8085/api/auth/login', {
+      data: { login: testUser(7).login, password: testUser(7).password },
+    });
+    expect(loginRes.ok()).toBeTruthy();
+    const token = (await loginRes.json()).token as string;
+    const res = await request.get(
+      'http://localhost:8085/api/prosthesis-manufacturing/patients/candidates',
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    expect(res.ok()).toBeTruthy();
+    const candidates = (await res.json()) as Array<unknown>;
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      test.skip(true, 'No eligible prosthetics candidates in real MIS — seed-bound journey needs primed data');
+    }
   });
 
   test.afterAll(async () => {

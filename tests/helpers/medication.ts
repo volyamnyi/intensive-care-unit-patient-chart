@@ -123,22 +123,33 @@ export interface NavResult {
   // A near-full prefix of the real-catalog name whose search returns the
   // exact entry in the dropdown (for the "select a suggestion" test).
   partial: string;
+  patient: any;
 }
 
-// Authenticate as the doctor test account, pick the first dept-19/37 patient,
-// guarantee an open list + a real-catalog item, then navigate to the detail
-// page. Returns { listId, drugName, partial } for the spec to use.
-export async function navigateToDetail(
-  request: APIRequestContext,
-  page: Page,
-  opts: NavOpts,
-): Promise<NavResult> {
+// API-only setup: authenticate as the doctor test account, pick the first
+// dept-19/37 patient, guarantee an open list + a real-catalog item. Returns
+// { listId, drugName, partial, patient } WITHOUT any page navigation — the
+// caller navigates directly to `/prescriptions/{doctor|nurse}/{listId}`.
+// Use when the roster/drawer path itself is not under test.
+export async function setupDetail(request: APIRequestContext): Promise<NavResult> {
   const token = await getToken(request, 1);
   const patient = await firstMedicationPatient(request, token);
   const listId = await ensureMedicationList(request, token, patient.id);
   const full = await firstCatalogMedicine(request, token);
   const partial = full.length > 2 ? full.slice(0, full.length - 1) : full;
   await ensureMedicationItem(request, token, listId, full);
+  return { listId, drugName: full, partial, patient };
+}
+
+// Full journey setup + UI navigation (roster search → drawer → detail).
+// Returns { listId, drugName, partial, patient } for the spec to use.
+export async function navigateToDetail(
+  request: APIRequestContext,
+  page: Page,
+  opts: NavOpts,
+): Promise<NavResult> {
+  const nav = await setupDetail(request);
+  const { patient } = nav;
 
   await page.goto(opts.base, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: deptTabName(patient.departmentId) }).click();
@@ -156,5 +167,5 @@ export async function navigateToDetail(
   await target.getByRole('button', { name: /Листок/ }).first().click();
   await page.waitForURL(opts.expectPath, { timeout: 15_000 });
   await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10_000 });
-  return { listId, drugName: full, partial };
+  return nav;
 }

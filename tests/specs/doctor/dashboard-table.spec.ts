@@ -387,7 +387,7 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       for (let i = 0; i < count; i++) {
         const label = (await rows.nth(i).locator('td').first().innerText()).trim();
         expect(label.length, `row ${i} patient label is empty`).toBeGreaterThanOrEqual(2);
-        expect(label).not.toContain('');
+        expect(label).not.toContain('�');
         expect(label).not.toContain('<');
       }
     });
