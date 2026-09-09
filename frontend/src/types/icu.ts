@@ -396,8 +396,6 @@ export interface Signature {
   version: number;
 }
 
-export type TransferStatus = 'PENDING' | 'SENT' | 'FAILED';
-
 export interface PdfResponse {
   id: string;
   clinicalDayId: string;
@@ -406,9 +404,6 @@ export interface PdfResponse {
   generatedAt: string;
   generatedBy: number;
   checksum: string | null;
-  transferStatus: TransferStatus | null;
-  transferredAt: string | null;
-  transferError: string | null;
 }
 
 export interface DepartmentStats {

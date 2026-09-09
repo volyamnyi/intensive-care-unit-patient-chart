@@ -65,16 +65,22 @@ class PdfControllerTest {
     }
 
     @Test
-    void getPdfStatus_returnsOk() throws Exception {
-        PdfResponse response = PdfResponse.builder()
-                .id(UUID.randomUUID())
-                .clinicalDayId(UUID.randomUUID())
-                .build();
-        when(pdfGeneratorService.getLatestPdf(any())).thenReturn(response);
-
+    void getPdfStatus_removed_returnsNotFound() throws Exception {
         mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf/status")
                         .with(csrf()).with(doctor()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getPdfFile_returnsBytes() throws Exception {
+        when(pdfGeneratorService.getPdfBytes(any()))
+                .thenReturn(new byte[]{0x25, 0x50, 0x44, 0x46});
+
+        mockMvc.perform(get("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/pdf/file")
+                        .with(csrf()).with(doctor()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.APPLICATION_PDF))
+                .andExpect(content().bytes(new byte[]{0x25, 0x50, 0x44, 0x46}));
     }
 
     @Test

@@ -133,11 +133,35 @@ class PdfGeneratorServiceTest {
     }
 
     @Test
+    void getPdfBytes_returnsStoredBytes() {
+        GeneratedPdf pdf = new GeneratedPdf();
+        pdf.setId(UUID.randomUUID());
+        pdf.setClinicalDay(clinicalDay);
+        pdf.setFileData(new byte[]{0x25, 0x50, 0x44, 0x46});
+        when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
+                .thenReturn(Optional.of(pdf));
+
+        assertThat(pdfGeneratorService.getPdfBytes(clinicalDayId))
+                .isEqualTo(new byte[]{0x25, 0x50, 0x44, 0x46});
+    }
+
+    @Test
+    void getPdfBytes_whenNoBytes_throws() {
+        GeneratedPdf pdf = new GeneratedPdf();
+        pdf.setId(UUID.randomUUID());
+        pdf.setClinicalDay(clinicalDay);
+        when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
+                .thenReturn(Optional.of(pdf));
+
+        assertThatThrownBy(() -> pdfGeneratorService.getPdfBytes(clinicalDayId))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
     void generatePdf_createsAndSavesPdfRecord() {
         when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
         when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
                 .thenReturn(Optional.empty());
-        when(misService.sendPdf(any(), any(), any(), anyInt())).thenReturn(true);
 
         GeneratedPdf saved = new GeneratedPdf();
         saved.setId(UUID.randomUUID());
@@ -150,7 +174,7 @@ class PdfGeneratorServiceTest {
 
         PdfResponse res = pdfGeneratorService.generatePdf(clinicalDayId, userId);
 
-        verify(generatedPdfRepository, times(2)).save(pdfCaptor.capture());
+        verify(generatedPdfRepository, times(1)).save(pdfCaptor.capture());
         assertThat(pdfCaptor.getValue().getFileVersion()).isEqualTo(1);
         assertThat(pdfCaptor.getValue().getGeneratedBy()).isEqualTo(userId);
         verify(auditService).logAction("GeneratedPdf", clinicalDayId, "GENERATE", userId);
@@ -184,7 +208,6 @@ class PdfGeneratorServiceTest {
         when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
         when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
                 .thenReturn(Optional.of(existing));
-        when(misService.sendPdf(any(), any(), any(), anyInt())).thenReturn(true);
 
         GeneratedPdf saved = new GeneratedPdf();
         saved.setId(UUID.randomUUID());
@@ -194,7 +217,7 @@ class PdfGeneratorServiceTest {
 
         PdfResponse res = pdfGeneratorService.generatePdf(clinicalDayId, userId);
 
-        verify(generatedPdfRepository, times(2)).save(pdfCaptor.capture());
+        verify(generatedPdfRepository, times(1)).save(pdfCaptor.capture());
         assertThat(pdfCaptor.getValue().getFileVersion()).isEqualTo(2);
     }
 }

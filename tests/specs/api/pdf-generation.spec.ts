@@ -61,4 +61,30 @@ test.describe.serial('PDF Generation', () => {
     const genRes = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/pdf`);
     expect(genRes.status()).toBe(401);
   });
+
+  test('downloads the generated PDF bytes for in-module print/download', async ({ request }) => {
+    const token = await getToken(request, testUser(1).login, testUser(1).password);
+
+    const fileRes = await request.get(`${API}/clinical-days/${OPEN_DAY_ID}/pdf/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(fileRes.ok()).toBeTruthy();
+    expect(fileRes.headers()['content-type']).toContain('application/pdf');
+    const bytes = await fileRes.body();
+    expect(bytes.slice(0, 5).toString('utf8')).toBe('%PDF-');
+  });
+
+  test('denies PDF file download without auth', async ({ request }) => {
+    const fileRes = await request.get(`${API}/clinical-days/${OPEN_DAY_ID}/pdf/file`);
+    expect(fileRes.status()).toBe(401);
+  });
+
+  test('removed transfer-status endpoint stays gone', async ({ request }) => {
+    const token = await getToken(request, testUser(1).login, testUser(1).password);
+
+    const statusRes = await request.get(`${API}/clinical-days/${OPEN_DAY_ID}/pdf/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(statusRes.status()).toBe(404);
+  });
 });

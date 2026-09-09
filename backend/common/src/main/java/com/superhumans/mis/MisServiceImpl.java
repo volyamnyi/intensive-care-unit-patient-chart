@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  * Talks to the live MIS API through {@link MisApiClient} (stored-procedure
  * envelope {@code {name, params, installationId}}, Bearer-authenticated). The
  * ICU Chart is a <b>READ-ONLY</b> client: only Search/Details/Dictionary
- * retrieval plus the single {@code sendPdf} document transfer are used; no MIS
+ * retrieval are used; no MIS
  * write method is ever invoked.
  */
 @Slf4j
@@ -169,13 +169,6 @@ public class MisServiceImpl implements MisService {
 
     private static boolean containsIgnoreCase(String value, String lowerQuery) {
         return value != null && value.toLowerCase().contains(lowerQuery);
-    }
-
-    @Override
-    public boolean sendPdf(UUID clinicalDayId, byte[] pdfContent, String fileName, int version) {
-        auditService.logAction("MIS", clinicalDayId, "SEND_PDF", getUserId());
-        log.info("PDF sent to MIS: clinicalDayId={}, fileName={}, version={}", clinicalDayId, fileName, version);
-        return true;
     }
 
     @Override

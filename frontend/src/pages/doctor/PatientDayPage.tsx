@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Lock, Download, Loader2 } from 'lucide-react'
+import { ArrowLeft, Lock, Download, Printer, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { useThemeMode } from '../../styles/ThemeContext'
@@ -10,6 +10,7 @@ import { useAuth } from '../../services/AuthContext'
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard'
 import NurseDashboard from '../../components/monitoring/NurseDashboard'
 import DocumentHeader from '../../components/icu/DocumentHeader'
+import { printPdfBlob } from '../../lib/printPdf'
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types/icu';
 
 export default function PatientDayPage() {
@@ -34,6 +35,7 @@ export default function PatientDayPage() {
   const [dayLoading, setDayLoading] = useState(false)
   const [signingLoading, setSigningLoading] = useState(false)
   const [reopenLoading, setReopenLoading] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState<'download' | 'print' | null>(null)
   const [feedback, setFeedback] = useState<{ message: string; severity: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
@@ -152,6 +154,42 @@ export default function PatientDayPage() {
     }
   }
 
+  // PDFs stay local (MIS transfer banned, #269): download/print in-module.
+  const handleDownloadPDF = async () => {
+    if (!selectedDay) return
+    setPdfBusy('download')
+    try {
+      const res = await pdfApi.downloadFile(selectedDay.id)
+      const url = window.URL.createObjectURL(res.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `clinical-day-${selectedDay.dayNumber ?? selectedDay.id}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      setFeedback({ message: 'PDF завантажено', severity: 'success' })
+    } catch {
+      setFeedback({ message: 'Не вдалося завантажити PDF', severity: 'error' })
+    } finally {
+      setPdfBusy(null)
+    }
+  }
+
+  const handlePrintPDF = async () => {
+    if (!selectedDay) return
+    setPdfBusy('print')
+    try {
+      const res = await pdfApi.downloadFile(selectedDay.id)
+      await printPdfBlob(res.data)
+      setFeedback({ message: 'PDF надіслано на друк', severity: 'success' })
+    } catch {
+      setFeedback({ message: 'Не вдалося надрукувати PDF', severity: 'error' })
+    } finally {
+      setPdfBusy(null)
+    }
+  }
+
   if (loading) return <Loader2 role="progressbar" aria-label="Loading" className="mx-auto mt-4 size-6 animate-spin text-primary" />
   if (!episode) return <Alert variant="destructive">Епізод не знайдено</Alert>
 
@@ -205,6 +243,18 @@ export default function PatientDayPage() {
             <Button size="sm" variant="outline" onClick={handleGeneratePDF}>
               <Download />
               PDF
+            </Button>
+          )}
+          {selectedDay && selectedDay.status === 'CLOSED' && (
+            <Button size="sm" variant="outline" onClick={handleDownloadPDF} disabled={pdfBusy !== null}>
+              {pdfBusy === 'download' ? <Loader2 className="mr-0.5 size-3.5 animate-spin" /> : <Download />}
+              Завантажити
+            </Button>
+          )}
+          {selectedDay && selectedDay.status === 'CLOSED' && (
+            <Button size="sm" variant="outline" onClick={handlePrintPDF} disabled={pdfBusy !== null}>
+              {pdfBusy === 'print' ? <Loader2 className="mr-0.5 size-3.5 animate-spin" /> : <Printer />}
+              Друкувати
             </Button>
           )}
           {canReopen && (

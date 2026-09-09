@@ -27,10 +27,10 @@ import tools.jackson.databind.node.ObjectNode;
  * {@link MisApiProperties}. A single HTTP 401 triggers one token
  * invalidation + re-fetch and one retry.
  * <p>
- * <b>POLICY: ICU Chart is READ-ONLY client of MIS.</b>
+ * <b>POLICY: ICU Chart is READ-ONLY client of MIS — with no exceptions.</b>
  * Only read-methods (procedure Search/Details/Dictionary families) are allowed.
- * Write methods (Save/Create/Update/Delete families) MUST NEVER be called via this client.
- * The sole allowed write is {@code sendPdf} which transfers an immutable PDF.
+ * Write methods (Save/Create/Update/Delete families, document transfer) MUST NEVER
+ * be called via this client. Generated PDFs stay local (download/print in-module).
  */
 @Slf4j
 @Component

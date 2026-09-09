@@ -121,8 +121,10 @@ export const pdfApi = {
     client.get<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf`),
   generate: (clinicalDayId: string) =>
     client.post<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf`),
-  getStatus: (clinicalDayId: string) =>
-    client.get<PdfResponse>(`/clinical-days/${clinicalDayId}/pdf/status`),
+  downloadFile: (clinicalDayId: string) =>
+    client.get<Blob>(`/clinical-days/${clinicalDayId}/pdf/file`, {
+      responseType: 'blob',
+    }),
 };
 
 export const patientStateApi = {

@@ -4,6 +4,7 @@ import com.superhumans.dto.PdfResponse;
 import com.superhumans.service.PdfGeneratorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -29,12 +30,14 @@ public class PdfController {
                 .body(pdfGeneratorService.getLatestPdf(clinicalDayId));
     }
 
-    @GetMapping("/clinical-days/{clinicalDayId}/pdf/status")
-    public ResponseEntity<PdfResponse> getPdfStatus(@PathVariable UUID clinicalDayId) {
+    @GetMapping(
+            value = "/clinical-days/{clinicalDayId}/pdf/file",
+            produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> getPdfFile(@PathVariable UUID clinicalDayId) {
         return ResponseEntity.ok()
                 .header("Cache-Control", "no-store")
                 .header("X-Content-Type-Options", "nosniff")
-                .body(pdfGeneratorService.getLatestPdf(clinicalDayId));
+                .body(pdfGeneratorService.getPdfBytes(clinicalDayId));
     }
 
     @PostMapping("/clinical-days/{clinicalDayId}/pdf")

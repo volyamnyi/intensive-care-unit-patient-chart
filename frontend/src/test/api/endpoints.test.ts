@@ -155,6 +155,13 @@ describe('pdfApi', () => {
     pdfApi.generate('cd-1');
     expect(mockClient.post).toHaveBeenCalledWith('/clinical-days/cd-1/pdf');
   });
+
+  it('downloadFile gets bytes from /clinical-days/:id/pdf/file', () => {
+    pdfApi.downloadFile('cd-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/clinical-days/cd-1/pdf/file', {
+      responseType: 'blob',
+    });
+  });
 });
 
 describe('userApi', () => {

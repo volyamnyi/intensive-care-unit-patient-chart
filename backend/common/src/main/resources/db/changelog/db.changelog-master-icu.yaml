@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: icu/006-order-planning.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/007-drop-pdf-transfer.sql

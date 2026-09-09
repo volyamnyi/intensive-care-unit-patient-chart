@@ -25,6 +25,12 @@ const mockGetNotes = vi.fn();
 const mockGetScaleResults = vi.fn();
 const mockGetAvailableScales = vi.fn();
 const mockGetBalanceItems = vi.fn();
+const mockDownloadFile = vi.fn();
+const mockPrintPdfBlob = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../../lib/printPdf', () => ({
+  printPdfBlob: (...args: unknown[]) => mockPrintPdfBlob(...args),
+}));
 
 vi.mock('../../api/icu', () => ({
   episodeApi: {
@@ -71,6 +77,7 @@ vi.mock('../../api/icu', () => ({
   },
   pdfApi: {
     generate: vi.fn().mockResolvedValue({ data: {} }),
+    downloadFile: (...args: unknown[]) => mockDownloadFile(...args),
   },
   orderExecutionApi: {
     getByOrder: vi.fn().mockResolvedValue({ data: [] }),
@@ -278,6 +285,55 @@ describe('PatientDayPage', () => {
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Епізод не знайдено')).toBeInTheDocument();
+    });
+  });
+
+  describe('closed-day PDF download/print (no MIS transfer)', () => {
+    const closedDay: ClinicalDay = {
+      ...mockDays[0],
+      id: 'day-closed',
+      status: 'CLOSED',
+    };
+
+    beforeEach(() => {
+      mockGetClinicalDays.mockResolvedValue({ data: [closedDay] });
+      mockDownloadFile.mockResolvedValue({ data: new Blob(['%PDF-1.4'], { type: 'application/pdf' }) });
+      window.URL.createObjectURL = vi.fn(() => 'blob:mock-pdf');
+      window.URL.revokeObjectURL = vi.fn();
+    });
+
+    it('renders download and print buttons on a closed day', async () => {
+      renderPage();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Завантажити/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Друкувати/ })).toBeInTheDocument();
+      });
+    });
+
+    it('downloads the stored PDF bytes on download click', async () => {
+      renderPage();
+      const btn = await screen.findByRole('button', { name: /Завантажити/ });
+      await userEvent.click(btn);
+      await waitFor(() => {
+        expect(mockDownloadFile).toHaveBeenCalledWith('day-closed');
+      });
+      await waitFor(() => {
+        expect(screen.getByText('PDF завантажено')).toBeInTheDocument();
+      });
+    });
+
+    it('prints the stored PDF bytes on print click', async () => {
+      renderPage();
+      const btn = await screen.findByRole('button', { name: /Друкувати/ });
+      await userEvent.click(btn);
+      await waitFor(() => {
+        expect(mockPrintPdfBlob).toHaveBeenCalledTimes(1);
+      });
+      const blob = mockPrintPdfBlob.mock.calls[0][0] as Blob;
+      expect(blob).toBeInstanceOf(Blob);
+      await waitFor(() => {
+        expect(screen.getByText('PDF надіслано на друк')).toBeInTheDocument();
+      });
     });
   });
 });

@@ -17,7 +17,6 @@ import com.itextpdf.layout.properties.UnitValue;
 import com.superhumans.dto.PdfResponse;
 import com.superhumans.icu.entity.*;
 import com.superhumans.entity.core.User;
-import com.superhumans.icu.entity.TransferStatus;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.mis.MisService;
@@ -104,27 +103,25 @@ public class PdfGeneratorService {
             pdf.setChecksum(Integer.toHexString(pdfContent.hashCode()));
             pdf.setFileData(pdfContent);
         }
-        pdf.setTransferStatus(TransferStatus.PENDING);
         pdf.setCreatedBy(userId);
         pdf.setUpdatedBy(userId);
         pdf = generatedPdfRepository.save(pdf);
         auditService.logAction("GeneratedPdf", clinicalDayId, "GENERATE", userId);
-
-        try {
-            boolean sent = misService.sendPdf(clinicalDayId, pdfContent, pdf.getFileName(), nextVersion);
-            if (sent) {
-                pdf.setTransferStatus(TransferStatus.SENT);
-                pdf.setTransferredAt(LocalDateTime.now());
-            } else {
-                pdf.setTransferStatus(TransferStatus.FAILED);
-                pdf.setTransferError("MIS відхилив PDF");
-            }
-        } catch (Exception e) {
-            pdf.setTransferStatus(TransferStatus.FAILED);
-            pdf.setTransferError(e.getMessage());
-        }
-        pdf = generatedPdfRepository.save(pdf);
         return toResponse(pdf);
+    }
+
+    /**
+     * Returns the stored PDF bytes for download/print in-module.
+     * PDFs are never transferred anywhere (MIS is strictly read-only).
+     */
+    public byte[] getPdfBytes(UUID clinicalDayId) {
+        GeneratedPdf pdf = generatedPdfRepository
+                .findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId)
+                .orElseThrow(() -> new NotFoundException("PDF не знайдено для клінічного дня: " + clinicalDayId));
+        if (pdf.getFileData() == null || pdf.getFileData().length == 0) {
+            throw new NotFoundException("PDF-файл відсутній для клінічного дня: " + clinicalDayId);
+        }
+        return pdf.getFileData();
     }
 
     // ========================================================================
@@ -910,9 +907,6 @@ public class PdfGeneratorService {
                 .generatedAt(entity.getGeneratedAt())
                 .generatedBy(entity.getGeneratedBy())
                 .checksum(entity.getChecksum())
-                .transferStatus(entity.getTransferStatus())
-                .transferredAt(entity.getTransferredAt())
-                .transferError(entity.getTransferError())
                 .build();
     }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CheckCircle2, Download, Info, Layers, Package } from 'lucide-react';
+import { CheckCircle2, Download, Printer, Info, Layers, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProcessStat } from '@/components/prosthetics/ProcessStat';
 import { flowInstanceApi } from '@/api/prosthetics';
+import { printPdfBlob } from '@/lib/printPdf';
 import { getErrorMessage } from '@/utils/errorMessage';
 import type {
   FlowInstance,
@@ -34,6 +35,7 @@ export default function DoneScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   const exportPdf = async () => {
     if (!instance) return;
@@ -53,6 +55,20 @@ export default function DoneScreen() {
       toast.error(getErrorMessage(err, 'Не вдалося сформувати PDF-звіт'));
     } finally {
       setExporting(false);
+    }
+  };
+
+  const printReport = async () => {
+    if (!instance) return;
+    setPrinting(true);
+    try {
+      const res = await flowInstanceApi.generateReport(instance.id);
+      await printPdfBlob(res.data);
+      toast.success('PDF-звіт надіслано на друк');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося надрукувати PDF-звіт'));
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -249,6 +265,9 @@ export default function DoneScreen() {
         </Button>
         <Button variant="outline" className="gap-2" disabled={exporting} onClick={() => void exportPdf()}>
           <Download className="size-4" /> Експортувати PDF
+        </Button>
+        <Button variant="outline" className="gap-2" disabled={printing} onClick={() => void printReport()}>
+          <Printer className="size-4" /> Друкувати PDF
         </Button>
         <Button onClick={() => navigate('/prosthetics')}>До панелі управління</Button>
       </div>

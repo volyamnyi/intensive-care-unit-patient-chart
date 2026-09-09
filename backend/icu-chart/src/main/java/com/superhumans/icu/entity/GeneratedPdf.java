@@ -35,14 +35,4 @@ public class GeneratedPdf extends BaseEntity {
 
     @Column(name = "file_data", columnDefinition = "BYTEA")
     byte[] fileData;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "transfer_status", length = 20)
-    TransferStatus transferStatus;
-
-    @Column(name = "transfer_error", length = 1000)
-    String transferError;
-
-    @Column(name = "transferred_at")
-    LocalDateTime transferredAt;
 }

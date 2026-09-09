@@ -8,14 +8,13 @@ import java.util.UUID;
 /**
  * MIS integration interface.
  * <p>
- * <b>POLICY: ICU Chart is a READ-ONLY client of MIS.</b>
- * Only data retrieval (read) from MIS is permitted.
- * The sole exception is {@link #sendPdf(UUID, byte[], String, int)} which transfers
- * an immutable PDF document — no existing MIS records are modified.
+ * <b>POLICY: ICU Chart is a READ-ONLY client of MIS — with no exceptions.</b>
+ * Only data retrieval (read) from MIS is permitted. Generated PDFs stay local
+ * (download/print in-module); they are never transferred to MIS.
  * <p>
  * <b>FORBIDDEN:</b> Any MIS write method (spzIBPatientCreate, spzIBScheduleCreate,
- * spzIBAgentSave, spzIBInstitutionSave, etc.) MUST NEVER be called by this application.
- * Violating this policy will corrupt MIS data integrity.
+ * spzIBAgentSave, spzIBInstitutionSave, document transfer, etc.) MUST NEVER be
+ * called by this application. Violating this policy will corrupt MIS data integrity.
  */
 public interface MisService {
 
@@ -40,13 +39,6 @@ public interface MisService {
      * must not implement alternative patient sources.
      */
     List<PatientDTO> getAllPatientsUnderTreatment();
-
-    /**
-     * Sends generated PDF to MIS patient document repository.
-     * This is the ONLY allowed write operation to MIS.
-     * The PDF is immutable — no existing MIS records are modified.
-     */
-    boolean sendPdf(UUID clinicalDayId, byte[] pdfContent, String fileName, int version);
 
     /**
      * Searches the medicine catalog from MIS (real mode:
