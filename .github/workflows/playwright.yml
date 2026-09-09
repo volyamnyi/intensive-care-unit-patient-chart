@@ -1,4 +1,4 @@
-﻿name: CI/CD Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -244,6 +244,30 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test]
+    # Test-user credentials are dynamic: every spec/helper reads them via
+    # testUser(slot) from APP_TEST_USERNAME* / APP_TEST_PASSWORD*. Values come
+    # from repository secrets (masked in logs); nothing is hardcoded here.
+    # Job-level so BOTH "Start backend" (UserSeedService) and
+    # "Run Playwright tests" (testUser helper) inherit them.
+    env:
+      APP_TEST_USERNAME1: ${{ secrets.APP_TEST_USERNAME1 }}
+      APP_TEST_PASSWORD1: ${{ secrets.APP_TEST_PASSWORD1 }}
+      APP_TEST_USERNAME2: ${{ secrets.APP_TEST_USERNAME2 }}
+      APP_TEST_PASSWORD2: ${{ secrets.APP_TEST_PASSWORD2 }}
+      APP_TEST_USERNAME3: ${{ secrets.APP_TEST_USERNAME3 }}
+      APP_TEST_PASSWORD3: ${{ secrets.APP_TEST_PASSWORD3 }}
+      APP_TEST_USERNAME4: ${{ secrets.APP_TEST_USERNAME4 }}
+      APP_TEST_PASSWORD4: ${{ secrets.APP_TEST_PASSWORD4 }}
+      APP_TEST_USERNAME5: ${{ secrets.APP_TEST_USERNAME5 }}
+      APP_TEST_PASSWORD5: ${{ secrets.APP_TEST_PASSWORD5 }}
+      APP_TEST_USERNAME6: ${{ secrets.APP_TEST_USERNAME6 }}
+      APP_TEST_PASSWORD6: ${{ secrets.APP_TEST_PASSWORD6 }}
+      APP_TEST_USERNAME7: ${{ secrets.APP_TEST_USERNAME7 }}
+      APP_TEST_PASSWORD7: ${{ secrets.APP_TEST_PASSWORD7 }}
+      APP_TEST_USERNAME8: ${{ secrets.APP_TEST_USERNAME8 }}
+      APP_TEST_PASSWORD8: ${{ secrets.APP_TEST_PASSWORD8 }}
+      APP_TEST_USERNAME9: ${{ secrets.APP_TEST_USERNAME9 }}
+      APP_TEST_PASSWORD9: ${{ secrets.APP_TEST_PASSWORD9 }}
     
     services:
       postgres:
@@ -312,59 +336,49 @@ jobs:
           APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
           APP_DATASOURCE_PROSTH_USERNAME: postgres
           APP_DATASOURCE_PROSTH_PASSWORD: admin
+          # Real MIS API is the sole patient/user/department source — no mock, no fallback.
+          # Values come from repository secrets; masked in CI logs, never read by agents.
+          APP_MIS_API_BASE_URL: ${{ secrets.APP_MIS_API_BASE_URL }}
+          APP_MIS_API_TOKEN_PATH: ${{ secrets.APP_MIS_API_TOKEN_PATH }}
+          APP_MIS_API_RUN_PATH: ${{ secrets.APP_MIS_API_RUN_PATH }}
+          APP_MIS_API_LOGIN: ${{ secrets.APP_MIS_API_LOGIN }}
+          APP_MIS_API_PASSWORD: ${{ secrets.APP_MIS_API_PASSWORD }}
+          APP_MIS_API_INSTALLATION_GUID: ${{ secrets.APP_MIS_API_INSTALLATION_GUID }}
           APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
-          # Seed users come from APP_TEST_* (UserSeedService); values below are the
-          # long-public dev credentials already hardcoded across the E2E specs.
-          APP_TEST_USERNAME1: doctor1
-          APP_TEST_PASSWORD1: doctor123
+          # Seed-user profile metadata (UserSeedService; logins/passwords come
+          # from the job-level env above — never hardcoded).
           APP_TEST_USERFULLNAME: РћР»РµРєСЃР°РЅРґСЂ РњРµР»СЊРЅРёРє
           APP_TEST_PHONE1: +380501111111
           APP_TEST_PROFESSION1: Р›С–РєР°СЂ-С…С–СЂСѓСЂРі
           APP_TEST_USERROLE1: DOCTOR
-          APP_TEST_USERNAME2: doctor2
-          APP_TEST_PASSWORD2: doctor123
           APP_TEST_USERFULLNAME2: РќР°С‚Р°Р»С–СЏ Р‘РѕР№РєРѕ
           APP_TEST_PHONE2: +380502222222
           APP_TEST_PROFESSION2: Р›С–РєР°СЂ-С…С–СЂСѓСЂРі
           APP_TEST_USERROLE2: DOCTOR
-          APP_TEST_USERNAME3: nurse1
-          APP_TEST_PASSWORD3: nurse123
           APP_TEST_USERFULLNAME3: РћР»РµРЅР° РўРєР°С‡РµРЅРєРѕ
           APP_TEST_PHONE3: +380503333333
           APP_TEST_PROFESSION3: РњРµРґРёС‡РЅР° СЃРµСЃС‚СЂР° СЃС‚Р°С†С–РѕРЅР°СЂСѓ
           APP_TEST_USERROLE3: NURSE
-          APP_TEST_USERNAME4: nurse2
-          APP_TEST_PASSWORD4: nurse123
           APP_TEST_USERFULLNAME4: РњР°СЂС–СЏ РљСЂР°РІС‡СѓРє
           APP_TEST_PHONE4: +380504444444
           APP_TEST_PROFESSION4: РњРµРґРёС‡РЅР° СЃРµСЃС‚СЂР° СЃС‚Р°С†С–РѕРЅР°СЂСѓ
           APP_TEST_USERROLE4: NURSE
-          APP_TEST_USERNAME5: head1
-          APP_TEST_PASSWORD5: head123
           APP_TEST_USERFULLNAME5: Р’Р°СЃРёР»СЊ Р“РѕРЅС‡Р°СЂСѓРє
           APP_TEST_PHONE5: +380505555555
           APP_TEST_PROFESSION5: Р—Р°РІС–РґСѓРІР°С‡
           APP_TEST_USERROLE5: HEAD_OF_DEPARTMENT
-          APP_TEST_USERNAME6: admin
-          APP_TEST_PASSWORD6: admin123
           APP_TEST_USERFULLNAME6: РђРґРјС–РЅ РЎРёСЃС‚РµРјРё
           APP_TEST_PHONE6: +380506666666
           APP_TEST_PROFESSION6: РђРґРјС–РЅС–СЃС‚СЂР°С‚РѕСЂ
           APP_TEST_USERROLE6: ADMINISTRATOR
-          APP_TEST_USERNAME7: prosthetist1
-          APP_TEST_PASSWORD7: doctor123
           APP_TEST_USERFULLNAME7: РћР»РµРі Р РѕРјР°РЅСЋРє
           APP_TEST_PHONE7: +380507777777
           APP_TEST_PROFESSION7: РџСЂРѕС‚РµР·РёСЃС‚
           APP_TEST_USERROLE7: PROSTHETIST
-          APP_TEST_USERNAME8: prosthetist2
-          APP_TEST_PASSWORD8: doctor123
           APP_TEST_USERFULLNAME8: Р†СЂРёРЅР° РЁРµРІС‡СѓРє
           APP_TEST_PHONE8: +380508888888
           APP_TEST_PROFESSION8: РџСЂРѕС‚РµР·РёСЃС‚
           APP_TEST_USERROLE8: PROSTHETIST
-          APP_TEST_USERNAME9: prosthetics_admin1
-          APP_TEST_PASSWORD9: doctor123
           APP_TEST_USERFULLNAME9: РўР°СЂР°СЃ РњРµР»СЊРЅРёРє
           APP_TEST_PHONE9: +380509999999
           APP_TEST_PROFESSION9: РђРґРјС–РЅС–СЃС‚СЂР°С‚РѕСЂ РїСЂРѕС‚РµР·СѓРІР°РЅРЅСЏ
