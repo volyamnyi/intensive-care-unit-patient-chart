@@ -7,6 +7,7 @@ import com.superhumans.icu.entity.Episode;
 import com.superhumans.icu.entity.EpisodeStatus;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.mis.MisService;
+import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.icu.repository.ClinicalDayRepository;
 import com.superhumans.icu.repository.EpisodeRepository;
 import com.superhumans.repository.core.UserRepository;
@@ -17,6 +18,7 @@ import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -79,9 +81,17 @@ public class DepartmentService {
         userRepository.findByRole(UserRole.HEAD_OF_DEPARTMENT).forEach(
                 u -> doctorNames.put(u.getId(), u.getFullName()));
 
+        // One roster fetch for the whole list (same N+1 rationale as
+        // EpisodeService.searchEpisodes over real MIS).
+        Map<Long, String> patientNames = new HashMap<>();
+        for (PatientDTO p : misService.getAllPatientsUnderTreatment()) {
+            if (p.getId() != null && !patientNames.containsKey(p.getId())) {
+                patientNames.put(p.getId(), p.getFullName());
+            }
+        }
+
         return activeEpisodes.stream().map(ep -> {
-            String patientName = misService.getPatient(ep.getPatientId())
-                    .map(p -> p.getFullName()).orElse(null);
+            String patientName = patientNames.get(ep.getPatientId());
 
             var latestDay = clinicalDayRepository
                     .findFirstByEpisodeIdOrderByDayNumberDesc(ep.getId());

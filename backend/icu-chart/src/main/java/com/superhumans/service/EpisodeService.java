@@ -13,6 +13,7 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.EpisodeMapper;
 import com.superhumans.mis.MisService;
+import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.icu.repository.ClinicalDayRepository;
 import com.superhumans.icu.repository.EpisodeRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -62,11 +65,19 @@ public class EpisodeService {
         } else {
             episodes = episodeRepository.findAll();
         }
-        return episodes.stream().map(ep -> {
-            String name = misService.getPatient(ep.getPatientId())
-                    .map(p -> p.getFullName()).orElse(null);
-            return episodeMapper.toResponse(ep, name);
-        }).collect(Collectors.toList());
+        // One roster fetch for the whole list: MisService.getPatient() re-fetches
+        // the full roster per id, which turns this endpoint N+1 over real MIS
+        // (each fetch costs seconds; the roster load never settles inside UI
+        // budgets). First-wins + null-name semantics match getPatient exactly.
+        Map<Long, String> namesByPatientId = new HashMap<>();
+        for (PatientDTO p : misService.getAllPatientsUnderTreatment()) {
+            if (p.getId() != null && !namesByPatientId.containsKey(p.getId())) {
+                namesByPatientId.put(p.getId(), p.getFullName());
+            }
+        }
+        return episodes.stream().map(ep ->
+                episodeMapper.toResponse(ep, namesByPatientId.get(ep.getPatientId()))
+        ).collect(Collectors.toList());
     }
 
     @Transactional
