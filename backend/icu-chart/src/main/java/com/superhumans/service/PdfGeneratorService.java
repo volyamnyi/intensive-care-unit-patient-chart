@@ -875,7 +875,11 @@ public class PdfGeneratorService {
         if (bundled != null) {
             return bundled;
         }
-        String name = regular.getFontProgram().getFontNames().getFontName();
+        // Standard Type1 fallbacks (e.g. Helvetica) have no font program —
+        // guard against NPE and fall through to the path list instead.
+        String name = regular.getFontProgram() != null
+                ? regular.getFontProgram().getFontNames().getFontName()
+                : null;
         if (name != null && !name.isEmpty()) {
             String boldPath = name.replace("Sans-Regular", "Sans-Bold")
                     .replace("arial", "arialbd")
