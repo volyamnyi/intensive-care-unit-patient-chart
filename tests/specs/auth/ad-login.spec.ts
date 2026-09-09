@@ -81,21 +81,35 @@ test.describe.serial('AD authentication (corporate directory, local-only)', () =
   test('demoted identity behaves as GUEST with zero modules', async ({ page, request }) => {
     const { login, password } = credsOrThrow(9);
     const adminHeaders = await seedAdminHeaders(request);
+    // Capture the seeded role first: this file runs before role-sensitive
+    // suites, so the demotion below must be reverted (finally) — otherwise
+    // slot 9 stays GUEST and every later PROSTHETICS_ADMINISTRATOR assertion
+    // fails (observed as 403s in tp-ll-02-rbac).
+    const meRes = await request.get('http://localhost:8085/api/users/me', {
+      headers: { Authorization: `Bearer ${jwtFromLogin(await apiLogin(request, login, password))}` },
+    });
+    expect(meRes.ok()).toBeTruthy();
+    const originalRole = ((await meRes.json()) as { role?: string }).role;
+    expect(originalRole).toBeTruthy();
     await setUserRole(request, adminHeaders, login, 'GUEST');
 
-    await apiSession(page, request, login, password);
-    await page.goto('/select');
-    await expect(page.getByText(/не має доступу до жодного модуля/)).toBeVisible();
-    await expect(page.getByText('Відділення анестезіології та інтенсивної терапії')).not.toBeVisible();
+    try {
+      await apiSession(page, request, login, password);
+      await page.goto('/select');
+      await expect(page.getByText(/не має доступу до жодного модуля/)).toBeVisible();
+      await expect(page.getByText('Відділення анестезіології та інтенсивної терапії')).not.toBeVisible();
 
-    await page.goto('/icu/doctor');
-    await expect(page).toHaveURL(/\/select/);
+      await page.goto('/icu/doctor');
+      await expect(page).toHaveURL(/\/select/);
 
-    const perms = await request.get('http://localhost:8085/api/users/me/permissions', {
-      headers: { Cookie: `jwt=${(await page.context().cookies()).find((c) => c.name === 'jwt')?.value}` },
-    });
-    expect(perms.status()).toBe(200);
-    expect(await perms.json()).toEqual([]);
+      const perms = await request.get('http://localhost:8085/api/users/me/permissions', {
+        headers: { Cookie: `jwt=${(await page.context().cookies()).find((c) => c.name === 'jwt')?.value}` },
+      });
+      expect(perms.status()).toBe(200);
+      expect(await perms.json()).toEqual([]);
+    } finally {
+      await setUserRole(request, adminHeaders, login, originalRole as string);
+    }
   });
 
   test('doctor session reaches the ICU module and survives reload', async ({ page, request }) => {
