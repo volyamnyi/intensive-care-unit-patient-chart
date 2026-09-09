@@ -244,6 +244,9 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test]
+    # Secrets live in the APP environment (environment-scoped secrets only
+    # resolve when the job declares it).
+    environment: APP
     # Test-user credentials are dynamic: every spec/helper reads them via
     # testUser(slot) from APP_TEST_USERNAME* / APP_TEST_PASSWORD*. Values come
     # from repository secrets (masked in logs); nothing is hardcoded here.
