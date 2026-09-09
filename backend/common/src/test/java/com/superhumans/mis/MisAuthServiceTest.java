@@ -47,10 +47,9 @@ class MisAuthServiceTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Content-Type", "application/x-www-form-urlencoded"))
                 .andExpect(content().string(
-                        java.util.regex.Pattern.quote(
-                                "grant_type=password"
-                                        + "&username=integration%40%40%4011111111-2222-3333-4444-555555555555"
-                                        + "&password=integration-secret")))
+                        "grant_type=password"
+                                + "&username=integration%40%40%4011111111-2222-3333-4444-555555555555"
+                                + "&password=integration-secret"))
                 .andRespond(withSuccess(
                         "{\"access_token\":\"the-token\",\"token_type\":\"bearer\","
                                 + "\"expires_in\":86399,\"login\":\"DELoginAPI\"}",
