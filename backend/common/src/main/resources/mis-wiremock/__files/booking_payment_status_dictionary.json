@@ -1,8 +1,0 @@
-{
-  "bookingPaymentStatusList": [
-    { "bookingPaymentStatusCode": "UNPAID", "bookingPaymentStatusName": "Не оплачено" },
-    { "bookingPaymentStatusCode": "PAID", "bookingPaymentStatusName": "Оплачено" },
-    { "bookingPaymentStatusCode": "PARTIALLY_PAID", "bookingPaymentStatusName": "Частково оплачено" },
-    { "bookingPaymentStatusCode": "REFUNDED", "bookingPaymentStatusName": "Повернено" }
-  ]
-}

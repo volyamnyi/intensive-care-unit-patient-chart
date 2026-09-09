@@ -5,7 +5,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -20,11 +19,18 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Generic REST client for MIS API.
+ * Generic REST client for the real MIS API.
+ * <p>
+ * Every call is {@code POST {base-url}{run-path}} with an
+ * {@code Authorization: Bearer} token from {@link MisAuthService} and the API
+ * identity ({@code login} param, {@code installationId}) from
+ * {@link MisApiProperties}. A single HTTP 401 triggers one token
+ * invalidation + re-fetch and one retry.
  * <p>
  * <b>POLICY: ICU Chart is READ-ONLY client of MIS.</b>
  * Only read-methods (procedure Search/Details/Dictionary families) are allowed.
  * Write methods (Save/Create/Update/Delete families) MUST NEVER be called via this client.
+ * The sole allowed write is {@code sendPdf} which transfers an immutable PDF.
  */
 @Slf4j
 @Component
@@ -34,21 +40,12 @@ public class MisApiClient {
 
     final RestTemplate restTemplate;
     final ObjectMapper objectMapper;
-
-    @Value("${app.mis.api.base-url:http://localhost:9090}")
-    String baseUrl;
-
-    @Value("${app.mis.api.run-path:/api/run}")
-    String runPath;
-
-    @Value("${app.mis.login:integration}")
-    String login;
-
-    @Value("${app.mis.installation-guid:00000000-0000-0000-0000-000000000000}")
-    String installationGuid;
+    final MisAuthService misAuthService;
+    final MisApiProperties properties;
 
     public JsonNode callMethod(String methodName, Param... params) {
-        String url = baseUrl + runPath;
+        properties.ensureConfigured();
+        String url = properties.getBaseUrl() + properties.getRunPath();
         log.debug("Calling MIS API: {} method={}", url, methodName);
 
         ObjectNode requestBody = objectMapper.createObjectNode();
@@ -64,13 +61,21 @@ public class MisApiClient {
 
         ObjectNode loginParam = objectMapper.createObjectNode();
         loginParam.put("name", "Login");
-        loginParam.put("value", login);
+        loginParam.put("value", properties.getLogin());
         paramsArray.add(loginParam);
 
         requestBody.set("params", paramsArray);
-        requestBody.put("installationId", installationGuid);
+        requestBody.put("installationId", properties.getInstallationGuid());
 
-        return post(url, requestBody, null, methodName);
+        try {
+            return post(url, requestBody, misAuthService.getAccessToken(), methodName);
+        } catch (MisBadResponseException e) {
+            if (e.getStatusCode() == 401) {
+                misAuthService.invalidateToken();
+                return post(url, requestBody, misAuthService.getAccessToken(), methodName);
+            }
+            throw e;
+        }
     }
 
     private JsonNode post(String url, ObjectNode requestBody, String bearerToken,

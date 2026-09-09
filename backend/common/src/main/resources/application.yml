@@ -73,13 +73,15 @@ app:
 
   mis:
     api:
-      base-url: ${APP_MIS_API_BASE_URL:http://localhost:9090}
+      base-url: ${APP_MIS_API_BASE_URL:}
+      token-path: ${APP_MIS_API_TOKEN_PATH:/token}
       run-path: ${APP_MIS_API_RUN_PATH:/api/run}
-      login: ${APP_MIS_API_LOGIN:integration}
+      login: ${APP_MIS_API_LOGIN:}
       password: ${APP_MIS_API_PASSWORD:}
-      installation-guid: ${APP_MIS_API_INSTALLATION_GUID:00000000-0000-0000-0000-000000000000}
+      installation-guid: ${APP_MIS_API_INSTALLATION_GUID:}
       connect-timeout-ms: 5000
       read-timeout-ms: 15000
+      token-skew-sec: 60
 
   api:
     title: MIS Doctor Eleks API
@@ -188,10 +190,6 @@ server:
 app:
   seed-data:
     enabled: false
-
-  mis:
-    api:
-      base-url: ${APP_MIS_API_BASE_URL:}
 
 logging:
   level:

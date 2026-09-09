@@ -2,7 +2,7 @@ package com.superhumans.mis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -29,20 +29,55 @@ class MisApiClientTest {
         runServer = MockRestServiceServer.bindTo(clientTransport).build();
         mapper = new tools.jackson.databind.ObjectMapper();
 
-        client = new MisApiClient(clientTransport, mapper);
-        ReflectionTestUtils.setField(client, "baseUrl", "http://localhost:9090");
-        ReflectionTestUtils.setField(client, "runPath", "/api/run");
-        ReflectionTestUtils.setField(client, "login", "integration");
-        ReflectionTestUtils.setField(client, "installationGuid", "00000000-0000-0000-0000-000000000000");
+        MisApiProperties properties = new MisApiProperties();
+        ReflectionTestUtils.setField(properties, "baseUrl", "http://localhost:9090");
+        ReflectionTestUtils.setField(properties, "runPath", "/api/run");
+        ReflectionTestUtils.setField(properties, "tokenPath", "/token");
+        ReflectionTestUtils.setField(properties, "login", "integration");
+        ReflectionTestUtils.setField(properties, "password", "integration-secret");
+        ReflectionTestUtils.setField(properties, "installationGuid", "00000000-0000-0000-0000-000000000000");
+
+        MisAuthService authService = new StubOAuthService(clientTransport, mapper, properties);
+        authStubToken = "test-bearer-token";
+
+        client = new MisApiClient(clientTransport, mapper, authService, properties);
+    }
+
+    /** Token is stubbed so the client test never hits a real auth endpoint. */
+    static String authStubToken;
+
+    private static final class StubOAuthService extends MisAuthService {
+        private final MisApiProperties props;
+
+        StubOAuthService(RestTemplate restTemplate, tools.jackson.databind.ObjectMapper objectMapper,
+                MisApiProperties props) {
+            super(restTemplate, objectMapper, props);
+            this.props = props;
+        }
+
+        @Override
+        public String getAccessToken() {
+            props.ensureConfigured();
+            return authStubToken;
+        }
+
+        @Override
+        public synchronized void invalidateToken() {
+            // no-op
+        }
     }
 
     @Test
-    void callMethod_postsToRunPathWithLoginAndInstallation() {
+    void callMethod_postsToRunPathWithBearerAndInstallation() {
         runServer.expect(requestTo("http://localhost:9090/api/run"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(headerDoesNotExist("Authorization"))
+                .andExpect(header("Authorization", "Bearer test-bearer-token"))
                 .andExpect(content().string(
-                        java.util.regex.Matcher.quoteReplacement("{\"name\":\"spzIBPatientSearch\",\"params\":[{\"name\":\"q\",\"value\":\"x\"},{\"name\":\"Login\",\"value\":\"integration\"}],\"installationId\":\"00000000-0000-0000-0000-000000000000\"}")
+                        java.util.regex.Matcher.quoteReplacement(
+                                "{\"name\":\"spzIBPatientSearch\","
+                                        + "\"params\":[{\"name\":\"q\",\"value\":\"x\"},"
+                                        + "{\"name\":\"Login\",\"value\":\"integration\"}],"
+                                        + "\"installationId\":\"00000000-0000-0000-0000-000000000000\"}")
                 ))
                 .andRespond(withSuccess("{\"ok\":true}", MediaType.APPLICATION_JSON));
 
