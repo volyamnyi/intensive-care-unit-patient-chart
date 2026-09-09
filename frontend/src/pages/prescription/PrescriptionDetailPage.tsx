@@ -243,7 +243,7 @@ export default function PrescriptionDetailPage() {
         onExecute={isNurseUser ? handleExecute : undefined}
         onAddItem={isNurseUser ? async () => {} : handleAddItem}
         onRemoveItem={isNurseUser ? async () => {} : handleRemoveItem}
-        onSearchMedicine={(keyword) => prescriptionApi.getMedicineCatalog(keyword).then(r => r.data)}
+        onSearchMedicine={(keyword, signal) => prescriptionApi.getMedicineCatalog(keyword, signal).then(r => r.data)}
         loading={loading}
       />
 

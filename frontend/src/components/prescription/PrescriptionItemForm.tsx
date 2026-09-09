@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useMedicineSearch } from './useMedicineSearch';
 import type { MedicineCatalogItem, PrescriptionItemAddRequest } from '../../types/medication';
 
 interface PrescriptionItemFormProps {
   onSubmit: (data: PrescriptionItemAddRequest) => void;
-  onSearchMedicine: (keyword: string) => Promise<MedicineCatalogItem[]>;
+  onSearchMedicine?: (keyword: string, signal?: AbortSignal) => Promise<MedicineCatalogItem[]>;
   disabled?: boolean;
 }
 
@@ -14,11 +16,8 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, disab
   const [medicine, setMedicine] = useState<MedicineCatalogItem | null>(null);
   const [medicineMethod, setMedicineMethod] = useState('');
   const [regime, setRegime] = useState('');
-  const [options, setOptions] = useState<MedicineCatalogItem[]>([]);
-  const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [open, setOpen] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,34 +30,11 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, disab
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const { options, loading, error: searchError, active, retry } = useMedicineSearch(inputValue, onSearchMedicine);
+
   useEffect(() => {
-    if (inputValue.length < 2) {
-      setOptions([]);
-      return;
-    }
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setLoading(true);
-    const timeout = setTimeout(() => {
-      onSearchMedicine(inputValue)
-        .then((res) => {
-          if (!controller.signal.aborted) {
-            setOptions(res);
-            setOpen(true);
-          }
-        })
-        .catch(() => setOptions([]))
-        .finally(() => {
-          if (!controller.signal.aborted) {
-            setLoading(false);
-          }
-        });
-    }, 300);
-    return () => {
-      clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [inputValue, onSearchMedicine]);
+    if (!loading) setOpen(active);
+  }, [loading, active]);
 
   const handleSubmit = () => {
     if (!medicine) return;
@@ -71,8 +47,10 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, disab
     setMedicineMethod('');
     setRegime('');
     setInputValue('');
-    setOptions([]);
+    setOpen(false);
   };
+
+  const isEmpty = !loading && !searchError && options.length === 0;
 
   return (
     <div>
@@ -82,7 +60,7 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, disab
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onFocus={() => { if (options.length > 0) setOpen(true); }}
+              onFocus={() => { if (active) setOpen(true); }}
               placeholder="Препарат"
               disabled={disabled}
             />
@@ -90,20 +68,52 @@ export default function PrescriptionItemForm({ onSubmit, onSearchMedicine, disab
               <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
             )}
           </div>
-          {open && options.length > 0 && (
+          {open && (
             <div className="absolute z-50 mt-1 w-full rounded-lg border bg-popover text-popover-foreground shadow-md max-h-48 overflow-auto">
-              {options.map((option) => (
-                <div
+              {loading && (
+                <div className="flex min-h-11 items-center gap-1 px-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Завантаження каталогу…
+                </div>
+              )}
+              {!loading && searchError && (
+                <div className="flex min-h-11 items-center px-2 text-xs text-destructive">
+                  Не вдалося завантажити каталог ліків з MIS —{' '}
+                  <button type="button" className="underline hover:decoration-accent-foreground" onClick={retry}>
+                    Спробувати ще раз
+                  </button>
+                </div>
+              )}
+              {!loading && !searchError && isEmpty && (
+                <div className="flex min-h-11 items-center px-2 text-xs text-muted-foreground">Нічого не знайдено</div>
+              )}
+              {!loading && !searchError && options.map((option) => (
+                <button
                   key={option.id || option.name}
-                  className="flex min-h-11 items-center px-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                  type="button"
+                  disabled={option.itemKindIsDisabled === true}
+                  aria-disabled={option.itemKindIsDisabled ? true : undefined}
+                  className={cn(
+                    'flex w-full min-h-11 items-center px-2 text-left text-sm',
+                    option.itemKindIsDisabled === true
+                      ? 'cursor-not-allowed text-muted-foreground/60'
+                      : 'cursor-pointer hover:bg-accent hover:text-accent-foreground',
+                    medicine?.id === option.id && 'bg-accent'
+                  )}
                   onClick={() => {
+                    if (option.itemKindIsDisabled === true) return;
                     setMedicine(option);
                     setInputValue(option.name);
                     setOpen(false);
                   }}
                 >
                   {option.name}
-                </div>
+                  {option.itemKindIsDisabled === true && (
+                    <span className="ml-1 text-muted-foreground/60 text-xs">(вимкнено)</span>
+                  )}
+                  {option.isHighRisk === true && (
+                    <span className="ml-1 text-destructive text-xs">(HR)</span>
+                  )}
+                </button>
               ))}
             </div>
           )}

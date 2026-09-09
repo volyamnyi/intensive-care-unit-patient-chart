@@ -23,7 +23,7 @@ export interface GridProps {
   onExecute?: (dayPartId: string, actualDose: string, secondPersonLogin: string, secondPersonPassword: string) => Promise<void>;
   onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
   onRemoveItem: (itemId: string) => Promise<void>;
-  onSearchMedicine: (keyword: string) => Promise<MedicineCatalogItem[]>;
+  onSearchMedicine: (keyword: string, signal?: AbortSignal) => Promise<MedicineCatalogItem[]>;
   loading?: boolean;
 }
 

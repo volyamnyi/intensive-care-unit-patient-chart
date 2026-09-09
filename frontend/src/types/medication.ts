@@ -61,6 +61,9 @@ export interface MedicineCatalogItem {
   categoryRef: number | null;
   ptgCode: string | null;
   isHighRisk: boolean | null;
+  /** From MIS `itemKindIsDisabled`: the item exists in the MIS catalog but is
+   *  not orderable. Rendered non-selectable (visible, dimmed, no-op) never hidden. */
+  itemKindIsDisabled?: boolean | null;
 }
 
 export interface VitalSignEntry {

@@ -100,18 +100,22 @@ export async function ensureMedicationItem(
   return (await addRes.json()).id;
 }
 
-// Fetch a single real-catalog medicine name (resilient to arbitrary MIS data).
+// Fetch a single orderable real-catalog medicine name (resilient to arbitrary
+// MIS data). Prefers the first named item that is NOT disabled
+// (`itemKindIsDisabled !== true`) so the add-drug flow never targets a
+// non-selectable row; falls back to the first named item if none are enabled.
 export async function firstCatalogMedicine(request: APIRequestContext, token: string): Promise<string> {
   const res = await request.get(`${API}/prescriptions/medicine-catalog`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   expect(res.ok()).toBeTruthy();
   const catalog = await res.json();
-  const med = Array.isArray(catalog)
-    ? catalog.find((m: any) => typeof m?.name === 'string' && m.name.trim().length >= 2)
-    : undefined;
+  const items = Array.isArray(catalog) ? catalog : [];
+  const enabled = items.find((m: any) => typeof m?.name === 'string' && m.name.trim().length >= 2
+    && m.itemKindIsDisabled !== true);
+  const med = enabled ?? items.find((m: any) => typeof m?.name === 'string' && m.name.trim().length >= 2);
   if (!med) throw new Error('No medicine with a name available in the MIS catalog');
-  return med.name;
+  return med.name as string;
 }
 
 export interface NavOpts {

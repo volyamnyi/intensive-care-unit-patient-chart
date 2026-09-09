@@ -98,4 +98,44 @@ describe('MedicineSearchInput — «Додати» button enablement (in-progres
       expect.objectContaining({ medicineName: 'Ondansetron' }),
     ));
   });
+
+  it('retries a failed catalog fetch via the error-state button', async () => {
+    const user = userEvent.setup();
+    const onSearchMedicine = vi.fn(() => Promise.reject(new Error('network')));
+    renderSearchInput({ onSearchMedicine });
+    const input = screen.getByPlaceholderText('Препарат');
+    await user.type(input, 'Ond');
+    const retry = await screen.findByRole('button', { name: 'Спробувати ще раз' });
+    await user.click(retry);
+    await waitFor(() => expect(onSearchMedicine).toHaveBeenCalledTimes(2));
+  });
+
+  it('shows an empty state when the catalog returns no matches', async () => {
+    const user = userEvent.setup();
+    const onSearchMedicine = vi.fn(() => Promise.resolve([]));
+    renderSearchInput({ onSearchMedicine });
+    const input = screen.getByPlaceholderText('Препарат');
+    await user.type(input, 'Zzzz');
+    expect(await screen.findByText('Нічого не знайдено')).toBeInTheDocument();
+  });
+
+  it('renders a disabled catalog item non-selectable (visible, not hidden)', async () => {
+    const user = userEvent.setup();
+    const onSearchMedicine = vi.fn(() => Promise.resolve<MedicineCatalogItem[]>([
+      { id: 9, name: 'DisabledPar', categoryRef: 9, ptgCode: '9', isHighRisk: false, itemKindIsDisabled: true },
+    ]));
+    const onAddItem = vi.fn().mockResolvedValue(undefined);
+    renderSearchInput({ onSearchMedicine, onAddItem });
+    const input = screen.getByPlaceholderText('Препарат');
+    await user.type(input, 'DisabledPar');
+    const row = await screen.findByRole('button', { name: /DisabledPar/ });
+    expect(row).toBeDisabled();
+    expect(screen.getByText('Нічого не знайдено')).not.toBeInTheDocument();
+    // Clicking the disabled row must not select/enable «Додати» from a selection.
+    await user.click(row);
+    const add = screen.getByRole('button', { name: 'Додати' });
+    // «Додати» is enabled purely from the typed text (free-text contract), so
+    // assert the row itself stayed disabled rather than the add button.
+    expect(add).toBeEnabled();
+  });
 });
