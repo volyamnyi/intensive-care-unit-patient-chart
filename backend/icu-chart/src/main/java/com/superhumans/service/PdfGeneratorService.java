@@ -34,6 +34,7 @@ import com.superhumans.icu.repository.OrderExecutionRepository;
 import com.superhumans.icu.repository.ScaleResultRepository;
 import com.superhumans.icu.repository.SignatureRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,7 @@ import lombok.experimental.FieldDefaults;
 
 import com.itextpdf.kernel.colors.ColorConstants;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -91,6 +93,10 @@ public class PdfGeneratorService {
                 .orElse(1);
 
         byte[] pdfContent = buildPdfContent(day, nextVersion, userId);
+        if (pdfContent == null || pdfContent.length == 0) {
+            throw new IllegalStateException(
+                    "PDF content build failed for clinical day " + clinicalDayId);
+        }
 
         GeneratedPdf pdf = GeneratedPdf.builder()
                 .clinicalDay(day)
@@ -219,6 +225,9 @@ public class PdfGeneratorService {
             document.close();
             return baos.toByteArray();
         } catch (Exception e) {
+            log.error("PDF content build failed for clinical day {}: {}: {}",
+                    day != null ? day.getId() : null,
+                    e.getClass().getName(), e.getMessage(), e);
             return null;
         }
     }
