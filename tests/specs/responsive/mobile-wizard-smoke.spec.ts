@@ -1,6 +1,7 @@
 ﻿import { test, expect, type APIRequestContext } from '@playwright/test';
 import { completeInstanceViaApi } from '../../helpers/prosthetics-flow';
 import { WizardExecutionPage } from '../../pages/prosthetics/WizardExecutionPage';
+import { testUser } from '../../helpers/test-users';
 
 // Responsive UI Phase 6 (issue #165): a prosthetist can complete one full
 // wizard stage at 360x740 — start the process, fill the step elements,
@@ -24,7 +25,7 @@ const ACTIVE_DUPLICATE_STATUSES = [
 
 async function login(request: APIRequestContext): Promise<string> {
   const res = await request.post(AUTH, {
-    data: { login: 'prosthetist1', password: 'doctor123' },
+    data: { login: testUser(7).login, password: testUser(7).password },
   });
   if (!res.ok()) {
     throw new Error(`Login failed: HTTP ${res.status()}`);

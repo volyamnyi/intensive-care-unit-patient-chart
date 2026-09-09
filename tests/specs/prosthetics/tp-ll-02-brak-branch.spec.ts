@@ -9,6 +9,7 @@ import {
   terminateInstance,
   createBrakViaApi,
 } from '../../helpers/tp-ll-02-flow';
+import { testUser } from '../../helpers/test-users';
 
 /**
  * TP-LL-02 «Брак» branching E2E (§12.3 ТЗ). Runs under the serial
@@ -40,7 +41,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
   let branchId: string;
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
     templateId = await findTemplateByIdName(request, h(), 'TP-LL-02');
   });
 
@@ -307,7 +308,7 @@ test.describe('TP-LL-02 — Брак (defect) branching', () => {
     await req.post(`${PROSTH}/instances/${instanceId}/start`, { headers: h() });
     await completeToStep(req, h(), instanceId, STEP_E28);
 
-    const otherToken = await login(req, 'prosthetist2', 'doctor123');
+    const otherToken = await login(req, testUser(8).login, testUser(8).password);
     const res = await req.get(`${PROSTH}/instances/${instanceId}`, { headers: headersFor(otherToken) });
     expect(res.status()).toBe(404);
     // The foreign user cannot create a brak on it either.

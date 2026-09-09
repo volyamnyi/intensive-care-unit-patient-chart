@@ -10,6 +10,7 @@ import {
   completeToStep,
   createBrakViaApi,
 } from '../../helpers/tp-ll-02-flow';
+import { testUser } from '../../helpers/test-users';
 
 /**
  * Issue #210 — Brak (Bpak) verification & acceptance: HTTP security, audit trail,
@@ -39,7 +40,7 @@ async function startInstance(request: APIRequestContext, headers: Record<string,
 
 test.describe('TP-LL-02 — Brak audit trail, branch PDF & HTTP security (Issue #210)', () => {
   test('invalid JWT (unauthenticated) POST /brak with a valid body → 401', async ({ request }) => {
-    const p1Headers = headersFor(await login(request, 'prosthetist1', 'doctor123'));
+    const p1Headers = headersFor(await login(request, testUser(7).login, testUser(7).password));
     const templateId = await findTemplateByIdName(request, p1Headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, p1Headers, templateId);
     await startInstance(request, p1Headers, instance.id);
@@ -60,8 +61,8 @@ test.describe('TP-LL-02 — Brak audit trail, branch PDF & HTTP security (Issue 
   });
 
   test('nurse (lacks PROSTHETICS_STEP_COMPLETE) POST /brak (valid body) → 403', async ({ request }) => {
-    const p1Headers = headersFor(await login(request, 'prosthetist1', 'doctor123'));
-    const nurseHeaders = headersFor(await login(request, 'nurse1', 'nurse123'));
+    const p1Headers = headersFor(await login(request, testUser(7).login, testUser(7).password));
+    const nurseHeaders = headersFor(await login(request, testUser(3).login, testUser(3).password));
     const templateId = await findTemplateByIdName(request, p1Headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, p1Headers, templateId);
     await startInstance(request, p1Headers, instance.id);
@@ -83,7 +84,7 @@ test.describe('TP-LL-02 — Brak audit trail, branch PDF & HTTP security (Issue 
   });
 
   test('owner PDF for a fresh BRANCHED branch (IN_PROGRESS) returns 200 application/pdf', async ({ request }) => {
-    const p1Headers = headersFor(await login(request, 'prosthetist1', 'doctor123'));
+    const p1Headers = headersFor(await login(request, testUser(7).login, testUser(7).password));
     const templateId = await findTemplateByIdName(request, p1Headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, p1Headers, templateId);
     await startInstance(request, p1Headers, instance.id);
@@ -107,8 +108,8 @@ test.describe('TP-LL-02 — Brak audit trail, branch PDF & HTTP security (Issue 
   });
 
   test('admin (AUDIT_ACCESS) reads a brak\'s audit trail: BrakEvent/CREATE, FlowInstance/BRANCH (original), FlowInstance/CREATE_BRANCH (branch)', async ({ request }) => {
-    const p1Headers = headersFor(await login(request, 'prosthetist1', 'doctor123'));
-    const adminHeaders = headersFor(await login(request, 'admin', 'admin123'));
+    const p1Headers = headersFor(await login(request, testUser(7).login, testUser(7).password));
+    const adminHeaders = headersFor(await login(request, testUser(6).login, testUser(6).password));
     const templateId = await findTemplateByIdName(request, p1Headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, p1Headers, templateId);
     await startInstance(request, p1Headers, instance.id);
@@ -142,7 +143,7 @@ test.describe('TP-LL-02 — Brak audit trail, branch PDF & HTTP security (Issue 
 
     // A NURSE (no AUDIT_ACCESS) is denied the same read.
     const nurseRes = await request.get(`${API}/audit?entity=BrakEvent&entityId=${eventId}`, {
-      headers: headersFor(await login(request, 'nurse1', 'nurse123')),
+      headers: headersFor(await login(request, testUser(3).login, testUser(3).password)),
     });
     expect(nurseRes.status()).toBe(403);
 

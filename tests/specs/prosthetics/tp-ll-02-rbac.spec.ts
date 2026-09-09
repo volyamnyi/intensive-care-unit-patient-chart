@@ -9,6 +9,7 @@ import {
   createFreeLowerInstance,
   terminateInstance,
 } from '../../helpers/tp-ll-02-flow';
+import { testUser } from '../../helpers/test-users';
 
 /**
  * TP-LL-02 access-control matrix (Фаза 5).
@@ -29,11 +30,11 @@ test.describe('TP-LL-02 — Role-Based Access Control (Фаза 5)', () => {
   let nurseHeaders: any;
 
   test.beforeAll(async ({ request }) => {
-    p1Headers = headersFor(await login(request, 'prosthetist1', 'doctor123'));
-    p2Headers = headersFor(await login(request, 'prosthetist2', 'doctor123'));
-    prosthetisAdminHeaders = headersFor(await login(request, 'prosthetics_admin1', 'doctor123'));
-    adminHeaders = headersFor(await login(request, 'admin', 'admin123'));
-    nurseHeaders = headersFor(await login(request, 'nurse1', 'nurse123'));
+    p1Headers = headersFor(await login(request, testUser(7).login, testUser(7).password));
+    p2Headers = headersFor(await login(request, testUser(8).login, testUser(8).password));
+    prosthetisAdminHeaders = headersFor(await login(request, testUser(9).login, testUser(9).password));
+    adminHeaders = headersFor(await login(request, testUser(6).login, testUser(6).password));
+    nurseHeaders = headersFor(await login(request, testUser(3).login, testUser(3).password));
   });
 
   test('unauthenticated (invalid token) GET /instances returns 401', async ({ request }) => {

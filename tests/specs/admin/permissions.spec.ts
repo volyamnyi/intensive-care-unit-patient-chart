@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import type { APIRequestContext } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 // Admin role & permission management (dynamic RBAC matrix).
 // Runs in the admin-chromium project (storageState = admin).
@@ -7,8 +8,8 @@ import type { APIRequestContext } from '@playwright/test';
 
 test.describe.configure({ mode: 'serial' });
 
-const ADMIN = { login: 'admin', password: 'admin123' };
-const NURSE = { login: 'nurse1', password: 'nurse123' };
+const ADMIN = { login: testUser(6).login, password: testUser(6).password };
+const NURSE = { login: testUser(3).login, password: testUser(3).password };
 
 async function login(request: APIRequestContext, creds: { login: string; password: string }) {
   const res = await request.post('/api/auth/login', { data: creds });
@@ -87,7 +88,7 @@ test.describe('Role & permission management', () => {
     // of the matrix. Close leftovers before and after the grant. Uses DOCTOR
     // credentials — /api/episodes reads are clinical-core-gated and admins
     // hold neither the role nor MODULE_ICU_ACCESS by default.
-    const doctorHeaders = await login(request, { login: 'doctor1', password: 'doctor123' });
+    const doctorHeaders = await login(request, { login: testUser(1).login, password: testUser(1).password });
     const closeActiveEpisodes = async () => {
       const list = await request.get('/api/episodes?patientId=1&status=ACTIVE', {
         headers: doctorHeaders,
@@ -253,7 +254,7 @@ test.describe('Role & permission management', () => {
     const adminHeaders = await login(request, ADMIN);
     await setDoctorModuleAccess(request, adminHeaders, true);
     try {
-      const doctorHeaders = await login(request, { login: 'doctor1', password: 'doctor123' });
+      const doctorHeaders = await login(request, { login: testUser(1).login, password: testUser(1).password });
 
       // Read surface stays open…
       const list = await request.get('/api/prosthesis-manufacturing/instances', { headers: doctorHeaders });

@@ -10,14 +10,15 @@ import {
   completeToCompleted,
   instanceStatus,
 } from '../../helpers/tp-ll-02-flow';
+import { testUser } from '../../helpers/test-users';
 
 test.describe('TP-LL-02 — Full Lifecycle (Фаза 5)', () => {
   let prosthetistToken: string;
   let adminToken: string;
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
-    adminToken = await login(request, 'admin', 'admin123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
+    adminToken = await login(request, testUser(6).login, testUser(6).password);
   });
 
   test('NEW → COMPLETED → PDF + audit of FlowInstance/StepExecution mutations', async ({ request }) => {

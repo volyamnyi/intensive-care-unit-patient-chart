@@ -1,10 +1,11 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 test.describe('Logout', () => {
   test('doctor can logout via user menu', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Логін').fill('doctor1');
-    await page.getByLabel('Пароль').fill('doctor123');
+    await page.getByLabel('Логін').fill(testUser(1).login);
+    await page.getByLabel('Пароль').fill(testUser(1).password);
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
     await page.goto('/icu/doctor');
@@ -18,8 +19,8 @@ test.describe('Logout', () => {
 
   test('nurse can logout via user menu', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Логін').fill('nurse1');
-    await page.getByLabel('Пароль').fill('nurse123');
+    await page.getByLabel('Логін').fill(testUser(3).login);
+    await page.getByLabel('Пароль').fill(testUser(3).password);
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
     await page.goto('/icu/nurse');
@@ -33,8 +34,8 @@ test.describe('Logout', () => {
 
   test('protected route redirects to login after logout', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Логін').fill('doctor1');
-    await page.getByLabel('Пароль').fill('doctor123');
+    await page.getByLabel('Логін').fill(testUser(1).login);
+    await page.getByLabel('Пароль').fill(testUser(1).password);
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
     await page.goto('/icu/doctor');
@@ -50,8 +51,8 @@ test.describe('Logout', () => {
 
   test('admin can logout via user menu', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Логін').fill('admin');
-    await page.getByLabel('Пароль').fill('admin123');
+    await page.getByLabel('Логін').fill(testUser(6).login);
+    await page.getByLabel('Пароль').fill(testUser(6).password);
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
     await page.goto('/admin');

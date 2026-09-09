@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 // Phase 3 tablet forms & dialogs (issue #177).
 // Runs in responsive-tablet-chromium (768×1024, hasTouch, doctor storageState).
@@ -101,17 +102,51 @@ test.describe('Tablet forms & dialogs at 768', () => {
     await expect(consciousness).toHaveClass(/pointer-coarse:min-h-11/);
   });
 
-  test('prescription delete dialog caps at md max-width (448px)', async ({ page }) => {
+  test('prescription delete dialog caps at md max-width (448px)', async ({ page, request }) => {
+    const API = 'http://localhost:8085/api';
+    const res = await request.post(`${API}/auth/login`, {
+      data: { login: testUser(1).login, password: testUser(1).password },
+    });
+    const token = (await res.json()).token as string;
+    const auth = { Authorization: `Bearer ${token}` };
+
+    // The roster (module=medication) is real MIS dept 19/37. Find any patient that
+    // actually has a prescription list so the drawer offers a «Видалити» button.
+    const roster = await (await request.get(`${API}/patients?module=medication`, { headers: auth })).json();
+    let target: any = null;
+    for (const p of roster) {
+      const lists = await (
+        await request.get(`${API}/prescriptions?patientId=${p.id}`, { headers: auth })
+      ).json();
+      if (Array.isArray(lists) && lists.length > 0) {
+        target = p;
+        break;
+      }
+    }
+    if (!target) {
+      // No patient has a list yet — create one for the first named patient.
+      const named = roster.find((x: any) => typeof x?.fullName === 'string' && x.fullName.trim().length >= 2);
+      if (!named) {
+        test.skip(true, 'no medication roster patient available from real MIS');
+        return;
+      }
+      await request.post(`${API}/prescriptions`, { headers: auth, data: { patientId: String(named.id) } });
+      target = named;
+    }
+
     await page.goto('/prescriptions/doctor');
     await page.waitForLoadState('networkidle');
 
-    // Коваленко (1002) — реабілітація (37): roster change #260
-    await page.getByRole('button', { name: 'Реабілітація' }).click();
-    await page.getByPlaceholder('Пошук пацієнта').fill('1002');
-    await expect(page.getByRole('cell', { name: 'Коваленко Олена Вікторівна' })).toBeVisible({
-      timeout: 10000,
+    // The surgery|rehab toggle splits the roster client-side by departmentId (19/37).
+    const tabName = target.departmentId === 37 ? 'Реабілітація' : 'Хірургія';
+    await page.getByRole('button', { name: tabName }).click();
+    await page.getByPlaceholder('Пошук пацієнта').fill(String(target.id));
+    const row = page.locator('tbody tr', {
+      has: page.getByRole('cell', { name: String(target.id), exact: true }),
     });
-    await page.getByRole('button', { name: 'Відкрити' }).first().click();
+    await expect(row).toBeVisible({ timeout: 10000 });
+
+    await row.getByRole('button', { name: 'Відкрити' }).click();
     await expect(page.getByText(/Листки призначен/)).toBeVisible({ timeout: 10000 });
 
     await page.getByRole('button', { name: 'Видалити' }).first().click();

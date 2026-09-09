@@ -1,4 +1,5 @@
 import type { APIRequestContext } from '@playwright/test';
+import { testUser } from './test-users';
 
 /**
  * Active Directory test-identity helpers (issue #250).
@@ -76,7 +77,7 @@ export function jwtFromLogin(response: { headers: () => Record<string, string> }
 export async function seedAdminHeaders(
   request: APIRequestContext,
 ): Promise<Record<string, string>> {
-  const res = await apiLogin(request, 'admin', 'admin123');
+  const res = await apiLogin(request, testUser(6).login, testUser(6).password);
   if (!res.ok()) throw new Error(`seed admin login failed with status ${res.status()}`);
   const token = ((await res.json()) as { token?: string }).token;
   if (!token) throw new Error('seed admin login returned no token');

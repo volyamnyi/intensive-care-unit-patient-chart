@@ -1,10 +1,11 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 const API = 'http://localhost:8085/api';
 
 async function getHodToken(request: any) {
   const res = await request.post(`${API}/auth/login`, {
-    data: { login: 'head1', password: 'head123' },
+    data: { login: testUser(5).login, password: testUser(5).password },
   });
   expect(res.ok()).toBeTruthy();
   return (await res.json()).token as string;

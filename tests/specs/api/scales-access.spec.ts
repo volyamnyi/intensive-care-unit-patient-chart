@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 const API = 'http://localhost:8085/api';
 const EPISODE_ID = 'a3333333-3333-3333-3333-333333333333';
@@ -17,7 +18,7 @@ async function getToken(request: any, login: string, password: string) {
 
 test.describe('Scales API Access Control', () => {
   test('doctor can calculate APACHE II via episode endpoint', async ({ request }) => {
-    const token = await getToken(request, 'doctor1', 'doctor123');
+    const token = await getToken(request, testUser(1).login, testUser(1).password);
 
     const res = await request.post(
       `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
@@ -39,7 +40,7 @@ test.describe('Scales API Access Control', () => {
   });
 
   test('nurse is blocked from APACHE II calculation', async ({ request }) => {
-    const token = await getToken(request, 'nurse1', 'nurse123');
+    const token = await getToken(request, testUser(3).login, testUser(3).password);
 
     const res = await request.post(
       `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
@@ -55,7 +56,7 @@ test.describe('Scales API Access Control', () => {
   });
 
   test('nurse is blocked from creating episode-level SOFA', async ({ request }) => {
-    const token = await getToken(request, 'nurse1', 'nurse123');
+    const token = await getToken(request, testUser(3).login, testUser(3).password);
 
     const res = await request.post(`${API}/episodes/${EPISODE_ID}/scales`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -66,7 +67,7 @@ test.describe('Scales API Access Control', () => {
   });
 
   test('nurse can create daily-scale results', async ({ request }) => {
-    const token = await getToken(request, 'nurse1', 'nurse123');
+    const token = await getToken(request, testUser(3).login, testUser(3).password);
 
     const res = await request.post(`${API}/clinical-days/${CLINICAL_DAY_ID}/scales`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -77,7 +78,7 @@ test.describe('Scales API Access Control', () => {
   });
 
   test('doctor can fetch episode-level scale results', async ({ request }) => {
-    const token = await getToken(request, 'doctor1', 'doctor123');
+    const token = await getToken(request, testUser(1).login, testUser(1).password);
 
     const res = await request.get(`${API}/episodes/${EPISODE_ID}/scales`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -89,7 +90,7 @@ test.describe('Scales API Access Control', () => {
   });
 
   test('nurse can fetch episode-level scale results (read-only)', async ({ request }) => {
-    const token = await getToken(request, 'nurse1', 'nurse123');
+    const token = await getToken(request, testUser(3).login, testUser(3).password);
 
     const res = await request.get(`${API}/episodes/${EPISODE_ID}/scales`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -99,7 +100,7 @@ test.describe('Scales API Access Control', () => {
   });
 
   test('doctor can update an APACHE II scale result', async ({ request }) => {
-    const doctorToken = await getToken(request, 'doctor1', 'doctor123');
+    const doctorToken = await getToken(request, testUser(1).login, testUser(1).password);
 
     const created = await request.post(
       `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
@@ -121,7 +122,7 @@ test.describe('Scales API Access Control', () => {
   });
 
   test('nurse is blocked from updating an APACHE II scale result', async ({ request }) => {
-    const doctorToken = await getToken(request, 'doctor1', 'doctor123');
+    const doctorToken = await getToken(request, testUser(1).login, testUser(1).password);
 
     const created = await request.post(
       `${API}/episodes/${EPISODE_ID}/scales/calculate?scaleId=${APACHE_SCALE_ID}&clinicalDayId=${CLINICAL_DAY_ID}`,
@@ -133,7 +134,7 @@ test.describe('Scales API Access Control', () => {
     expect(created.ok()).toBeTruthy();
     const body = await created.json();
 
-    const nurseToken = await getToken(request, 'nurse1', 'nurse123');
+    const nurseToken = await getToken(request, testUser(3).login, testUser(3).password);
     const res = await request.patch(`${API}/scales/${body.id}`, {
       headers: { Authorization: `Bearer ${nurseToken}` },
       data: { result: '50', version: body.version },

@@ -1,18 +1,19 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 test.describe('Login', () => {
   test('doctor can login with valid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Логін').fill('doctor1');
-    await page.getByLabel('Пароль').fill('doctor123');
+    await page.getByLabel('Логін').fill(testUser(1).login);
+    await page.getByLabel('Пароль').fill(testUser(1).password);
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
   });
 
   test('nurse can login with valid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Логін').fill('nurse1');
-    await page.getByLabel('Пароль').fill('nurse123');
+    await page.getByLabel('Логін').fill(testUser(3).login);
+    await page.getByLabel('Пароль').fill(testUser(3).password);
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/);
   });

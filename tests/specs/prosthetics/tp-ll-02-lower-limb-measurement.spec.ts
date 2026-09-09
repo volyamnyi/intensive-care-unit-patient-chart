@@ -7,6 +7,7 @@ import {
   createFreeLowerInstance,
   terminateInstance,
 } from '../../helpers/tp-ll-02-flow';
+import { testUser } from '../../helpers/test-users';
 
 /**
  * E2E for TP-LL-02 КРОК 1: Зняття та внесення об''ємних розмірів
@@ -18,7 +19,7 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
   let prosthetistToken: string;
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
   });
 
   async function createAndStartLowerInstance(request: any): Promise<{ id: string }> {

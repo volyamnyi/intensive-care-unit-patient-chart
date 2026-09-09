@@ -1,5 +1,15 @@
 import { test, expect } from '../../fixtures/index';
 
+async function firstPatientLabel(page: any): Promise<string> {
+  // The patient column is the first cell of the first data row. The dashboard search
+  // matches patientName OR patientId, so reuse whatever label the row renders.
+  const label = (await page.locator('table tbody tr').first().locator('td').first().innerText()).trim();
+  if (!label) {
+    throw new Error('No patient label found in the first dashboard row');
+  }
+  return label;
+}
+
 test.describe('Doctor Dashboard', () => {
   test('displays active episodes with patient names', async ({ page }) => {
     await page.goto('/icu/doctor');
@@ -15,9 +25,9 @@ test.describe('Doctor Dashboard', () => {
 
   test('search filters episodes', async ({ page }) => {
     await page.goto('/icu/doctor');
-    await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Петренко');
-    // Wait for table to filter
-    await expect(page.getByText('Петренко').first()).toBeVisible({ timeout: 5000 });
+    const label = await firstPatientLabel(page);
+    await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill(label);
+    await expect(page.getByText(label).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('opening an episode navigates to episode page', async ({ page }) => {

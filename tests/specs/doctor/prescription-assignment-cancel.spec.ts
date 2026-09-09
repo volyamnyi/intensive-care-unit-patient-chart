@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import type { APIRequestContext, Page } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 // E2E for «Відмінити це призначення» (issue #223, phase 3): strict single-cell
 // scope — only the right-clicked period cell returns to «Не заплановано»
@@ -183,8 +184,8 @@ test.describe('Doctor — «Відмінити це призначення» (si
   let nurseToken = '';
 
   test.beforeAll(async ({ request }) => {
-    doctorToken = await login(request, 'doctor1', 'doctor123');
-    nurseToken = await login(request, 'nurse1', 'nurse123');
+    doctorToken = await login(request, testUser(1).login, testUser(1).password);
+    nurseToken = await login(request, testUser(3).login, testUser(3).password);
   });
 
   test('planned cell → white empty, sibling/day/row untouched, reload persists', async ({ page, request }) => {

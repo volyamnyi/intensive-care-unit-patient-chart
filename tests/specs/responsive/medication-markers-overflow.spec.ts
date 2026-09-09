@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import type { APIRequestContext, Page } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 // Responsive overflow check for the medication grid with an added day and
 // visual markers present (issue #226, phase 6). Runs under both
@@ -92,7 +93,7 @@ test.describe('Responsive — medication grid with added-day markers', () => {
   let itemId = '';
 
   test.beforeAll(async ({ request }) => {
-    doctorToken = await login(request, 'doctor1', 'doctor123');
+    doctorToken = await login(request, testUser(1).login, testUser(1).password);
     listId = await openListId(request, doctorToken);
     const res = await request.post(`${API}/prescriptions/${listId}/items`, {
       headers: { Authorization: `Bearer ${doctorToken}` },

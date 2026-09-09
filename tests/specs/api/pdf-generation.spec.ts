@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 const API = 'http://localhost:8085/api';
 /** An OPEN clinical day that no other E2E test modifies */
@@ -14,8 +15,8 @@ async function getToken(request: any, login: string, password: string) {
 
 test.describe.serial('PDF Generation', () => {
   test('generates a PDF for a signed clinical day', async ({ request }) => {
-    const docToken = await getToken(request, 'doctor1', 'doctor123');
-    const nrsToken = await getToken(request, 'nurse1', 'nurse123');
+    const docToken = await getToken(request, testUser(1).login, testUser(1).password);
+    const nrsToken = await getToken(request, testUser(3).login, testUser(3).password);
 
     const signNrs = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/sign/nurse`, {
       headers: { Authorization: `Bearer ${nrsToken}` },
@@ -44,7 +45,7 @@ test.describe.serial('PDF Generation', () => {
   });
 
   test('retrieves the latest PDF for a clinical day', async ({ request }) => {
-    const token = await getToken(request, 'doctor1', 'doctor123');
+    const token = await getToken(request, testUser(1).login, testUser(1).password);
 
     const getRes = await request.get(`${API}/clinical-days/${OPEN_DAY_ID}/pdf`, {
       headers: { Authorization: `Bearer ${token}` },

@@ -60,7 +60,8 @@ export default function DepartmentDashboardPage() {
   }, [fetchData])
 
   const filteredPatients = patients.filter((p) =>
-    (p.patientName ?? '').toLowerCase().includes(search.toLowerCase())
+    (p.patientName ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    String(p.patientId ?? '').includes(search)
   )
 
   const statCards = [

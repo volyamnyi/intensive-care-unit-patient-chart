@@ -1,4 +1,5 @@
 ﻿import { test, expect } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 const API = 'http://localhost:8085/api';
 const PROSTH = 'http://localhost:8085/api/prosthesis-manufacturing';
@@ -13,7 +14,7 @@ test.describe('TP-LL-02 — Setup Flow & Template Selection (Фаза 3)', () =>
   let prosthetistToken: string;
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
   });
 
   test('GET /templates filters by productType/amputationLevel/limbSide with BOTH wildcard', async ({ request }) => {

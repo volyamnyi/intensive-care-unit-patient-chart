@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 // Wire-level mirror of the backend SEC-B01..B05 red-gate suite (Phase A) over
 // raw HTTP (issue #172). Runs in api-chromium against the real filter chain:
@@ -33,7 +34,7 @@ function signJwt(payload: Record<string, unknown>, secret: string): string {
 
 async function loginToken(request: import('@playwright/test').APIRequestContext): Promise<string> {
   const res = await request.post(`${API}/auth/login`, {
-    data: { login: 'doctor1', password: 'doctor123' },
+    data: { login: testUser(1).login, password: testUser(1).password },
   });
   expect(res.ok()).toBeTruthy();
   return (await res.json()).token as string;
@@ -42,7 +43,7 @@ async function loginToken(request: import('@playwright/test').APIRequestContext)
 const FORGED_TOKENS: Record<string, () => Promise<string>> = {
   'wrong-key signature': async () =>
     signJwt(
-      { sub: 'doctor1', role: 'DOCTOR', userId: '11', iat: 1_000_000_000 },
+      { sub: testUser(1).login, role: 'DOCTOR', userId: '11', iat: 1_000_000_000 },
       'attacker-key-not-the-real-secret-value-000',
     ),
   'tampered payload': async () => {
@@ -54,7 +55,7 @@ const FORGED_TOKENS: Record<string, () => Promise<string>> = {
   },
   'unsigned alg-none': async () =>
     `${b64url(JSON.stringify({ alg: 'none' }))}.${b64url(
-      JSON.stringify({ sub: 'doctor1', role: 'ADMINISTRATOR', userId: '11' }),
+      JSON.stringify({ sub: testUser(1).login, role: 'ADMINISTRATOR', userId: '11' }),
     )}.`,
 };
 
@@ -98,7 +99,7 @@ test.describe('JWT forgery rejected over the wire', () => {
 
   test('login sets an HttpOnly jwt cookie that alone authenticates', async ({ request }) => {
     const loginRes = await request.post(`${API}/auth/login`, {
-      data: { login: 'doctor1', password: 'doctor123' },
+      data: { login: testUser(1).login, password: testUser(1).password },
     });
     expect(loginRes.ok()).toBeTruthy();
 
@@ -111,7 +112,7 @@ test.describe('JWT forgery rejected over the wire', () => {
       headers: { Cookie: `jwt=${cookieValue}` },
     });
     expect(me.status()).toBe(200);
-    expect((await me.json()).login).toBe('doctor1');
+    expect((await me.json()).login).toBe(testUser(1).login);
 
     const forged = await request.get(`${API}/users/me`, {
       headers: { Cookie: 'jwt=forged.cookie.value' },

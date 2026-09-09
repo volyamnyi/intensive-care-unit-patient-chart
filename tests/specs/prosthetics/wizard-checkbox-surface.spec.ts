@@ -1,5 +1,6 @@
 ﻿import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { completeCurrentStepViaApi, completeInstanceViaApi } from '../../helpers/prosthetics-flow';
+import { testUser } from '../../helpers/test-users';
 
 // Wizard checkbox whole-surface clickability: every parent checkbox row in the
 // «Операційна карта» wizard (WizardScreen.tsx) must be clickable across its
@@ -25,7 +26,7 @@ const ACTIVE_DUPLICATE_STATUSES = [
 
 async function login(request: APIRequestContext): Promise<string> {
   const res = await request.post(AUTH, {
-    data: { login: 'prosthetist1', password: 'doctor123' },
+    data: { login: testUser(7).login, password: testUser(7).password },
   });
   if (!res.ok()) {
     throw new Error(`Login failed: HTTP ${res.status()}`);

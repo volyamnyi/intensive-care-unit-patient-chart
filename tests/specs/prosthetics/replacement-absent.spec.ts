@@ -8,6 +8,7 @@ import {
   completeOneStep,
   terminateInstance,
 } from '../../helpers/tp-ll-02-flow';
+import { testUser } from '../../helpers/test-users';
 
 /**
  * Issue #237 — replacement removal regression.
@@ -16,14 +17,14 @@ import {
  * offer "Create Replacement Process": no CTA button, no dialog. The failure
  * report itself (heading, read-only banner, reason, PDF export) keeps working.
  * Runs under the serial `prosthetics-chromium` project
- * (storageState `.auth/prosthetist.json` — already prosthetist1).
+ * (storageState `.auth/prosthetist.json` — already the prosthetist test account).
  */
 test.describe('Replacement absent on failed process (issue #237)', () => {
   let prosthetistToken: string;
   let instanceId: string;
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
     const headers = headersFor(prosthetistToken);
     const templateId = await findTemplateByIdName(request, headers, 'TP-LL-02');
     const instance = await createFreeLowerInstance(request, headers, templateId);

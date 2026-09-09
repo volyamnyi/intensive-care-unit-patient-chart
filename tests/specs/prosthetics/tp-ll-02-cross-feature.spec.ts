@@ -10,12 +10,13 @@ import {
   terminateInstance,
 } from '../../helpers/tp-ll-02-flow';
 import { WizardExecutionPage } from '../../pages/prosthetics/WizardExecutionPage';
+import { testUser } from '../../helpers/test-users';
 
 /**
  * TP-LL-02 cross-feature regression (§12.3 braking + §7.1 soft-liner + notes/files
  * + backward + pause + fail). Runs under the serial
  * `prosthetics-chromium` project (storageState .auth/prosthetist.json — already
- * prosthetist1). Single order chain: original → BRANCHED → branch (IN_PROGRESS)
+ * the prosthetist test account). Single order chain: original → BRANCHED → branch (IN_PROGRESS)
  * → notes/files → backward → PAUSED → resumed → FAILED (terminal, no replacement).
  *
  * Order / template are the seeded lower-limb fixtures, shared across the
@@ -52,7 +53,7 @@ test.describe.serial('TP-LL-02 cross-feature', () => {
   const h = () => headersFor(prosthetistToken);
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
     templateId = await findTemplateByIdName(request, h(), 'TP-LL-02');
   });
 

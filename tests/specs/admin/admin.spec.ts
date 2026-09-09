@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 test.describe('Admin Page', () => {
   test('displays administrative panel with users tab', async ({ page }) => {
@@ -11,14 +12,14 @@ test.describe('Admin Page', () => {
 
   test('users tab shows doctor user data', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByText('doctor1')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('doctor2')).toBeVisible();
+    await expect(page.getByText(testUser(1).login)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(testUser(2).login)).toBeVisible();
   });
 
   test('users tab shows nurse user data', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByText('nurse1')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('nurse2')).toBeVisible();
+    await expect(page.getByText(testUser(3).login)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(testUser(4).login)).toBeVisible();
   });
 
   test('page title is set correctly', async ({ page }) => {

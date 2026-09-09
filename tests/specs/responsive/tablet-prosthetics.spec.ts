@@ -1,5 +1,6 @@
 ﻿import { test, expect, type APIRequestContext } from '@playwright/test';
 import { completeInstanceViaApi } from '../../helpers/prosthetics-flow';
+import { testUser } from '../../helpers/test-users';
 
 // Phase 4 tablet pass (issue #178): ProcessLayout shows a collapsed icon rail
 // in the tablet band (640–1023px); labels return at ≥1024px. The flow instance
@@ -21,7 +22,7 @@ const ACTIVE_DUPLICATE_STATUSES = [
 
 async function createInstance(request: APIRequestContext): Promise<string> {
   const res = await request.post(AUTH, {
-    data: { login: 'prosthetist1', password: 'doctor123' },
+    data: { login: testUser(7).login, password: testUser(7).password },
   });
   if (!res.ok()) {
     throw new Error(`Login failed: HTTP ${res.status()}`);

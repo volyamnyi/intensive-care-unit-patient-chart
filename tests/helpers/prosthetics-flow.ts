@@ -1,4 +1,5 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { testUser } from './test-users';
 
 /**
  * Shared API helpers for the prosthetics E2E specs.
@@ -60,11 +61,11 @@ export function buildValues(
 
 /**
  * Drives an instance to COMPLETED via the backend API:
- * resume when paused → complete pending step executions (as prosthetist1) →
+ * resume when paused → complete pending step executions (as the prosthetist test account) →
  * repeat until COMPLETED.
  */
 export async function completeInstanceViaApi(request: APIRequestContext, instanceId: string): Promise<void> {
-  const prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
+  const prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
   const prosthetistHeaders = { Authorization: `Bearer ${prosthetistToken}` };
 
   for (let i = 0; i < 30; i++) {
@@ -112,7 +113,7 @@ export async function completeCurrentStepViaApi(
   request: APIRequestContext,
   instanceId: string,
 ): Promise<void> {
-  const token = await login(request, 'prosthetist1', 'doctor123');
+  const token = await login(request, testUser(7).login, testUser(7).password);
   const headers = { Authorization: `Bearer ${token}` };
 
   const stepsRes = await request.get(`${BASE}/instances/${instanceId}/step-executions`, {

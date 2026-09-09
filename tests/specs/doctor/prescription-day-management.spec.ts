@@ -1,10 +1,15 @@
 import { test, expect } from '../../fixtures/index';
 import type { Locator, Page } from '@playwright/test';
+import { getToken, navigateToDetail } from '../../helpers/medication';
 
 // E2E for per-item prescription day management (issue #169, phase 4;
 // reshaped by issue #223, phase 3: whole-day deletion left the cell menu,
 // so this spec adds a day via «+», asserts the menu offers no whole-day
 // delete, and removes the day via API — net-zero, no seed pollution).
+//
+// Dynamic-data contract (real MIS, no seed IDs): beforeEach picks the first
+// dept-19/37 patient, guarantees an open list + one real-catalog item, and
+// navigates to the list detail.
 
 const API = 'http://localhost:8085/api';
 const DODATI_DENY = 'Додати день';
@@ -13,20 +18,6 @@ const MENU_WHOLE_DAY_DELETE = 'Видалити цей день';
 
 function formatUa(iso: string): string {
   return new Date(iso).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
-}
-
-async function navigateToDetail(page: Page): Promise<void> {
-  await page.goto('/prescriptions/doctor');
-  await page.getByPlaceholder('Пошук пацієнта').fill('1003');
-  const row = page.locator('tr').filter({ hasText: 'В ході' }).first();
-  await expect(row).toBeVisible({ timeout: 10_000 });
-  await row.getByRole('button', { name: 'Відкрити' }).click();
-  await expect(page.getByText('Листки призначень (').first()).toBeVisible({ timeout: 10_000 });
-  const card = page.locator('div.rounded-xl.border', { hasText: 'В ході' }).first();
-  await card.getByRole('button', { name: /Листок/ }).first().click();
-  await page.waitForURL(/\/prescriptions\/doctor\/[0-9a-f-]{36}$/, { timeout: 15_000 });
-  await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10_000 });
-  await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
 }
 
 // The detail page renders TWO tables (item grid AND vital-sign grid), so page-wide
@@ -61,17 +52,15 @@ async function gotoDay(page: Page, grid: Locator, iso: string): Promise<void> {
 test.describe('Doctor — prescription day add + remove (UI)', () => {
   let doctorToken = '';
   test.beforeAll(async ({ request }) => {
-    const res = await request.post('http://localhost:8085/api/auth/login', {
-      data: { login: 'doctor1', password: 'doctor123' },
-    });
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    const token = body.token as string;
-    doctorToken = token;
+    doctorToken = await getToken(request, 1);
   });
 
-  test.beforeEach(async ({ page }) => {
-    await navigateToDetail(page);
+  test.beforeEach(async ({ page, request }) => {
+    await navigateToDetail(request, page, {
+      base: '/prescriptions/doctor',
+      expectPath: /\/prescriptions\/doctor\/[0-9a-f-]{36}$/,
+    });
+    await expect(page.getByText(/Статус: Відкрито/)).toBeVisible({ timeout: 10_000 });
   });
 
   test('per-row "Додати день" buttons appear on every item row', async ({ page }) => {

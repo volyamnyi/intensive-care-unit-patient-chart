@@ -1,10 +1,11 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 const API = 'http://localhost:8085/api';
 
 async function getDoctorToken(request: any) {
   const res = await request.post(`${API}/auth/login`, {
-    data: { login: 'doctor1', password: 'doctor123' },
+    data: { login: testUser(1).login, password: testUser(1).password },
   });
   expect(res.ok()).toBeTruthy();
   return (await res.json()).token as string;

@@ -7,12 +7,13 @@ import {
   createFreeLowerInstance,
   completeOneStep,
 } from '../../helpers/tp-ll-02-flow';
+import { testUser } from '../../helpers/test-users';
 
 test.describe('TP-LL-02 — Failure terminal state (issue #238)', () => {
   let prosthetistToken: string;
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
   });
 
   test('FAILED (materials) → failure PDF → terminal, no replacement', async ({ request }) => {

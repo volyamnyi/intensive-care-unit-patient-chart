@@ -5,17 +5,18 @@ import {
   adCredentials,
   apiLoginEnsureRole,
 } from '../../helpers/ad-auth';
+import { testUser } from '../../helpers/test-users';
 
 const AUTH_BASE = '.auth';
 if (!existsSync(AUTH_BASE)) mkdirSync(AUTH_BASE, { recursive: true });
 
 const USERS = [
-  { login: 'doctor1', password: 'doctor123', file: 'doctor.json' },
-  { login: 'nurse1', password: 'nurse123', file: 'nurse.json' },
-  { login: 'head1', password: 'head123', file: 'hod.json' },
-  { login: 'admin', password: 'admin123', file: 'admin.json' },
-  { login: 'prosthetist1', password: 'doctor123', file: 'prosthetist.json' },
-  { login: 'prosthetics_admin1', password: 'doctor123', file: 'prosthetics_admin.json' },
+  { ...testUser(1), file: 'doctor.json' },
+  { ...testUser(3), file: 'nurse.json' },
+  { ...testUser(5), file: 'hod.json' },
+  { ...testUser(6), file: 'admin.json' },
+  { ...testUser(7), file: 'prosthetist.json' },
+  { ...testUser(9), file: 'prosthetics_admin.json' },
 ];
 
 for (const user of USERS) {

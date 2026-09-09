@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 // API contract for per-item prescription day endpoints (issue #169):
 //   POST   /api/prescriptions/items/{itemId}/days         201  (PRESCRIPTION_CREATE)
@@ -33,11 +34,11 @@ type DayPart = {
 
 test.describe('Prescription-day API access controls', () => {
   test.beforeAll(async ({ request }) => {
-    const token = await login(request, 'doctor1', 'doctor123');
+    const token = await login(request, testUser(1).login, testUser(1).password);
   });
 
   test('nurse is rejected (403) on POST /items/{id}/days', async ({ request }) => {
-    const token = await login(request, 'nurse1', 'nurse123');
+    const token = await login(request, testUser(3).login, testUser(3).password);
     const res = await request.post(`${API}/prescriptions/items/${MORFIN_ITEM_ID}/days`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -49,7 +50,7 @@ test.describe('Prescription-day API access controls', () => {
   });
 
   test('nurse is rejected (403) on DELETE /items/{id}/days/{dayId}', async ({ request }) => {
-    const token = await login(request, 'nurse1', 'nurse123');
+    const token = await login(request, testUser(3).login, testUser(3).password);
     const res = await request.delete(
       `${API}/prescriptions/items/${MORFIN_ITEM_ID}/days/${MORFIN_OPEN_DAY_ID}`,
       { headers: { Authorization: `Bearer ${token}` } },
@@ -58,7 +59,7 @@ test.describe('Prescription-day API access controls', () => {
   });
 
   test('doctor adds a new day (201) — new day has 4 unplanned parts', async ({ request }) => {
-    const token = await login(request, 'doctor1', 'doctor123');
+    const token = await login(request, testUser(1).login, testUser(1).password);
     const res = await request.post(`${API}/prescriptions/items/${MORFIN_ITEM_ID}/days`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -90,7 +91,7 @@ test.describe('Prescription-day API access controls', () => {
   });
 
   test('doctor is rejected (422) when removing a completed day', async ({ request }) => {
-    const token = await login(request, 'doctor1', 'doctor123');
+    const token = await login(request, testUser(1).login, testUser(1).password);
     const res = await request.delete(
       `${API}/prescriptions/items/${MORFIN_ITEM_ID}/days/${MORFIN_COMPLETED_DAY_ID}`,
       { headers: { Authorization: `Bearer ${token}` } },
@@ -104,7 +105,7 @@ test.describe('Prescription-day API access controls', () => {
   });
 
   test('doctor deletes an open day (204)', async ({ request }) => {
-    const token = await login(request, 'doctor1', 'doctor123');
+    const token = await login(request, testUser(1).login, testUser(1).password);
     const res = await request.delete(
       `${API}/prescriptions/items/${MORFIN_ITEM_ID}/days/${MORFIN_OPEN_DAY_ID}`,
       { headers: { Authorization: `Bearer ${token}` } },

@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import type { APIRequestContext, Page } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 // E2E for «Відмінити препарат» + «Повернути у Заплановано» (issue #222, phase 2).
 // Net-zero: every test creates its own item via API on patient 1003 (Сидоренко)
@@ -141,8 +142,8 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
   let nurseToken = '';
 
   test.beforeAll(async ({ request }) => {
-    doctorToken = await login(request, 'doctor1', 'doctor123');
-    nurseToken = await login(request, 'nurse1', 'nurse123');
+    doctorToken = await login(request, testUser(1).login, testUser(1).password);
+    nurseToken = await login(request, testUser(3).login, testUser(3).password);
   });
 
   test('cancel → purple ✕ → restore → blue dose → reload persists', async ({ page, request }) => {

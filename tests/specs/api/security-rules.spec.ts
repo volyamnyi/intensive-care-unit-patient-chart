@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 const API = 'http://localhost:8085/api';
 const BACKEND = 'http://localhost:8085';
@@ -33,7 +34,7 @@ test.describe('API Security Rules', () => {
   });
 
   test('nurse cannot create episodes (prescriber role required)', async ({ request }) => {
-    const token = await getToken(request, 'nurse1', 'nurse123');
+    const token = await getToken(request, testUser(3).login, testUser(3).password);
 
     // Valid body on purpose: argument validation runs before method security,
     // so an invalid body would yield 400 (validation) instead of 403 (denied).
@@ -46,7 +47,7 @@ test.describe('API Security Rules', () => {
   });
 
   test('admin cannot create episodes (prescriber role required)', async ({ request }) => {
-    const token = await getToken(request, 'admin', 'admin123');
+    const token = await getToken(request, testUser(6).login, testUser(6).password);
 
     const res = await request.post(`${API}/episodes`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -57,7 +58,7 @@ test.describe('API Security Rules', () => {
   });
 
   test('doctor passes the episode creation rule (validation rejects empty body)', async ({ request }) => {
-    const token = await getToken(request, 'doctor1', 'doctor123');
+    const token = await getToken(request, testUser(1).login, testUser(1).password);
 
     const res = await request.post(`${API}/episodes`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -68,7 +69,7 @@ test.describe('API Security Rules', () => {
   });
 
   test('nurse cannot create medical orders', async ({ request }) => {
-    const token = await getToken(request, 'nurse1', 'nurse123');
+    const token = await getToken(request, testUser(3).login, testUser(3).password);
 
     // Valid body: method security must deny before any validation can pass.
     const res = await request.post(`${API}/clinical-days/${SEED_DAY_ID}/orders`, {
@@ -80,19 +81,19 @@ test.describe('API Security Rules', () => {
   });
 
   test('audit log endpoints require the administrator role', async ({ request }) => {
-    const doctor = await getToken(request, 'doctor1', 'doctor123');
+    const doctor = await getToken(request, testUser(1).login, testUser(1).password);
     const doctorRes = await request.get(`${API}/audit`, {
       headers: { Authorization: `Bearer ${doctor}` },
     });
     expect(doctorRes.status()).toBe(403);
 
-    const nurse = await getToken(request, 'nurse1', 'nurse123');
+    const nurse = await getToken(request, testUser(3).login, testUser(3).password);
     const nurseRes = await request.get(`${API}/audit`, {
       headers: { Authorization: `Bearer ${nurse}` },
     });
     expect(nurseRes.status()).toBe(403);
 
-    const admin = await getToken(request, 'admin', 'admin123');
+    const admin = await getToken(request, testUser(6).login, testUser(6).password);
     const adminRes = await request.get(`${API}/audit`, {
       headers: { Authorization: `Bearer ${admin}` },
     });
@@ -100,14 +101,14 @@ test.describe('API Security Rules', () => {
   });
 
   test('day-part completion requires the executor role (nurse)', async ({ request }) => {
-    const doctor = await getToken(request, 'doctor1', 'doctor123');
+    const doctor = await getToken(request, testUser(1).login, testUser(1).password);
     const doctorRes = await request.put(
       `${API}/prescriptions/day-parts/${FAKE_DAY_PART_ID}/complete`,
       { headers: { Authorization: `Bearer ${doctor}` } },
     );
     expect(doctorRes.status()).toBe(403);
 
-    const nurse = await getToken(request, 'nurse1', 'nurse123');
+    const nurse = await getToken(request, testUser(3).login, testUser(3).password);
     const nurseRes = await request.put(
       `${API}/prescriptions/day-parts/${FAKE_DAY_PART_ID}/complete`,
       { headers: { Authorization: `Bearer ${nurse}` } },
@@ -116,13 +117,13 @@ test.describe('API Security Rules', () => {
   });
 
   test('episode search is readable by all clinical roles', async ({ request }) => {
-    const doctor = await getToken(request, 'doctor1', 'doctor123');
+    const doctor = await getToken(request, testUser(1).login, testUser(1).password);
     const doctorRes = await request.get(`${API}/episodes`, {
       headers: { Authorization: `Bearer ${doctor}` },
     });
     expect(doctorRes.ok()).toBeTruthy();
 
-    const nurse = await getToken(request, 'nurse1', 'nurse123');
+    const nurse = await getToken(request, testUser(3).login, testUser(3).password);
     const nurseRes = await request.get(`${API}/episodes`, {
       headers: { Authorization: `Bearer ${nurse}` },
     });
@@ -136,7 +137,7 @@ test.describe('API Security Rules', () => {
     // у годину (поточна+1)%24, тож фіксована година 6 зламалася б у прогонах CI 05:00-05:59Z.
     const planHour = new Date(Date.now() + 2 * 3600_000).getHours();
 
-    const nurse = await getToken(request, 'nurse1', 'nurse123');
+    const nurse = await getToken(request, testUser(3).login, testUser(3).password);
     const nursePlan = await request.put(`${API}/orders/${orderId}/plan`, {
       headers: { Authorization: `Bearer ${nurse}` },
       data: { hour: planHour, dose: '500' },
@@ -155,7 +156,7 @@ test.describe('API Security Rules', () => {
     });
     expect(nurseCancel.status()).toBe(403);
 
-    const doctor = await getToken(request, 'doctor1', 'doctor123');
+    const doctor = await getToken(request, testUser(1).login, testUser(1).password);
     const doctorPlan = await request.put(`${API}/orders/${orderId}/plan`, {
       headers: { Authorization: `Bearer ${doctor}` },
       data: { hour: planHour, dose: '500' },
@@ -165,7 +166,7 @@ test.describe('API Security Rules', () => {
 
   test('order execution endpoints require the executor role (nurse)', async ({ request }) => {
     const orderId = 'd3333001-3333-3333-0000-333333330001';
-    const doctor = await getToken(request, 'doctor1', 'doctor123');
+    const doctor = await getToken(request, testUser(1).login, testUser(1).password);
 
     const doctorExecute = await request.post(`${API}/orders/${orderId}/execute`, {
       headers: { Authorization: `Bearer ${doctor}` },

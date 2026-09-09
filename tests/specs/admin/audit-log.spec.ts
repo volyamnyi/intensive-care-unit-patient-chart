@@ -1,10 +1,11 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 test.describe('Admin Audit Log', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Логін').fill('admin');
-    await page.getByLabel('Пароль').fill('admin123');
+    await page.getByLabel('Логін').fill(testUser(6).login);
+    await page.getByLabel('Пароль').fill(testUser(6).password);
     await page.getByRole('button', { name: 'Увійти' }).click();
     await expect(page).toHaveURL(/\/select/, { timeout: 10000 });
     await page.goto('/admin');

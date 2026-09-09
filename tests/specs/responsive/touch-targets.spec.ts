@@ -1,8 +1,39 @@
 import { test, expect, type Locator } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 // Responsive UI Phase 6 (issue #165): on touch (coarse-pointer) contexts every
 // primary CTA must be at least 44x44 px — enforced via pointer-coarse:min-h-11 /
 // pointer-coarse:size-11 on ui Button and explicit min-h-[44px] elsewhere.
+
+const API = 'http://localhost:8085/api';
+
+async function getToken(request: any) {
+  const res = await request.post(`${API}/auth/login`, {
+    data: { login: testUser(1).login, password: testUser(1).password },
+  });
+  return (await res.json()).token as string;
+}
+
+// create-card's PatientSearch searches the dept-19 ICU roster from real MIS, so the
+// CTA must be revealed by a real patient (no hardcoded mock name).
+async function firstIcuPatient(request: any): Promise<{ fullName: string; query: string }> {
+  const token = await getToken(request);
+  const res = await request.get(`${API}/patients?module=icu`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(res.ok()).toBeTruthy();
+  const patients = await res.json();
+  const p = patients.find((x: any) => typeof x?.fullName === 'string' && x.fullName.trim().length >= 2);
+  if (!p) {
+    throw new Error('No ICU (dept 19) patient with a ≥2-char full name available from real MIS');
+  }
+  return { fullName: p.fullName.trim(), query: p.fullName.trim().slice(0, 4) };
+}
+
+// PatientSearch dropdown options are `div` wrappers whose first line is the full name.
+function patientOption(page: any, fullName: string) {
+  return page.locator('div:has(> p.font-semibold)').filter({ hasText: fullName }).first();
+}
 
 async function expectTouchTarget(locator: Locator, label: string) {
   const box = await locator.boundingBox();
@@ -13,15 +44,16 @@ async function expectTouchTarget(locator: Locator, label: string) {
 }
 
 test.describe('touch targets — doctor', () => {
-  test('dashboard and create-card CTAs are at least 44px', async ({ page }) => {
+  test('dashboard and create-card CTAs are at least 44px', async ({ page, request }) => {
     await page.goto('/icu/doctor');
     await expectTouchTarget(page.getByRole('button', { name: 'Нова карта' }), 'Нова карта');
 
     // The create-card form (and its submit button) renders after a patient is
-    // picked; Ткачук has no seeded episode, so the form stays unobstructed.
+    // picked; drive the PatientSearch with a real dept-19 patient from MIS.
+    const patient = await firstIcuPatient(request);
     await page.goto('/icu/doctor/create-card');
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill('Ткачук');
-    const option = page.getByText('Ткачук Андрій Вікторович');
+    await page.getByLabel('ПІБ, телефон або № медкарти').fill(patient.query);
+    const option = patientOption(page, patient.fullName);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
     await expect(

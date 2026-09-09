@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import type { APIRequestContext, Page } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 // E2E for added/removed-day visual distinction (issue #226, phase 6):
 // added days get header + inactive-cell markers, removed gaps get an edge
@@ -110,7 +111,7 @@ test.describe('Doctor — added/removed day visual distinction', () => {
   let doctorToken = '';
 
   test.beforeAll(async ({ request }) => {
-    doctorToken = await login(request, 'doctor1', 'doctor123');
+    doctorToken = await login(request, testUser(1).login, testUser(1).password);
   });
 
   test('added day: marked header + cells, status wins on planned cell, reload persists, no overflow', async ({ page, request }) => {

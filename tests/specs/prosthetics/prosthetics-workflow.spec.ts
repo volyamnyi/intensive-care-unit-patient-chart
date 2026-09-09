@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { mkdirSync, existsSync, writeFileSync, appendFileSync } from 'fs';
+import { testUser } from '../../helpers/test-users';
 
 const CONFIG = {
   screenshotDir: 'screenshots/prosthetics-workflow',
@@ -72,8 +73,8 @@ test.describe('Prosthetics Workflow Verification', () => {
     logStep('Quick login');
     await page.goto(`${CONFIG.baseUrl}/prosthetics`);
     if (await page.locator('#login').isVisible({ timeout: 5000 }).catch(() => false)) {
-      await page.locator('#login').fill('prosthetist1');
-      await page.locator('#password').fill('doctor123');
+      await page.locator('#login').fill(testUser(7).login);
+      await page.locator('#password').fill(testUser(7).password);
       await page.getByRole('button', { name: /Увійти/i }).first().click();
       await page.waitForURL('**/prosthetics**', { timeout: 15000 });
     }

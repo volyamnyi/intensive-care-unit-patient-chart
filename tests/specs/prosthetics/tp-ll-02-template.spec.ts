@@ -1,4 +1,5 @@
 ﻿import { test, expect } from '@playwright/test';
+import { testUser } from '../../helpers/test-users';
 
 const API = 'http://localhost:8085/api';
 const PROSTH = 'http://localhost:8085/api/prosthesis-manufacturing';
@@ -16,8 +17,8 @@ test.describe('TP-LL-02 — Persistence & Seed (Фаза 1)', () => {
   let adminToken: string;
 
   test.beforeAll(async ({ request }) => {
-    prosthetistToken = await login(request, 'prosthetist1', 'doctor123');
-    adminToken = await login(request, 'prosthetics_admin1', 'doctor123');
+    prosthetistToken = await login(request, testUser(7).login, testUser(7).password);
+    adminToken = await login(request, testUser(9).login, testUser(9).password);
   });
 
   test('GET /templates?productType=LOWER_LIMB returns TP-LL-02 ACTIVE 540', async ({ request }) => {

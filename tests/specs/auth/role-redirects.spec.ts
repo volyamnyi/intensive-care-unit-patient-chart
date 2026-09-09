@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/index';
+import { testUser } from '../../helpers/test-users';
 
 // Phase C direct-URL authorization pins (issue #172), run in login-chromium
 // (no storageState — each test performs its own UI login). Proves that the
@@ -23,19 +24,19 @@ async function uiLogin(page: import('@playwright/test').Page, login: string, pas
 
 test.describe('Direct-URL redirects per role', () => {
   test('ADMINISTRATOR can open /admin directly', async ({ page }) => {
-    await uiLogin(page, 'admin', 'admin123');
+    await uiLogin(page, testUser(6).login, testUser(6).password);
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/admin/);
   });
 
   test('NURSE is redirected away from /icu/doctor', async ({ page }) => {
-    await uiLogin(page, 'nurse1', 'nurse123');
+    await uiLogin(page, testUser(3).login, testUser(3).password);
     await page.goto('/icu/doctor');
     await expect(page).toHaveURL(/\/select/, { timeout: 10000 });
   });
 
   test('PROSTHETIST is redirected away from /admin', async ({ page }) => {
-    await uiLogin(page, 'prosthetist1', 'doctor123');
+    await uiLogin(page, testUser(7).login, testUser(7).password);
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/select/, { timeout: 10000 });
   });

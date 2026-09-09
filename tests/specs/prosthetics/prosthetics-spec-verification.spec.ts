@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { mkdirSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { completeInstanceViaApi } from '../../helpers/prosthetics-flow';
+import { testUser } from '../../helpers/test-users';
 
 // ============== CONFIGURATION ==============
 const CONFIG = {
@@ -154,11 +155,11 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
     log(`\n--- ${currentPhase} ---`);
 
     await test.step('Quick login as prosthetist', async () => {
-      logStep('Quick login as prosthetist1');
+      logStep('Quick login as prosthetist test account');
       await page.goto(`${CONFIG.baseUrl}/login`);
       await page.waitForSelector('#login', { timeout: 10000 });
-      await page.locator('#login').fill('prosthetist1');
-      await page.locator('#password').fill('doctor123');
+      await page.locator('#login').fill(testUser(7).login);
+      await page.locator('#password').fill(testUser(7).password);
       await page.getByRole('button', { name: 'Увійти' }).click();
       
       // Wait for navigation (may go to /select first)

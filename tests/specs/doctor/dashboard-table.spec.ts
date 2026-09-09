@@ -1,5 +1,15 @@
 import { test, expect } from '../../fixtures/index';
 
+async function firstPatientLabel(page: any): Promise<string> {
+  // The patient column is the first cell of the first data row. The dashboard search
+  // matches patientName OR patientId, so reuse whatever label the row renders.
+  const label = (await page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]').first().locator('td[data-slot="table-cell"]').first().innerText()).trim();
+  if (!label) {
+    throw new Error('No patient label found in the first dashboard row');
+  }
+  return label;
+}
+
 test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/icu/doctor');
@@ -168,37 +178,42 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
     test('search input is present and accepts text', async ({ page }) => {
       const searchInput = page.getByPlaceholder('Пошук пацієнта за ПІБ...');
       await expect(searchInput).toBeVisible();
-      await searchInput.fill('Петренко');
-      await expect(searchInput).toHaveValue('Петренко');
+      const label = await firstPatientLabel(page);
+      await searchInput.fill(label);
+      await expect(searchInput).toHaveValue(label);
     });
 
     test('search filters table by patient name', async ({ page }) => {
       const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');
-      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Петренко');
+      const label = await firstPatientLabel(page);
+      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill(label);
       // Client-side filter: the auto-waiting text assertion covers the re-render.
-      await expect(rows.first()).toContainText('Петренко', { timeout: 5000 });
+      // Search matches patientName OR patientId, so every visible row contains the label case-insensitively.
+      await expect(rows.first()).toContainText(label, { timeout: 5000, useInnerText: true });
       const count = await rows.count();
       expect(count).toBeGreaterThan(0);
-      // All visible rows should contain "Петренко"
       for (let i = 0; i < count; i++) {
         const name = await rows.nth(i).locator('td').first().innerText();
-        expect(name.toLowerCase()).toContain('петренко');
+        expect(name.toLowerCase()).toContain(label.toLowerCase());
       }
     });
 
     test('search is case-insensitive', async ({ page }) => {
       const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');
-      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('петренко');
-      await expect(rows.first()).toContainText(/петренко/i, { timeout: 5000 });
+      const label = await firstPatientLabel(page);
+      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill(label.toLowerCase());
+      // The filter lowercases the query and the patient name before matching.
+      await expect(rows.first()).toContainText(label, { timeout: 5000, useInnerText: true });
       const count = await rows.count();
       expect(count).toBeGreaterThan(0);
     });
 
     test('clearing search shows all rows again', async ({ page }) => {
       const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');
+      const label = await firstPatientLabel(page);
       // First filter — wait for the re-render via the auto-waiting assertion.
-      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill('Петренко');
-      await expect(rows.first()).toContainText('Петренко', { timeout: 5000 });
+      await page.getByPlaceholder('Пошук пацієнта за ПІБ...').fill(label);
+      await expect(rows.first()).toContainText(label, { timeout: 5000, useInnerText: true });
       const filteredCount = await rows.count();
 
       // Clear search — poll until the full row set is back (condition, not sleep).
@@ -360,16 +375,21 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
       }
     });
 
-    test('no duplicate patient names in the table', async ({ page }) => {
+    test('patient labels are non-empty and well-formed (no garbled text)', async ({ page }) => {
+      // With real MIS the patient name is unknown and may even repeat across
+      // active episodes (or be absent, in which case the cell shows the numeric
+      // patientId). So the only safe invariant is: every rendered label is a
+      // non-empty, well-formed string. Row identity stays unique by the episode
+      // UUID (the React key), not by the name.
       const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');
       const count = await rows.count();
-      const names: string[] = [];
+      expect(count).toBeGreaterThan(0);
       for (let i = 0; i < count; i++) {
-        const name = await rows.nth(i).locator('td').first().innerText();
-        names.push(name.trim());
+        const label = (await rows.nth(i).locator('td').first().innerText()).trim();
+        expect(label.length, `row ${i} patient label is empty`).toBeGreaterThanOrEqual(2);
+        expect(label).not.toContain('');
+        expect(label).not.toContain('<');
       }
-      const uniqueNames = new Set(names);
-      expect(uniqueNames.size).toBe(names.length);
     });
   });
 

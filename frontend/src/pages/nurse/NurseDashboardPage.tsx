@@ -23,7 +23,8 @@ export default function NurseDashboardPage() {
   useEffect(() => { document.title = 'ВАІТ — Медсестра' }, [])
 
   const filteredEpisodes = episodes.filter((ep) =>
-    (ep.patientName ?? '').toLowerCase().includes(search.toLowerCase())
+    (ep.patientName ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    String(ep.patientId ?? '').includes(search)
   )
 
   if (loading) return <Loader2 role="progressbar" aria-label="Loading" className="mx-auto mt-4 size-6 animate-spin text-primary" />
