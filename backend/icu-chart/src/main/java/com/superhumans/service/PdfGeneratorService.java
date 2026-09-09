@@ -828,12 +828,16 @@ public class PdfGeneratorService {
     }
 
     private String lookupUserName(Long userId) {
+        if (userId == null) {
+            return "-";
+        }
         try {
             return userRepository.findById(userId)
                     .map(User::getFullName)
-                    .orElse(userId.toString().substring(0, 8));
+                    .orElse("user-" + userId);
         } catch (Exception e) {
-            return userId.toString().substring(0, 8);
+            log.warn("Failed to resolve user name for id {}: {}", userId, e.getMessage());
+            return "user-" + userId;
         }
     }
 

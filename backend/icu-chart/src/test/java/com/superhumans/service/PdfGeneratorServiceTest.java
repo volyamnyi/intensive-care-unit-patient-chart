@@ -25,10 +25,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -196,6 +198,60 @@ class PdfGeneratorServiceTest {
 
         assertThatThrownBy(() -> pdfGeneratorService.generatePdf(clinicalDayId, userId))
                 .isInstanceOf(DocumentLockedException.class);
+    }
+
+    @Test
+    void generatePdf_shortUnknownSignatureUserId_savesRecordInsteadOfFailing() {
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+        when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
+                .thenReturn(Optional.empty());
+        Signature nurseSig = Signature.builder()
+                .clinicalDay(clinicalDay)
+                .userId(13L)
+                .role("NURSE")
+                .status("ACTIVE")
+                .signedAt(LocalDateTime.now())
+                .build();
+        when(signatureRepository.findByClinicalDayId(clinicalDayId)).thenReturn(List.of(nurseSig));
+        when(userRepository.findById(13L)).thenReturn(Optional.empty());
+
+        GeneratedPdf saved = new GeneratedPdf();
+        saved.setId(UUID.randomUUID());
+        saved.setClinicalDay(clinicalDay);
+        saved.setFileVersion(1);
+        when(generatedPdfRepository.save(any(GeneratedPdf.class))).thenReturn(saved);
+
+        assertThatCode(() -> pdfGeneratorService.generatePdf(clinicalDayId, 13L))
+                .doesNotThrowAnyException();
+
+        verify(generatedPdfRepository).save(any(GeneratedPdf.class));
+    }
+
+    @Test
+    void generatePdf_signatureUserLookupError_savesRecordInsteadOfFailing() {
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+        when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
+                .thenReturn(Optional.empty());
+        Signature nurseSig = Signature.builder()
+                .clinicalDay(clinicalDay)
+                .userId(15L)
+                .role("NURSE")
+                .status("ACTIVE")
+                .signedAt(LocalDateTime.now())
+                .build();
+        when(signatureRepository.findByClinicalDayId(clinicalDayId)).thenReturn(List.of(nurseSig));
+        when(userRepository.findById(15L)).thenThrow(new RuntimeException("db down"));
+
+        GeneratedPdf saved = new GeneratedPdf();
+        saved.setId(UUID.randomUUID());
+        saved.setClinicalDay(clinicalDay);
+        saved.setFileVersion(1);
+        when(generatedPdfRepository.save(any(GeneratedPdf.class))).thenReturn(saved);
+
+        assertThatCode(() -> pdfGeneratorService.generatePdf(clinicalDayId, 15L))
+                .doesNotThrowAnyException();
+
+        verify(generatedPdfRepository).save(any(GeneratedPdf.class));
     }
 
     @Test
