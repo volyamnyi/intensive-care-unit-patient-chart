@@ -112,8 +112,8 @@ class DepartmentServiceTest {
         when(userRepository.findByRole(UserRole.DOCTOR))
                 .thenReturn(List.of(user(11L, "Доктор Іван"), user(12L, "Доктор Петро")));
         when(userRepository.findByRole(UserRole.HEAD_OF_DEPARTMENT)).thenReturn(List.of());
-        when(misService.getPatient(1001L))
-                .thenReturn(Optional.of(PatientDTO.builder().fullName("Петренко Іван Сергійович").build()));
+        when(misService.getAllPatientsUnderTreatment()).thenReturn(List.of(
+                PatientDTO.builder().id(1001L).fullName("Петренко Іван Сергійович").build()));
         when(clinicalDayRepository.findFirstByEpisodeIdOrderByDayNumberDesc(episode.getId()))
                 .thenReturn(Optional.of(latestDay));
 
@@ -138,7 +138,8 @@ class DepartmentServiceTest {
         when(episodeRepository.findAllActiveByDepartmentId(departmentId)).thenReturn(List.of(episode));
         when(userRepository.findByRole(UserRole.DOCTOR)).thenReturn(List.of());
         when(userRepository.findByRole(UserRole.HEAD_OF_DEPARTMENT)).thenReturn(List.of());
-        when(misService.getPatient(1002L)).thenReturn(Optional.of(PatientDTO.builder().fullName("Коваленко Олена").build()));
+        when(misService.getAllPatientsUnderTreatment()).thenReturn(List.of(
+                PatientDTO.builder().id(1002L).fullName("Коваленко Олена").build()));
         when(clinicalDayRepository.findFirstByEpisodeIdOrderByDayNumberDesc(episode.getId()))
                 .thenReturn(Optional.empty());
 
@@ -160,7 +161,7 @@ class DepartmentServiceTest {
         when(episodeRepository.findAllActive()).thenReturn(List.of(episode));
         when(userRepository.findByRole(UserRole.DOCTOR)).thenReturn(List.of());
         when(userRepository.findByRole(UserRole.HEAD_OF_DEPARTMENT)).thenReturn(List.of());
-        when(misService.getPatient(1003L)).thenReturn(Optional.empty());
+        when(misService.getAllPatientsUnderTreatment()).thenReturn(List.of());
         when(clinicalDayRepository.findFirstByEpisodeIdOrderByDayNumberDesc(episode.getId()))
                 .thenReturn(Optional.empty());
 
