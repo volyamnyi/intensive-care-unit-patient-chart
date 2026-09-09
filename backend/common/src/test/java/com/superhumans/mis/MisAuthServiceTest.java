@@ -31,6 +31,7 @@ class MisAuthServiceTest {
         MisApiProperties properties = new MisApiProperties();
         ReflectionTestUtils.setField(properties, "baseUrl", "https://mis.example.test");
         ReflectionTestUtils.setField(properties, "tokenPath", "/token");
+        ReflectionTestUtils.setField(properties, "runPath", "/api/run");
         ReflectionTestUtils.setField(properties, "login", "integration");
         ReflectionTestUtils.setField(properties, "password", "integration-secret");
         ReflectionTestUtils.setField(properties, "installationGuid",
