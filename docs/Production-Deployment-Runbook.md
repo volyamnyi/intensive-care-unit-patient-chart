@@ -139,12 +139,8 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_JWT_SECRET` | `openssl rand -base64 64` | Замінити дев-секрет з `application.yml:43`; `JwtSecretGuard` падає на старті в `prod`, якщо стоїть дев-дефолт (A1) |
 | `APP_CORS_ALLOWED_ORIGINS` | `https://<домен>` (кома-список) | Точний allowlist для credentialed CORS; дефолт — лише localhost (#184/F5) |
 | `APP_SEED_DATA_ENABLED` | **`false`** | Критично — інакше демо-дані |
-| `APP_MIS_MOCK_ENABLED` | `false` | Не MockMisServiceImpl |
-| `APP_MIS_WIREMOCK_ENABLED` | `true` | WireMockMisServiceImpl (див. 1.5) |
-| `APP_MIS_WIREMOCK-URL` | `https://mis.internal/api` | Реальний endpoint MIS (з `MisApiClient.java:32` `app.mis.wiremock-url`) |
-| `APP_MIS_INSTALLATION-GUID` | *(GUID інсталяції)* | `MisApiClient.java:35` |
-| `APP_MIS_LOGIN` | *(integration user)* | `MisApiClient.java:38` |
-| `APP_MIS_MODE` | `wiremock` (дефолт) або `real` | Вибір джерела MIS (#255): `wiremock` — legacy-стаби, `real` — справжній MIS API з Bearer-автентифікацією |
+| `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Єдиний MIS-клієнт (`MisServiceImpl`, див. 1.5); моків/режимів немає |
+| `APP_MIS_API_LOGIN` / `APP_MIS_API_PASSWORD` / `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Інтеграційні credentials MIS, не в yml, не в git, ніколи в логи |
 | `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Real-режим: `app.mis.api.base-url`, без дефолту — fail-fast на старті, якщо порожньо |
 | `APP_MIS_API_TOKEN_PATH` | `/token` | Real-режим: `app.mis.api.token-path` (має починатись з `/`) |
 | `APP_MIS_API_RUN_PATH` | `/api/run` | Real-режим: `app.mis.api.run-path` (має починатись з `/`) |
@@ -183,21 +179,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ictc_app;
 
 ### 1.5 MIS-інтеграція
 
-У репозиторії **лише два** варіанти `MisService`:
-- `MockMisServiceImpl` — хардкод 5 пацієнтів (dev/test).
-- `WireMockMisServiceImpl` — генерує mock-відповіді на основі `wiremock __files/*.json`. **Насправді це не WireMock** — це REST-клієнт до `MisApiClient`, який POSTить на `app.mis.wiremock-url/api/run`.
+У репозиторії **єдиний** `MisService` — `MisServiceImpl` (реальні виклики MIS API через `MisApiClient.callMethod(methodName, params)`). Моків, режимів і перемикачів немає (видалено у Phase 11, #264): `MockMisServiceImpl`, `WireMockMisServiceImpl`, `mis-wiremock/` і ключі `wiremock-enabled`/`mode` видалено з коду.
 
-Обидва — **mock**. Для продакшну потрібен **новий** клас, що імплементує `MisService` і робить реальні виклики на ваш MIS API (з `MisApiClient.callMethod(methodName, params)`). **Без порушення read-only policy** (див. AGENTS.md, `MIS Data Policy`).
-
-Що **можна** зараз (за 2 години):
-1. Створити `RealMisServiceImpl` у `com.superhumans.mis` з `@ConditionalOnProperty(name="app.mis.real-enabled", havingValue="true")`.
-2. Усередині — використовувати `MisApiClient.callMethod("spzIBPatientSearch", ...)` тощо.
-3. `MockMisServiceImpl` залишається з `@ConditionalOnProperty(mock-enabled=true, matchIfMissing=false)` — коли `mock-enabled=false`, він не створюється.
-4. Додати `RealMisServiceImpl` — новий `@ConditionalOnProperty(real-enabled=true, matchIfMissing=false)`.
-
-Ця частина **залишається TODO для продакшну** — якщо MIS ще не готовий, працюйте на `WireMockMisServiceImpl` (`APP_MIS_WIREMOCK_ENABLED=true`) і не забудьте, що відповіді — від WireMock `__files/*.json`, не реальні.
-
-**Real-режим (#255, доступний):** встановіть `APP_MIS_MODE=real` та заповніть `APP_MIS_API_BASE_URL / APP_MIS_API_LOGIN / APP_MIS_API_PASSWORD / APP_MIS_API_INSTALLATION_GUID` (шляхи — за потреби `APP_MIS_API_TOKEN_PATH / APP_MIS_API_RUN_PATH`). Клієнт сам отримує й кешує Bearer-токен (`MisAuthService`: reuse до `expires_in − skew`, один re-auth на 401); пароль/токен ніколи не потрапляють у логи чи винятки. Неповний конфіг валить старт (fail-fast, у повідомленні — лише імена ключів). Поки корпоративний MIS недосяжний з CI-раннерів, real-сюїти виконуються лише локально. Read-only policy чинна і для real-режиму: тільки читання + `sendPdf`.
+Заповніть `APP_MIS_API_BASE_URL / APP_MIS_API_LOGIN / APP_MIS_API_PASSWORD / APP_MIS_API_INSTALLATION_GUID` (шляхи — за потреби `APP_MIS_API_TOKEN_PATH / APP_MIS_API_RUN_PATH`). Клієнт сам отримує й кешує Bearer-токен (`MisAuthService`: reuse до `expires_in − skew`, один re-auth на 401); пароль/токен ніколи не потрапляють у логи чи винятки. Неповний конфіг валить старт (fail-fast, у повідомленні — лише імена ключів). MIS Data Policy абсолютна: тільки читання, передача PDF заборонена (Phase 16, #269) — PDF лишаються локально (завантаження/друк у модулях).
 
 ### 1.6 Перший запуск
 
@@ -761,8 +745,8 @@ A: 1. Backup. 2. `pg_basebackup` на новий сервер. 3. `pg_upgrade` (
 **Q: А якщо я хочу вимкнути Swagger в проді?**
 A: `SPRING_PROFILES_ACTIVE=prod` вже вимикає (див. `application.yml:163-166`). Якщо не хочете — `app.mis.wiremock-enabled=false` + власна `prod`-профіль.
 
-**Q: А `MockMisServiceImpl` у проді — це «так»?**
-A: Ні. `APP_MIS_MOCK_ENABLED=false`. `WireMockMisServiceImpl` — теж mock (попри назву). `RealMisServiceImpl` — TODO.
+**Q: А моки MIS у проді — це «так»?**
+A: Ні, і їх більше не існує: `MockMisServiceImpl`/`WireMockMisServiceImpl` видалено (Phase 11, #264). Єдиний `MisServiceImpl` ходить у реальний MIS; без `APP_MIS_API_*` застосунок валить старт (fail-fast).
 
 ---
 
@@ -808,12 +792,13 @@ SPRING_DATASOURCE_HIKARI_CONNECTION-TIMEOUT=30000
 # --- Seed-data (КРИТИЧНО: false в проді) ---
 APP_SEED_DATA_ENABLED=false
 
-# --- MIS (якщо real-не готовий) ---
-APP_MIS_MOCK_ENABLED=false
-APP_MIS_WIREMOCK_ENABLED=true
-APP_MIS_WIREMOCK-URL=https://mis.internal/api
-APP_MIS_INSTALLATION-GUID=<GUID>
-APP_MIS_LOGIN=integration
+# --- MIS (єдиний реальний клієнт; моків немає) ---
+APP_MIS_API_BASE_URL=https://mis.internal/api
+APP_MIS_API_TOKEN_PATH=/token
+APP_MIS_API_RUN_PATH=/api/run
+APP_MIS_API_LOGIN=<з vault>
+APP_MIS_API_PASSWORD=<з vault>
+APP_MIS_API_INSTALLATION_GUID=<з vault>
 
 # --- LDAP / Active Directory (read-only bind; вимкнено за замовчуванням) ---
 # Увімкнути тільки якщо застосунок повинен приймати корпоративні обліковки.
