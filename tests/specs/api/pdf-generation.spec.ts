@@ -8,9 +8,48 @@ const DOCTOR1_ID = 11;
 const NURSE1_ID = 13;
 
 async function getToken(request: any, login: string, password: string) {
-  const res = await request.post(`${API}/auth/login`, { data: { login, password } });
+  const res = await request.post(`${API}/auth/login`, {
+    data: { login, password },
+  });
   expect(res.ok()).toBeTruthy();
   return (await res.json()).token as string;
+}
+
+// Signs the day if it is still open. Tolerates 422 (already signed — e.g. a
+// previous attempt signed before failing later, or a serial retry re-runs
+// this file): the generate step below fails loudly on its own when the day
+// is genuinely unsigned, so setup stays strict where it matters.
+async function ensureSignedDay(request: any, docToken: string, nrsToken: string) {
+  const signNrs = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/sign/nurse`, {
+    headers: { Authorization: `Bearer ${nrsToken}` },
+    data: { userId: NURSE1_ID },
+  });
+  expect(
+    [204, 422].includes(signNrs.status()),
+    `nurse-sign unexpected: ${signNrs.status()} ${await signNrs.text()}`,
+  ).toBeTruthy();
+
+  const signDoc = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/sign/doctor`, {
+    headers: { Authorization: `Bearer ${docToken}` },
+    data: { userId: DOCTOR1_ID },
+  });
+  expect(
+    [204, 422].includes(signDoc.status()),
+    `doctor-sign unexpected: ${signDoc.status()} ${await signDoc.text()}`,
+  ).toBeTruthy();
+}
+
+// Generates a PDF if none exists yet, returning the metadata.
+async function ensurePdf(request: any, docToken: string) {
+  const existing = await request.get(`${API}/clinical-days/${OPEN_DAY_ID}/pdf`, {
+    headers: { Authorization: `Bearer ${docToken}` },
+  });
+  if (existing.ok()) return existing;
+  const genRes = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/pdf`, {
+    headers: { Authorization: `Bearer ${docToken}` },
+  });
+  expect(genRes.ok(), `generate failed: ${genRes.status()} ${await genRes.text()}`).toBeTruthy();
+  return genRes;
 }
 
 test.describe.serial('PDF Generation', () => {
@@ -18,22 +57,12 @@ test.describe.serial('PDF Generation', () => {
     const docToken = await getToken(request, testUser(1).login, testUser(1).password);
     const nrsToken = await getToken(request, testUser(3).login, testUser(3).password);
 
-    const signNrs = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/sign/nurse`, {
-      headers: { Authorization: `Bearer ${nrsToken}` },
-      data: { userId: NURSE1_ID },
-    });
-    expect(signNrs.status()).toBe(204);
-
-    const signDoc = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/sign/doctor`, {
-      headers: { Authorization: `Bearer ${docToken}` },
-      data: { userId: DOCTOR1_ID },
-    });
-    expect(signDoc.status()).toBe(204);
+    await ensureSignedDay(request, docToken, nrsToken);
 
     const genRes = await request.post(`${API}/clinical-days/${OPEN_DAY_ID}/pdf`, {
       headers: { Authorization: `Bearer ${docToken}` },
     });
-    expect(genRes.ok()).toBeTruthy();
+    expect(genRes.ok(), `generate failed: ${genRes.status()} ${await genRes.text()}`).toBeTruthy();
     const genBody = await genRes.json();
     expect(genBody).toHaveProperty('id');
     expect(genBody).toHaveProperty('fileName');
@@ -63,12 +92,16 @@ test.describe.serial('PDF Generation', () => {
   });
 
   test('downloads the generated PDF bytes for in-module print/download', async ({ request }) => {
-    const token = await getToken(request, testUser(1).login, testUser(1).password);
+    const docToken = await getToken(request, testUser(1).login, testUser(1).password);
+    const nrsToken = await getToken(request, testUser(3).login, testUser(3).password);
+
+    await ensureSignedDay(request, docToken, nrsToken);
+    await ensurePdf(request, docToken);
 
     const fileRes = await request.get(`${API}/clinical-days/${OPEN_DAY_ID}/pdf/file`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${docToken}` },
     });
-    expect(fileRes.ok()).toBeTruthy();
+    expect(fileRes.ok(), `file download failed: ${fileRes.status()} ${await fileRes.text()}`).toBeTruthy();
     expect(fileRes.headers()['content-type']).toContain('application/pdf');
     const bytes = await fileRes.body();
     expect(bytes.slice(0, 5).toString('utf8')).toBe('%PDF-');
