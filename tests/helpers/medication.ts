@@ -49,8 +49,10 @@ export async function expectRowVisible(page: Page, patientId: number): Promise<v
   await expect(rowForPatient(page, patientId)).toBeVisible({ timeout: 10_000 });
 }
 
-// Guarantee the patient has at least one prescription list; returns the open
-// (non-Finished) list if one exists, else the first, else creates one.
+// Guarantee the patient has an OPEN (non-Finished) prescription list and return
+// its id: reuse the open one if present, else create a fresh list. Never
+// returns a Finished list (the previous `?? lists[0]` fallback did, breaking
+// every open-only assertion downstream).
 export async function ensureMedicationList(
   request: APIRequestContext,
   token: string,
@@ -61,8 +63,8 @@ export async function ensureMedicationList(
   });
   const lists = await res.json();
   if (Array.isArray(lists) && lists.length > 0) {
-    const open = lists.find((l: any) => l.status !== 'Finished') ?? lists[0];
-    return open.id;
+    const open = lists.find((l: any) => l.status !== 'Finished');
+    if (open) return open.id;
   }
   const cr = await request.post(`${API}/prescriptions`, {
     headers: { Authorization: `Bearer ${token}` },
