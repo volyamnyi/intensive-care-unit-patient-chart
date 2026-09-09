@@ -37,7 +37,12 @@ test.describe('MIS Users API', () => {
   });
 
   test('get user by ID returns a valid MIS user', async ({ request }) => {
-    const id = await findAnExistingMisUserId(request, token, 300);
+    // Real MIS answers each probe in seconds (spzIBUserDetails per id), so a
+    // 300-deep sequential probe cannot fit any sane timeout. Bound the scan to
+    // low ids (hospital MIS directories start at 1) with a generous budget;
+    // the null branch skips honestly when nothing answers in range.
+    test.setTimeout(120_000);
+    const id = await findAnExistingMisUserId(request, token, 12);
     if (id === null) {
       test.skip();
       return;
