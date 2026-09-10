@@ -76,7 +76,7 @@ describe('OrderSelectPage', () => {
     await waitFor(() => {
       expect(prostheticsOrderApiMock.listMisDocuments).toHaveBeenCalled();
     });
-    expect(prostheticsOrderApiMock.listByPatient).toBeUndefined();
+    expect('listByPatient' in prostheticsOrderApiMock).toBe(false);
     expect(screen.queryByText(/локальних замовлень/)).not.toBeInTheDocument();
   });
 
