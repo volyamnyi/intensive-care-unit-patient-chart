@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,6 +22,15 @@ public interface FlowInstanceRepository extends JpaRepository<FlowInstance, UUID
     List<FlowInstance> findByOrderId(UUID orderId);
     List<FlowInstance> findByParentInstanceId(UUID parentInstanceId);
     List<FlowInstance> findByOrderIdOrderByBranchSequence(UUID orderId);
+
+    /**
+     * Batch rework counts: number of branch instances per originating instance,
+     * for the production read-model. Returns {@code [parentInstanceId, count]}
+     * rows; instances without branches are absent.
+     */
+    @Query("select i.parentInstanceId, count(i) from FlowInstance i "
+            + "where i.parentInstanceId in :ids group by i.parentInstanceId")
+    List<Object[]> countChildrenByParentIds(@Param("ids") Collection<UUID> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from FlowInstance i where i.id = :id")
