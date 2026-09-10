@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.superhumans.exception.NotFoundException;
-import com.superhumans.exception.NotFoundException;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
@@ -65,21 +64,30 @@ class ProductionDetailIntegrationTest {
 
     private UUID instanceId;
     private UUID orderId;
+    private UUID templateId;
+    private String patientId;
+    private long patientNumericId;
 
     @BeforeEach
     void seed() {
+        // Unique digits-only ids per run: never collide with dev leftovers or
+        // other runs (the suite must not assume empty tables).
+        patientId = "9" + String.format("%05d",
+                java.util.concurrent.ThreadLocalRandom.current().nextInt(100000));
+        patientNumericId = Long.parseLong(patientId);
         FlowTemplate template = templateRepository.save(FlowTemplate.builder()
                 .name("TP-DET-" + UUID.randomUUID().toString().substring(0, 8))
                 .templateVersion(1)
                 .productType(ProductType.LOWER_LIMB)
                 .status(TemplateStatus.ACTIVE)
                 .build());
+        templateId = template.getId();
         ProstheticsPatient patient = patientRepository.save(ProstheticsPatient.builder()
-                .id("900001")
+                .id(patientId)
                 .pib("Детальний Пацієнт")
                 .build());
         ProstheticsOrder order = orderRepository.save(ProstheticsOrder.builder()
-                .orderNumber("MIS-900001-55")
+                .orderNumber("MIS-" + patientId + "-55")
                 .patient(patient)
                 .productType(ProductType.LOWER_LIMB)
                 .limbSide(LimbSide.LEFT)
@@ -118,7 +126,7 @@ class ProductionDetailIntegrationTest {
                 .note("тріщина гільзи")
                 .build());
 
-        when(misService.getPatientDocuments(900001L)).thenReturn(List.of(
+        when(misService.getPatientDocuments(patientNumericId)).thenReturn(List.of(
                 DocumentMisDTO.builder().documentId(77L).documentTemplateId(121L)
                         .documentUrl("https://mis.local/77").build(),
                 DocumentMisDTO.builder().documentId(55L).documentTemplateId(121L)
@@ -139,7 +147,7 @@ class ProductionDetailIntegrationTest {
         assertThat(detail.getBrakEvents()).hasSize(1);
         assertThat(detail.getBrakEvents().get(0).getNote()).isEqualTo("тріщина гільзи");
         assertThat(detail.getBranches()).isEmpty();
-        assertThat(detail.getOrder().getOrderNumber()).isEqualTo("MIS-900001-55");
+        assertThat(detail.getOrder().getOrderNumber()).isEqualTo("MIS-" + patientId + "-55");
         assertThat(detail.getPatient().getPib()).isEqualTo("Детальний Пацієнт");
         assertThat(detail.isPatientDetailsVisible()).isTrue();
         assertThat(detail.getDocuments()).hasSize(2);
@@ -172,11 +180,12 @@ class ProductionDetailIntegrationTest {
     }
 
     @Test
-    void detail_brokenPatientLink_marksDocumentsUnknown() {
-        // digits-only passes the DB CHECK; the MIS side 404s instead.
-        FlowInstance broken = instanceRepository.save(FlowInstance.builder()
-                .templateId(UUID.randomUUID())
-                .patientId("999999")
+    void detail_nullPatient_hasNoDocuments() {
+        // patient_id is nullable (FK only constrains non-null values):
+        // no patient, no documents, nothing unknown.
+        FlowInstance orphan = instanceRepository.save(FlowInstance.builder()
+                .templateId(templateId)
+                .patientId(null)
                 .orderId(orderId)
                 .assignedUserId(5L)
                 .status(FlowInstanceStatus.COMPLETED)
@@ -186,12 +195,11 @@ class ProductionDetailIntegrationTest {
                 .totalIdleSeconds(0L)
                 .branchSequence(1)
                 .build());
-        when(misService.getPatientDocuments(999999L))
-                .thenThrow(new NotFoundException("no such patient in MIS"));
 
-        ProductionDetailDto detail = readService.detail(broken.getId(), 5L, true, true);
+        ProductionDetailDto detail = readService.detail(orphan.getId(), 5L, true, true);
 
-        assertThat(detail.isDocumentsUnknown()).isTrue();
+        assertThat(detail.getPatient()).isNull();
+        assertThat(detail.isDocumentsUnknown()).isFalse();
         assertThat(detail.getDocuments()).isEmpty();
         assertThat(detail.getMatchedDocument()).isNull();
         assertThat(detail.getWorkItem().getElapsedSeconds()).isGreaterThan(0L);

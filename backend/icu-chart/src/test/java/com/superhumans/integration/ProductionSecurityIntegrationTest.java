@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
@@ -13,7 +14,10 @@ import com.superhumans.prosthesismanufacturing.entity.OrderStatus;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsPatient;
+import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
+import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
+import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
 import com.superhumans.prosthesismanufacturing.service.DocumentUrlAvailability;
@@ -25,9 +29,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -42,10 +49,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * without {@code VIEW_ALL}, and patient masking without
  * {@code PATIENT_VIEW} — over the real filter chain.
  *
- * <p>Prosthetics rows are created and removed by this class (the shared
+ * <p>Prosthetics rows are created and removed per test (the shared
  * integration databases carry no prosthetics seed); the runtime matrix is
  * left untouched.
  */
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
 
     private static final String BASE = "/api/prosthesis-manufacturing/production";
@@ -53,6 +61,7 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
     @Autowired private FlowInstanceRepository instanceRepository;
     @Autowired private ProstheticsOrderRepository orderRepository;
     @Autowired private ProstheticsPatientRepository patientRepository;
+    @Autowired private FlowTemplateRepository templateRepository;
     @Autowired private UserRepository userRepository;
 
     @MockitoBean private DocumentUrlAvailability documentUrlAvailability;
@@ -63,35 +72,61 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
     private final List<UUID> instanceIds = new ArrayList<>();
     private final List<UUID> orderIds = new ArrayList<>();
     private final List<String> patientIds = new ArrayList<>();
+    private final List<UUID> templateIds = new ArrayList<>();
 
     private Long prosthetist1Id;
     private Long prosthetist2Id;
     private UUID ownInstanceId;
     private UUID foreignInstanceId;
 
-    @BeforeEach
-    void seed() {
-        // data-test-core.sql carries no prosthetics users: provision them here
-        // (BCrypt-hashed at seed time, removed in cleanUp).
+    @BeforeAll
+    void seedUsers() {
+        // data-test-core.sql carries no prosthetics users: provision them once
+        // per class (BCrypt-hashed at seed time, removed in cleanUpUsers).
+        // Per-method creation would advance the users id sequence into the
+        // fixed seed ids (11-17) after TRUNCATE ... RESTART IDENTITY.
         createUser("prod_prosthetist1", UserRole.PROSTHETIST);
         createUser("prod_prosthetist2", UserRole.PROSTHETIST);
         createUser("prod_prosthadmn", UserRole.PROSTHETICS_ADMINISTRATOR);
+    }
+
+    @AfterAll
+    void cleanUpUsers() {
+        userRepository.findByLogin("prod_prosthetist1").ifPresent(userRepository::delete);
+        userRepository.findByLogin("prod_prosthetist2").ifPresent(userRepository::delete);
+        userRepository.findByLogin("prod_prosthadmn").ifPresent(userRepository::delete);
+    }
+
+    @BeforeEach
+    void seed() {
         prosthetist1Id = loginUserId("prod_prosthetist1", PASSWORD);
         prosthetist2Id = loginUserId("prod_prosthetist2", PASSWORD);
 
+        FlowTemplate template = templateRepository.save(FlowTemplate.builder()
+                .name("TP-SEC-" + UUID.randomUUID().toString().substring(0, 8))
+                .templateVersion(1)
+                .productType(ProductType.LOWER_LIMB)
+                .status(TemplateStatus.ACTIVE)
+                .build());
+        templateIds.add(template.getId());
+
         ProstheticsPatient patient = patientRepository.save(ProstheticsPatient.builder()
-                .id("900001")
+                // Unique digits-only id per run: never collide with dev leftovers.
+                .id("9" + String.format("%05d",
+                        java.util.concurrent.ThreadLocalRandom.current().nextInt(100000)))
                 .pib("Пацієнт Безпеки")
                 .birthDate(LocalDate.of(1990, 5, 5))
                 .gender("Чоловіча")
                 .build());
         patientIds.add(patient.getId());
-        ProstheticsOrder ownOrder = saveOrder(patient, "MIS-900001-55");
-        ProstheticsOrder foreignOrder = saveOrder(patient, "MIS-900001-77");
-        ownInstanceId = saveInstance(ownOrder.getId(), patient.getId(), prosthetist1Id);
-        foreignInstanceId = saveInstance(foreignOrder.getId(), patient.getId(), prosthetist2Id);
+        long numericPatientId = Long.parseLong(patient.getId());
+        ProstheticsOrder ownOrder = saveOrder(patient, "MIS-" + patient.getId() + "-55");
+        ProstheticsOrder foreignOrder = saveOrder(patient, "MIS-" + patient.getId() + "-77");
+        ownInstanceId = saveInstance(template.getId(), ownOrder.getId(), patient.getId(), prosthetist1Id);
+        foreignInstanceId =
+                saveInstance(template.getId(), foreignOrder.getId(), patient.getId(), prosthetist2Id);
 
-        when(misService.getPatientDocuments(900001L)).thenReturn(List.of(
+        when(misService.getPatientDocuments(numericPatientId)).thenReturn(List.of(
                 DocumentMisDTO.builder().documentId(55L).documentTemplateId(121L)
                         .documentUrl("https://mis.local/55").patientFullName("Пацієнт Безпеки")
                         .build()));
@@ -103,12 +138,11 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
         instanceIds.forEach(instanceRepository::deleteById);
         orderIds.forEach(orderRepository::deleteById);
         patientIds.forEach(patientRepository::deleteById);
-        userRepository.findByLogin("prod_prosthetist1").ifPresent(userRepository::delete);
-        userRepository.findByLogin("prod_prosthetist2").ifPresent(userRepository::delete);
-        userRepository.findByLogin("prod_prosthadmn").ifPresent(userRepository::delete);
+        templateIds.forEach(templateRepository::deleteById);
         instanceIds.clear();
         orderIds.clear();
         patientIds.clear();
+        templateIds.clear();
     }
 
     private void createUser(String login, UserRole role) {
@@ -216,9 +250,9 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
         return order;
     }
 
-    private UUID saveInstance(UUID orderId, String patientId, Long assignee) {
+    private UUID saveInstance(UUID templateId, UUID orderId, String patientId, Long assignee) {
         FlowInstance instance = instanceRepository.save(FlowInstance.builder()
-                .templateId(UUID.randomUUID())
+                .templateId(templateId)
                 .patientId(patientId)
                 .orderId(orderId)
                 .assignedUserId(assignee)
@@ -232,7 +266,19 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
         return instance.getId();
     }
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     private ResponseEntity<JsonNode> get(String url, String token) {
-        return restTemplate.exchange(url, HttpMethod.GET, authGet(token), JsonNode.class);
+        ResponseEntity<String> res =
+                restTemplate.exchange(url, HttpMethod.GET, authGet(token), String.class);
+        JsonNode body = null;
+        if (res.getBody() != null) {
+            try {
+                body = objectMapper.readTree(res.getBody());
+            } catch (Exception e) {
+                throw new IllegalStateException("Response is not JSON: " + url, e);
+            }
+        }
+        return new ResponseEntity<>(body, res.getHeaders(), res.getStatusCode());
     }
 }
