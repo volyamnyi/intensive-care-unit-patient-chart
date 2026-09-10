@@ -27,41 +27,62 @@ class RemovedEndpointsIntegrationTest extends AbstractIntegrationTest {
         lenient().when(misService.getPatientDocuments(any())).thenReturn(List.of());
     }
 
+    // Removed endpoints must behave exactly like a certainly-absent route
+    // in the same security bucket: a dedicated handler would change the
+    // status and trip the guard. (An authenticated request to a handler-less
+    // path answers 401 here, not 404: the JWT filter is skipped on the
+    // container error re-dispatch, so /error sees no authentication.)
     @Test
-    void removed_userById_returns404() {
+    void removed_userById_matchesAbsentRoute() {
         getDoctorToken();
         ResponseEntity<String> res = restTemplate.exchange(
                 baseUrl + "/api/users/" + doctorUserId,
                 HttpMethod.GET, authGet(getDoctorToken()), String.class);
+        ResponseEntity<String> probe = restTemplate.exchange(
+                baseUrl + "/api/users/no-such-route-xyz",
+                HttpMethod.GET, authGet(getDoctorToken()), String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.getStatusCode().is4xxClientError()).isTrue();
+        assertThat(res.getStatusCode()).isEqualTo(probe.getStatusCode());
     }
 
+    // No dedicated allergies handler exists: the path falls through to the
+    // prescription /{id} route, whose UUID conversion rejects it with 400.
+    // Re-adding a dedicated /allergies mapping would win over /{id} and
+    // answer 200, tripping this guard.
     @Test
-    void removed_prescriptionAllergies_returns404() {
+    void removed_prescriptionAllergies_fallsThroughToIdRoute() {
         ResponseEntity<String> res = restTemplate.exchange(
                 baseUrl + "/api/prescriptions/allergies",
                 HttpMethod.GET, authGet(getDoctorToken()), String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
-    void removed_misErrorMode_returns404() {
+    void removed_misErrorMode_matchesAbsentRoute() {
         ResponseEntity<String> res = restTemplate.postForEntity(
                 baseUrl + "/api/mis/error-mode",
                 authEntity(null, getAdminToken()), String.class);
+        ResponseEntity<String> probe = restTemplate.postForEntity(
+                baseUrl + "/api/mis/no-such-route-xyz",
+                authEntity(null, getAdminToken()), String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.getStatusCode().is4xxClientError()).isTrue();
+        assertThat(res.getStatusCode()).isEqualTo(probe.getStatusCode());
     }
 
     @Test
-    void removed_pdfStatus_returns404() {
+    void removed_pdfStatus_matchesAbsentRoute() {
         ResponseEntity<String> res = restTemplate.exchange(
                 baseUrl + "/api/clinical-days/b1111111-1111-1111-1111-111111111111/pdf/status",
                 HttpMethod.GET, authGet(getDoctorToken()), String.class);
+        ResponseEntity<String> probe = restTemplate.exchange(
+                baseUrl + "/api/clinical-days/b1111111-1111-1111-1111-111111111111/pdf/nope-xyz",
+                HttpMethod.GET, authGet(getDoctorToken()), String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.getStatusCode().is4xxClientError()).isTrue();
+        assertThat(res.getStatusCode()).isEqualTo(probe.getStatusCode());
     }
 
     @Test
