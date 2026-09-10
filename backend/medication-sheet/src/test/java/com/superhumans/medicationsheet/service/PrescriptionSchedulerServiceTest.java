@@ -10,7 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,7 +32,7 @@ class PrescriptionSchedulerServiceTest {
         return PatientDTO.builder()
                 .id(id)
                 .fullName("Patient-" + id)
-                .birthDate(LocalDate.of(1980, 1, 1))
+                .birthDate(LocalDateTime.of(1980, 1, 1, 0, 0, 0))
                 .build();
     }
 

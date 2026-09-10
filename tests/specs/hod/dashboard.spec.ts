@@ -57,7 +57,7 @@ test.describe('HOD Dashboard', () => {
     await closeActiveEpisode(request, token, patient.id);
 
     await page.goto('/icu/doctor/create-card');
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill(patient.query);
+    await page.getByLabel('ПІБ, телефон або ID').fill(patient.query);
 
     const option = patientOption(page, patient.fullName);
     await expect(option).toBeVisible({ timeout: 10000 });

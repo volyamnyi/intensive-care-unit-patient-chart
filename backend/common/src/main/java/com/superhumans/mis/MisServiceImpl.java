@@ -66,7 +66,6 @@ public class MisServiceImpl implements MisService {
         return patients.stream()
                 .filter(p -> (p.getId() != null && String.valueOf(p.getId()).contains(lower))
                         || containsIgnoreCase(p.getFullName(), lower)
-                        || containsIgnoreCase(p.getExternalId1(), lower)
                         || containsIgnoreCase(p.getPhone(), lower))
                 .collect(Collectors.toList());
     }
@@ -199,6 +198,14 @@ public class MisServiceImpl implements MisService {
         return null;
     }
 
+    /**
+     * Parses the exact 13-field {@code spiPatientProsthesCheck} contract
+     * ({@code id, fullName, birthDate, sexCode, address, phone, email,
+     * bloodGroup, rhFactor, departmentId, room, bed, doctorName}).
+     * No legacy aliases, no fallbacks: unknown keys are ignored and absent
+     * keys stay null. {@code birthDate} accepts {@code "1962-07-08T00:00:00"},
+     * {@code "1962-07-08"} and {@code "1962-07-08 00:00:00"} shapes.
+     */
     private List<PatientDTO> parsePatientList(JsonNode response) {
         JsonNode patientList = firstNonEmptyArray(
                 response, SPI_PATIENT_PROCEDURE, "patientList", "patients");
@@ -208,24 +215,19 @@ public class MisServiceImpl implements MisService {
         List<PatientDTO> result = new ArrayList<>();
         for (JsonNode node : patientList) {
             PatientDTO patient = PatientDTO.builder()
-                    .id(longOrNull(node, "id", "patientID", "patientId"))
-                    .fullName(textOrNull(node, "fullName", "patientName", "patientFullName"))
-                    .birthDate(parseDateOrNull(node, "birthDate", "patientBirthDate"))
-                    .sexCode(textOrNull(node, "sexCode", "patientSexCode"))
-                    .address(textOrNull(node, "address", "patientAddress"))
-                    .phone(textOrNull(node, "phone", "patientPhone"))
-                    .email(textOrNull(node, "email", "patientEmail"))
-                    .externalId1(textOrNull(node, "patientExternalID1", "patientExternalId1"))
-                    .externalId2(textOrNull(node, "patientExternalID2", "patientExternalId2"))
-                    .height(intOrNull(node, "height", "patientHeight"))
-                    .weight(intOrNull(node, "weight", "patientWeight"))
-                    .bloodGroup(textOrNull(node, "bloodGroup", "patientBloodGroup"))
-                    .rhFactor(textOrNull(node, "rhFactor", "patientRhFactor"))
-                    .room(textOrNull(node, "room", "patientRoomNumber", "roomNumber"))
-                    .bed(textOrNull(node, "bed", "patientBedNumber", "bedNumber"))
-                    .doctorName(textOrNull(node, "doctorName", "patientDoctor"))
-                    .departmentId(longOrNull(node, "departmentId", "patientDepartmentID",
-                            "patientDepartmentId", "departmentID"))
+                    .id(longOrNull(node, "id"))
+                    .fullName(textOrNull(node, "fullName"))
+                    .birthDate(parseFlexibleDateTime(node, "birthDate"))
+                    .sexCode(textOrNull(node, "sexCode"))
+                    .address(textOrNull(node, "address"))
+                    .phone(textOrNull(node, "phone"))
+                    .email(textOrNull(node, "email"))
+                    .bloodGroup(textOrNull(node, "bloodGroup"))
+                    .rhFactor(textOrNull(node, "rhFactor"))
+                    .departmentId(longOrNull(node, "departmentId"))
+                    .room(textOrNull(node, "room"))
+                    .bed(textOrNull(node, "bed"))
+                    .doctorName(textOrNull(node, "doctorName"))
                     .build();
             result.add(patient);
         }
@@ -246,23 +248,6 @@ public class MisServiceImpl implements MisService {
             JsonNode node = response.get(key);
             if (node != null && node.isArray() && node.size() > 0) {
                 return node;
-            }
-        }
-        return null;
-    }
-
-    private LocalDate parseDateOrNull(JsonNode node, String... fields) {
-        for (String field : fields) {
-            if (!node.has(field) || node.get(field).isNull()) {
-                continue;
-            }
-            String raw = node.get(field).asText().trim();
-            if (raw.length() >= 10) {
-                try {
-                    return LocalDate.parse(raw.substring(0, 10));
-                } catch (Exception ignored) {
-                    continue;
-                }
             }
         }
         return null;

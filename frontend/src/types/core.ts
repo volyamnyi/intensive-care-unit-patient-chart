@@ -64,6 +64,7 @@ export interface PageResponse<T> {
   size?: number;
 }
 
+/** MIS spiPatientProsthesCheck — exact 13-field contract (no card numbers, no height/weight). */
 export interface PatientDto {
   id: number;
   fullName: string;
@@ -72,10 +73,6 @@ export interface PatientDto {
   address: string;
   phone: string;
   email: string;
-  externalId1: string;
-  externalId2: string;
-  height: number | null;
-  weight: number | null;
   bloodGroup: string;
   rhFactor: string;
   departmentId?: number;

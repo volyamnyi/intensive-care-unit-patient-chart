@@ -52,7 +52,7 @@ test.describe('touch targets — doctor', () => {
     // picked; drive the PatientSearch with a real dept-19 patient from MIS.
     const patient = await firstIcuPatient(request);
     await page.goto('/icu/doctor/create-card');
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill(patient.query);
+    await page.getByLabel('ПІБ, телефон або ID').fill(patient.query);
     const option = patientOption(page, patient.fullName);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();

@@ -15,16 +15,16 @@ vi.mock('../../api/platform', () => ({
 
 const testPatients: PatientDto[] = [
   {
-    id: 1001, fullName: 'Петренко Іван', birthDate: '1990-05-15',
-    sexCode: 'M', address: 'м. Київ, вул. Хрещатик, 1',
-    phone: '+380501234567', email: '', externalId1: '123456',
-    externalId2: '', height: 180, weight: 80, bloodGroup: 'A', rhFactor: '+',
+    id: 13372, fullName: 'Петренко Іван', birthDate: '1990-05-15T00:00:00',
+    sexCode: 'MAL', address: 'м. Київ, вул. Хрещатик, 1',
+    phone: '+380501234567', email: '', bloodGroup: 'A', rhFactor: 'NEG',
+    departmentId: 19, room: '411A-Тестова', bed: 'Ліжко №1', doctorName: 'Ямний В. М.',
   },
   {
-    id: 1002, fullName: 'Коваленко Олена', birthDate: '1985-10-20',
-    sexCode: 'F', address: 'м. Львів, вул. Лесі Українки',
-    phone: '+380507654321', email: '', externalId1: '789012',
-    externalId2: '', height: 165, weight: null, bloodGroup: 'B', rhFactor: '-',
+    id: 13373, fullName: 'Коваленко Олена', birthDate: '1985-10-20T00:00:00',
+    sexCode: 'FEM', address: 'м. Львів, вул. Лесі Українки',
+    phone: '+380507654321', email: '', bloodGroup: 'B', rhFactor: 'POS',
+    departmentId: 19, room: '611A-Тестова', bed: 'Ліжко №3', doctorName: 'Ямний В. М.',
   },
 ];
 
@@ -43,12 +43,12 @@ describe('PatientSearch', () => {
 
   it('renders the search input', () => {
     renderSearch();
-    expect(screen.getByLabelText('ПІБ, телефон або № медкарти')).toBeInTheDocument();
+    expect(screen.getByLabelText('ПІБ, телефон або ID')).toBeInTheDocument();
   });
 
   it('shows hint when input is less than 2 characters', async () => {
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('ПІБ, телефон або ID');
     await userEvent.type(input, 'A');
     await waitFor(() => {
       expect(screen.getByText('Введіть мінімум 2 символи')).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('PatientSearch', () => {
   it('shows no patients found when search has no results', async () => {
     mockSearch.mockResolvedValue({ data: [] });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('ПІБ, телефон або ID');
     await userEvent.type(input, 'NonExistent');
     await waitFor(() => {
       expect(screen.getByText('Пацієнтів не знайдено')).toBeInTheDocument();
@@ -68,7 +68,7 @@ describe('PatientSearch', () => {
   it('calls patientApi.searchByModule with the icu roster after debounce', async () => {
     mockSearch.mockResolvedValue({ data: [] });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('ПІБ, телефон або ID');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(mockSearch).toHaveBeenCalledWith('icu', 'Петр', expect.any(Object));
@@ -80,7 +80,7 @@ describe('PatientSearch', () => {
       .mockRejectedValueOnce({ response: { data: { message: 'MIS недоступна' } } })
       .mockResolvedValueOnce({ data: testPatients });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('ПІБ, телефон або ID');
     await userEvent.type(input, 'Петр');
 
     expect(await screen.findByText('MIS недоступна')).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe('PatientSearch', () => {
   it('displays patient options in dropdown', async () => {
     mockSearch.mockResolvedValue({ data: testPatients });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('ПІБ, телефон або ID');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('PatientSearch', () => {
   it('calls onSelect when a patient is chosen', async () => {
     mockSearch.mockResolvedValue({ data: testPatients });
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('ПІБ, телефон або ID');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(screen.getByText('Петренко Іван')).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('PatientSearch', () => {
   it('shows loading indicator during search', async () => {
     mockSearch.mockReturnValue(new Promise(() => {}));
     renderSearch();
-    const input = screen.getByLabelText('ПІБ, телефон або № медкарти');
+    const input = screen.getByLabelText('ПІБ, телефон або ID');
     await userEvent.type(input, 'Петр');
     await waitFor(() => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument();

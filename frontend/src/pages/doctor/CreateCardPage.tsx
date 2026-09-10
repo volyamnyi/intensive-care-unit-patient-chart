@@ -22,7 +22,6 @@ export default function CreateCardPage() {
       const res = await episodeApi.create({
         patientId: selectedPatient.id,
         admissionDate: new Date().toISOString(),
-        heightCm: selectedPatient.height ?? undefined,
         ward: ward || undefined,
         bedNumber: bedNumber || undefined,
         admissionDiagnosis: admissionDiagnosis || undefined,
@@ -61,25 +60,7 @@ export default function CreateCardPage() {
             </div>
             <div className="col-span-1">
               <label htmlFor="gender" className="text-sm font-medium text-muted-foreground mb-1 block">Стать</label>
-              <Input id="gender" value={selectedPatient.sexCode === 'M' ? 'Чол' : 'Жін'} readOnly />
-            </div>
-            <div className="col-span-1">
-              <label htmlFor="height" className="text-sm font-medium text-muted-foreground mb-1 block">Зріст (см)</label>
-              <Input id="height" value={selectedPatient.height ?? ''} readOnly />
-            </div>
-            <div className="col-span-1">
-              <label htmlFor="weight" className="text-sm font-medium text-muted-foreground mb-1 block">Маса (кг)</label>
-              <Input id="weight" value={selectedPatient.weight ?? ''} readOnly />
-            </div>
-            <div className="col-span-1">
-              <label className="text-sm font-medium text-muted-foreground mb-1 block">Ідеальна маса (кг)</label>
-              <Input value={
-                selectedPatient.height
-                  ? (selectedPatient.sexCode === 'M'
-                    ? (50 + 0.91 * (selectedPatient.height - 152.4)).toFixed(1)
-                    : (45.5 + 0.91 * (selectedPatient.height - 152.4)).toFixed(1))
-                  : ''
-              } readOnly />
+              <Input id="gender" value={selectedPatient.sexCode === 'MAL' || selectedPatient.sexCode === 'M' ? 'Чол' : 'Жін'} readOnly />
             </div>
             <div className="col-span-1">
               <label htmlFor="bloodGroup" className="text-sm font-medium text-muted-foreground mb-1 block">Група крові</label>
@@ -88,10 +69,6 @@ export default function CreateCardPage() {
             <div className="col-span-1">
               <label htmlFor="rhFactor" className="text-sm font-medium text-muted-foreground mb-1 block">Rezus</label>
               <Input id="rhFactor" value={selectedPatient.rhFactor} readOnly />
-            </div>
-            <div className="col-span-2 sm:col-span-2">
-              <label htmlFor="cardNumber" className="text-sm font-medium text-muted-foreground mb-1 block">№ медкарти</label>
-              <Input id="cardNumber" value={selectedPatient.externalId1} readOnly />
             </div>
           </div>
         </div>

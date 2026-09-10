@@ -53,7 +53,7 @@ test.describe('Create Card', () => {
     await page.goto('/icu/doctor/create-card');
     await expect(page.getByText('Нова карта інтенсивної терапії')).toBeVisible();
 
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill(patient.query);
+    await page.getByLabel('ПІБ, телефон або ID').fill(patient.query);
     const option = patientOption(page, patient.fullName);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();
@@ -66,7 +66,7 @@ test.describe('Create Card', () => {
 
   test('shows info message for short search query', async ({ page }) => {
     await page.goto('/icu/doctor/create-card');
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill('A');
+    await page.getByLabel('ПІБ, телефон або ID').fill('A');
     await expect(page.getByText('Введіть мінімум 2 символи')).toBeVisible();
   });
 
@@ -76,7 +76,7 @@ test.describe('Create Card', () => {
     await closeActiveEpisode(request, token, patient.id);
 
     await page.goto('/icu/doctor/create-card');
-    await page.getByLabel('ПІБ, телефон або № медкарти').fill(patient.query);
+    await page.getByLabel('ПІБ, телефон або ID').fill(patient.query);
     const option = patientOption(page, patient.fullName);
     await expect(option).toBeVisible({ timeout: 10000 });
     await option.click();

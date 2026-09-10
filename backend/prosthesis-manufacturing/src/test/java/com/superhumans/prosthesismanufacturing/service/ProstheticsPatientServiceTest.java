@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,13 +52,17 @@ class ProstheticsPatientServiceTest {
         return PatientDTO.builder()
                 .id(900001L)
                 .fullName("Сніжко Іван Петрович")
-                .birthDate(LocalDate.of(1991, 3, 14))
+                .birthDate(LocalDateTime.of(1991, 3, 14, 0, 0, 0))
                 .sexCode(sexCode)
-                .height(182)
-                .weight(84)
                 .address("м. Миколаїв, вул. Чапаєва, буд. 54-А, кв. 17")
                 .phone("380933329111")
                 .email("snizhko.ivan@example.com")
+                .bloodGroup("O")
+                .rhFactor("POS")
+                .departmentId(19L)
+                .room("411A-Тестова")
+                .bed("Ліжко №1")
+                .doctorName("Ямний В. М.")
                 .build();
     }
 
@@ -70,6 +75,8 @@ class ProstheticsPatientServiceTest {
                 .affectedLimb("RIGHT")
                 .amputationLevel("upper_third_forearm")
                 .stump("[{\"label\":\"Форма кукси\",\"value\":\"Циліндрична\"}]")
+                .heightCm(182)
+                .weightKg(84)
                 .build();
     }
 

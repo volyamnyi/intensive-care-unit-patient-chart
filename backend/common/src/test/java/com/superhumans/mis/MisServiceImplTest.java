@@ -12,7 +12,6 @@ import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.service.AuditService;
 import java.time.LocalDateTime;
-import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,11 +19,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Unit tests (issue #265) for the real MIS {@link MisServiceImpl}: tolerant
- * multi-alias parsing of the SPI envelopes, the 16-field
+ * Unit tests for the real MIS {@link MisServiceImpl}: exact 13-field patient
+ * contract parsing ({@code spiPatientProsthesCheck}), the 16-field
  * {@link MedicineMisDTO} mapping, the tri-state {@code itemKindIsDisabled}
- * flag, the {@code PatientModuleFilter} search semantics, and the empty /
- * filter / error behaviour of each SPI wrapper.
+ * flag, and the empty / filter / error behaviour of each SPI wrapper.
  *
  * <p>The client transport is a Mockito double (no Spring, no credentials): the
  * contract under test is the parsing/filtering done by the service itself,
@@ -72,49 +70,73 @@ class MisServiceImplTest {
     // ---------------------- patient parsing ----------------------
 
     @Test
-    void searchPatients_parsesTolerantAliases_andFiltersByQuery() {
+    void searchPatients_parsesExact13FieldContract_andFiltersByQuery() {
         stubPatientList("""
                 {"spiPatientProsthesCheck":[
-                  {"id":900001,"fullName":"Snihko Ivan Petrovych","sexCode":"MAL",
-                   "phone":"380501000001","patientDepartmentID":19,"patientExternalID1":"EXT-1","birthDate":"1980-01-02"},
-                  {"id":900002,"patientName":"Gavryluk Olena Mykolaivna","sexCode":"FEM",
-                   "patientDepartmentId":27,"patientPhone":"380501000002","patientExternalId1":"EXT-2","patientBirthDate":"1985-03-04"}
+                  {"id":13372,"fullName":"Сидоренко Василь Тестович","birthDate":"1962-07-08T00:00:00",
+                   "sexCode":"MAL","address":"Україна, Дніпропетровська область, Васильківський р-н",
+                   "phone":"380631234567","email":"vasyl.syd@mail.com","bloodGroup":"O","rhFactor":"NEG",
+                   "departmentId":19,"room":"411A-Тестова","bed":"Лжко №1\\n","doctorName":"Ямний В. М."},
+                  {"id":13373,"fullName":"Бондаренко Тетяна Тестівна","birthDate":"1990-05-12T00:00:00",
+                   "sexCode":"FEM","phone":"380501112233","email":"t.bond@mail.com","bloodGroup":"A","rhFactor":"POS",
+                   "departmentId":19,"room":"611A-Тестова","bed":"Лжко №3\\n","doctorName":"Ямний В. М."}
                 ]}
                 """);
 
         List<PatientDTO> all = service.searchPatients(null);
         assertThat(all).hasSize(2);
         PatientDTO first = all.get(0);
-        assertThat(first.getId()).isEqualTo(900001L);
-        assertThat(first.getFullName()).isEqualTo("Snihko Ivan Petrovych");
+        assertThat(first.getId()).isEqualTo(13372L);
+        assertThat(first.getFullName()).isEqualTo("Сидоренко Василь Тестович");
+        assertThat(first.getBirthDate()).isEqualTo(LocalDateTime.of(1962, 7, 8, 0, 0, 0));
         assertThat(first.getSexCode()).isEqualTo("MAL");
-        assertThat(first.getPhone()).isEqualTo("380501000001");
+        assertThat(first.getAddress()).isEqualTo("Україна, Дніпропетровська область, Васильківський р-н");
+        assertThat(first.getPhone()).isEqualTo("380631234567");
+        assertThat(first.getEmail()).isEqualTo("vasyl.syd@mail.com");
+        assertThat(first.getBloodGroup()).isEqualTo("O");
+        assertThat(first.getRhFactor()).isEqualTo("NEG");
         assertThat(first.getDepartmentId()).isEqualTo(19L);
-        assertThat(first.getExternalId1()).isEqualTo("EXT-1");
-        assertThat(first.getBirthDate()).isEqualTo(LocalDate.of(1980, 1, 2));
+        assertThat(first.getRoom()).isEqualTo("411A-Тестова");
+        assertThat(first.getBed()).isEqualTo("Лжко №1\n");
+        assertThat(first.getDoctorName()).isEqualTo("Ямний В. М.");
 
-        // second row uses the alternative aliases
+        // second row: optional address absent stays null, datetime parses
         PatientDTO second = all.get(1);
-        assertThat(second.getFullName()).isEqualTo("Gavryluk Olena Mykolaivna");
+        assertThat(second.getFullName()).isEqualTo("Бондаренко Тетяна Тестівна");
         assertThat(second.getSexCode()).isEqualTo("FEM");
-        assertThat(second.getDepartmentId()).isEqualTo(27L);
-        assertThat(second.getExternalId1()).isEqualTo("EXT-2");
-        assertThat(second.getBirthDate()).isEqualTo(LocalDate.of(1985, 3, 4));
+        assertThat(second.getDepartmentId()).isEqualTo(19L);
+        assertThat(second.getAddress()).isNull();
+        assertThat(second.getBirthDate()).isEqualTo(LocalDateTime.of(1990, 5, 12, 0, 0, 0));
 
-        // search filters on fullName, external id, phone and numeric id
-        assertThat(service.searchPatients("sni")).hasSize(1);
-        assertThat(service.searchPatients("900002")).hasSize(1);
-        assertThat(service.searchPatients("EXT-2")).hasSize(1);
-        assertThat(service.searchPatients("380501000002")).hasSize(1);
+        // search filters on fullName, phone and numeric id
+        assertThat(service.searchPatients("сидоренко")).hasSize(1);
+        assertThat(service.searchPatients("13373")).hasSize(1);
+        assertThat(service.searchPatients("380501112233")).hasSize(1);
         assertThat(service.searchPatients("zzz-no-such")).isEmpty();
+    }
+
+    @Test
+    void searchPatients_acceptsDateOnlyBirthDate_andIgnoresUnknownKeys() {
+        stubPatientList("""
+                {"spiPatientProsthesCheck":[
+                  {"id":13385,"fullName":"Мартинюк Людмила Тестівна","birthDate":"1983-09-11",
+                   "sexCode":"FEM","departmentId":27,"bed":"Поліклінічне відділення",
+                   "doctorName":"Ямний В. М.","legacyExternalId":"EXT-9","patientHeight":170}
+                ]}
+                """);
+
+        List<PatientDTO> all = service.searchPatients(null);
+        assertThat(all).hasSize(1);
+        assertThat(all.get(0).getBirthDate()).isEqualTo(LocalDateTime.of(1983, 9, 11, 0, 0, 0));
+        assertThat(all.get(0).getDepartmentId()).isEqualTo(27L);
     }
 
     @Test
     void getPatient_returnsMatch_byId() {
         stubPatientList("""
                 {"spiPatientProsthesCheck":[
-                  {"id":900001,"fullName":"Snihko Ivan Petrovych","patientDepartmentID":19},
-                  {"id":900002,"fullName":"Gavryluk Olena Mykolaivna","patientDepartmentID":27}
+                  {"id":900001,"fullName":"Snihko Ivan Petrovych","departmentId":19},
+                  {"id":900002,"fullName":"Gavryluk Olena Mykolaivna","departmentId":27}
                 ]}
                 """);
         assertThat(service.getPatient(900001L)).isPresent();

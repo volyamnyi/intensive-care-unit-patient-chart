@@ -181,7 +181,6 @@ export default function NursePrescriptionPage() {
       list = list.filter(r =>
         r.patient.fullName.toLowerCase().includes(q) ||
         String(r.patient.id).includes(q) ||
-        (r.patient.externalId1 ?? '').toLowerCase().includes(q) ||
         (r.patient.room ?? '').toLowerCase().includes(q) ||
         (r.patient.doctorName ?? '').toLowerCase().includes(q),
       );
@@ -248,7 +247,7 @@ export default function NursePrescriptionPage() {
       )}
 
       <Input
-        placeholder="Пошук пацієнта за ПІБ, ID, № картки, палатою або лікарем"
+        placeholder="Пошук пацієнта за ПІБ, ID, палатою або лікарем"
         value={search}
         onChange={e => setSearch(e.target.value)}
         className="mb-2 max-w-[500px]"

@@ -23,11 +23,13 @@ import java.util.Optional;
  * Patient registry facade.
  * <p>
  * <b>SINGLE SOURCE OF TRUTH POLICY:</b> all demographic patient data (ПІБ, date
- * of birth, sex, address, phone, email, height, weight) comes from the MIS
- * Integration Layer (common module) — never from the local
- * database. The local {@code prosthetics_patients} table stores ONLY
- * prosthesis-specific clinical data (amputation, stump, clinical state) that the
- * MIS API does not expose.
+ * of birth, sex, address, phone, email) comes from the MIS Integration Layer
+ * (common module, 13-field {@code spiPatientProsthesCheck} contract) — never
+ * from the local database. MIS no longer supplies height/weight, so
+ * {@code heightCm}/{@code weightKg} fall back to the local
+ * {@code prosthetics_patients} record when present. The local table otherwise
+ * stores ONLY prosthesis-specific clinical data (amputation, stump, clinical
+ * state) that the MIS API does not expose.
  */
 @Slf4j
 @Service
@@ -91,16 +93,18 @@ public class ProstheticsPatientService {
                 .id(mis.getId() == null ? null : String.valueOf(mis.getId()))
                 .departmentId(mis.getDepartmentId())
                 .pib(mis.getFullName())
-                .birthDate(mis.getBirthDate())
+                .birthDate(mis.getBirthDate() == null ? null : mis.getBirthDate().toLocalDate())
                 .gender(misSexToLabel(mis.getSexCode()))
-                .heightCm(mis.getHeight())
-                .weightKg(mis.getWeight())
+                .heightCm(null)
+                .weightKg(null)
                 .residence(mis.getAddress())
                 .phone(mis.getPhone())
                 .email(mis.getEmail())
                 .socialStatus(null);
         local.ifPresent(l -> {
-            b.cause(l.getCause())
+            b.heightCm(l.getHeightCm())
+                    .weightKg(l.getWeightKg())
+                    .cause(l.getCause())
                     .amputationDate(l.getAmputationDate())
                     .affectedLimb(l.getAffectedLimb())
                     .amputationLevel(l.getAmputationLevel())

@@ -18,11 +18,11 @@ class PatientSearchIntegrationTest extends AbstractIntegrationTest {
     void setUpMisStubs() {
         var patients = List.of(
                 PatientDTO.builder().id(1001L).fullName("Петренко Іван Сергійович")
-                        .birthDate(java.time.LocalDate.of(1978, 3, 15)).sexCode("MAL").build(),
+                        .birthDate(java.time.LocalDateTime.of(1978, 3, 15, 0, 0, 0)).sexCode("MAL").build(),
                 PatientDTO.builder().id(1002L).fullName("Коваленко Олена Вікторівна")
-                        .birthDate(java.time.LocalDate.of(1985, 11, 22)).sexCode("FEM").build(),
+                        .birthDate(java.time.LocalDateTime.of(1985, 11, 22, 0, 0, 0)).sexCode("FEM").build(),
                 PatientDTO.builder().id(1003L).fullName("Сидоренко Василь Петрович")
-                        .birthDate(java.time.LocalDate.of(1962, 7, 8)).sexCode("MAL").build());
+                        .birthDate(java.time.LocalDateTime.of(1962, 7, 8, 0, 0, 0)).sexCode("MAL").build());
         when(misService.searchPatients(org.mockito.ArgumentMatchers.any()))
                 .thenAnswer(inv -> {
                     String q = inv.getArgument(0);

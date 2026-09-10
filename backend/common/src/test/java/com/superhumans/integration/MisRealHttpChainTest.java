@@ -61,7 +61,9 @@ class MisRealHttpChainTest {
 
     private static final String PATIENT_ENVELOPE = """
             {"spiPatientProsthesCheck":[
-              {"id":900001,"fullName":"Snihko Ivan Petrovych","patientDepartmentID":19}
+              {"id":900001,"fullName":"Snihko Ivan Petrovych","birthDate":"1991-03-14T00:00:00",
+               "sexCode":"MAL","departmentId":19,"room":"411A-Тестова","bed":"Ліжко №1",
+               "doctorName":"Ямний В. М."}
             ]}""";
 
     private static final String MEDICINE_ENVELOPE = """

@@ -27,19 +27,19 @@ vi.mock('../../components/common/PatientSearch', () => ({
 }));
 
 const testPatient: PatientDto = {
-  id: 1001,
-  fullName: 'Петренко Іван',
-  birthDate: '1990-05-15',
-  sexCode: 'M',
-  address: 'м. Київ, вул. Хрещатик',
-  phone: '+380501234567',
-  email: '',
-  externalId1: '123456',
-  externalId2: '',
-  height: 180,
-  weight: 80,
-  bloodGroup: 'A',
-  rhFactor: '+',
+  id: 13372,
+  fullName: 'Сидоренко Василь Тестович',
+  birthDate: '1962-07-08T00:00:00',
+  sexCode: 'MAL',
+  address: 'Україна, Дніпропетровська область, Васильківський р-н',
+  phone: '380631234567',
+  email: 'vasyl.syd@mail.com',
+  bloodGroup: 'O',
+  rhFactor: 'NEG',
+  departmentId: 19,
+  room: '411A-Тестова',
+  bed: 'Ліжко №1',
+  doctorName: 'Ямний В. М.',
 };
 
 function renderPage() {
@@ -80,11 +80,8 @@ describe('CreateCardPage', () => {
       expect(screen.getByLabelText('ПІП')).toBeInTheDocument();
       expect(screen.getByLabelText('Дата народження')).toBeInTheDocument();
       expect(screen.getByLabelText('Стать')).toBeInTheDocument();
-      expect(screen.getByLabelText('Зріст (см)')).toBeInTheDocument();
-      expect(screen.getByLabelText('Маса (кг)')).toBeInTheDocument();
       expect(screen.getByLabelText('Група крові')).toBeInTheDocument();
       expect(screen.getByLabelText('Rezus')).toBeInTheDocument();
-      expect(screen.getByLabelText('№ медкарти')).toBeInTheDocument();
     });
   });
 
@@ -93,14 +90,11 @@ describe('CreateCardPage', () => {
     const onSelect = mockPatientSearch.mock.calls[0][0];
     onSelect(testPatient);
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Петренко Іван')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('1990-05-15')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Сидоренко Василь Тестович')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('1962-07-08T00:00:00')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Чол')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('180')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('80')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('A')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('+')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('123456')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('O')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('NEG')).toBeInTheDocument();
     });
   });
 
@@ -123,7 +117,7 @@ describe('CreateCardPage', () => {
     await userEvent.click(screen.getByText('Створити карту'));
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-        patientId: 1001,
+        patientId: 13372,
         admissionDate: expect.any(String),
       }));
       expect(mockNavigate).toHaveBeenCalledWith('/icu/doctor/episode/ep-1');

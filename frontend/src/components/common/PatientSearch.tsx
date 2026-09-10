@@ -16,7 +16,7 @@ interface PatientSearchProps {
 }
 
 export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
-  const resolvedLabel = label ?? 'ПІБ, телефон або № медкарти';
+  const resolvedLabel = label ?? 'ПІБ, телефон або ID';
   const [search, setSearch] = useState('');
   const [patients, setPatients] = useState<PatientDto[]>([]);
   const [selected, setSelected] = useState<PatientDto | null>(null);
@@ -76,7 +76,7 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
 
   const handleSelect = (patient: PatientDto) => {
     setSelected(patient);
-    setSearch(`${patient.fullName} (${patient.externalId1})`);
+    setSearch(`${patient.fullName} (ID ${patient.id})`);
     setOpen(false);
     onSelect(patient);
   };
@@ -108,7 +108,7 @@ export default function PatientSearch({ onSelect, label }: PatientSearchProps) {
             >
               <p className="font-semibold text-sm">{p.fullName}</p>
               <p className="text-xs text-muted-foreground">
-                {p.externalId1} &middot; {p.birthDate} &middot; {p.address?.split(',')[0]?.trim()}
+                ID {p.id} &middot; {p.birthDate} &middot; {p.address?.split(',')[0]?.trim()}
               </p>
             </div>
           ))}
