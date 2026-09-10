@@ -130,7 +130,7 @@ describe('MedicineSearchInput — «Додати» button enablement (in-progres
     await user.type(input, 'DisabledPar');
     const row = await screen.findByRole('button', { name: /DisabledPar/ });
     expect(row).toBeDisabled();
-    expect(screen.getByText('Нічого не знайдено')).not.toBeInTheDocument();
+    expect(screen.queryByText('Нічого не знайдено')).not.toBeInTheDocument();
     // Clicking the disabled row must not select/enable «Додати» from a selection.
     await user.click(row);
     const add = screen.getByRole('button', { name: 'Додати' });

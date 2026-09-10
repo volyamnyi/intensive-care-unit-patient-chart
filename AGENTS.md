@@ -216,7 +216,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 - JWT auth delivered via an **httpOnly `jwt` cookie** (SameSite=Lax) set on login and cleared on logout; axios uses `withCredentials: true` with no Authorization header. `localStorage` holds only a lightweight `auth:session` flag - never the token.
 - Backend port: **8085** (`application.yml`).
-- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (18 SQL files total: core 7, icu 6, med 1, prosth 4 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`; `core/007-ldap-auth-provider.sql` adds `users.auth_provider` and relaxes `password_hash` nullability with a guarded rollback):
+- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (25 SQL files total: core 7, icu 7, med 2, prosth 9 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`; `core/007-ldap-auth-provider.sql` adds `users.auth_provider` and relaxes `password_hash` nullability with a guarded rollback):
 
   | Database | Module | Purpose / contents |
   |---|---|---|
@@ -315,7 +315,7 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (770 tests across 89 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (796 tests across 87 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
@@ -326,9 +326,9 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 ## Testing
 
-- **Backend**: 347 main sources / 140 test files across the multi-module reactor (common 124/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 78/35, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 770 Vitest tests across 89 test files (136 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 88 Playwright spec files across 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Backend**: 340 main sources / 154 test files across the multi-module reactor (common 125/25, icu-chart 83/75, medication-sheet 54/16, prosthesis-manufacturing 78/37, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 796 Vitest tests across 87 test files (134 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **E2E**: 410 Playwright tests across 88 spec files in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -700,7 +700,7 @@ All endpoints prefixed with `/api`.
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer to MIS banned (#269) | `TransferStatus` + `GeneratedPdf.transferStatus/transferError/transferredAt` removed (Liquibase `icu/007-drop-pdf-transfer.sql`); PDFs stay local — `GET /clinical-days/{id}/pdf/file` serves bytes, in-module print via `lib/printPdf.ts` |
 | §98 | MIS calls audited | `MisServiceImpl` methods call `auditService.logAction()`; `sendPdf()` removed in #269 (guarded by `MisWriteBanTripwireTest`) |
-| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (21 SQL files: core 6, icu 6, med 1, prosth 8); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
+| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (25 SQL files: core 7, icu 7, med 2, prosth 9); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
 
 ## Key Patterns
 
@@ -737,7 +737,7 @@ All endpoints prefixed with `/api`.
 - **TypeScript**: `erasableSyntaxOnly: true` — no enums, no namespaces
 - **Roles**: Gate in backend (Spring Security `@PreAuthorize`) and frontend (`Guard` component)
 - **Routing**: `/icu/doctor/*` for DOCTOR/HOD, `/icu/nurse/*` for NURSE, `/prescriptions/*` for medication sheet, `/prosthetics/*` for prosthetics, `/admin/*` for ADMINISTRATOR
-- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 21 SQL files); never write manual DDL
+- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 25 SQL files); never write manual DDL
 - **Data seeding**: Only via `SeedDataInitializer` — one script per module: `data-core.sql`, `data-icu.sql`, `data-med.sql`, `data-prosth.sql` (in `backend/common/src/main/resources/`), executed on the matching datasource; gated by `app.seed-data.enabled: true`. Never write manual seed DDL.
 - **Test seed data**: Integration tests use `data-test-core.sql` / `data-test-icu.sql` / `data-test-med.sql` (in `backend/icu-chart/src/test/resources/`) with plain INSERTs, routed per-datasource via `@Sql` + `@SqlConfig(dataSource = ...)` (plus `data-prescription.sql` with `@SqlConfig(dataSource = "medDataSource", separator = "GO")`) on a fresh PostgreSQL database. The production seed files keep `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). The `users` inserts in `data-core.sql` use `ON CONFLICT (login) DO NOTHING` — a demo password is **never** overwritten on restart (A2, CWE-798). Modified data may persist across restarts. Reset each DB with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 
@@ -762,18 +762,18 @@ UseManual.md           ← User manual (Ukrainian)
 .gitignore             ← Global ignore rules
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire (5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
-  src/main/java/       ← 347 Java source files
+  src/main/java/       ← 340 Java source files
   src/main/resources/  ← application.yml, data-{core,icu,med,prosth}.sql, PDF template, db/changelog/ (Liquibase)
-  src/test/java/       ← 140 test files
+  src/test/java/       ← 154 test files
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 136 TS/TSX source + 89 test files
+  src/                 ← 134 TS/TSX source + 87 test files
 tests/
-  playwright.config.ts ← Playwright config with 11 projects
+  playwright.config.ts ← Playwright config with 10 projects
   package.json         ← Test dependencies
   specs/               ← 88 spec files
   pages/               ← Page Object Model (6 files)
