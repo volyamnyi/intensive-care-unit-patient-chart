@@ -36,19 +36,22 @@ export default function PatientSearchPage() {
     document.title = 'Вибір пацієнта — Виробництво протезів';
   }, []);
 
-  // Source: the backend eligibility worklist (Phase 9, #262) — only
-  // candidates (department 19/27/37 with 120/121 documents and local
-  // orders) are listed; the frontend never filters eligibility itself.
+  // Source: the MIS-backed patient registry (GET .../patients) — every
+  // patient under treatment is listed. The eligibility worklist (GET
+  // .../patients/candidates) must NOT feed this step: it additionally
+  // requires local orders and 120/121 MIS documents, so with a live MIS
+  // roster it returns empty and the setup flow dead-ends on step 1 with
+  // «Немає пацієнтів». Eligibility badges stay on step 2 (OrderSelectPage),
+  // which enriches best-effort from the candidates endpoint.
   useEffect(() => {
     let active = true;
     setLoading(true);
     prostheticsPatientApi
-      .listCandidates()
+      .search()
       .then((res) => {
         if (active) {
-          const rows = res.data.map((c) => c.patient);
-          setAllPatients(rows);
-          setPatients(rows);
+          setAllPatients(res.data);
+          setPatients(res.data);
         }
       })
       .catch(() => {
@@ -71,8 +74,8 @@ export default function PatientSearchPage() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await prostheticsPatientApi.listCandidates(query, controller.signal);
-        setPatients(res.data.map((c) => c.patient));
+        const res = await prostheticsPatientApi.search(query, controller.signal);
+        setPatients(res.data);
       } catch {
         setError('Помилка пошуку');
       } finally {
