@@ -52,8 +52,14 @@ export default function OrderReviewPage() {
     document.title = 'Перевірка замовлення — Виробництво протезів';
   }, []);
 
+  // The MIS document picked on step 2 (draft.misDocumentUrl) takes
+  // precedence: it feeds the «Замовлення на протез» tab directly without
+  // resolving anything through the local order.
+  const draftDocUrl = draft.misDocumentUrl ?? null;
+  const draftDocTemplate = draft.misDocumentTemplateName ?? null;
+
   useEffect(() => {
-    if (!draft.orderId) {
+    if (!draft.orderId && !draftDocUrl) {
       navigate('/prosthetics/new/select-order');
       return;
     }
@@ -64,29 +70,41 @@ export default function OrderReviewPage() {
       setDocError(null);
       setDocumentUrl(null);
       try {
-        const orderRes = await prostheticsOrderApi.getById(draft.orderId!);
-
-        let patient: ProstheticsPatient | null = null;
-        if (orderRes.data.patientId) {
-          try {
-            const patientRes = await prostheticsPatientApi.getById(orderRes.data.patientId);
-            patient = patientRes.data;
-          } catch {
-            // ignore patient fetch errors
-          }
+        if (draftDocUrl) {
+          setDocumentUrl(draftDocUrl);
+          setDocTemplateName(draftDocTemplate);
+          setDocLoaded(true);
         }
 
-        setOrder({ ...orderRes.data, patient });
+        if (draft.orderId) {
+          const orderRes = await prostheticsOrderApi.getById(draft.orderId);
 
-        try {
-          const urlRes = await prostheticsOrderApi.getDocumentUrl(draft.orderId!);
-          setDocumentUrl(urlRes.data.documentUrl);
-          setDocTemplateName(urlRes.data.documentTemplateName ?? null);
-          setDocLoaded(true);
-        } catch (err: unknown) {
-          const axiosError = err as { response?: { data?: { message?: string } } };
-          setDocError(axiosError.response?.data?.message || 'Не вдалося завантажити замовлення на протез');
-          setDocLoaded(true);
+          let patient: ProstheticsPatient | null = null;
+          if (orderRes.data.patientId) {
+            try {
+              const patientRes = await prostheticsPatientApi.getById(orderRes.data.patientId);
+              patient = patientRes.data;
+            } catch {
+              // ignore patient fetch errors
+            }
+          }
+
+          setOrder({ ...orderRes.data, patient });
+
+          if (!draftDocUrl) {
+            try {
+              const urlRes = await prostheticsOrderApi.getDocumentUrl(draft.orderId);
+              setDocumentUrl(urlRes.data.documentUrl);
+              setDocTemplateName(urlRes.data.documentTemplateName ?? null);
+              setDocLoaded(true);
+            } catch (err: unknown) {
+              const axiosError = err as { response?: { data?: { message?: string } } };
+              setDocError(axiosError.response?.data?.message || 'Не вдалося завантажити замовлення на протез');
+              setDocLoaded(true);
+            }
+          }
+        } else {
+          setOrder(null);
         }
       } catch {
         setError('Не вдалося завантажити дані');
@@ -95,7 +113,8 @@ export default function OrderReviewPage() {
       }
     };
     fetchData();
-  }, [draft.orderId, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.orderId, draftDocUrl, navigate]);
 
   const handleStart = async () => {
     if (!draft.orderId) return;
@@ -120,7 +139,7 @@ export default function OrderReviewPage() {
     }
   };
 
-  if (!draft.orderId) {
+  if (!draft.orderId && !draftDocUrl) {
     return (
       <div className="container mx-auto max-w-2xl py-8">
         <div className="mb-6 flex items-center gap-3">
@@ -150,7 +169,7 @@ export default function OrderReviewPage() {
     );
   }
 
-  if (error || !order) {
+  if (error || (!order && !draftDocUrl)) {
     return (
       <div className="container mx-auto max-w-2xl py-8">
         <div className="mb-6 flex items-center gap-3">
@@ -173,7 +192,9 @@ export default function OrderReviewPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold">Перевірка замовлення</h1>
-          <p className="text-sm text-muted-foreground">Крок 3 з 4 · {order?.orderNumber}</p>
+          <p className="text-sm text-muted-foreground">
+            Крок 3 з 4{order ? ` · ${order.orderNumber}` : draftDocTemplate ? ` · ${draftDocTemplate}` : ''}
+          </p>
         </div>
         <SetupSteps current={3} />
       </div>
@@ -186,31 +207,37 @@ export default function OrderReviewPage() {
         </TabsList>
 
         <TabsContent value="details">
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Пацієнт</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-base">{order.patient?.pib || '—'}</p>
-                <p className="text-sm text-muted-foreground">ID: {order.patientId}</p>
-              </CardContent>
-            </Card>
+          {order ? (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Пацієнт</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-base">{order.patient?.pib || '—'}</p>
+                  <p className="text-sm text-muted-foreground">ID: {order.patientId}</p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Замовлення</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-base">Замовлення #{order.orderNumber}</p>
-                <p className="text-muted-foreground">{order.productType}</p>
-                <p className="text-sm text-muted-foreground">
-                  Рівень ампутації: {order.amputationLevel || '—'}
-                </p>
-                <p className="text-sm text-muted-foreground">Бік: {limbSideLabel(order.limbSide)}</p>
-              </CardContent>
-            </Card>
-          </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Замовлення</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-base">Замовлення #{order.orderNumber}</p>
+                  <p className="text-muted-foreground">{order.productType}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Рівень ампутації: {order.amputationLevel || '—'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Бік: {limbSideLabel(order.limbSide)}</p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              Локальне замовлення не обрано — показано документ MIS, обраний на кроці 2.
+            </p>
+          )}
         </TabsContent>
 
         <TabsContent value="document">
@@ -262,7 +289,7 @@ export default function OrderReviewPage() {
               <CardDescription>Список матеріалів для виготовлення</CardDescription>
             </CardHeader>
             <CardContent>
-              {parseMaterials(order.materials).length > 0 ? (
+              {order && parseMaterials(order.materials).length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -304,21 +331,27 @@ export default function OrderReviewPage() {
           <Button variant="ghost" className="w-full sm:w-auto" onClick={() => navigate('/prosthetics')}>
             До головного меню
           </Button>
-          <Button
-            disabled={!docLoaded || checking}
-            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
-            onClick={() => void handleStart()}
-          >
-            {checking ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" /> Перевірка…
-              </>
-            ) : docLoaded ? (
-              'Старт'
-            ) : (
-              'Очікування замовлення на протез…'
-            )}
-          </Button>
+          {draft.orderId ? (
+            <Button
+              disabled={!docLoaded || checking}
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
+              onClick={() => void handleStart()}
+            >
+              {checking ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" /> Перевірка…
+                </>
+              ) : docLoaded ? (
+                'Старт'
+              ) : (
+                'Очікування замовлення на протез…'
+              )}
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground sm:self-center">
+              Для старту процесу оберіть локальне замовлення на кроці 2.
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import client from './client';
 import type {
+  MisOrderDocument,
   ProstheticsCandidate,
   ProstheticsPatient,
   ProstheticsOrder,
@@ -38,6 +39,13 @@ export const prostheticsPatientApi = {
 export const prostheticsOrderApi = {
   list: () => client.get<ProstheticsOrder[]>(`${BASE}/orders`),
   listByPatient: (patientId: string) => client.get<ProstheticsOrder[]>(`${BASE}/orders`, { params: { patientId } }),
+  /**
+   * MIS limb-prosthesis order documents for setup step 2
+   * (spiDocumentProsthesCheck narrowed to templates 120/121, 404 URLs excluded).
+   * The picked documentUrl feeds step 3 (review).
+   */
+  listMisDocuments: (patientId: string, signal?: AbortSignal) =>
+    client.get<MisOrderDocument[]>(`${BASE}/orders/documents`, { params: { patientId }, signal }),
   getById: (id: string) => client.get<ProstheticsOrder>(`${BASE}/orders/${id}`),
   /**
    * Resolves the MIS-hosted URL for the order document. The client opens

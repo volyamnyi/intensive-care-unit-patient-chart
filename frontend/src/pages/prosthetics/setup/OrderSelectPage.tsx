@@ -9,8 +9,14 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { useProsthetics } from '@/prosthetics/ProstheticsContext';
 import { prostheticsOrderApi, prostheticsPatientApi } from '@/api/prosthetics';
-import type { ProstheticsCandidateDocument, ProstheticsOrder } from '@/prosthetics/types';
+import type { MisOrderDocument, ProstheticsCandidateDocument, ProstheticsOrder } from '@/prosthetics/types';
 import { SetupSteps } from '@/components/prosthetics/SetupSteps';
+
+function formatDocDate(raw: string | undefined): string {
+  if (!raw) return '—';
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('uk-UA');
+}
 
 export default function OrderSelectPage() {
   const navigate = useNavigate();
@@ -20,6 +26,9 @@ export default function OrderSelectPage() {
   const [documentsUnknown, setDocumentsUnknown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [misDocs, setMisDocs] = useState<MisOrderDocument[]>([]);
+  const [misLoading, setMisLoading] = useState(false);
+  const [misError, setMisError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'Вибір замовлення — Виробництво протезів';
@@ -55,9 +64,33 @@ export default function OrderSelectPage() {
         // ignore — badges are decorative
       }
     };
+    // MIS limb-order documents (templates 120/121, 404 URLs excluded
+    // backend-side): the picked documentUrl feeds step 3 (review).
+    const fetchMisDocs = async () => {
+      setMisLoading(true);
+      setMisError(null);
+      try {
+        const res = await prostheticsOrderApi.listMisDocuments(draft.patientId!);
+        setMisDocs(res.data);
+      } catch {
+        setMisError('Не вдалося завантажити замовлення MIS');
+        setMisDocs([]);
+      } finally {
+        setMisLoading(false);
+      }
+    };
     fetchOrders();
     fetchDocuments();
+    fetchMisDocs();
   }, [draft.patientId, navigate]);
+
+  const handleSelectMisDoc = (doc: MisOrderDocument) => {
+    if (!doc.documentUrl) return;
+    setDraftField('misDocumentUrl', doc.documentUrl);
+    setDraftField('misDocumentId', doc.documentId != null ? String(doc.documentId) : null);
+    setDraftField('misDocumentTemplateName', doc.documentTemplateName ?? null);
+    navigate('/prosthetics/new/review-order');
+  };
 
   return (
     <div className="container mx-auto max-w-2xl py-8">
@@ -108,13 +141,68 @@ export default function OrderSelectPage() {
         </p>
       )}
 
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="text-base">Замовлення на протези (MIS)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {misLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : misError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Помилка</AlertTitle>
+              <AlertDescription>{misError}</AlertDescription>
+            </Alert>
+          ) : misDocs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Замовлень на протези в MIS не знайдено.</p>
+          ) : (
+            <Table data-testid="mis-order-documents">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Документ</TableHead>
+                  <TableHead>Дата</TableHead>
+                  <TableHead>Виріб</TableHead>
+                  <TableHead className="text-right">Дія</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {misDocs.map((doc) => (
+                  <TableRow key={`${doc.documentTemplateId}-${doc.documentId}-${doc.documentUrl}`}>
+                    <TableCell className="font-medium">
+                      {doc.documentTemplateName ?? `Шаблон ${doc.documentTemplateId}`}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {formatDocDate(doc.documentCreationDate ?? doc.orderDate)}
+                    </TableCell>
+                    <TableCell>{doc.productName || '—'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant={draft.misDocumentUrl === doc.documentUrl ? 'default' : 'outline'}
+                        disabled={!doc.documentUrl}
+                        onClick={() => handleSelectMisDoc(doc)}
+                      >
+                        {draft.misDocumentUrl === doc.documentUrl ? 'Обрано' : 'Обрати'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       {loading ? (
         <div className="space-y-2">
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
         </div>
       ) : orders.length === 0 ? (
-        <p className="text-muted-foreground">Немає замовлень для цього пацієнта.</p>
+        <p className="text-muted-foreground">Немає локальних замовлень для цього пацієнта.</p>
       ) : (
         <Table>
           <TableHeader>
@@ -157,7 +245,7 @@ export default function OrderSelectPage() {
           Назад
         </Button>
         <Button
-          disabled={!draft.orderId}
+          disabled={!draft.orderId && !draft.misDocumentUrl}
           className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
           onClick={() => navigate('/prosthetics/new/review-order')}
         >

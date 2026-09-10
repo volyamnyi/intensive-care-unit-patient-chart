@@ -197,6 +197,45 @@ describe('OrderReviewPage', () => {
     });
   });
 
+  it('prefers the draft MIS document without resolving through the local order', async () => {
+    mockUseProsthetics({
+      patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null,
+      misDocumentUrl: documentUrlMock, misDocumentId: '681078',
+      misDocumentTemplateName: 'Замовлення на протези нижніх кінцівок',
+    });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      const frame = screen.getByTitle('Замовлення на протез (MIS)');
+      expect(frame.getAttribute('src')).toBe(documentUrlMock);
+    });
+    expect(prostheticsOrderApiMock.getDocumentUrl).not.toHaveBeenCalled();
+    expect(screen.getByText(/MIS: Замовлення на протези нижніх кінцівок/)).toBeInTheDocument();
+  });
+
+  it('renders the MIS document without a local order and hides Start', async () => {
+    mockUseProsthetics({
+      patientId: 'p1', orderId: null, templateId: null, instanceId: null,
+      misDocumentUrl: documentUrlMock, misDocumentId: '681078',
+      misDocumentTemplateName: 'Замовлення на протези нижніх кінцівок',
+    });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => {
+      const frame = screen.getByTitle('Замовлення на протез (MIS)');
+      expect(frame.getAttribute('src')).toBe(documentUrlMock);
+    });
+    expect(prostheticsOrderApiMock.getById).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Старт/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Для старту процесу оберіть локальне замовлення/)).toBeInTheDocument();
+  });
+
   it('blocks start when an active process already exists', async () => {
     flowInstanceApiMock.list.mockResolvedValue({
       data: [{ id: 'i1', orderId: 'o1', status: 'IN_PROGRESS' }],

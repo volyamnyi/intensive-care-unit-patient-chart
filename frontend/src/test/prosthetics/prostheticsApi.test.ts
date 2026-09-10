@@ -92,6 +92,16 @@ describe('prostheticsOrderApi', () => {
     await prostheticsOrderApi.getDocumentUrl('o1');
     expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/orders/o1/document-url');
   });
+
+  it('lists MIS limb-order documents for a patient', async () => {
+    clientMock.get.mockReturnValue(ok([]));
+    const signal = new AbortController().signal;
+    await prostheticsOrderApi.listMisDocuments('13373', signal);
+    expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/orders/documents', {
+      params: { patientId: '13373' },
+      signal,
+    });
+  });
 });
 
 describe('flowTemplateApi', () => {

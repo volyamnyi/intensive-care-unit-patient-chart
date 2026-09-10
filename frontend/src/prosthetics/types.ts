@@ -287,6 +287,33 @@ export interface ProstheticsDraft {
   orderId: string | null;
   templateId: string | null;
   instanceId: string | null;
+  /** MIS limb-order document picked on step 2 (feeds step 3 review). */
+  misDocumentUrl?: string | null;
+  misDocumentId?: string | null;
+  misDocumentTemplateName?: string | null;
+}
+
+/** MIS limb-prosthesis order document (spiDocumentProsthesCheck, templates 120/121). */
+export interface MisOrderDocument {
+  documentId?: number;
+  documentName?: string;
+  documentCreationDate?: string;
+  documentUserLogin?: string;
+  documentTemplateId?: number;
+  documentTemplateName?: string;
+  documentUrl?: string;
+  patientId?: number;
+  orderDate?: string;
+  patientFullName?: string;
+  patientAddress?: string;
+  productCode?: string;
+  productName?: string;
+  mobilityLevel?: string;
+  patientGender?: string;
+  age?: number;
+  height?: number;
+  weight?: number;
+  note?: string;
 }
 
 // Phase 5 types
