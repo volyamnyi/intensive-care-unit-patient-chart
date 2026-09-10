@@ -97,6 +97,10 @@ class ProductionReadServiceIntegrationTest {
         ProstheticsOrder order1 = saveOrder(patientA, "06 24 09");
         ProstheticsOrder order2 = saveOrder(patientA, "06 24 10");
         ProstheticsOrder order3 = saveOrder(patientB, "06 25 03");
+        // A third order for patient A: the unique active-instance-per-order
+        // constraint (uq_flow_instances_active_order) forbids sharing order1
+        // between the open I1 and the fresh NEW instance below.
+        ProstheticsOrder order4 = saveOrder(patientA, "06 24 11");
         order1Id = order1.getId();
         order2Id = order2.getId();
 
@@ -138,7 +142,7 @@ class ProductionReadServiceIntegrationTest {
         saveBrak(i4.getId());
 
         // I6: fresh NEW instance, no assignee, no start, no snapshot.
-        saveInstance(order1.getId(), patientA.getId(), null,
+        saveInstance(order4.getId(), patientA.getId(), null,
                 FlowInstanceStatus.NEW, null, null, null, null, 0L, null);
     }
 
@@ -175,7 +179,7 @@ class ProductionReadServiceIntegrationTest {
         List<ProductionWorkItemDto> patientA = rows.values().stream()
                 .filter(r -> r.getPatientPib() != null && r.getPatientPib().startsWith("Пацієнт А"))
                 .toList();
-        // I1 (order1) + I2 (order2) + I6 (order1): same patient, distinct orders.
+        // I1 (order1) + I2 (order2) + I6 (order4): same patient, distinct orders.
         assertThat(patientA).extracting(ProductionWorkItemDto::getOrderId)
                 .contains(order1Id, order2Id);
         assertThat(rows.values().stream()
