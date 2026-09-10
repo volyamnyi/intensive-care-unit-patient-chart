@@ -23,6 +23,10 @@ import type {
   BrakEvent,
   BranchResponse,
   StepNotePatchRequest,
+  ProductionListParams,
+  ProductionPage,
+  ProductionSummary,
+  ProductionWorkItem,
 } from '../prosthetics/types';
 
 const BASE = '/prosthesis-manufacturing';
@@ -129,9 +133,21 @@ export const flowInstanceApi = {
     client.get<FlowInstance[]>(`${BASE}/instances/${id}/branches`),
 };
 
+/**
+ * Production monitoring read-model (epic #271): paged work items and KPI
+ * summary. Scope is enforced server-side (own items without VIEW_ALL).
+ */
+export const productionApi = {
+  list: (params?: ProductionListParams, signal?: AbortSignal) =>
+    client.get<ProductionPage<ProductionWorkItem>>(`${BASE}/production`, { params, signal }),
+  summary: (signal?: AbortSignal) =>
+    client.get<ProductionSummary>(`${BASE}/production/summary`, { signal }),
+};
+
 export const prostheticsApi = {
   patient: prostheticsPatientApi,
   order: prostheticsOrderApi,
   template: flowTemplateApi,
   instance: flowInstanceApi,
+  production: productionApi,
 };

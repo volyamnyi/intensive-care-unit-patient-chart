@@ -237,8 +237,7 @@ class ProductionReadServiceIntegrationTest {
     }
 
     @Test
-    void list_sortsAndPaginates() {
-        Page<ProductionWorkItemDto> longest = readService.list(
+    void list_sortsAndPaginates() {        Page<ProductionWorkItemDto> longest = readService.list(
                 ProductionQuery.builder().sort(ProductionQuery.Sort.LONGEST).size(50).build());
         assertThat(longest.getContent().get(0).getInstanceId()).isEqualTo(instance1Id);
 
@@ -251,6 +250,22 @@ class ProductionReadServiceIntegrationTest {
         Page<ProductionWorkItemDto> mostBrak = readService.list(
                 ProductionQuery.builder().sort(ProductionQuery.Sort.MOST_BRAK).size(50).build());
         assertThat(mostBrak.getContent().get(0).getInstanceId()).isEqualTo(instance1Id);
+    }
+
+    @Test
+    void summary_countsScope() {
+        var all = readService.summary(null);
+
+        assertThat(all.getTotalItems()).isEqualTo(6);
+        assertThat(all.getInWork()).isEqualTo(3);
+        assertThat(all.getActive()).isEqualTo(2);
+        assertThat(all.getPaused()).isZero();
+        assertThat(all.getCompleted()).isEqualTo(1);
+        assertThat(all.getFailed()).isEqualTo(1);
+        assertThat(all.getBrakItems()).isEqualTo(3);
+        assertThat(all.getReworkItems()).isEqualTo(1);
+        assertThat(all.getAvgElapsedSeconds()).isPositive();
+        assertThat(all.getAvgActiveSeconds()).isPositive();
     }
 
     private Map<UUID, ProductionWorkItemDto> allRows() {

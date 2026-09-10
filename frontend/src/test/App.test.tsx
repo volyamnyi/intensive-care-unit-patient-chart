@@ -86,6 +86,10 @@ vi.mock('../pages/prosthetics/DashboardPage', () => ({
   default: () => <div>Prosthetics Dashboard</div>,
 }));
 
+vi.mock('../pages/prosthetics/ProductionPage', () => ({
+  default: () => <div>Production Monitoring</div>,
+}));
+
 vi.mock('../prosthetics/ProstheticsContext', () => ({
   ProstheticsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -221,5 +225,28 @@ describe('App', () => {
       expect(screen.getByText('App Selector')).toBeInTheDocument();
     });
     expect(screen.queryByText('Doctor Dashboard')).not.toBeInTheDocument();
+  });
+
+  it('renders production monitoring for a role granted PROSTHETICS_PRODUCTION_VIEW', async () => {
+    mockUser = { id: 5, login: 'head1', fullName: 'Завідувач', role: 'HEAD_OF_DEPARTMENT' };
+    mockHasRole = (...roles: string[]) => roles.includes('HEAD_OF_DEPARTMENT');
+    mockHasPermission = (...perms: string[]) => perms.includes('PROSTHETICS_PRODUCTION_VIEW');
+    window.history.pushState({}, '', '/prosthetics/production');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('Production Monitoring')).toBeInTheDocument();
+    });
+  });
+
+  it('blocks production monitoring without the permission', async () => {
+    mockUser = { id: 2, login: 'nurse1', fullName: 'Медсестра Олена', role: 'NURSE' };
+    mockHasRole = (...roles: string[]) => roles.includes('NURSE');
+    mockHasPermission = () => false;
+    window.history.pushState({}, '', '/prosthetics/production');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('App Selector')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Production Monitoring')).not.toBeInTheDocument();
   });
 });

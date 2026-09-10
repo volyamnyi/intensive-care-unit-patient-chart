@@ -4,6 +4,7 @@ import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
+import com.superhumans.prosthesismanufacturing.dto.ProductionSummaryDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
 import com.superhumans.prosthesismanufacturing.service.ProductionReadService;
@@ -115,8 +116,33 @@ class ProductionControllerTest {
     }
 
     @Test
-    void team_returnsOk() throws Exception {
-        when(readService.team()).thenReturn(List.of(
+    void summary_scopesToOwnWithoutViewAll() throws Exception {
+        when(permissionService.has(ProductionController.Codes.VIEW_ALL)).thenReturn(false);
+        when(readService.summary(1L)).thenReturn(
+                ProductionSummaryDto.builder().totalItems(2).inWork(2).build());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/production/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(2));
+
+        verify(readService).summary(1L);
+    }
+
+    @Test
+    void summary_teamScopeWithViewAll() throws Exception {
+        when(permissionService.has(ProductionController.Codes.VIEW_ALL)).thenReturn(true);
+        when(readService.summary(null)).thenReturn(
+                ProductionSummaryDto.builder().totalItems(9).build());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/production/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalItems").value(9));
+
+        verify(readService).summary(null);
+    }
+
+    @Test
+    void team_returnsOk() throws Exception {        when(readService.team()).thenReturn(List.of(
                 ProductionTeamRowDto.builder().userId(1L).fullName("Іваненко").inWork(2).build()));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/production/team"))

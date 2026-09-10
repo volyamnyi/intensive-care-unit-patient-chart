@@ -7,6 +7,7 @@ import com.superhumans.prosthesismanufacturing.dto.BrakEventResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
+import com.superhumans.prosthesismanufacturing.dto.ProductionSummaryDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
 import com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse;
@@ -221,6 +222,55 @@ public class ProductionReadService {
     }
 
     /**
+     * KPI summary over the caller's scope. Pass the effective assignee
+     * (own id without {@code VIEW_ALL}, {@code null} for the team scope).
+     */
+    @Transactional(readOnly = true)
+    public ProductionSummaryDto summary(Long assigneeOrNull) {
+        List<FlowInstance> instances = assigneeOrNull == null
+                ? instanceRepository.findAll()
+                : instanceRepository.findByAssignedUserId(assigneeOrNull);
+        List<ProductionWorkItemDto> rows = buildRows(instances);
+        return ProductionSummaryDto.builder()
+                .totalItems(rows.size())
+                .inWork((int) rows.stream().filter(ProductionReadService::isInWork).count())
+                .active((int) rows.stream()
+                        .filter(r -> "IN_PROGRESS".equals(r.getStatus())).count())
+                .paused((int) rows.stream().filter(ProductionReadService::isPaused).count())
+                .completed((int) rows.stream()
+                        .filter(r -> "COMPLETED".equals(r.getStatus())).count())
+                .failed((int) rows.stream().filter(ProductionWorkItemDto::isFailed).count())
+                .brakItems((int) rows.stream().filter(r -> r.getBrakCount() > 0).count())
+                .reworkItems((int) rows.stream().filter(r -> r.getReworkCount() > 0).count())
+                .avgElapsedSeconds(average(rows, ProductionWorkItemDto::getElapsedSeconds))
+                .avgActiveSeconds(average(rows, ProductionWorkItemDto::getActiveSeconds))
+                .build();
+    }
+
+    private static boolean isInWork(ProductionWorkItemDto row) {
+        return "NEW".equals(row.getStatus()) || "IN_PROGRESS".equals(row.getStatus());
+    }
+
+    private static boolean isPaused(ProductionWorkItemDto row) {
+        return "PAUSED".equals(row.getStatus())
+                || "BLOCKED_PATIENT".equals(row.getStatus())
+                || "BLOCKED_MATERIAL".equals(row.getStatus());
+    }
+
+    private static Long average(List<ProductionWorkItemDto> rows,
+            java.util.function.Function<ProductionWorkItemDto, Long> value) {
+        if (rows.isEmpty()) {
+            return null;
+        }
+        long sum = 0;
+        for (ProductionWorkItemDto row : rows) {
+            Long v = value.apply(row);
+            sum += v == null ? 0 : v;
+        }
+        return sum / rows.size();
+    }
+
+    /**
      * Team workload aggregation: one row per prosthetist with an assigned
      * item. Unassigned items surface through the NO_ASSIGNEE attention flag,
      * not here.
@@ -237,13 +287,10 @@ public class ProductionReadService {
                     return ProductionTeamRowDto.builder()
                             .userId(e.getKey())
                             .fullName(rows.get(0).getProsthetistFullName())
-                            .inWork((int) rows.stream().filter(r ->
-                                    "NEW".equals(r.getStatus())
-                                            || "IN_PROGRESS".equals(r.getStatus())).count())
-                            .paused((int) rows.stream().filter(r ->
-                                    "PAUSED".equals(r.getStatus())
-                                            || "BLOCKED_PATIENT".equals(r.getStatus())
-                                            || "BLOCKED_MATERIAL".equals(r.getStatus())).count())
+                            .inWork((int) rows.stream()
+                                    .filter(ProductionReadService::isInWork).count())
+                            .paused((int) rows.stream()
+                                    .filter(ProductionReadService::isPaused).count())
                             .completed((int) rows.stream()
                                     .filter(r -> "COMPLETED".equals(r.getStatus())).count())
                             .failed((int) rows.stream().filter(ProductionWorkItemDto::isFailed).count())

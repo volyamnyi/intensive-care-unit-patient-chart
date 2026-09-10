@@ -424,3 +424,80 @@ export const ALLOWED_RETURN_STAGE_LABELS: Record<string, string> = {
   'd0000013-0000-0000-0000-000000000013': 'Виготовлення гіпсової моделі кукси',
   'd0000014-0000-0000-0000-000000000014': 'Виготовлення тренувальної гільзи',
 };
+
+// Production monitoring read-model (epic #271, GET .../production).
+export type ProductionQuality = 'ALL' | 'CLEAN' | 'BRAK' | 'REPEAT_BRAK' | 'REWORK';
+
+export type ProductionSort =
+  | 'NEWEST'
+  | 'OLDEST'
+  | 'LONGEST'
+  | 'MOST_BRAK'
+  | 'MOST_IDLE'
+  | 'MOST_DEVIATION';
+
+export interface ProductionWorkItem {
+  instanceId: string;
+  orderId: string;
+  patientId: string | null;
+  patientPib: string | null;
+  prosthetistUserId: number | null;
+  prosthetistFullName: string | null;
+  orderNumber: string | null;
+  productCode: string | null;
+  productType: string | null;
+  prosthesisType: string | null;
+  prescriptionDate: string | null;
+  templateName: string | null;
+  currentStageName: string | null;
+  currentStepName: string | null;
+  status: FlowInstanceStatus | null;
+  startTime: string | null;
+  endTime: string | null;
+  lastActivityAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  elapsedSeconds: number | null;
+  activeSeconds: number | null;
+  idleSeconds: number | null;
+  expectedActiveSeconds: number | null;
+  activeDeviationSeconds: number | null;
+  brakCount: number;
+  reworkCount: number;
+  failed: boolean;
+  attentionFlags: string[];
+}
+
+export interface ProductionSummary {
+  totalItems: number;
+  inWork: number;
+  active: number;
+  paused: number;
+  completed: number;
+  failed: number;
+  brakItems: number;
+  reworkItems: number;
+  avgElapsedSeconds: number | null;
+  avgActiveSeconds: number | null;
+}
+
+/** Spring Data page envelope (subset used by the dashboard). */
+export interface ProductionPage<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export interface ProductionListParams {
+  assigneeId?: number;
+  status?: FlowInstanceStatus;
+  stageId?: string;
+  quality?: ProductionQuality;
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: ProductionSort;
+  page?: number;
+  size?: number;
+}

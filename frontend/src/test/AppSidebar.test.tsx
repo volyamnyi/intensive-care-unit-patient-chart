@@ -98,12 +98,25 @@ describe('AppSidebar', () => {
       expect(screen.getByText('Модулі')).toBeInTheDocument();
     });
 
-    it('hides labels in collapsed mode but keeps accessible link names', () => {
-      mockPermissions = ['MODULE_ICU_ACCESS'];
-      renderInRouter(<AppNavList collapsed />);
-      const link = screen.getByRole('link', { name: 'Карта інтенсивної терапії' });
-      expect(screen.queryByText('Карта інтенсивної терапії')).not.toBeInTheDocument();
-      expect(link).toHaveAttribute('title', 'Карта інтенсивної терапії');
-    });
+  it('hides labels in collapsed mode but keeps accessible link names', () => {
+    mockPermissions = ['MODULE_ICU_ACCESS'];
+    renderInRouter(<AppNavList collapsed />);
+    const link = screen.getByRole('link', { name: 'Карта інтенсивної терапії' });
+    expect(screen.queryByText('Карта інтенсивної терапії')).not.toBeInTheDocument();
+    expect(link).toHaveAttribute('title', 'Карта інтенсивної терапії');
   });
+
+  it('shows production monitoring only with PROSTHETICS_PRODUCTION_VIEW', () => {
+    mockPermissions = ['MODULE_PROSTHETICS_ACCESS'];
+    const { rerender } = renderInRouter(<AppSidebar />);
+    expect(screen.queryByText('Моніторинг виробництва')).not.toBeInTheDocument();
+    mockPermissions = ['MODULE_PROSTHETICS_ACCESS', 'PROSTHETICS_PRODUCTION_VIEW'];
+    rerender(
+      <MemoryRouter>
+        <AppSidebar />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Моніторинг виробництва')).toBeInTheDocument();
+  });
+});
 });

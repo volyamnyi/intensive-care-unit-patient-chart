@@ -3,6 +3,7 @@ package com.superhumans.prosthesismanufacturing.controller;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
+import com.superhumans.prosthesismanufacturing.dto.ProductionSummaryDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
 import com.superhumans.prosthesismanufacturing.service.ProductionReadService;
@@ -75,6 +76,14 @@ public class ProductionController {
     @Operation(summary = "Team workload aggregation")
     public List<ProductionTeamRowDto> team() {
         return readService.team();
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_PRODUCTION_VIEW')")
+    @Operation(summary = "KPI summary over the caller's scope (own items without VIEW_ALL)")
+    public ProductionSummaryDto summary() {
+        Long effectiveAssignee = permissionService.has(Codes.VIEW_ALL) ? null : currentUser.userId();
+        return readService.summary(effectiveAssignee);
     }
 
     @GetMapping("/{id}")

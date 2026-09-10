@@ -6,6 +6,7 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
+import com.superhumans.prosthesismanufacturing.dto.ProductionSummaryDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
 import com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse;
@@ -383,7 +384,6 @@ class ProductionReadServiceTest {
     }
 
     // --- getRow / team ---
-
     @Test
     void getRow_unknownId_throwsNotFound() {
         when(instanceRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
@@ -587,6 +587,62 @@ class ProductionReadServiceTest {
         assertThat(detail.isDocumentsUnknown()).isTrue();
         assertThat(detail.getDocuments()).isEmpty();
         assertThat(detail.getMatchedDocument()).isNull();
+    }
+
+    @Test
+    void summary_aggregatesScope() {
+        FlowInstance open = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        open.setId(UUID.randomUUID());
+        open.setAssignedUserId(5L);
+        open.setStartTime(NOW.minusHours(2));
+        open.setCreatedAt(NOW.minusHours(2));
+        open.setUpdatedAt(NOW);
+        FlowInstance paused = baseInstance(FlowInstanceStatus.PAUSED);
+        paused.setId(UUID.randomUUID());
+        paused.setAssignedUserId(5L);
+        paused.setCreatedAt(NOW.minusDays(1));
+        paused.setUpdatedAt(NOW);
+        FlowInstance failed = baseInstance(FlowInstanceStatus.FAILED);
+        failed.setId(UUID.randomUUID());
+        failed.setAssignedUserId(6L);
+        failed.setStartTime(NOW.minusHours(4));
+        failed.setEndTime(NOW.minusHours(3));
+        failed.setCreatedAt(NOW.minusHours(4));
+        failed.setUpdatedAt(NOW.minusHours(3));
+
+        when(instanceRepository.findAll()).thenReturn(List.of(open, paused, failed));
+        when(instanceRepository.findByAssignedUserId(5L)).thenReturn(List.of(open, paused));
+        when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of());
+        when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
+        when(userRepository.findAllById(anyCollection())).thenReturn(List.of());
+        when(executionRepository.sumActiveSecondsByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of(new Object[]{open.getId(), 3600L}));
+        when(brakEventRepository.countByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of(new Object[]{failed.getId(), 1L}));
+        when(instanceRepository.countChildrenByParentIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+
+        var all = service.summary(null);
+        assertThat(all.getTotalItems()).isEqualTo(3);
+        assertThat(all.getInWork()).isEqualTo(1);
+        assertThat(all.getActive()).isEqualTo(1);
+        assertThat(all.getPaused()).isEqualTo(1);
+        assertThat(all.getCompleted()).isZero();
+        assertThat(all.getFailed()).isEqualTo(1);
+        assertThat(all.getBrakItems()).isEqualTo(1);
+        assertThat(all.getReworkItems()).isZero();
+        assertThat(all.getAvgElapsedSeconds()).isEqualTo((2 * 3600L + 0L + 3600L) / 3);
+        assertThat(all.getAvgActiveSeconds()).isEqualTo(3600L / 3);
+
+        var own = service.summary(5L);
+        assertThat(own.getTotalItems()).isEqualTo(2);
+        assertThat(own.getFailed()).isZero();
+        assertThat(own.getAvgElapsedSeconds()).isEqualTo((2 * 3600L) / 2);
+
+        var empty = service.summary(99L);
+        assertThat(empty.getTotalItems()).isZero();
+        assertThat(empty.getAvgElapsedSeconds()).isNull();
+        assertThat(empty.getAvgActiveSeconds()).isNull();
     }
 
     private FlowInstance baseInstance(FlowInstanceStatus status) {

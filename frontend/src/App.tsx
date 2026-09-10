@@ -19,6 +19,7 @@ import PrescriptionDetailPage from './pages/prescription/PrescriptionDetailPage'
 import NursePrescriptionPage from './pages/prescription/NursePrescriptionPage';
 import AppSelectorPage from './pages/AppSelectorPage';
 import ProstheticsDashboard from './pages/prosthetics/DashboardPage';
+import ProductionPage from './pages/prosthetics/ProductionPage';
 import PatientSearchPage from './pages/prosthetics/setup/PatientSearchPage';
 import OrderSelectPage from './pages/prosthetics/setup/OrderSelectPage';
 import OrderReviewPage from './pages/prosthetics/setup/OrderReviewPage';
@@ -41,6 +42,8 @@ const MODULE_ICU = 'MODULE_ICU_ACCESS';
 const MODULE_MEDICATION = 'MODULE_MEDICATION_ACCESS';
 const MODULE_PROSTHETICS = 'MODULE_PROSTHETICS_ACCESS';
 const MODULE_ADMIN = 'MODULE_ADMIN_ACCESS';
+// Production monitoring (epic #271): permission-gated, never role-gated.
+const PRODUCTION_VIEW = 'PROSTHETICS_PRODUCTION_VIEW';
 
 function Guard({ children, roles, permissions, excludeRoles }: {
   children: React.ReactNode;
@@ -186,6 +189,14 @@ function AppRoutes() {
           <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
             <ProstheticsProvider>
               <ProstheticsDashboard />
+            </ProstheticsProvider>
+          </Guard>
+        } />
+
+        <Route path="/prosthetics/production" element={
+          <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS, PRODUCTION_VIEW]}>
+            <ProstheticsProvider>
+              <ProductionPage />
             </ProstheticsProvider>
           </Guard>
         } />

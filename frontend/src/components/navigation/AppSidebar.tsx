@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   ChevronLeft, ChevronRight,
-  Hospital, FileText, AppWindow, Wrench,
+  Hospital, FileText, AppWindow, Wrench, Activity,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -37,6 +37,9 @@ export function useNavItems() {
         : []),
       ...(hasPermission('MODULE_PROSTHETICS_ACCESS')
         ? [{ label: 'Виробництво протезів', to: '/prosthetics', icon: <Wrench className="size-5 text-mint" /> }]
+        : []),
+      ...(hasPermission('PROSTHETICS_PRODUCTION_VIEW')
+        ? [{ label: 'Моніторинг виробництва', to: '/prosthetics/production', icon: <Activity className="size-5 text-mint" /> }]
         : []),
       { label: 'Модулі', to: '/select', icon: <AppWindow className="size-4" /> },
     ];
