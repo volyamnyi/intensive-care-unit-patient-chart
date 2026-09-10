@@ -47,19 +47,24 @@ test.describe('Prosthetics setup — step 2 MIS order documents', () => {
     expect(patients.length).toBeGreaterThan(0);
     const patient = patients[0];
 
-    const docsRes = await request.get(`${PROSTH}/orders/documents?patientId=${patient.id}`, {
-      headers,
-    });
-    expect(docsRes.ok()).toBeTruthy();
-    const docs = (await docsRes.json()) as Array<{ documentUrl: string }>;
-
     await page.goto('/prosthetics/new/select-patient');
     await expect(page.getByRole('heading', { name: /Вибір пацієнта/ })).toBeVisible({
       timeout: 10000,
     });
     const row = page.locator('table tbody tr').filter({ hasText: patient.pib }).first();
     await expect(row).toBeVisible({ timeout: 15000 });
-    await row.getByRole('button', { name: 'Обрати' }).click();
+
+    // MIS rotates documentUrl tokens per call, so the expected URLs must
+    // come from the page's own fetch — not from an earlier API snapshot.
+    const [docsResponse] = await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/orders/documents') && resp.request().method() === 'GET',
+        { timeout: 15000 },
+      ),
+      row.getByRole('button', { name: 'Обрати' }).click(),
+    ]);
+    expect(docsResponse.ok()).toBeTruthy();
+    const docs = (await docsResponse.json()) as Array<{ documentUrl: string }>;
     await expect(page).toHaveURL(/select-order/);
 
     if (docs.length === 0) {
@@ -77,6 +82,6 @@ test.describe('Prosthetics setup — step 2 MIS order documents', () => {
     await expect(page).toHaveURL(/review-order/);
     const frame = page.locator('iframe[title="Замовлення на протез (MIS)"]');
     await expect(frame).toBeVisible({ timeout: 10000 });
-    expect(docs.map((d) => d.documentUrl)).toContain(await frame.getAttribute('src'));
+    expect(await frame.getAttribute('src')).toBe(docs[0].documentUrl);
   });
 });
