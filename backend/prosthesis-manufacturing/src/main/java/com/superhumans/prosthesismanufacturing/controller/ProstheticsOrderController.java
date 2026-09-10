@@ -16,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -69,6 +71,22 @@ public class ProstheticsOrderController {
             @jakarta.validation.constraints.Pattern(regexp = "\\d+",
                     message = "ID пацієнта має містити лише цифри") String patientId) {
         return orderService.getAllLowerLimbsOrdersForByPatientId(patientId);
+    }
+
+    /**
+     * Provisions (find-or-create) the local order for an MIS
+     * limb-prosthesis document. Setup step 2 calls this when the
+     * prosthetist picks an MIS document, so order selection never depends
+     * on pre-existing local rows: an MIS order is always selectable and
+     * executable.
+     */
+    @PostMapping("/provision")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
+    @Operation(summary = "Provision a local order from an MIS order document")
+    public com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse provision(
+            @jakarta.validation.Valid @RequestBody
+            com.superhumans.prosthesismanufacturing.dto.OrderProvisionRequest request) {
+        return orderService.provisionFromMis(request);
     }
 
     /**

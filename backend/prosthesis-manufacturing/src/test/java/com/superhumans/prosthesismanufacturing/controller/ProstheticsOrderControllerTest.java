@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,5 +95,46 @@ class ProstheticsOrderControllerTest {
     void documents_rejectsMissingPatientId() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/orders/documents"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void provision_returnsLocalOrderForMisDocument() throws Exception {
+        when(orderService.provisionFromMis(any())).thenReturn(
+                com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse.builder()
+                        .orderNumber("MIS-13373-681078")
+                        .build());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/prosthesis-manufacturing/orders/provision")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"13373\",\"documentId\":681078}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderNumber").value("MIS-13373-681078"));
+    }
+
+    @Test
+    void provision_rejectsNonNumericPatientId() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/prosthesis-manufacturing/orders/provision")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"abc\",\"documentId\":681078}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void provision_rejectsMissingDocumentId() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/prosthesis-manufacturing/orders/provision")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"13373\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void provision_unknownDocument_returnsNotFound() throws Exception {
+        when(orderService.provisionFromMis(any()))
+                .thenThrow(new com.superhumans.exception.NotFoundException("no such doc"));
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/prosthesis-manufacturing/orders/provision")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"13373\",\"documentId\":1}"))
+                .andExpect(status().isNotFound());
     }
 }

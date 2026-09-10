@@ -102,6 +102,15 @@ describe('prostheticsOrderApi', () => {
       signal,
     });
   });
+
+  it('provisions the local order from an MIS document', async () => {
+    clientMock.post.mockReturnValue(ok({ id: 'ord-1' }));
+    await prostheticsOrderApi.provisionFromMis({ patientId: '13373', documentId: 681078 });
+    expect(clientMock.post).toHaveBeenCalledWith('/prosthesis-manufacturing/orders/provision', {
+      patientId: '13373',
+      documentId: 681078,
+    });
+  });
 });
 
 describe('flowTemplateApi', () => {

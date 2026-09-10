@@ -46,6 +46,12 @@ export const prostheticsOrderApi = {
    */
   listMisDocuments: (patientId: string, signal?: AbortSignal) =>
     client.get<MisOrderDocument[]>(`${BASE}/orders/documents`, { params: { patientId }, signal }),
+  /**
+   * Provisions (find-or-create) the local order for an MIS document:
+   * selection never depends on pre-existing local rows.
+   */
+  provisionFromMis: (body: { patientId: string; documentId: number }) =>
+    client.post<ProstheticsOrder>(`${BASE}/orders/provision`, body),
   getById: (id: string) => client.get<ProstheticsOrder>(`${BASE}/orders/${id}`),
   /**
    * Resolves the MIS-hosted URL for the order document. The client opens

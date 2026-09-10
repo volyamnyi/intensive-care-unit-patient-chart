@@ -4,18 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import OrderSelectPage from '@/pages/prosthetics/setup/OrderSelectPage';
 
 const prostheticsOrderApiMock = vi.hoisted(() => ({
-  listByPatient: vi.fn(),
   listMisDocuments: vi.fn(),
+  provisionFromMis: vi.fn(),
 }));
-
-const misDoc = {
-  documentId: 681078,
-  documentCreationDate: '2026-09-07T13:32:12.1',
-  documentTemplateId: 121,
-  documentTemplateName: 'Замовлення на протези нижніх кінцівок',
-  documentUrl: 'https://mis.example/document?request=abc',
-  productName: '06.12.09 : Ортези на колінний суглоб',
-};
 
 const prostheticsPatientApiMock = vi.hoisted(() => ({
   listCandidates: vi.fn(),
@@ -39,6 +30,15 @@ function mockUseProsthetics(draft = { patientId: 'p1', orderId: null, templateId
     resetDraft: vi.fn(),
   });
 }
+
+const misDoc = {
+  documentId: 681078,
+  documentCreationDate: '2026-09-07T13:32:12.1',
+  documentTemplateId: 121,
+  documentTemplateName: 'Замовлення на протези нижніх кінцівок',
+  documentUrl: 'https://mis.example/document?request=abc',
+  productName: '06.12.09 : Ортези на колінний суглоб',
+};
 
 function renderPage() {
   mockUseProsthetics();
@@ -64,47 +64,23 @@ describe('OrderSelectPage', () => {
     expect(screen.getByText('p1')).toBeInTheDocument();
   });
 
-  it('fetches orders for the selected patient', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
-    renderPage();
-    await waitFor(() => {
-      expect(prostheticsOrderApiMock.listByPatient).toHaveBeenCalledWith('p1');
-    });
-  });
-
-  it('renders orders in a table', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({
-      data: [
-        {
-          id: 'o1', orderNumber: 'ORD-001', productType: 'Протез', amputationLevel: 'above',
-          limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z',
-        },
-      ],
-    });
-    renderPage();
-    await waitFor(() => {
-      expect(screen.getByText('#ORD-001')).toBeInTheDocument();
-    });
-  });
-
-  it('shows empty state when patient has no orders', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
-    renderPage();
-    await waitFor(() => {
-      expect(screen.getByText(/Немає локальних замовлень для цього пацієнта/)).toBeInTheDocument();
-    });
-  });
-
   it('fetches MIS limb-order documents for the selected patient', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
     renderPage();
     await waitFor(() => {
       expect(prostheticsOrderApiMock.listMisDocuments).toHaveBeenCalledWith('p1');
     });
   });
 
+  it('does not depend on local orders', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(prostheticsOrderApiMock.listMisDocuments).toHaveBeenCalled();
+    });
+    expect(prostheticsOrderApiMock.listByPatient).toBeUndefined();
+    expect(screen.queryByText(/локальних замовлень/)).not.toBeInTheDocument();
+  });
+
   it('renders MIS order documents in a table', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
     prostheticsOrderApiMock.listMisDocuments.mockResolvedValue({ data: [misDoc] });
     renderPage();
     await waitFor(() => {
@@ -114,7 +90,6 @@ describe('OrderSelectPage', () => {
   });
 
   it('shows MIS empty state when no limb-order documents exist', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
     prostheticsOrderApiMock.listMisDocuments.mockResolvedValue({ data: [] });
     renderPage();
     await waitFor(() => {
@@ -123,7 +98,6 @@ describe('OrderSelectPage', () => {
   });
 
   it('shows MIS error on documents fetch failure', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
     prostheticsOrderApiMock.listMisDocuments.mockRejectedValue(new Error('network'));
     renderPage();
     await waitFor(() => {
@@ -131,37 +105,7 @@ describe('OrderSelectPage', () => {
     });
   });
 
-  it('stores the MIS document in the draft on select', async () => {
-    const setDraftField = vi.fn();
-    useProsthetics.mockReturnValue({
-      draft: { patientId: 'p1', orderId: null, templateId: null, instanceId: null },
-      setDraftField,
-      resetDraft: vi.fn(),
-    });
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
-    prostheticsOrderApiMock.listMisDocuments.mockResolvedValue({ data: [misDoc] });
-    render(
-      <MemoryRouter initialEntries={['/prosthetics/new/select-order']}>
-        <OrderSelectPage />
-      </MemoryRouter>,
-    );
-    await waitFor(() => expect(screen.getByText('Замовлення на протези нижніх кінцівок')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /Обрати/i }));
-    expect(setDraftField).toHaveBeenCalledWith('misDocumentUrl', 'https://mis.example/document?request=abc');
-    expect(setDraftField).toHaveBeenCalledWith('misDocumentId', '681078');
-    expect(setDraftField).toHaveBeenCalledWith('misDocumentTemplateName', 'Замовлення на протези нижніх кінцівок');
-  });
-
-  it('shows error on fetch failure', async () => {
-    prostheticsOrderApiMock.listByPatient.mockRejectedValue(new Error('network'));
-    renderPage();
-    await waitFor(() => {
-      expect(screen.getByText(/Не вдалося завантажити замовлення/)).toBeInTheDocument();
-    });
-  });
-
   it('shows MIS document badges for the selected patient candidate', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
     prostheticsPatientApiMock.listCandidates.mockResolvedValue({
       data: [
         {
@@ -184,7 +128,6 @@ describe('OrderSelectPage', () => {
   });
 
   it('shows a hint when candidate documents are unknown', async () => {
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({ data: [] });
     prostheticsPatientApiMock.listCandidates.mockResolvedValue({
       data: [
         {
@@ -201,28 +144,57 @@ describe('OrderSelectPage', () => {
     });
   });
 
-  it('calls setDraftField and navigates on order select', async () => {
+  it('provisions the local order and stores it in the draft on MIS select', async () => {
     const setDraftField = vi.fn();
     useProsthetics.mockReturnValue({
       draft: { patientId: 'p1', orderId: null, templateId: null, instanceId: null },
       setDraftField,
       resetDraft: vi.fn(),
     });
-    prostheticsOrderApiMock.listByPatient.mockResolvedValue({
-      data: [
-        {
-          id: 'o1', orderNumber: 'ORD-001', productType: 'Протез', amputationLevel: 'above',
-          limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z',
-        },
-      ],
+    prostheticsOrderApiMock.listMisDocuments.mockResolvedValue({ data: [misDoc] });
+    prostheticsOrderApiMock.provisionFromMis.mockResolvedValue({ data: { id: 'ord-1' } });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/select-order']}>
+        <OrderSelectPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText('Замовлення на протези нижніх кінцівок')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /Обрати/i }));
+    await waitFor(() => {
+      expect(prostheticsOrderApiMock.provisionFromMis).toHaveBeenCalledWith({
+        patientId: 'p1',
+        documentId: 681078,
+      });
+    });
+    await waitFor(() => {
+      expect(setDraftField).toHaveBeenCalledWith('orderId', 'ord-1');
+    });
+    expect(setDraftField).toHaveBeenCalledWith('misDocumentUrl', 'https://mis.example/document?request=abc');
+    expect(setDraftField).toHaveBeenCalledWith('misDocumentId', '681078');
+    expect(setDraftField).toHaveBeenCalledWith('misDocumentTemplateName', 'Замовлення на протези нижніх кінцівок');
+  });
+
+  it('shows an error and stays on step 2 when provisioning fails', async () => {
+    const setDraftField = vi.fn();
+    useProsthetics.mockReturnValue({
+      draft: { patientId: 'p1', orderId: null, templateId: null, instanceId: null },
+      setDraftField,
+      resetDraft: vi.fn(),
+    });
+    prostheticsOrderApiMock.listMisDocuments.mockResolvedValue({ data: [misDoc] });
+    prostheticsOrderApiMock.provisionFromMis.mockRejectedValue({
+      response: { data: { message: 'Документ замовлення недоступний' } },
     });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/select-order']}>
         <OrderSelectPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText('#ORD-001')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Замовлення на протези нижніх кінцівок')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /Обрати/i }));
-    expect(setDraftField).toHaveBeenCalledWith('orderId', 'o1');
+    await waitFor(() => {
+      expect(screen.getByText('Документ замовлення недоступний')).toBeInTheDocument();
+    });
+    expect(setDraftField).not.toHaveBeenCalled();
   });
 });

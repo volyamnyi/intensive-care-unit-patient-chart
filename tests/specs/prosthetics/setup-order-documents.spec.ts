@@ -64,7 +64,10 @@ test.describe('Prosthetics setup — step 2 MIS order documents', () => {
       row.getByRole('button', { name: 'Обрати' }).click(),
     ]);
     expect(docsResponse.ok()).toBeTruthy();
-    const docs = (await docsResponse.json()) as Array<{ documentUrl: string }>;
+    const docs = (await docsResponse.json()) as Array<{
+      documentId: number;
+      documentUrl: string;
+    }>;
     await expect(page).toHaveURL(/select-order/);
 
     if (docs.length === 0) {
@@ -83,5 +86,32 @@ test.describe('Prosthetics setup — step 2 MIS order documents', () => {
     const frame = page.locator('iframe[title="Замовлення на протез (MIS)"]');
     await expect(frame).toBeVisible({ timeout: 10000 });
     expect(await frame.getAttribute('src')).toBe(docs[0].documentUrl);
+
+    // Selecting the MIS document provisions the local order the execution
+    // chain runs on — no pre-existing local rows required.
+    const ordersRes = await request.get(`${PROSTH}/orders?patientId=${patient.id}`, { headers });
+    expect(ordersRes.ok()).toBeTruthy();
+    const orders = (await ordersRes.json()) as Array<{ orderNumber: string }>;
+    expect(orders.map((o) => o.orderNumber)).toContain(`MIS-${patient.id}-${docs[0].documentId}`);
+  });
+
+  test('POST /provision is idempotent for the same MIS document', async ({ request }) => {
+    const token = await prosthetistToken(request);
+    const headers = { Authorization: `Bearer ${token}` };
+
+    const docsRes = await request.get(`${PROSTH}/orders/documents?patientId=13373`, { headers });
+    expect(docsRes.ok()).toBeTruthy();
+    const docs = (await docsRes.json()) as Array<{ documentId: number }>;
+    if (docs.length === 0) {
+      test.skip(true, 'No limb-order MIS documents for patient 13373 right now');
+      return;
+    }
+
+    const body = { patientId: '13373', documentId: docs[0].documentId };
+    const first = await request.post(`${PROSTH}/orders/provision`, { headers, data: body });
+    expect(first.ok()).toBeTruthy();
+    const second = await request.post(`${PROSTH}/orders/provision`, { headers, data: body });
+    expect(second.ok()).toBeTruthy();
+    expect((await second.json()).id).toBe((await first.json()).id);
   });
 });

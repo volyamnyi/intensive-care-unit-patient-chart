@@ -9,7 +9,8 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { useProsthetics } from '@/prosthetics/ProstheticsContext';
 import { prostheticsOrderApi, prostheticsPatientApi } from '@/api/prosthetics';
-import type { MisOrderDocument, ProstheticsCandidateDocument, ProstheticsOrder } from '@/prosthetics/types';
+import { getErrorMessage } from '@/utils/errorMessage';
+import type { MisOrderDocument, ProstheticsCandidateDocument } from '@/prosthetics/types';
 import { SetupSteps } from '@/components/prosthetics/SetupSteps';
 
 function formatDocDate(raw: string | undefined): string {
@@ -21,14 +22,13 @@ function formatDocDate(raw: string | undefined): string {
 export default function OrderSelectPage() {
   const navigate = useNavigate();
   const { draft, setDraftField } = useProsthetics();
-  const [orders, setOrders] = useState<ProstheticsOrder[]>([]);
   const [documents, setDocuments] = useState<ProstheticsCandidateDocument[]>([]);
   const [documentsUnknown, setDocumentsUnknown] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [misDocs, setMisDocs] = useState<MisOrderDocument[]>([]);
   const [misLoading, setMisLoading] = useState(false);
   const [misError, setMisError] = useState<string | null>(null);
+  const [provisioningUrl, setProvisioningUrl] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'Вибір замовлення — Виробництво протезів';
@@ -39,17 +39,6 @@ export default function OrderSelectPage() {
       navigate('/prosthetics/new/select-patient');
       return;
     }
-    const fetchOrders = async () => {
-      setLoading(true);
-      try {
-        const res = await prostheticsOrderApi.listByPatient(draft.patientId!);
-        setOrders(res.data);
-      } catch {
-        setError('Не вдалося завантажити замовлення');
-      } finally {
-        setLoading(false);
-      }
-    };
     // MIS document badges (Phase 9, #262): best-effort enrichment from the
     // candidates worklist — the order list stays usable without it.
     const fetchDocuments = async () => {
@@ -64,8 +53,9 @@ export default function OrderSelectPage() {
         // ignore — badges are decorative
       }
     };
-    // MIS limb-order documents (templates 120/121, 404 URLs excluded
-    // backend-side): the picked documentUrl feeds step 3 (review).
+    // Order selection is MIS-driven only: every limb-prosthesis document
+    // (templates 120/121, 404 URLs excluded backend-side) is selectable,
+    // regardless of local rows.
     const fetchMisDocs = async () => {
       setMisLoading(true);
       setMisError(null);
@@ -79,17 +69,33 @@ export default function OrderSelectPage() {
         setMisLoading(false);
       }
     };
-    fetchOrders();
     fetchDocuments();
     fetchMisDocs();
   }, [draft.patientId, navigate]);
 
-  const handleSelectMisDoc = (doc: MisOrderDocument) => {
-    if (!doc.documentUrl) return;
-    setDraftField('misDocumentUrl', doc.documentUrl);
-    setDraftField('misDocumentId', doc.documentId != null ? String(doc.documentId) : null);
-    setDraftField('misDocumentTemplateName', doc.documentTemplateName ?? null);
-    navigate('/prosthetics/new/review-order');
+  // Picking an MIS document provisions (find-or-create) the local order the
+  // rest of the flow runs on — selection never depends on pre-existing
+  // local rows.
+  const handleSelectMisDoc = async (doc: MisOrderDocument) => {
+    if (!doc.documentUrl || doc.documentId == null || provisioningUrl) return;
+    setProvisioningUrl(doc.documentUrl);
+    setError(null);
+    try {
+      const res = await prostheticsOrderApi.provisionFromMis({
+        patientId: draft.patientId!,
+        documentId: doc.documentId,
+      });
+      setDraftField('orderId', res.data.id);
+      setDraftField('templateId', null);
+      setDraftField('misDocumentUrl', doc.documentUrl);
+      setDraftField('misDocumentId', String(doc.documentId));
+      setDraftField('misDocumentTemplateName', doc.documentTemplateName ?? null);
+      navigate('/prosthetics/new/review-order');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Не вдалося підготувати замовлення'));
+    } finally {
+      setProvisioningUrl(null);
+    }
   };
 
   return (
@@ -182,10 +188,14 @@ export default function OrderSelectPage() {
                       <Button
                         size="sm"
                         variant={draft.misDocumentUrl === doc.documentUrl ? 'default' : 'outline'}
-                        disabled={!doc.documentUrl}
-                        onClick={() => handleSelectMisDoc(doc)}
+                        disabled={!doc.documentUrl || doc.documentId == null || provisioningUrl != null}
+                        onClick={() => void handleSelectMisDoc(doc)}
                       >
-                        {draft.misDocumentUrl === doc.documentUrl ? 'Обрано' : 'Обрати'}
+                        {provisioningUrl === doc.documentUrl
+                          ? 'Підготовка…'
+                          : draft.misDocumentUrl === doc.documentUrl
+                            ? 'Обрано'
+                            : 'Обрати'}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -195,50 +205,6 @@ export default function OrderSelectPage() {
           )}
         </CardContent>
       </Card>
-
-      {loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      ) : orders.length === 0 ? (
-        <p className="text-muted-foreground">Немає локальних замовлень для цього пацієнта.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Замовлення</TableHead>
-              <TableHead>Тип протеза</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead className="text-right">Дія</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.map((order) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-medium">#{order.orderNumber}</TableCell>
-                <TableCell>{order.productType}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{order.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="sm"
-                    variant={draft.orderId === order.id ? 'default' : 'outline'}
-                    onClick={() => {
-                      setDraftField('orderId', order.id);
-                      setDraftField('templateId', null);
-                      navigate('/prosthetics/new/review-order');
-                    }}
-                  >
-                    {draft.orderId === order.id ? 'Обрано' : 'Обрати'}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
 
       <div className="sticky bottom-0 z-10 -mx-4 mt-4 flex flex-col gap-3 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:pb-3">
         <Button variant="outline" className="w-full sm:w-auto" onClick={() => navigate('/prosthetics/new/select-patient')}>
