@@ -5,7 +5,6 @@ import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.prosthesismanufacturing.mapper.ProstheticsOrderMapper;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,11 +39,6 @@ class ProstheticsOrderDocumentsTest {
     @InjectMocks
     private ProstheticsOrderService orderService;
 
-    @BeforeEach
-    void allowAllUrls() {
-        when(documentUrlAvailability.isAvailable(any())).thenReturn(true);
-    }
-
     private static DocumentMisDTO doc(long templateId, String url) {
         return DocumentMisDTO.builder()
                 .documentId(templateId * 1000)
@@ -58,6 +52,7 @@ class ProstheticsOrderDocumentsTest {
 
     @Test
     void returnsLowerAndUpperLimbOrders_preservingMisOrder() {
+        when(documentUrlAvailability.isAvailable(any())).thenReturn(true);
         when(misService.getPatientDocuments(13373L)).thenReturn(List.of(
                 doc(121L, "https://mis/docs/1"),
                 doc(120L, "https://mis/docs/2")));
@@ -71,6 +66,7 @@ class ProstheticsOrderDocumentsTest {
 
     @Test
     void excludesForeignTemplates_nullTemplate_blankUrl() {
+        when(documentUrlAvailability.isAvailable(any())).thenReturn(true);
         DocumentMisDTO nullTemplate = DocumentMisDTO.builder()
                 .documentId(7L).documentUrl("https://mis/docs/7").build();
         DocumentMisDTO blankUrl = DocumentMisDTO.builder()
