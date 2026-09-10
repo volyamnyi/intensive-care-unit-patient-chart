@@ -37,6 +37,12 @@ class RemovedEndpointsIntegrationTest extends AbstractIntegrationTest {
                 baseUrl + "/api/users/" + doctorUserId,
                 HttpMethod.GET, authGet(token), String.class);
         System.out.println("DIAG userById status=" + res.getStatusCode() + " body=" + res.getBody());
+        ResponseEntity<String> control = restTemplate.exchange(
+                baseUrl + "/api/users/me", HttpMethod.GET, authGet(token), String.class);
+        System.out.println("DIAG userById control-live=" + control.getStatusCode());
+        ResponseEntity<String> probe = restTemplate.exchange(
+                baseUrl + "/api/users/no-such-route-xyz", HttpMethod.GET, authGet(token), String.class);
+        System.out.println("DIAG userById probe-absent=" + probe.getStatusCode());
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
@@ -76,6 +82,13 @@ class RemovedEndpointsIntegrationTest extends AbstractIntegrationTest {
                 baseUrl + "/api/clinical-days/b1111111-1111-1111-1111-111111111111/pdf/status",
                 HttpMethod.GET, authGet(token), String.class);
         System.out.println("DIAG pdfStatus status=" + res.getStatusCode() + " body=" + res.getBody());
+        ResponseEntity<String> control = restTemplate.exchange(
+                baseUrl + "/api/users/me", HttpMethod.GET, authGet(token), String.class);
+        System.out.println("DIAG pdfStatus control-live=" + control.getStatusCode());
+        ResponseEntity<String> probe = restTemplate.exchange(
+                baseUrl + "/api/clinical-days/b1111111-1111-1111-1111-111111111111/pdf/nope-xyz",
+                HttpMethod.GET, authGet(token), String.class);
+        System.out.println("DIAG pdfStatus probe-absent=" + probe.getStatusCode());
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
