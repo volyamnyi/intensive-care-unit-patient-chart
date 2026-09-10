@@ -2,8 +2,14 @@ package com.superhumans.prosthesismanufacturing.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
+import com.superhumans.exception.NotFoundException;
+import com.superhumans.mis.dto.DocumentMisDTO;
+import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
+import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
+import com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse;
+import com.superhumans.prosthesismanufacturing.dto.ProstheticsPatientResponse;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
@@ -11,10 +17,13 @@ import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsPatient;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
+import com.superhumans.prosthesismanufacturing.mapper.ProstheticsOrderMapper;
+import com.superhumans.prosthesismanufacturing.mapper.ProstheticsPatientMapper;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
+import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
@@ -33,10 +42,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
@@ -49,10 +60,16 @@ class ProductionReadServiceTest {
 
     @Mock FlowInstanceRepository instanceRepository;
     @Mock ProstheticsOrderRepository orderRepository;
+    @Mock ProstheticsPatientRepository patientRepository;
     @Mock FlowTemplateRepository templateRepository;
     @Mock StepExecutionRepository executionRepository;
     @Mock BrakEventRepository brakEventRepository;
     @Mock UserRepository userRepository;
+    @Mock FlowInstanceService instanceService;
+    @Mock BrakService brakService;
+    @Mock ProstheticsOrderService orderService;
+    @Mock ProstheticsOrderMapper orderMapper;
+    @Mock ProstheticsPatientMapper patientMapper;
 
     TemplateSnapshotParser parser;
     ProductionReadService service;
@@ -60,8 +77,9 @@ class ProductionReadServiceTest {
     @BeforeEach
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
-        service = new ProductionReadService(instanceRepository, orderRepository, templateRepository,
-                executionRepository, brakEventRepository, userRepository, parser);
+        service = new ProductionReadService(instanceRepository, orderRepository, patientRepository,
+                templateRepository, executionRepository, brakEventRepository, userRepository, parser,
+                instanceService, brakService, orderService, orderMapper, patientMapper);
         service.setClock(Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
     }
 
@@ -326,6 +344,249 @@ class ProductionReadServiceTest {
         assertThat(second.getTotalElements()).isEqualTo(2);
         assertThat(second.getContent()).extracting(ProductionWorkItemDto::getInstanceId)
                 .containsExactly(newest.getId());
+    }
+
+    // --- document matching ---
+
+    @Test
+    void matchDocument_prefersMisOrderNumber() {
+        DocumentMisDTO first = DocumentMisDTO.builder().documentId(77L)
+                .documentUrl("https://mis.local/77").build();
+        DocumentMisDTO exact = DocumentMisDTO.builder().documentId(55L)
+                .documentUrl("https://mis.local/55").build();
+
+        assertThat(ProductionReadService.matchDocument("MIS-900001-55", List.of(first, exact)))
+                .isEqualTo(exact);
+    }
+
+    @Test
+    void matchDocument_fallsBackToFirstWithUrl() {
+        DocumentMisDTO noUrl = DocumentMisDTO.builder().documentId(1L).build();
+        DocumentMisDTO withUrl = DocumentMisDTO.builder().documentId(2L)
+                .documentUrl("https://mis.local/2").build();
+
+        assertThat(ProductionReadService.matchDocument("PR-LOCAL-1", List.of(noUrl, withUrl)))
+                .isEqualTo(withUrl);
+        assertThat(ProductionReadService.matchDocument("MIS-900001-999", List.of(noUrl, withUrl)))
+                .isEqualTo(withUrl);
+        assertThat(ProductionReadService.matchDocument("MIS-900001-55", List.of(noUrl))).isNull();
+        assertThat(ProductionReadService.matchDocument("MIS-900001-55", List.of())).isNull();
+        assertThat(ProductionReadService.matchDocument("MIS-900001-55", null)).isNull();
+    }
+
+    @Test
+    void parseMisDocumentId_matrix() {
+        assertThat(ProductionReadService.parseMisDocumentId("MIS-900001-55")).isEqualTo(55L);
+        assertThat(ProductionReadService.parseMisDocumentId("PR-LOCAL-1")).isNull();
+        assertThat(ProductionReadService.parseMisDocumentId("MIS-900001-x")).isNull();
+        assertThat(ProductionReadService.parseMisDocumentId(null)).isNull();
+    }
+
+    // --- getRow / team ---
+
+    @Test
+    void getRow_unknownId_throwsNotFound() {
+        when(instanceRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getRow(UUID.randomUUID()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void team_groupsByAssigneeAndSkipsUnassigned() {
+        FlowInstance a1 = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        a1.setId(UUID.randomUUID());
+        a1.setAssignedUserId(5L);
+        a1.setCreatedAt(NOW.minusDays(2));
+        a1.setUpdatedAt(NOW);
+        FlowInstance a2 = baseInstance(FlowInstanceStatus.PAUSED);
+        a2.setId(UUID.randomUUID());
+        a2.setAssignedUserId(5L);
+        a2.setCreatedAt(NOW.minusDays(1));
+        a2.setUpdatedAt(NOW);
+        FlowInstance b1 = baseInstance(FlowInstanceStatus.COMPLETED);
+        b1.setId(UUID.randomUUID());
+        b1.setAssignedUserId(6L);
+        b1.setCreatedAt(NOW);
+        b1.setUpdatedAt(NOW);
+        FlowInstance free = baseInstance(FlowInstanceStatus.NEW);
+        free.setId(UUID.randomUUID());
+        free.setCreatedAt(NOW);
+        free.setUpdatedAt(NOW);
+
+        when(instanceRepository.findAll()).thenReturn(List.of(a1, a2, b1, free));
+        when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of());
+        when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
+        User user5 = User.builder().login("p1").fullName("Протезист Один")
+                .role(com.superhumans.entity.core.UserRole.PROSTHETIST).build();
+        user5.setId(5L);
+        when(userRepository.findAllById(anyCollection())).thenReturn(List.of(user5));
+        when(executionRepository.sumActiveSecondsByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(brakEventRepository.countByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceRepository.countChildrenByParentIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+
+        List<ProductionTeamRowDto> team = service.team();
+
+        assertThat(team).hasSize(2);
+        ProductionTeamRowDto first = team.get(0);
+        assertThat(first.getUserId()).isEqualTo(5L);
+        assertThat(first.getFullName()).isEqualTo("Протезист Один");
+        assertThat(first.getInWork()).isEqualTo(1);
+        assertThat(first.getPaused()).isEqualTo(1);
+        ProductionTeamRowDto second = team.get(1);
+        assertThat(second.getUserId()).isEqualTo(6L);
+        assertThat(second.getCompleted()).isEqualTo(1);
+    }
+
+    // --- detail ---
+
+    @Test
+    void detail_maskedWithoutPatientView() {
+        UUID instanceId = UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
+        FlowInstance instance = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        instance.setId(instanceId);
+        instance.setOrderId(orderId);
+        instance.setPatientId("900001");
+        instance.setAssignedUserId(5L);
+        instance.setCreatedAt(NOW.minusHours(3));
+        instance.setUpdatedAt(NOW.minusHours(1));
+        ProstheticsOrder order = ProstheticsOrder.builder().orderNumber("MIS-900001-55")
+                .patient(ProstheticsPatient.builder().id("900001").pib("Сніжко").build()).build();
+        order.setId(orderId);
+
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+        when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of(order));
+        when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
+        when(executionRepository.sumActiveSecondsByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(brakEventRepository.countByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceRepository.countChildrenByParentIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceService.listExecutions(instanceId, 5L, true)).thenReturn(List.of());
+        when(brakService.listBrakEvents(instanceId, 5L, true)).thenReturn(List.of());
+        when(brakService.listBranches(instanceId, 5L, true)).thenReturn(List.of());
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(patientRepository.findById("900001")).thenReturn(Optional.of(order.getPatient()));
+        when(orderMapper.toResponse(order)).thenReturn(
+                ProstheticsOrderResponse.builder().orderNumber("MIS-900001-55").build());
+        when(patientMapper.toResponse(order.getPatient())).thenReturn(
+                ProstheticsPatientResponse.builder().id("900001").pib("Сніжко")
+                        .birthDate(LocalDate.of(1990, 1, 1)).build());
+
+        ProductionDetailDto detail = service.detail(instanceId, 5L, false, false);
+
+        assertThat(detail.getWorkItem().getInstanceId()).isEqualTo(instanceId);
+        assertThat(detail.isPatientDetailsVisible()).isFalse();
+        assertThat(detail.getPatient().getPib()).isEqualTo("Сніжко");
+        assertThat(detail.getPatient().getBirthDate()).isNull();
+        assertThat(detail.getDocuments()).isEmpty();
+        assertThat(detail.getMatchedDocument()).isNull();
+        assertThat(detail.isDocumentsUnknown()).isFalse();
+    }
+
+    @Test
+    void detail_fullWithPatientViewMatchesDocument() {
+        UUID instanceId = UUID.randomUUID();
+        UUID orderId = UUID.randomUUID();
+        FlowInstance instance = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        instance.setId(instanceId);
+        instance.setOrderId(orderId);
+        instance.setPatientId("900001");
+        instance.setAssignedUserId(5L);
+        instance.setCreatedAt(NOW.minusHours(3));
+        instance.setUpdatedAt(NOW.minusHours(1));
+        ProstheticsPatient patient =
+                ProstheticsPatient.builder().id("900001").pib("Сніжко").build();
+        ProstheticsOrder order = ProstheticsOrder.builder().orderNumber("MIS-900001-55")
+                .patient(patient).build();
+        order.setId(orderId);
+        DocumentMisDTO doc55 = DocumentMisDTO.builder().documentId(55L)
+                .documentUrl("https://mis.local/55").build();
+        DocumentMisDTO doc77 = DocumentMisDTO.builder().documentId(77L)
+                .documentUrl("https://mis.local/77").build();
+
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+        when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of(order));
+        when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
+        when(executionRepository.sumActiveSecondsByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(brakEventRepository.countByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceRepository.countChildrenByParentIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceService.listExecutions(instanceId, 5L, true)).thenReturn(List.of());
+        when(brakService.listBrakEvents(instanceId, 5L, true)).thenReturn(List.of());
+        when(brakService.listBranches(instanceId, 5L, true)).thenReturn(List.of());
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(patientRepository.findById("900001")).thenReturn(Optional.of(patient));
+        when(orderMapper.toResponse(order)).thenReturn(
+                ProstheticsOrderResponse.builder().orderNumber("MIS-900001-55").build());
+        when(patientMapper.toResponse(patient)).thenReturn(
+                ProstheticsPatientResponse.builder().id("900001").pib("Сніжко")
+                        .birthDate(LocalDate.of(1990, 1, 1)).build());
+        when(orderService.getAllLowerLimbsOrdersForByPatientId("900001"))
+                .thenReturn(List.of(doc77, doc55));
+
+        ProductionDetailDto detail = service.detail(instanceId, 5L, false, true);
+
+        assertThat(detail.isPatientDetailsVisible()).isTrue();
+        assertThat(detail.getPatient().getBirthDate()).isEqualTo(LocalDate.of(1990, 1, 1));
+        assertThat(detail.getDocuments()).hasSize(2);
+        assertThat(detail.getMatchedDocument()).isEqualTo(doc55);
+        assertThat(detail.isDocumentsUnknown()).isFalse();
+    }
+
+    @Test
+    void detail_foreignWithoutViewAll_throwsNotFound() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        instance.setId(instanceId);
+        instance.setAssignedUserId(5L);
+
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.detail(instanceId, 99L, false, true))
+                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.detail(UUID.randomUUID(), 5L, true, true))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void detail_brokenPatientLink_marksDocumentsUnknown() {
+        UUID instanceId = UUID.randomUUID();
+        FlowInstance instance = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        instance.setId(instanceId);
+        instance.setPatientId("not-a-number");
+        instance.setAssignedUserId(5L);
+        instance.setCreatedAt(NOW.minusHours(1));
+        instance.setUpdatedAt(NOW);
+
+        when(instanceRepository.findById(instanceId)).thenReturn(Optional.of(instance));
+        when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of());
+        when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
+        when(executionRepository.sumActiveSecondsByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(brakEventRepository.countByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceRepository.countChildrenByParentIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceService.listExecutions(instanceId, 5L, true)).thenReturn(List.of());
+        when(brakService.listBrakEvents(instanceId, 5L, true)).thenReturn(List.of());
+        when(brakService.listBranches(instanceId, 5L, true)).thenReturn(List.of());
+        when(patientRepository.findById("not-a-number")).thenReturn(Optional.empty());
+        when(orderService.getAllLowerLimbsOrdersForByPatientId("not-a-number"))
+                .thenThrow(new NotFoundException("bad id"));
+
+        ProductionDetailDto detail = service.detail(instanceId, 5L, false, true);
+
+        assertThat(detail.isDocumentsUnknown()).isTrue();
+        assertThat(detail.getDocuments()).isEmpty();
+        assertThat(detail.getMatchedDocument()).isNull();
     }
 
     private FlowInstance baseInstance(FlowInstanceStatus status) {

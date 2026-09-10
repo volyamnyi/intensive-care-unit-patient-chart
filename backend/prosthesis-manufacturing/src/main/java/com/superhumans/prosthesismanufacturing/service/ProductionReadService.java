@@ -1,16 +1,29 @@
 package com.superhumans.prosthesismanufacturing.service;
 
 import com.superhumans.exception.BadRequestException;
+import com.superhumans.exception.NotFoundException;
+import com.superhumans.mis.dto.DocumentMisDTO;
+import com.superhumans.prosthesismanufacturing.dto.BrakEventResponse;
+import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
+import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
+import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
+import com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse;
+import com.superhumans.prosthesismanufacturing.dto.ProstheticsPatientResponse;
+import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
+import com.superhumans.prosthesismanufacturing.entity.ProstheticsPatient;
+import com.superhumans.prosthesismanufacturing.mapper.ProstheticsOrderMapper;
+import com.superhumans.prosthesismanufacturing.mapper.ProstheticsPatientMapper;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
+import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
@@ -66,11 +79,17 @@ public class ProductionReadService {
 
     final FlowInstanceRepository instanceRepository;
     final ProstheticsOrderRepository orderRepository;
+    final ProstheticsPatientRepository patientRepository;
     final FlowTemplateRepository templateRepository;
     final StepExecutionRepository executionRepository;
     final BrakEventRepository brakEventRepository;
     final UserRepository userRepository;
     final TemplateSnapshotParser snapshotParser;
+    final FlowInstanceService instanceService;
+    final BrakService brakService;
+    final ProstheticsOrderService orderService;
+    final ProstheticsOrderMapper orderMapper;
+    final ProstheticsPatientMapper patientMapper;
 
     /** Test seam: fixed clock for deterministic elapsed-time math. */
     Clock clock = Clock.systemDefaultZone();
@@ -107,10 +126,7 @@ public class ProductionReadService {
                     .toList();
         }
 
-        Batch batch = loadBatch(instances);
-        LocalDateTime now = LocalDateTime.now(clock);
-        List<ProductionWorkItemDto> rows = instances.stream()
-                .map(i -> toRow(i, batch, now))
+        List<ProductionWorkItemDto> rows = buildRows(instances).stream()
                 .filter(r -> matchesQuality(r, query.getQuality()))
                 .sorted(comparator(query.getSort()))
                 .toList();
@@ -119,6 +135,181 @@ public class ProductionReadService {
         int from = Math.min(query.getPage() * query.getSize(), total);
         int to = Math.min(from + query.getSize(), total);
         return new PageImpl<>(rows.subList(from, to), PageRequest.of(query.getPage(), query.getSize()), total);
+    }
+
+    /**
+     * Single dashboard row by instance id.
+     *
+     * @throws NotFoundException when the instance does not exist
+     */
+    @Transactional(readOnly = true)
+    public ProductionWorkItemDto getRow(UUID instanceId) {
+        FlowInstance instance = instanceRepository.findById(instanceId)
+                .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
+        return buildRows(List.of(instance)).get(0);
+    }
+
+    /**
+     * Detail view for one work item. Ownership is enforced here: without
+     * {@code viewAll} only the assignee may read, and strangers get 404
+     * (same contract as {@code FlowInstanceService.requireOwner}).
+     *
+     * @param includePatientDetails whether personal data and MIS documents are
+     *                              included (caller must hold
+     *                              {@code PROSTHETICS_PRODUCTION_PATIENT_VIEW})
+     * @throws NotFoundException when the instance does not exist or is foreign
+     */
+    @Transactional(readOnly = true)
+    public ProductionDetailDto detail(UUID instanceId, Long userId,
+            boolean viewAll, boolean includePatientDetails) {
+        FlowInstance instance = instanceRepository.findById(instanceId)
+                .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
+        if (!viewAll && !Objects.equals(instance.getAssignedUserId(), userId)) {
+            throw new NotFoundException("Instance not found: " + instanceId);
+        }
+        ProductionWorkItemDto row = buildRows(List.of(instance)).get(0);
+        List<StepExecutionResponse> timeline =
+                instanceService.listExecutions(instanceId, userId, true);
+        List<BrakEventResponse> brakEvents = brakService.listBrakEvents(instanceId, userId, true);
+        List<FlowInstanceResponse> branches = brakService.listBranches(instanceId, userId, true);
+
+        ProstheticsOrderResponse order = null;
+        ProstheticsPatientResponse patient = null;
+        if (instance.getOrderId() != null) {
+            ProstheticsOrder orderEntity = orderRepository.findById(instance.getOrderId()).orElse(null);
+            if (orderEntity != null) {
+                order = orderMapper.toResponse(orderEntity);
+            }
+        }
+        if (instance.getPatientId() != null) {
+            ProstheticsPatient patientEntity =
+                    patientRepository.findById(instance.getPatientId()).orElse(null);
+            if (patientEntity != null) {
+                patient = patientMapper.toResponse(patientEntity);
+                if (!includePatientDetails) {
+                    patient = ProstheticsPatientResponse.builder()
+                            .id(patient.getId())
+                            .pib(patient.getPib())
+                            .build();
+                }
+            }
+        }
+
+        List<DocumentMisDTO> documents = List.of();
+        DocumentMisDTO matched = null;
+        boolean documentsUnknown = false;
+        if (includePatientDetails && instance.getPatientId() != null) {
+            try {
+                documents = orderService.getAllLowerLimbsOrdersForByPatientId(instance.getPatientId());
+                matched = matchDocument(row.getOrderNumber(), documents);
+            } catch (NotFoundException e) {
+                documentsUnknown = true;
+            }
+        }
+        return ProductionDetailDto.builder()
+                .workItem(row)
+                .timeline(timeline)
+                .brakEvents(brakEvents)
+                .branches(branches)
+                .order(order)
+                .patient(patient)
+                .patientDetailsVisible(includePatientDetails)
+                .documents(documents)
+                .matchedDocument(matched)
+                .documentsUnknown(documentsUnknown)
+                .build();
+    }
+
+    /**
+     * Team workload aggregation: one row per prosthetist with an assigned
+     * item. Unassigned items surface through the NO_ASSIGNEE attention flag,
+     * not here.
+     */
+    @Transactional(readOnly = true)
+    public List<ProductionTeamRowDto> team() {
+        Map<Long, List<ProductionWorkItemDto>> byUser = buildRows(instanceRepository.findAll())
+                .stream()
+                .filter(r -> r.getProsthetistUserId() != null)
+                .collect(Collectors.groupingBy(ProductionWorkItemDto::getProsthetistUserId));
+        return byUser.entrySet().stream()
+                .map(e -> {
+                    List<ProductionWorkItemDto> rows = e.getValue();
+                    return ProductionTeamRowDto.builder()
+                            .userId(e.getKey())
+                            .fullName(rows.get(0).getProsthetistFullName())
+                            .inWork((int) rows.stream().filter(r ->
+                                    "NEW".equals(r.getStatus())
+                                            || "IN_PROGRESS".equals(r.getStatus())).count())
+                            .paused((int) rows.stream().filter(r ->
+                                    "PAUSED".equals(r.getStatus())
+                                            || "BLOCKED_PATIENT".equals(r.getStatus())
+                                            || "BLOCKED_MATERIAL".equals(r.getStatus())).count())
+                            .completed((int) rows.stream()
+                                    .filter(r -> "COMPLETED".equals(r.getStatus())).count())
+                            .failed((int) rows.stream().filter(ProductionWorkItemDto::isFailed).count())
+                            .brakItems((int) rows.stream()
+                                    .filter(r -> r.getBrakCount() > 0).count())
+                            .reworkItems((int) rows.stream()
+                                    .filter(r -> r.getReworkCount() > 0).count())
+                            .activeSeconds(rows.stream()
+                                    .mapToLong(r -> r.getActiveSeconds() == null
+                                            ? 0L : r.getActiveSeconds()).sum())
+                            .build();
+                })
+                .sorted(Comparator.comparingInt(ProductionTeamRowDto::getInWork).reversed()
+                        .thenComparing(ProductionTeamRowDto::getUserId))
+                .toList();
+    }
+
+    /**
+     * Picks the MIS document backing an order: exact match on the
+     * {@code MIS-{patientId}-{documentId}} order number first, else the first
+     * document with a URL. Never throws.
+     */
+    static DocumentMisDTO matchDocument(String orderNumber, List<DocumentMisDTO> documents) {
+        if (documents == null || documents.isEmpty()) {
+            return null;
+        }
+        Long documentId = parseMisDocumentId(orderNumber);
+        if (documentId != null) {
+            for (DocumentMisDTO document : documents) {
+                if (documentId.equals(document.getDocumentId())) {
+                    return document;
+                }
+            }
+        }
+        for (DocumentMisDTO document : documents) {
+            if (document.getDocumentUrl() != null && !document.getDocumentUrl().isBlank()) {
+                return document;
+            }
+        }
+        return null;
+    }
+
+    static Long parseMisDocumentId(String orderNumber) {
+        if (orderNumber == null) {
+            return null;
+        }
+        String[] parts = orderNumber.split("-");
+        if (parts.length != 3 || !"MIS".equals(parts[0])) {
+            return null;
+        }
+        try {
+            return Long.parseLong(parts[2]);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private List<ProductionWorkItemDto> buildRows(List<FlowInstance> instances) {
+        if (instances.isEmpty()) {
+            return List.of();
+        }
+        Batch batch = loadBatch(instances);
+        LocalDateTime now = LocalDateTime.now(clock);
+        return instances.stream()
+                .map(i -> toRow(i, batch, now))
+                .toList();
     }
 
     private List<FlowInstance> loadInstances(Long assigneeId, FlowInstanceStatus status) {
