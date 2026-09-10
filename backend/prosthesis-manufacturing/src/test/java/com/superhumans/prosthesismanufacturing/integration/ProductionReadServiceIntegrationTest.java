@@ -163,8 +163,8 @@ class ProductionReadServiceIntegrationTest {
         assertThat(i1.getActiveSeconds()).isEqualTo(3000L);
         assertThat(i1.getIdleSeconds()).isEqualTo(600L);
         assertThat(i1.getElapsedSeconds()).isGreaterThanOrEqualTo(5 * 86400L - 120);
-        assertThat(i1.getExpectedActiveSeconds()).isEqualTo(3600L);
-        assertThat(i1.getActiveDeviationSeconds()).isEqualTo(3000L - 3600L);
+        assertThat(i1.getExpectedActiveSeconds()).isEqualTo(5400L);
+        assertThat(i1.getActiveDeviationSeconds()).isEqualTo(3000L - 5400L);
         assertThat(i1.getBrakCount()).isEqualTo(2);
         assertThat(i1.getReworkCount()).isZero();
         assertThat(i1.isFailed()).isFalse();
