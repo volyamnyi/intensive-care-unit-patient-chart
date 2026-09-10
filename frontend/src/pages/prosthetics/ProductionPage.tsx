@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { productionApi } from '@/api/prosthetics';
 import { useAuth } from '@/services/AuthContext';
 import { getErrorMessage } from '@/utils/errorMessage';
+import ProductionWorkItemDrawer from '@/components/prosthetics/ProductionWorkItemDrawer';
 import type {
   FlowInstanceStatus,
   ProductionListParams,
@@ -103,6 +104,7 @@ export default function ProductionPage() {
   const canViewAll = hasPermission('PROSTHETICS_PRODUCTION_VIEW_ALL');
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState<ProductionPageData<ProductionWorkItem> | null>(null);
   const [summary, setSummary] = useState<ProductionSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -163,13 +165,14 @@ export default function ProductionPage() {
     return () => abortRef.current?.abort();
   }, [fetchAll]);
 
-  const openInstance = (item: ProductionWorkItem) => {
-    if (item.status === 'COMPLETED') {
-      navigate(`/prosthetics/process/${item.instanceId}/done`);
-    } else if (item.status === 'FAILED' || item.status === 'BRANCHED') {
-      navigate(`/prosthetics/process/${item.instanceId}/failed`);
+  const openProcess = (instanceId: string, status: FlowInstanceStatus | null) => {
+    setSelectedId(null);
+    if (status === 'COMPLETED') {
+      navigate(`/prosthetics/process/${instanceId}/done`);
+    } else if (status === 'FAILED' || status === 'BRANCHED') {
+      navigate(`/prosthetics/process/${instanceId}/failed`);
     } else {
-      navigate(`/prosthetics/process/${item.instanceId}/wizard`);
+      navigate(`/prosthetics/process/${instanceId}/wizard`);
     }
   };
 
@@ -383,7 +386,7 @@ export default function ProductionPage() {
                       <TableCell className="text-right tabular-nums">{item.reworkCount}</TableCell>
                       <TableCell>{formatDate(item.startTime)}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openInstance(item)}>
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedId(item.instanceId)}>
                           Відкрити
                         </Button>
                       </TableCell>
@@ -433,6 +436,11 @@ export default function ProductionPage() {
           </div>
         </>
       )}
+      <ProductionWorkItemDrawer
+        instanceId={selectedId}
+        onClose={() => setSelectedId(null)}
+        onOpenProcess={openProcess}
+      />
     </div>
   );
 }

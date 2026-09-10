@@ -48,6 +48,9 @@ export interface ProstheticsOrder {
   limbSide: string;
   status: string;
   materials: string | null;
+  productCode?: string | null;
+  doctorName?: string | null;
+  prescriptionDate?: string | null;
   createdAt: string;
 }
 
@@ -500,4 +503,40 @@ export interface ProductionListParams {
   sort?: ProductionSort;
   page?: number;
   size?: number;
+}
+
+// Production detail view (epic #271, GET .../production/{id}).
+export interface ProductionPatient {
+  id: string;
+  pib: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  socialStatus: string | null;
+  cause: string | null;
+  amputationDate: string | null;
+  affectedLimb: string | null;
+  amputationLevel: string | null;
+  amputationSite: string | null;
+  phone: string | null;
+  email: string | null;
+  residence: string | null;
+  healthStatus: string | null;
+  clinicalState: string | null;
+  stump: string | null;
+  departmentId: number | null;
+}
+
+export interface ProductionDetail {
+  workItem: ProductionWorkItem;
+  timeline: StepExecution[];
+  brakEvents: BrakEvent[];
+  branches: FlowInstance[];
+  order: ProstheticsOrder | null;
+  patient: ProductionPatient | null;
+  patientDetailsVisible: boolean;
+  documents: MisOrderDocument[];
+  matchedDocument: MisOrderDocument | null;
+  documentsUnknown: boolean;
 }

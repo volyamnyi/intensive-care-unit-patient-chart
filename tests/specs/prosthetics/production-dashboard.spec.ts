@@ -61,11 +61,39 @@ test.describe('Production monitoring dashboard', () => {
     await expect(page.getByRole('table')).toBeVisible();
   });
 
-  test('opening a row navigates to the process', async ({ page }) => {
+  test('row opens the detail drawer', async ({ page }) => {
     await page.goto('/prosthetics/production');
     const firstRow = page.getByRole('table').getByRole('row').nth(1);
     await expect(firstRow).toBeVisible();
     await firstRow.getByRole('button', { name: 'Відкрити' }).click();
+    const drawer = page.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText('Виріб')).toBeVisible();
+  });
+
+  test('drawer shows patient, timeline and masked personal data', async ({ page }) => {
+    await page.goto('/prosthetics/production');
+    const firstRow = page.getByRole('table').getByRole('row').nth(1);
+    await expect(firstRow).toBeVisible();
+    await firstRow.getByRole('button', { name: 'Відкрити' }).click();
+    const drawer = page.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText('Пацієнт')).toBeVisible();
+    await expect(drawer.getByText('Хронологія кроків')).toBeVisible();
+    await expect(drawer.getByText('Час виробництва')).toBeVisible();
+    // Prosthetist holds no PATIENT_VIEW: personal details hidden, no document.
+    await expect(drawer.getByText(/Деталі приховано/)).toBeVisible();
+    await expect(drawer.getByRole('button', { name: 'Відкрити документ' })).toHaveCount(0);
+  });
+
+  test('drawer opens the process page', async ({ page }) => {
+    await page.goto('/prosthetics/production');
+    const firstRow = page.getByRole('table').getByRole('row').nth(1);
+    await expect(firstRow).toBeVisible();
+    await firstRow.getByRole('button', { name: 'Відкрити' }).click();
+    const drawer = page.getByRole('dialog');
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole('button', { name: 'Відкрити процес' }).click();
     await expect(page).toHaveURL(/\/prosthetics\/process\/[0-9a-f-]+\/(wizard|done|failed)/);
   });
 });

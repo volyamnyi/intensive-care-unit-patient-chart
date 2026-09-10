@@ -23,6 +23,7 @@ import type {
   BrakEvent,
   BranchResponse,
   StepNotePatchRequest,
+  ProductionDetail,
   ProductionListParams,
   ProductionPage,
   ProductionSummary,
@@ -142,6 +143,8 @@ export const productionApi = {
     client.get<ProductionPage<ProductionWorkItem>>(`${BASE}/production`, { params, signal }),
   summary: (signal?: AbortSignal) =>
     client.get<ProductionSummary>(`${BASE}/production/summary`, { signal }),
+  detail: (id: string, signal?: AbortSignal) =>
+    client.get<ProductionDetail>(`${BASE}/production/${id}`, { signal }),
 };
 
 export const prostheticsApi = {

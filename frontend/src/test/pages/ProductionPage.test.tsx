@@ -8,6 +8,7 @@ import type { ProductionSummary, ProductionWorkItem } from '@/prosthetics/types'
 const productionApiMock = vi.hoisted(() => ({
   list: vi.fn(),
   summary: vi.fn(),
+  detail: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
@@ -206,7 +207,7 @@ describe('ProductionPage', () => {
     });
   });
 
-  it('navigates to the process page on open', async () => {
+  it('opens the detail drawer on open', async () => {
     mockOk();
     renderPage();
     await waitFor(() => {
@@ -214,7 +215,7 @@ describe('ProductionPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Відкрити' }));
     await waitFor(() => {
-      expect(screen.getByText('Wizard Page')).toBeInTheDocument();
+      expect(productionApiMock.detail).toHaveBeenCalledWith('i1', expect.anything());
     });
   });
 });
