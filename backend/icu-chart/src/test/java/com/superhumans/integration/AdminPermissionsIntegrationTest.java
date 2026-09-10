@@ -68,6 +68,17 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         assertThat(body.getGrants().get("PROSTHETIST"))
                 .contains("PROSTHETICS_DASHBOARD")
                 .doesNotContain("PROSTHETICS_TEMPLATE_MANAGE");
+        // Production monitoring defaults (manufacturing epic #271, issue #272).
+        assertThat(body.getGrants().get("PROSTHETICS_ADMINISTRATOR"))
+                .contains("PROSTHETICS_PRODUCTION_VIEW", "PROSTHETICS_PRODUCTION_VIEW_ALL",
+                        "PROSTHETICS_PRODUCTION_PATIENT_VIEW", "PROSTHETICS_PRODUCTION_QUALITY_VIEW");
+        assertThat(body.getGrants().get("PROSTHETIST"))
+                .contains("PROSTHETICS_PRODUCTION_VIEW", "PROSTHETICS_PRODUCTION_QUALITY_VIEW")
+                .doesNotContain("PROSTHETICS_PRODUCTION_VIEW_ALL",
+                        "PROSTHETICS_PRODUCTION_PATIENT_VIEW");
+        assertThat(body.getGrants().get("HEAD_OF_DEPARTMENT"))
+                .contains("PROSTHETICS_PRODUCTION_VIEW", "PROSTHETICS_PRODUCTION_VIEW_ALL")
+                .doesNotContain("PROSTHETICS_PRODUCTION_PATIENT_VIEW");
         // First-login directory role holds no grants on a fresh seed (decision D4).
         assertThat(body.getGrants().containsKey("GUEST")).isFalse();
     }
@@ -114,6 +125,20 @@ class AdminPermissionsIntegrationTest extends AbstractIntegrationTest {
         changeRolePermission("DOCTOR", "MODULE_PROSTHETICS_ACCESS", false);
         var after = prostheticsTemplatesAsDoctor();
         assertThat(after.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(6)
+    void productionPermission_grantRevokeCycle_persistsViaMatrixApi() {
+        // New production codes (manufacturing epic #271) travel the same admin
+        // matrix path: PUT validates the code against the catalog and persists.
+        changeRolePermission("NURSE", "PROSTHETICS_PRODUCTION_VIEW", true);
+        assertThat(exchangeMatrix().getBody().getGrants().get("NURSE"))
+                .contains("PROSTHETICS_PRODUCTION_VIEW");
+
+        changeRolePermission("NURSE", "PROSTHETICS_PRODUCTION_VIEW", false);
+        assertThat(exchangeMatrix().getBody().getGrants().get("NURSE"))
+                .doesNotContain("PROSTHETICS_PRODUCTION_VIEW");
     }
 
     @Test

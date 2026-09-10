@@ -207,14 +207,18 @@ class PermissionServiceTest {
 
     @Test
     void catalog_containsAllDefinedCodes() {
-        assertThat(permissionService.catalog()).hasSize(24);
+        assertThat(permissionService.catalog()).hasSize(28);
         assertThat(PermissionCatalog.allCodes())
                 .contains(PermissionCatalog.EPISODE_CREATE, PermissionCatalog.AUDIT_ACCESS,
                         PermissionCatalog.MODULE_ICU_ACCESS,
                         PermissionCatalog.MODULE_MEDICATION_ACCESS,
                         PermissionCatalog.MODULE_PROSTHETICS_ACCESS,
                         PermissionCatalog.MODULE_ADMIN_ACCESS,
-                        PermissionCatalog.PRESCRIPTION_LIST_CREATE);
+                        PermissionCatalog.PRESCRIPTION_LIST_CREATE,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW);
     }
 
     @Test
@@ -265,5 +269,45 @@ class PermissionServiceTest {
         assertThat(matrix.get(UserRole.PROSTHETICS_ADMINISTRATOR))
                 .contains(PermissionCatalog.PROSTHETICS_TEMPLATE_MANAGE,
                         PermissionCatalog.PROSTHETICS_ORDER_MANAGE);
+    }
+
+    @Test
+    void defaultMatrix_grantsProductionMonitoringPerRole() {
+        Map<UserRole, Set<String>> matrix = PermissionCatalog.defaultMatrix();
+
+        // Administrator of prosthetics manufacturing holds the full production scope (epic #271).
+        assertThat(matrix.get(UserRole.PROSTHETICS_ADMINISTRATOR))
+                .contains(PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW);
+        // Prosthetist sees the dashboard and quality data, but not the team scope or patient details.
+        assertThat(matrix.get(UserRole.PROSTHETIST))
+                .contains(PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW)
+                .doesNotContain(PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW);
+        // Head of department sees the team scope, but no patient personal data by default.
+        assertThat(matrix.get(UserRole.HEAD_OF_DEPARTMENT))
+                .contains(PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL)
+                .doesNotContain(PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW);
+        // No other role holds production codes by default.
+        assertThat(matrix.get(UserRole.DOCTOR))
+                .doesNotContain(PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW);
+        assertThat(matrix.get(UserRole.NURSE))
+                .doesNotContain(PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW);
+        assertThat(matrix.get(UserRole.ADMINISTRATOR))
+                .doesNotContain(PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW,
+                        PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW);
     }
 }

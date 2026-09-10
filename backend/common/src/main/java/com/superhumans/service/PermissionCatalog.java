@@ -46,6 +46,12 @@ public final class PermissionCatalog {
     public static final String PROSTHETICS_TEMPLATE_MANAGE = "PROSTHETICS_TEMPLATE_MANAGE";
     public static final String PROSTHETICS_ORDER_MANAGE = "PROSTHETICS_ORDER_MANAGE";
 
+    // Production monitoring (read-scoped dashboard codes, epic #271)
+    public static final String PROSTHETICS_PRODUCTION_VIEW = "PROSTHETICS_PRODUCTION_VIEW";
+    public static final String PROSTHETICS_PRODUCTION_VIEW_ALL = "PROSTHETICS_PRODUCTION_VIEW_ALL";
+    public static final String PROSTHETICS_PRODUCTION_PATIENT_VIEW = "PROSTHETICS_PRODUCTION_PATIENT_VIEW";
+    public static final String PROSTHETICS_PRODUCTION_QUALITY_VIEW = "PROSTHETICS_PRODUCTION_QUALITY_VIEW";
+
     // Module navigation (routing between sub-applications)
     public static final String MODULE_ICU_ACCESS = "MODULE_ICU_ACCESS";
     public static final String MODULE_MEDICATION_ACCESS = "MODULE_MEDICATION_ACCESS";
@@ -102,6 +108,14 @@ public final class PermissionCatalog {
                     "Створення та редагування шаблонів технологічних процесів", PROSTHETICS),
             new Def(PROSTHETICS_ORDER_MANAGE, "Пацієнти та замовлення",
                     "Створення пацієнтів і замовлень протезування", PROSTHETICS),
+            new Def(PROSTHETICS_PRODUCTION_VIEW, "Моніторинг виробництва",
+                    "Доступ до сторінки моніторингу виробництва протезів", PROSTHETICS),
+            new Def(PROSTHETICS_PRODUCTION_VIEW_ALL, "Виробництво всіх протезистів",
+                    "Перегляд виробів усіх протезистів, навантаження команди та аналітики", PROSTHETICS),
+            new Def(PROSTHETICS_PRODUCTION_PATIENT_VIEW, "Дані пацієнта у виробництві",
+                    "Перегляд персональних даних пацієнта та документів у моніторингу виробництва", PROSTHETICS),
+            new Def(PROSTHETICS_PRODUCTION_QUALITY_VIEW, "Якість виробництва",
+                    "Перегляд браків, доопрацювань та провалених процесів", PROSTHETICS),
             new Def(MODULE_ICU_ACCESS, "Модуль: Карта інтенсивної терапії",
                     "Навігація до модуля карти інтенсивної терапії (лікар / медсестра)", MODULES),
             new Def(MODULE_MEDICATION_ACCESS, "Модуль: Листок лікарських призначень",
@@ -130,7 +144,8 @@ public final class PermissionCatalog {
                     EPISODE_CREATE, CLINICAL_DAY_CREATE, SIGN_DOCTOR, REOPEN_DAY,
                     PRESCRIPTION_CREATE, PRESCRIPTION_LIST_CREATE, PATIENT_VIEW,
                     SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS,
-                    MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
+                    MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS,
+                    PROSTHETICS_PRODUCTION_VIEW, PROSTHETICS_PRODUCTION_VIEW_ALL)),
             Map.entry(UserRole.ADMINISTRATOR, Set.of(
                     PATIENT_VIEW, AUDIT_ACCESS, MODULE_ADMIN_ACCESS)),
             Map.entry(UserRole.AUDITOR, Set.of(
@@ -140,12 +155,15 @@ public final class PermissionCatalog {
             Map.entry(UserRole.PROSTHETIST, Set.of(
                     PROSTHETICS_DASHBOARD, PROSTHETICS_INSTANCE_CREATE,
                     PROSTHETICS_STEP_COMPLETE, PROSTHETICS_PAUSE_RESUME,
-                    MODULE_PROSTHETICS_ACCESS)),
+                    MODULE_PROSTHETICS_ACCESS,
+                    PROSTHETICS_PRODUCTION_VIEW, PROSTHETICS_PRODUCTION_QUALITY_VIEW)),
             Map.entry(UserRole.PROSTHETICS_ADMINISTRATOR, Set.of(
                     PROSTHETICS_DASHBOARD, PROSTHETICS_INSTANCE_CREATE,
                     PROSTHETICS_STEP_COMPLETE, PROSTHETICS_PAUSE_RESUME,
                     PROSTHETICS_TEMPLATE_MANAGE,
-                    PROSTHETICS_ORDER_MANAGE, MODULE_PROSTHETICS_ACCESS)),
+                    PROSTHETICS_ORDER_MANAGE, MODULE_PROSTHETICS_ACCESS,
+                    PROSTHETICS_PRODUCTION_VIEW, PROSTHETICS_PRODUCTION_VIEW_ALL,
+                    PROSTHETICS_PRODUCTION_PATIENT_VIEW, PROSTHETICS_PRODUCTION_QUALITY_VIEW)),
             // First-login directory role: authenticated with zero permissions (decision D4).
             Map.entry(UserRole.GUEST, Set.of()));
 

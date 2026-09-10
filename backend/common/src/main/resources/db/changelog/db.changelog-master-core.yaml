@@ -20,3 +20,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/007-ldap-auth-provider.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/008-prosthetics-production-permissions.sql

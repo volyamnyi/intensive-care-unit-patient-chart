@@ -75,6 +75,18 @@ test.describe('Role & permission management', () => {
     await expect(page.getByRole('checkbox', { name: 'Створення епізоду — Адміністратор', exact: true })).not.toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'Журнал аудиту — Адміністратор', exact: true })).toBeChecked();
 
+    // Production monitoring rows (manufacturing epic #271): visible with per-role defaults
+    await expect(page.getByText('Моніторинг виробництва')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Моніторинг виробництва — Адміністратор протезування', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Моніторинг виробництва — Протезист', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Моніторинг виробництва — Завідувач відділення', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Моніторинг виробництва — Лікар', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Виробництво всіх протезистів — Адміністратор протезування', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Виробництво всіх протезистів — Протезист', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Дані пацієнта у виробництві — Адміністратор протезування', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Дані пацієнта у виробництві — Завідувач відділення', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Якість виробництва — Протезист', exact: true })).toBeChecked();
+
     // Save button disabled while nothing is dirty
     await expect(page.getByRole('button', { name: 'Зберегти зміни' })).toBeDisabled();
   });
