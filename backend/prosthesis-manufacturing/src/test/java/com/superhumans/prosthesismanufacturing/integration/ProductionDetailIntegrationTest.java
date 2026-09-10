@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
@@ -172,9 +173,10 @@ class ProductionDetailIntegrationTest {
 
     @Test
     void detail_brokenPatientLink_marksDocumentsUnknown() {
+        // digits-only passes the DB CHECK; the MIS side 404s instead.
         FlowInstance broken = instanceRepository.save(FlowInstance.builder()
                 .templateId(UUID.randomUUID())
-                .patientId("not-a-number")
+                .patientId("999999")
                 .orderId(orderId)
                 .assignedUserId(5L)
                 .status(FlowInstanceStatus.COMPLETED)
@@ -184,11 +186,14 @@ class ProductionDetailIntegrationTest {
                 .totalIdleSeconds(0L)
                 .branchSequence(1)
                 .build());
+        when(misService.getPatientDocuments(999999L))
+                .thenThrow(new NotFoundException("no such patient in MIS"));
 
         ProductionDetailDto detail = readService.detail(broken.getId(), 5L, true, true);
 
         assertThat(detail.isDocumentsUnknown()).isTrue();
         assertThat(detail.getDocuments()).isEmpty();
+        assertThat(detail.getMatchedDocument()).isNull();
         assertThat(detail.getWorkItem().getElapsedSeconds()).isGreaterThan(0L);
     }
 }

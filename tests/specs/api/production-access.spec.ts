@@ -14,11 +14,14 @@ import {
 // Without VIEW_ALL the caller sees only their own items (assignee filter is
 // forced); strangers get 404 on detail (same contract as requireOwner).
 //
-// Self-sufficient: provisions two fresh MIS orders (one per owner) so the spec
-// never contends over seed orders with the parallel prosthetics specs.
+// Self-sufficient and retry-safe: provisions ONE fresh MIS order (never a seed
+// order, so no contention with the parallel prosthetics specs) and hands the
+// order from the prosthetist instance to the admin instance mid-file.
 
 const API = 'http://localhost:8085/api';
 const PROSTH = `${API}/prosthesis-manufacturing`;
+
+const ACTIVE = ['NEW', 'IN_PROGRESS', 'PAUSED', 'BLOCKED_PATIENT', 'BLOCKED_MATERIAL'];
 
 test.describe.configure({ mode: 'serial' });
 
@@ -28,32 +31,40 @@ let hNurse: Record<string, string>;
 let hHod: Record<string, string>;
 let me7: number;
 let me9: number;
+let orderA: string;
+let templateId: string;
 let inst7: string;
 let inst9: string;
 
-async function provisionOrder(
-  request: APIRequestContext,
-  headers: Record<string, string>,
-  patientId: string,
-  documentId: number,
-): Promise<string> {
-  const res = await request.post(`${PROSTH}/orders/provision`, {
-    headers,
-    data: { patientId, documentId },
-  });
-  expect(res.ok(), `provision failed: ${res.status()}: ${await res.text()}`).toBeTruthy();
-  return ((await res.json()) as { id: string }).id;
-}
+type InstanceRow = { id: string; orderId: string; status: string; assignedUserId: number };
 
-async function createInstance(
+async function activeOnOrder(
   request: APIRequestContext,
   headers: Record<string, string>,
   orderId: string,
-  templateId: string,
+): Promise<InstanceRow | undefined> {
+  const list = (await (await request.get(`${PROSTH}/instances`, { headers })).json()) as Array<InstanceRow>;
+  return list.find((i) => i.orderId === orderId && ACTIVE.includes(i.status));
+}
+
+function headersForAssignee(assignee: number): Record<string, string> {
+  return assignee === me7 ? h7 : h9;
+}
+
+/** Find-or-create an ACTIVE instance on orderA owned by the given user. */
+async function ensureInstance(
+  request: APIRequestContext,
+  ownerHeaders: Record<string, string>,
+  ownerMe: number,
 ): Promise<string> {
+  const active = await activeOnOrder(request, h9, orderA);
+  if (active) {
+    if (active.assignedUserId === ownerMe) return active.id;
+    await terminateInstance(request, headersForAssignee(active.assignedUserId), active.id);
+  }
   const res = await request.post(`${PROSTH}/instances`, {
-    headers,
-    data: { orderId, templateId },
+    headers: ownerHeaders,
+    data: { orderId: orderA, templateId },
   });
   expect(res.ok(), `create instance failed: ${res.status()}: ${await res.text()}`).toBeTruthy();
   return ((await res.json()) as { id: string }).id;
@@ -69,37 +80,33 @@ test.beforeAll(async ({ request }) => {
   hNurse = headersFor(tNurse);
   hHod = headersFor(tHod);
 
-  const me7Res = await request.get(`${API}/users/me`, { headers: h7 });
-  expect(me7Res.ok()).toBeTruthy();
-  me7 = ((await me7Res.json()) as { id: number }).id;
+  me7 = ((await (await request.get(`${API}/users/me`, { headers: h7 })).json()) as { id: number }).id;
   expect(typeof me7).toBe('number');
-  const me9Res = await request.get(`${API}/users/me`, { headers: h9 });
-  me9 = ((await me9Res.json()) as { id: number }).id;
+  me9 = ((await (await request.get(`${API}/users/me`, { headers: h9 })).json()) as { id: number }).id;
 
-  // Two distinct MIS documents → two independent orders (no seed contention).
+  // One live MIS document is enough: the order is handed from inst7 to inst9.
   const cands = (await (await request.get(`${PROSTH}/patients/candidates`, { headers: h9 })).json()) as Array<{
     patient: { id: string };
     documents: Array<{ documentId: number }>;
   }>;
-  const pairs: Array<{ patientId: string; documentId: number }> = [];
-  for (const c of cands ?? []) {
-    for (const d of c.documents ?? []) {
-      pairs.push({ patientId: c.patient.id, documentId: d.documentId });
-      if (pairs.length === 2) break;
-    }
-    if (pairs.length === 2) break;
-  }
-  expect(pairs.length, 'need 2 MIS order documents for the production spec').toBe(2);
+  const pair = (cands ?? []).flatMap((c) =>
+    (c.documents ?? []).map((d) => ({ patientId: c.patient.id, documentId: d.documentId })),
+  )[0];
+  expect(pair, 'need 1 MIS order document for the production spec').toBeTruthy();
 
-  const templateId = await findTemplateByIdName(request, h9, 'TP-UL-01');
-  const order7 = await provisionOrder(request, h9, pairs[0].patientId, pairs[0].documentId);
-  const order9 = await provisionOrder(request, h9, pairs[1].patientId, pairs[1].documentId);
-  inst7 = await createInstance(request, h7, order7, templateId);
-  inst9 = await createInstance(request, h9, order9, templateId);
+  templateId = await findTemplateByIdName(request, h9, 'TP-UL-01');
+  const prov = await request.post(`${PROSTH}/orders/provision`, {
+    headers: h9,
+    data: { patientId: pair.patientId, documentId: pair.documentId },
+  });
+  expect(prov.ok(), `provision failed: ${prov.status()}: ${await prov.text()}`).toBeTruthy();
+  orderA = ((await prov.json()) as { id: string }).id;
+
+  inst7 = await ensureInstance(request, h7, me7);
 });
 
 test.afterAll(async ({ request }) => {
-  // Free the provisioned orders; failures here must not fail the suite run.
+  // Free the provisioned order; cleanup failures must not fail the suite.
   if (inst7) await terminateInstance(request, h7, inst7).catch(() => undefined);
   if (inst9) await terminateInstance(request, h9, inst9).catch(() => undefined);
 });
@@ -171,6 +178,12 @@ test.describe('Production monitoring API access controls', () => {
     expect(body.documents).toEqual([]);
     expect(body.matchedDocument).toBeNull();
     expect(Array.isArray(body.timeline)).toBeTruthy();
+  });
+
+  test('hand off the order: terminate prosthetist instance, create admin instance', async ({ request }) => {
+    await terminateInstance(request, h7, inst7);
+    inst9 = await ensureInstance(request, h9, me9);
+    expect(inst9).not.toBe(inst7);
   });
 
   test('admin detail is full (patient details + documents shape)', async ({ request }) => {
