@@ -3,8 +3,6 @@ package com.superhumans.controller;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
-import com.superhumans.mis.MisService;
-import com.superhumans.mis.dto.UserMisDTO;
 import com.superhumans.repository.core.UserRepository;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.repository.core.AuditLogRepository;
@@ -36,9 +34,6 @@ class UserControllerTest {
 
     @MockitoBean
     private UserRepository userRepository;
-
-    @MockitoBean
-    private MisService misService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -124,27 +119,5 @@ class UserControllerTest {
         mockMvc.perform(get("/api/users/nurses").with(doctor()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].login").value("nurse1"));
-    }
-
-    @Test
-    void getMisUser_returnsUser() throws Exception {
-        UserMisDTO dto = UserMisDTO.builder()
-                .id(1L)
-                .fullName("Doctor One")
-                .build();
-
-        when(misService.getUser(1L)).thenReturn(Optional.of(dto));
-
-        mockMvc.perform(get("/api/users/{id}", 1L).with(doctor()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fullName").value("Doctor One"));
-    }
-
-    @Test
-    void getMisUser_notFound_returnsNotFound() throws Exception {
-        when(misService.getUser(999L)).thenReturn(Optional.empty());
-
-        mockMvc.perform(get("/api/users/{id}", 999L).with(doctor()))
-                .andExpect(status().isNotFound());
     }
 }

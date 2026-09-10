@@ -18,7 +18,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- CASCADE handles all FK-dependent tables (clinical_days, hourly_records, etc.)
 TRUNCATE episodes CASCADE;
 
--- Seed episodes (patient IDs match those in MockMISServiceImpl)
+-- Seed episodes (patient IDs reference the real-MIS patient roster)
 INSERT INTO episodes (id, patient_id, hospitalization_id, department_id, admission_date, status, created_at, created_by, updated_at, updated_by, version)
 VALUES
 ('a1111111-1111-1111-1111-111111111111', 1001, NULL, NULL, NOW() - INTERVAL '2 days', 'ACTIVE', NOW(), 11, NOW(), 11, 0),

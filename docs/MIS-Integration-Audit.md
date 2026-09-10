@@ -1,6 +1,8 @@
 # MIS Integration Audit — дві реалізації `MisService` (issue #191)
 
-**Дата:** 2026-08-24 · **Статус:** ЗАВЕРШЕНО (фази #191–#194). WireMockMisServiceImpl — єдина реалізація MisService.
+**Дата:** 2026-08-24 · **Статус на момент створення:** ЗАВЕРШЕНО (фази #191–#194).
+
+**Статус (оновлено, 2026-09-10, фази #264–#268):** активний код містить ЄДИНУ реалізацію `MisService` — `MisServiceImpl` (реальний MIS API, `spi*`-процедури). `MockMisServiceImpl`/`WireMockMisServiceImpl`, дерево `mis-wiremock/` і всі `spzIB*`-виклики видалено — `grep -r "spzIB"` по коду повертає 0 збігів. Увесь текст нижче зберігається як історичний запис.
 
 `MisService` має дві реалізації: `MockMisServiceImpl` (in-memory, дефолт у dev/CI через
 `app.mis.mock-enabled: true`) та `WireMockMisServiceImpl` (HTTP → WireMock-фікстури,

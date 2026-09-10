@@ -6,8 +6,8 @@ import lombok.AccessLevel;
 
 /**
  * MIS medicine item (real mode: {@code spiMedicineItemKindDetails}).
- * Fields beyond the legacy {@code spzIBMedicineDictionary} envelope
- * (itemKind*, medicineCategory*, medicinePackage*) are assumptions — the
+ * Fields beyond the legacy dictionary envelope (itemKind*,
+ * medicineCategory*, medicinePackage*) are assumptions — the
  * epic MIS real-API spec is still open (#258 follow-up). The parser is
  * tolerant: missing fields resolve to {@code null}, not errors.
  */

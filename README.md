@@ -20,7 +20,7 @@
 
 - **Form 003-15/о compliant** — Electronic ICU chart matching the Ukrainian paper standard
 - **PDF Generation** — A4 landscape with tabular layout, Times New Roman font, all card sections
-- **PDF Transfer to MIS** — PDF is stored as binary, transmitted to MIS, with transfer status tracking (PENDING/SENT/FAILED)
+- **Local PDF Storage** — PDFs are stored as binary in the local database and downloaded/printed in-module (transfer to MIS is banned — MIS stays read-only)
 - **Single-Page Layout** — Two-column design (table + resizable sidebar via left-edge drag), all sections always visible, no tabs/accordions
 
 ### For AUDITOR
@@ -33,7 +33,7 @@
 - **Clinical Day Timeline** — Visual timeline of all clinical days per episode with status (OPEN, NURSE_SIGNED, DOCTOR_SIGNED, REOPENED)
 - **Hourly Vital Signs** — Full 24-hour vital sign tables with color-coded completion status
 - **Prescription Management** — Create and cancel medication/lab orders with dose, route, frequency
-- **Prescription Dashboard** — Department toggle (Хірургія/Реабілітація), sortable patient table, search filter, 40 seed patients
+- **Prescription Dashboard** — Department toggle (Хірургія/Реабілітація), sortable patient table, search filter; patient roster served by the MIS (filterable by `?module=medication` departments 19/37)
 - **Prescription Grid** — Inline 21-day spreadsheet with 7-day scroll window, color-coded cells (blue=planned, green=completed, purple=cancelled), click-to-edit dose editing
 - **Clinical Scale Assessments** — Record and view APACHE II, SOFA, RASS, CAM-ICU, Braden scores
 - **Medical Notes** — Add typed clinical notes per day
@@ -119,18 +119,18 @@
 │  Vite Dev    │    JWT Bearer Auth   │              │               │            │
 │  Server      │                      │  JWT Filter  │               │            │
 └──────────────┘                      └──────┬───────┘               └────────────┘
-                                             │
-                                     ┌───────┴───────┐
-                                     │  WireMockMisService│
-                                     │  (or real MIS) │
-                                     └───────────────┘
+                                              │
+                                      ┌───────┴───────┐
+                                      │  MIS API      │
+                                      │ (Doctor Eleks)│
+                                      └───────────────┘
 ```
 
 - Frontend communicates via RESTful JSON APIs with JWT Bearer auth
-- Backend integrates with MIS via a pluggable `MisService` interface (mock implementation by default)
+- Backend integrates with MIS via a single `MisService` implementation (`MisServiceImpl` → real MIS API through `MisApiClient`; read-only, no mock implementations)
 - Scheduled tasks handle day transitions and escalation checks
 - **Module boundaries are enforced**: backend ArchUnit test (`backend/app/src/test/java/com/superhumans/architecture/ModuleBoundaryTest.java`) restricts the feature modules (`medication-sheet`, `prosthesis-manufacturing`) to a shared platform allowlist; frontend oxlint rules (`frontend/.oxlintrc.json` `no-restricted-imports`) forbid cross-feature imports
-- **Prosthetics Manufacturing** is a separate backend module (`prosthesis-manufacturing`) with its own entities, services, and REST endpoints under `/api/prosthesis-manufacturing`, using local mock tables (not MIS)
+- **Prosthetics Manufacturing** is a separate backend module (`prosthesis-manufacturing`) with its own entities, services, and REST endpoints under `/api/prosthesis-manufacturing`, with local mirror tables that take patient/order demographics from MIS
 
 ---
 
@@ -450,17 +450,9 @@ java -jar app/target/app-*.jar
 
 > ⚠️ **Production (A2):** first-boot provisioning creates these well-known demo credentials. They must be **rotated or disabled before go-live**. Seeding is disabled under the `prod` profile (`app.seed-data.enabled: false`) and the `SeedDataGuard` boot guard refuses to start if `prod` + seeding are somehow enabled. `UserSeedService` never overwrites an existing login, so a restart never reverts an operator-rotated password to the demo value.
 
-5 mock patients (from MIS mock):
+Patient demographics (names, card numbers, birth years) are served by the real MIS; episodes in `data-icu.sql` reference patients by their MIS IDs (e.g. 1001 = Петренко, 1002 = Коваленко, 1003 = Сидоренко). Tests resolve patients dynamically via the API (`tests/helpers/test-users.ts`, `tests/helpers/medication.ts`).
 
-| Full Name | Card # | Year |
-|---|---|---|
-| Петренко Іван Сергійович | МК-001234 | 1978 |
-| Коваленко Олена Вікторівна | МК-005678 | 1985 |
-| Сидоренко Василь Петрович | МК-009012 | 1962 |
-| Бондаренко Наталія Петрівна | МК-003456 | 1990 |
-| Ткачук Андрій Миколайович | МК-007890 | 1975 |
-
-Prosthetics seed patients (demographics served by the MIS Integration Layer wiremock `__files/patients_52.json`; clinical fields in local tables):
+Prosthetics seed patients (demographics served by the real MIS; clinical fields in local tables):
 
 | Patient | ID | Order | Template |
 |---|---|---|---|
@@ -480,7 +472,7 @@ icu-patient-chart/
 ├── backend/                    ← Maven multi-module reactor (parent POM + 5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
 │   ├── common/                 ← shared platform leaf (no internal deps): `@SpringBootApplication` main class, auth/JWT,
 │   │   │                         security config, multi-DB wiring, platform controllers (auth/user/patient/admin/audit/
-│   │   │                         settings/mock-MIS), `entity/base` + `entity/core` (User, Permission, RolePermission,
+│   │   │                         settings), `entity/base` + `entity/core` (User, Permission, RolePermission,
 │   │   │                         AuditLog, ...), `repository/core`, exception handlers, MIS client, services (Auth,
 │   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 21
 │   │   │                         SQL files in `db/changelog/{core (6), icu (6), med (1), prosth (8)}/`)

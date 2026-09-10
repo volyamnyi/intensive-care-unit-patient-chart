@@ -242,15 +242,15 @@ psql -d my_fullstack_core -c "SELECT login FROM users;"          # лише ре
 - `X-Forwarded-Proto https`.
 - `client_max_body_size` — для завантаження evidence-файлів у prosthetics (10 МБ ліміт у `EvidenceFileService`).
 
-### 1.9 Перевірка з'єднання з MIS (якщо реалізовано)
+### 1.9 Перевірка з'єднання з MIS
 
-Якщо ви написали `RealMisServiceImpl` (1.5):
+Єдиний `MisServiceImpl` (1.5) ходить у реальний MIS API:
 ```bash
 # У логі бекенду — стежу:
-#   INFO  c.s.mis.WireMockMisServiceImpl / RealMisServiceImpl  - MIS call: spzIBPatientSearch ...
+#   INFO  c.s.mis.MisServiceImpl  - MIS call: spiPatientProsthesCheck ...
 #   INFO  ... response: 200 OK  (X ms)
 ```
-Якщо MIS недоступний — застосунок не падає (всі `MisService` методи обороняють помилки → `Optional.empty()`), але UI не покаже пацієнтів. Діагностика через `POST /api/mis/error-mode?mode=none` (якщо ввімкнено).
+Якщо MIS недоступний — застосунок не падає (всі `MisService` методи обороняють помилки → `Optional.empty()`), але UI не покаже пацієнтів; діагностику дають backend-логи та `app.mis.api.*` settings (mock error simulation no longer exists).
 
 ---
 
@@ -558,8 +558,7 @@ pg_basebackup --check > /dev/null && echo "WAL archive OK"
 | Soft-delete аудиту (§81) | `isDeleted` + `findAllActive()` | ✅ |
 | RBAC seed only-once | `PermissionService.seedIfEmpty` | ✅ |
 | Seed-data gate | `app.seed-data.enabled` | **`false`** |
-| Mock MIS gate | `app.mis.mock-enabled` | **`false`** |
-| WireMock MIS gate | `app.mis.wiremock-enabled` (matchIfMissing=true) | **`true`**, якщо real-MIS не готовий; **`false`**, коли готовий |
+| MIS API settings | `app.mis.api.*` (`APP_MIS_API_*` env) | **set** — the single `MisServiceImpl` fails startup (fail-fast) if incomplete |
 | `spring.liquibase.enabled` | `false` (у yml) | **`false`** |
 | `spring.sql.init.mode` | `never` (у yml) | **`never`** |
 | Hibernate DDL | `none` | **`none`** |
@@ -743,7 +742,7 @@ A: Backwards-compatible changes (2.4) + rolling + health-check. **Не** `DROP C
 A: 1. Backup. 2. `pg_basebackup` на новий сервер. 3. `pg_upgrade` (offline) / `pglogical` (online). 4. Переключення DNS. **Test first.**
 
 **Q: А якщо я хочу вимкнути Swagger в проді?**
-A: `SPRING_PROFILES_ACTIVE=prod` вже вимикає (див. `application.yml:163-166`). Якщо не хочете — `app.mis.wiremock-enabled=false` + власна `prod`-профіль.
+A: `SPRING_PROFILES_ACTIVE=prod` вже вимикає (див. `application.yml` prod-профіль, `springdoc.api-docs.enabled: false` → `swagger-ui.enabled: false`).
 
 **Q: А моки MIS у проді — це «так»?**
 A: Ні, і їх більше не існує: `MockMisServiceImpl`/`WireMockMisServiceImpl` видалено (Phase 11, #264). Єдиний `MisServiceImpl` ходить у реальний MIS; без `APP_MIS_API_*` застосунок валить старт (fail-fast).

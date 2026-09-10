@@ -122,19 +122,16 @@ class ClinicalRbacIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void auditor_episodes_patients_errorMode_forbidden() {
+    void auditor_episodes_patients_forbidden() {
         String auditor = loginAs("auditor1", "doctor123");
 
         var episodes = restTemplate.exchange("/api/episodes", HttpMethod.GET,
                 authGet(auditor), String.class);
         var patients = restTemplate.exchange("/api/patients?query=a", HttpMethod.GET,
                 authGet(auditor), String.class);
-        var errorMode = restTemplate.exchange("/api/mis/error-mode?mode=none", HttpMethod.POST,
-                authGet(auditor), Void.class);
 
         assertThat(episodes.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(patients.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(errorMode.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     // ---- Vertical matrix: ADMINISTRATOR holds no clinical write codes ----

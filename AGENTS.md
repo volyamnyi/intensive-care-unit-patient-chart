@@ -160,18 +160,16 @@ Updated `docs/Технічне завдання карта Інтенсивно�
 
 | Operation | Status | MIS method |
 |---|---|---|
-| Search patients | ✅ ALLOWED (read) | `spzIBPatientSearch` |
-| Get patient by ID | ✅ ALLOWED (read) | `spzIBPatientSearch` |
-| Get hospitalization / schedule | ✅ ALLOWED (read) | `spzIBPatientScheduleList` |
-| Get user profile | ✅ ALLOWED (read) | `spzIBUserDetails` |
-| Get department users | ✅ ALLOWED (read) | `spzIBUserDetails` |
-| Get departments | ✅ ALLOWED (read) | `spzIBCompanyDetails` |
-| Get dictionaries | ✅ ALLOWED (read) | `spzIB*Dictionary` |
+| Search patients | ✅ ALLOWED (read) | `spiPatientProsthesCheck` |
+| Get patient by ID | ✅ ALLOWED (read) | `spiPatientProsthesCheck` |
+| Get all patients under treatment | ✅ ALLOWED (read) | `spiPatientProsthesCheck` |
+| Get medicine catalog | ✅ ALLOWED (read) | `spiMedicineItemKindDetails` |
+| Get patient documents | ✅ ALLOWED (read) | `spiDocumentProsthesCheck` |
 | Send PDF to MIS | ❌ FORBIDDEN (removed Phase 16, #269) | ex-`sendPdf()` — PDFs stay local, download/print in-module |
-| Create patient | ❌ FORBIDDEN | `spzIBPatientCreate` — must never be called |
-| Create schedule/appointment | ❌ FORBIDDEN | `spzIBScheduleCreate` — must never be called |
-| Save agent/insurance | ❌ FORBIDDEN | `spzIBAgentSave` — must never be called |
-| Save institution/venue | ❌ FORBIDDEN | `spzIBInstitutionSave` — must never be called |
+| Create patient | ❌ FORBIDDEN | Any `*Create`/`*Save` write method — must never be called |
+| Create schedule/appointment | ❌ FORBIDDEN | Any `*Create`/`*Save` write method — must never be called |
+| Save agent/insurance | ❌ FORBIDDEN | Any `*Save` write method — must never be called |
+| Save institution/venue | ❌ FORBIDDEN | Any `*Save` write method — must never be called |
 | Any other MIS mutation | ❌ FORBIDDEN | All `*Save`, `*Create`, `*Update`, `*Delete` methods |
 
 **Rule:** The `MisApiClient` only supports GET-style calls to `/api/run`. Any MIS write endpoint must never be implemented or called. Violating this policy will corrupt MIS data integrity.
@@ -202,7 +200,7 @@ frontend/  (React 19 + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Base UI, single 
   src/services/, src/layouts/, src/lib/, src/utils/  ← AuthContext, Doctor/Nurse/Global layouts, shared helpers
 backend/   (Spring Boot 4.1.0 + Java 25 + Maven, multi-module; dependency direction: common ← feature modules ← app)
   pom.xml                   ← parent POM (pom packaging, 5 modules)
-  common/                   ← shared platform leaf (no internal deps; 119 main sources): `@SpringBootApplication` main class `com.superhumans.IcuPatientChartApplication` (mainClass of the runnable JAR), platform controllers (auth/user/patient/admin/audit/settings/mock-MIS), `entity/base` (BaseEntity) + `entity/core` (User, UserRole, Permission, RolePermission, AuditLog, SystemSettings, ReferenceValue), `repository/core`, auth (JWT), config (security, CORS, multi-DB wiring, SpringContext), exception, mapper, mis, service (AuthService, AuditService, PermissionService, PermissionCatalog), util
+  common/                   ← shared platform leaf (no internal deps; 119 main sources): `@SpringBootApplication` main class `com.superhumans.IcuPatientChartApplication` (mainClass of the runnable JAR), platform controllers (auth/user/patient/admin/audit/settings), `entity/base` (BaseEntity) + `entity/core` (User, UserRole, Permission, RolePermission, AuditLog, SystemSettings, ReferenceValue), `repository/core`, auth (JWT), config (security, CORS, multi-DB wiring, SpringContext), exception, mapper, mis, service (AuthService, AuditService, PermissionService, PermissionCatalog), util
   icu-chart/                ← ICU chart feature (84 main sources): `com.superhumans.icu.*` (entities + repositories) + ICU domain root packages (controller ×13, service ×20, dto, mapper); depends on common
   medication-sheet/         ← medication sheet feature (61 main sources): `com.superhumans.medicationsheet.*` (entity/dto/repository/service/controller/mapper/config); depends on common
   prosthesis-manufacturing/ ← prosthetics manufacturing feature (84 main sources): `com.superhumans.prosthesismanufacturing.*` (entity/dto/repository/service/controller/mapper/config); depends on common
@@ -231,7 +229,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
   - Datasources configured in `application.yml` under `app.datasource.{core,icu,med,prosth}.{url,username,password}` (env override: `APP_DATASOURCE_*_URL/USERNAME/PASSWORD`); multi-DB bootstrap in `com.superhumans.config.multidb` (per-DB `DataSource`/EMF/`SpringLiquibase`/`JpaTransactionManager`, chained `transactionManager`).
 - Seed data: `SeedDataInitializer` (COMMON) runs `data-{core,icu,med,prosth}.sql` on the matching datasource at boot (gated by `app.seed-data.enabled=${APP_SEED_DATA_ENABLED:true}`; tests disable it). Application users are NOT in SQL: `UserSeedService` provisions 9 `LOCAL` accounts from `APP_TEST_USERNAME1..9` / `APP_TEST_PASSWORD1..9` (+ profile/role metadata, BCrypt-hashed at seed time, existing logins never overwritten). The `prod` profile sets `app.seed-data.enabled: false`; `SeedDataGuard` fails startup if `prod` + seeding are both on. Counts: 50 episodes, 90 clinical days, 360 prescription lists, 90 vital sign lists, prosthetics 2 patients/2 orders/2 templates.
 - CI: `.github/workflows/playwright.yml` — Postgres service, JDK 25, Node 22, Playwright chromium, 40min timeout. Every DB-using job creates the 4 DBs (`CREATE DATABASE` ×4) and passes the 12 `APP_DATASOURCE_*` env vars.
-- MIS data served by embedded WireMock server (classpath `mis-wiremock/` fixtures); `MisApiClient` → POST `/api/run`.
+- MIS data is read from the real MIS API: single `MisServiceImpl` → `MisApiClient` → POST `{base-url}{run-path}` (env `APP_MIS_API_*`).
 
 ## Module Boundaries (enforced)
 
@@ -330,20 +328,19 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 - **Backend**: 347 main sources / 140 test files across the multi-module reactor (common 124/19, icu-chart 84/68, medication-sheet 61/17, prosthesis-manufacturing 78/35, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: 770 Vitest tests across 89 test files (136 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 88 Playwright spec files (367 tests) across 11 projects (setup, login, api-error-mode, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **E2E**: 88 Playwright spec files across 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
 | Project | Depends On | storageState | Tests |
 |---|---|---|---|
 | setup | — | — | Auth setup (6 roles) |
-| login-chromium | — | none | Login/logout flow |
-| api-error-mode-chromium | — | none | Mock MIS error scenarios |
-| doctor-chromium | setup, api-error-mode | `.auth/doctor.json` | Dashboard, create card, prescriptions, notes, sign-off |
-| nurse-chromium | setup, api-error-mode | `.auth/nurse.json` | Dashboard, vitals, fluid balance, order execution |
-| hod-chromium | setup, api-error-mode | `.auth/hod.json` | Dashboard, clinical day reopen |
-| admin-chromium | setup, api-error-mode | `.auth/admin.json` | User tables, RBAC matrix, audit log |
-| api-chromium | api-error-mode | none | Patient search API, error handling, scales access control |
+| login-chromium | setup | none | Login/logout flow |
+| doctor-chromium | setup | `.auth/doctor.json` | Dashboard, create card, prescriptions, notes, sign-off |
+| nurse-chromium | setup | `.auth/nurse.json` | Dashboard, vitals, fluid balance, order execution |
+| hod-chromium | setup | `.auth/hod.json` | Dashboard, clinical day reopen |
+| admin-chromium | setup | `.auth/admin.json` | User tables, RBAC matrix, audit log |
+| api-chromium | — | none | Patient search API, error handling, scales access control |
 | prosthetics-chromium | setup | `.auth/prosthetist.json` | Prosthetics workflow (linear: wizard → done/failed) |
 | responsive-mobile-chromium | setup | `.auth/doctor.json` | Mobile 360px smoke (iPhone 13 emulation): nav sheet, touch targets, wizard smoke; `fullyParallel: false` |
 | responsive-tablet-chromium | setup | `.auth/doctor.json` | Tablet 768×1024 (`hasTouch`): no-horizontal-scroll audits, sidebar rail expand, 2-col stats; `fullyParallel: false` |
@@ -360,9 +357,9 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 | `prosthetics_admin1` | `doctor123` | PROSTHETICS_ADMINISTRATOR |
 | *(backend-only)* | — | AUDITOR |
 
-Mock MIS provides 5 test patients: Петренко, Коваленко, Сидоренко, Бондаренко, Ткачук.
+Patient demographics are served by the real MIS; tests resolve patients dynamically (`tests/helpers/test-users.ts`, `tests/helpers/medication.ts`).
 
-Prosthetics seed patients (demographics served by the MIS Integration Layer wiremock `__files/patients_52.json`; clinical fields in local tables):
+Prosthetics seed patients (demographics served by the real MIS; clinical fields in local tables):
 
 | Patient | ID | Order | Template |
 |---|---|---|---|
@@ -513,7 +510,7 @@ All endpoints prefixed with `/api`.
 | GET | `/api/clinical-days/{id}/fluid-balance` | Yes | Get fluid balance entries |
 | POST | `/api/clinical-days/{id}/fluid-balance/recalculate` | Yes | Recalculate from scratch |
 
-### Patients (Mock MIS)
+### Patients (MIS)
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | GET | `/api/patients` | Yes | Search (query param) |
@@ -545,11 +542,6 @@ All endpoints prefixed with `/api`.
 | GET | `/api/admin/permissions` | ADMINISTRATOR | Full matrix: roles, permission catalog, grants |
 | PUT | `/api/admin/permissions` | ADMINISTRATOR | Grant/revoke: `{role, permissionCode, granted}` |
 | GET | `/api/users/me/permissions` | Any authenticated | Effective permission codes of the current user's role |
-
-### Mock MIS Controls
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/mis/error-mode?mode=timeout\|not_found\|unavailable\|none` | Yes | Set mock MIS error simulation |
 
 ### Prosthetics Manufacturing
 | Method | Path | Auth | Description |
@@ -703,7 +695,7 @@ All endpoints prefixed with `/api`.
 | §81 | Soft delete on AuditLog | `isDeleted` field + `findAllActive()` JPQL query |
 | §84 | AUDITOR role | Added to `UserRole` enum |
 | §86 | Integration tests in CI | New `integration-tests` job with PostgreSQL 16 service |
-| §87 | Mock MIS error scenarios | Error modes: timeout, not_found, unavailable via `POST /api/mis/error-mode` |
+| §87 | ~~Mock MIS error scenarios~~ (removed Phase 11, #264) | `/api/mis/error-mode` deleted — no mock error simulation exists |
 | §88 | JaCoCo coverage | 60% instruction / 50% branch minimums |
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer to MIS banned (#269) | `TransferStatus` + `GeneratedPdf.transferStatus/transferError/transferredAt` removed (Liquibase `icu/007-drop-pdf-transfer.sql`); PDFs stay local — `GET /clinical-days/{id}/pdf/file` serves bytes, in-module print via `lib/printPdf.ts` |

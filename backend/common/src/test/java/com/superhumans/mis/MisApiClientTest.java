@@ -74,7 +74,7 @@ class MisApiClientTest {
                 .andExpect(header("Authorization", "Bearer test-bearer-token"))
                 .andExpect(content().string(
                         java.util.regex.Matcher.quoteReplacement(
-                                "{\"name\":\"spzIBPatientSearch\","
+                                "{\"name\":\"spiPatientProsthesCheck\","
                                         + "\"params\":[{\"name\":\"q\",\"value\":\"x\"},"
                                         + "{\"name\":\"Login\",\"value\":\"integration\"}],"
                                         + "\"installationId\":\"00000000-0000-0000-0000-000000000000\"}")
@@ -82,7 +82,7 @@ class MisApiClientTest {
                 .andRespond(withSuccess("{\"ok\":true}", MediaType.APPLICATION_JSON));
 
         JsonNode out = client.callMethod(
-                "spzIBPatientSearch", new MisApiClient.Param("q", "x"));
+                "spiPatientProsthesCheck", new MisApiClient.Param("q", "x"));
 
         assertThat(out.get("ok").asBoolean()).isTrue();
         runServer.verify();

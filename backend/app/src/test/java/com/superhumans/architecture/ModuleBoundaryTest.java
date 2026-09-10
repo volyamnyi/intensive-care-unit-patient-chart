@@ -87,8 +87,8 @@ class ModuleBoundaryTest {
 
     /**
      * Platform controllers that are intentionally ceiling-gated or public (auth login /
-     * admin console / mock-MIS control) and therefore excluded from rule #2 — they are
-     * not clinical feature endpoints.
+     * admin console) and therefore excluded from rule #2 — they are not clinical feature
+     * endpoints.
      */
     private static final String[] PLATFORM_CONTROLLER_EXCLUSIONS = {
         "AuthController",

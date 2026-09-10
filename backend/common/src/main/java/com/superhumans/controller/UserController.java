@@ -2,8 +2,6 @@ package com.superhumans.controller;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
-import com.superhumans.mis.MisService;
-import com.superhumans.mis.dto.UserMisDTO;
 import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.PermissionService;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +21,6 @@ import lombok.experimental.FieldDefaults;
 public class UserController {
 
     UserRepository userRepository;
-    MisService misService;
     PermissionService permissionService;
 
     @GetMapping("/me")
@@ -49,19 +46,5 @@ public class UserController {
     @GetMapping("/nurses")
     public ResponseEntity<List<User>> getNurses() {
         return ResponseEntity.ok(userRepository.findByRole(UserRole.NURSE));
-    }
-
-    /**
-     * MIS user profile by numeric id. Deliberately readable by clinical core
-     * roles (the URL ceiling in {@code ClinicalSecurityRules.USERS_READ_SPEL}
-     * already excludes AUDITOR/PROSTHETIST): colleague lookup by id is intended
-     * directory behavior asserted by E2E (users.spec.ts). Audit finding S1
-     * resolved as documented-intended, no further scoping applied.
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<UserMisDTO> getMisUser(@PathVariable Long id) {
-        return misService.getUser(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
     }
 }

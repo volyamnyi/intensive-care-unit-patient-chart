@@ -15,7 +15,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -23,8 +22,8 @@ import java.util.stream.Collectors;
  * <p>
  * Talks to the live MIS API through {@link MisApiClient} (stored-procedure
  * envelope {@code {name, params, installationId}}, Bearer-authenticated). The
- * ICU Chart is a <b>READ-ONLY</b> client: only Search/Details/Dictionary
- * retrieval are used; no MIS
+ * ICU Chart is a <b>READ-ONLY</b> client: only Search/Details retrieval is
+ * used; no MIS
  * write method is ever invoked.
  */
 @Slf4j
@@ -45,101 +44,6 @@ public class MisServiceImpl implements MisService {
         return getAllPatientsUnderTreatment().stream()
                 .filter(patient -> patient.getId() != null && patient.getId().equals(patientId))
                 .findFirst();
-    }
-
-    @Override
-    public Optional<HospitalizationDTO> getHospitalization(UUID hospitalizationId) {
-        try {
-            // Hospitalization UUIDs encode the MIS patient id in their last 12 decimal
-            // digits (same convention as the legacy mock); resolve it so the request
-            // targets the actual patient instead of a literal "0".
-            String patientId = hospitalizationId != null && hospitalizationId.toString().length() >= 36
-                    ? String.valueOf(Long.parseLong(hospitalizationId.toString().substring(24)))
-                    : "0";
-            JsonNode response = misApiClient.callMethod(
-                    "spzIBPatientScheduleList",
-                    new MisApiClient.Param("PatientID", patientId)
-            );
-            auditService.logAction("MIS", null, "GET_HOSPITALIZATION", getUserId());
-
-            JsonNode scheduleList = response.get("scheduleList");
-            if (scheduleList != null && scheduleList.isArray() && scheduleList.size() > 0) {
-                JsonNode first = scheduleList.get(0);
-                return Optional.of(HospitalizationDTO.builder()
-                        .id(hospitalizationId)
-                        .patientId(longOrNull(first, "patientID"))
-                        .departmentId(longOrNull(first, "departmentID", "departmentId"))
-                        .admissionDate(parseFlexibleDateTime(first, "admissionDate"))
-                        .diagnosis(textOrNull(first, "diagnosis"))
-                        .departmentName(textOrNull(first, "departmentName"))
-                        .room(textOrNull(first, "room", "roomNumber"))
-                        .bed(textOrNull(first, "bed", "bedNumber"))
-                        .build());
-            }
-            return Optional.empty();
-        } catch (Exception e) {
-            log.warn("Hospitalization lookup via MIS API failed: {}", e.getMessage());
-            return Optional.empty();
-        }
-    }
-
-    @Override
-    public Optional<UserMisDTO> getUser(Long userId) {
-        JsonNode response = misApiClient.callMethod(
-                "spzIBUserDetails",
-                new MisApiClient.Param("UserID", String.valueOf(userId))
-        );
-        auditService.logAction("MIS", null, "GET_USER", getUserId());
-        return parseUserList(response).stream()
-                .filter(user -> user.getId() != null && user.getId().equals(userId))
-                .findFirst();
-    }
-
-    @Override
-    public List<UserMisDTO> getDepartmentUsers(Long departmentId) {
-        JsonNode response = misApiClient.callMethod("spzIBUserDetails");
-        auditService.logAction("MIS", null, "GET_DEPARTMENT_USERS", getUserId());
-        List<UserMisDTO> all = parseUserList(response);
-        if (departmentId == null) {
-            return all;
-        }
-        return all.stream()
-                .filter(u -> u.getDepartmentId() != null
-                        && u.getDepartmentId().equals(departmentId))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<DepartmentDTO> getDepartments() {
-        JsonNode response = misApiClient.callMethod("spzIBCompanyDetails");
-        auditService.logAction("MIS", null, "GET_DEPARTMENTS", getUserId());
-        return parseDepartmentList(response);
-    }
-
-    @Override
-    public List<DictionaryItemDTO> getDictionary(String dictionaryName) {
-        return switch (dictionaryName) {
-            case "bookingStatus" ->
-                    dictionary("spzIBBookingStatusDictionary", "bookingStatusList",
-                            "bookingStatusCode", "bookingStatusName");
-            case "paymentStatus" ->
-                    dictionary("spzIBBookingPaymentStatusDictionary", "bookingPaymentStatusList",
-                            "bookingPaymentStatusCode", "bookingPaymentStatusName");
-            case "scheduleStatus" ->
-                    dictionary("spzIBScheduleStatusDictionary", "scheduleStatusList",
-                            "scheduleStatusCode", "scheduleStatusName");
-            default -> {
-                log.warn("Unknown dictionary: {}", dictionaryName);
-                yield List.of();
-            }
-        };
-    }
-
-    private List<DictionaryItemDTO> dictionary(String procedure, String listField,
-            String codeField, String nameField) {
-        JsonNode response = misApiClient.callMethod(procedure);
-        auditService.logAction("MIS", null, "GET_DICTIONARY", getUserId());
-        return parseDictionaryList(response, procedure, listField, codeField, nameField);
     }
 
     @Override
@@ -424,69 +328,6 @@ public class MisServiceImpl implements MisService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private List<UserMisDTO> parseUserList(JsonNode response) {
-        JsonNode userList = firstNonEmptyArray(response, "spzIBUserDetails", "userList", "users");
-        if (userList == null) {
-            return List.of();
-        }
-        List<UserMisDTO> result = new ArrayList<>();
-        for (JsonNode node : userList) {
-            UserMisDTO user = UserMisDTO.builder()
-                    .id(longOrNull(node, "userID", "userId"))
-                    .login(textOrNull(node, "userLogin"))
-                    .fullName(textOrNull(node, "userName", "userFullName"))
-                    .shortName(textOrNull(node, "userShortName"))
-                    .specialityCode(textOrNull(node, "userSpecialityCode"))
-                    .specialityName(textOrNull(node, "userSpecialityName"))
-                    .email(textOrNull(node, "userEmail"))
-                    .phone(textOrNull(node, "userPhone"))
-                    .departmentId(longOrNull(node, "userDepartmentID", "userDepartmentId", "departmentID"))
-                    .build();
-            result.add(user);
-        }
-        return result;
-    }
-
-    private List<DepartmentDTO> parseDepartmentList(JsonNode response) {
-        JsonNode companyList = firstNonEmptyArray(
-                response, "spzIBCompanyDetails", "companyList", "departments");
-        if (companyList == null) {
-            return List.of();
-        }
-        List<DepartmentDTO> result = new ArrayList<>();
-        for (JsonNode node : companyList) {
-            DepartmentDTO dept = DepartmentDTO.builder()
-                    .id(longOrNull(node, "companyID", "companyId", "departmentID"))
-                    .name(textOrNull(node, "companyName"))
-                    .code(textOrNull(node, "companyShortName", "companyCode"))
-                    .address(textOrNull(node, "companyAddress"))
-                    .email(textOrNull(node, "companyEmail"))
-                    .phone(textOrNull(node, "companyPhone"))
-                    .externalId1(textOrNull(node, "companyExternalID1", "companyExternalId1"))
-                    .externalId2(textOrNull(node, "companyExternalID2", "companyExternalId2"))
-                    .build();
-            result.add(dept);
-        }
-        return result;
-    }
-
-    private List<DictionaryItemDTO> parseDictionaryList(JsonNode response, String procedure,
-                                                         String listField,
-                                                         String codeField, String nameField) {
-        JsonNode list = firstNonEmptyArray(response, procedure, listField);
-        if (list == null) {
-            return List.of();
-        }
-        List<DictionaryItemDTO> result = new ArrayList<>();
-        for (JsonNode node : list) {
-            result.add(new DictionaryItemDTO(
-                    textOrNull(node, codeField),
-                    textOrNull(node, nameField)
-            ));
-        }
-        return result;
     }
 
     private Long getUserId() {
