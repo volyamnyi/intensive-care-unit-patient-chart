@@ -424,8 +424,7 @@ class ProductionReadServiceTest {
         assertThat(ProductionReadService.parseMisDocumentId(null)).isNull();
     }
 
-    // --- getRow / team ---
-    @Test
+    // --- getRow / team ---    @Test
     void getRow_unknownId_throwsNotFound() {
         when(instanceRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
@@ -684,6 +683,47 @@ class ProductionReadServiceTest {
         assertThat(empty.getTotalItems()).isZero();
         assertThat(empty.getAvgElapsedSeconds()).isNull();
         assertThat(empty.getAvgActiveSeconds()).isNull();
+    }
+
+    @Test
+    void attention_ordersBySeverityAndSkipsClean() {
+        FlowInstance failed = baseInstance(FlowInstanceStatus.FAILED);
+        failed.setId(UUID.randomUUID());
+        failed.setAssignedUserId(5L);
+        failed.setStartTime(NOW.minusHours(1));
+        failed.setEndTime(NOW);
+        failed.setCreatedAt(NOW.minusHours(1));
+        failed.setUpdatedAt(NOW);
+        FlowInstance overdue = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        overdue.setId(UUID.randomUUID());
+        overdue.setAssignedUserId(5L);
+        overdue.setStartTime(NOW.minusHours(10));
+        overdue.setCreatedAt(NOW.minusHours(10));
+        overdue.setUpdatedAt(NOW);
+        overdue.setTemplateSnapshot(snapshotJson());
+        FlowInstance clean = baseInstance(FlowInstanceStatus.IN_PROGRESS);
+        clean.setId(UUID.randomUUID());
+        clean.setAssignedUserId(5L);
+        clean.setStartTime(NOW.minusHours(1));
+        clean.setCreatedAt(NOW.minusHours(1));
+        clean.setUpdatedAt(NOW);
+
+        when(instanceRepository.findAll())
+                .thenReturn(List.of(clean, overdue, failed));
+        when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of());
+        when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
+        when(userRepository.findAllById(anyCollection())).thenReturn(List.of());
+        when(executionRepository.sumActiveSecondsByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(brakEventRepository.countByInstanceIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+        when(instanceRepository.countChildrenByParentIds(anyCollection()))
+                .thenReturn(List.<Object[]>of());
+
+        List<ProductionWorkItemDto> queue = service.attention(null);
+
+        assertThat(queue).extracting(ProductionWorkItemDto::getInstanceId)
+                .containsExactly(failed.getId(), overdue.getId());
     }
 
     private FlowInstance baseInstance(FlowInstanceStatus status) {

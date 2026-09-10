@@ -23,5 +23,7 @@ public class ProductionTeamRowDto {
     int brakItems;
     /** Rows with at least one rework branch. */
     int reworkItems;
+    /** Rows flagged OVERDUE. */
+    int overdueItems;
     long activeSeconds;
 }

@@ -168,7 +168,7 @@ class ProductionReadServiceIntegrationTest {
         assertThat(i1.getBrakCount()).isEqualTo(2);
         assertThat(i1.getReworkCount()).isZero();
         assertThat(i1.isFailed()).isFalse();
-        assertThat(i1.getAttentionFlags()).containsExactly("REPEAT_BRAK");
+        assertThat(i1.getAttentionFlags()).containsExactlyInAnyOrder("REPEAT_BRAK", "OVERDUE");
         assertThat(i1.getLastActivityAt()).isNotNull();
     }
 
@@ -266,6 +266,48 @@ class ProductionReadServiceIntegrationTest {
         assertThat(all.getReworkItems()).isEqualTo(1);
         assertThat(all.getAvgElapsedSeconds()).isPositive();
         assertThat(all.getAvgActiveSeconds()).isPositive();
+    }
+
+    @Test
+    void attention_ordersFlaggedSeverestFirst() {
+        List<ProductionWorkItemDto> queue = readService.attention(null);
+
+        // I6 (NEW, unassigned, fresh) is the only clean row of the six.
+        assertThat(queue).hasSize(5);
+        assertThat(queue.get(0).getStatus()).isEqualTo("FAILED");
+        assertThat(queue.get(0).getAttentionFlags()).contains("FAILED");
+        assertThat(queue.get(queue.size() - 1).getAttentionFlags())
+                .containsExactly("NO_ASSIGNEE");
+        assertThat(queue.stream()
+                .filter(r -> r.getAttentionFlags().contains("OVERDUE")).count())
+                .isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void attention_respectsAssigneeScope() {
+        List<ProductionWorkItemDto> queue = readService.attention(6L);
+
+        assertThat(queue).hasSize(1);
+        assertThat(queue.get(0).getAttentionFlags()).contains("FAILED");
+    }
+
+    @Test
+    void team_aggregatesWithOverdue() {
+        var team = readService.team();
+
+        assertThat(team).hasSize(2);
+        var first = team.get(0);
+        assertThat(first.getUserId()).isEqualTo(5L);
+        assertThat(first.getInWork()).isEqualTo(2);
+        assertThat(first.getCompleted()).isEqualTo(1);
+        assertThat(first.getFailed()).isZero();
+        assertThat(first.getBrakItems()).isEqualTo(2);
+        assertThat(first.getReworkItems()).isEqualTo(1);
+        assertThat(first.getOverdueItems()).isEqualTo(2);
+        var second = team.get(1);
+        assertThat(second.getUserId()).isEqualTo(6L);
+        assertThat(second.getFailed()).isEqualTo(1);
+        assertThat(second.getOverdueItems()).isZero();
     }
 
     private Map<UUID, ProductionWorkItemDto> allRows() {

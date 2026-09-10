@@ -276,6 +276,46 @@ public class ProductionReadService {
     }
 
     /**
+     * Attention queue: every row carrying at least one attention flag,
+     * severest first (FAILED, OVERDUE, REPEAT_BRAK, REWORK, STALE, NO_ASSIGNEE).
+     * Pass the effective assignee (own id without {@code VIEW_ALL},
+     * {@code null} for the team scope).
+     */
+    @Transactional(readOnly = true)
+    public List<ProductionWorkItemDto> attention(Long assigneeOrNull) {
+        List<FlowInstance> instances = assigneeOrNull == null
+                ? instanceRepository.findAll()
+                : instanceRepository.findByAssignedUserId(assigneeOrNull);
+        return buildRows(instances).stream()
+                .filter(r -> !r.getAttentionFlags().isEmpty())
+                .sorted(Comparator.comparingInt(ProductionReadService::severity).reversed()
+                        .thenComparing(ProductionWorkItemDto::getElapsedSeconds,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(ProductionWorkItemDto::getInstanceId))
+                .toList();
+    }
+
+    private static int severity(ProductionWorkItemDto row) {
+        Set<String> flags = row.getAttentionFlags();
+        if (flags.contains(FLAG_FAILED)) {
+            return 60;
+        }
+        if (flags.contains(FLAG_OVERDUE)) {
+            return 50;
+        }
+        if (flags.contains(FLAG_REPEAT_BRAK)) {
+            return 40;
+        }
+        if (flags.contains(FLAG_REWORK)) {
+            return 30;
+        }
+        if (flags.contains(FLAG_STALE)) {
+            return 20;
+        }
+        return 10;
+    }
+
+    /**
      * Team workload aggregation: one row per prosthetist with an assigned
      * item. Unassigned items surface through the NO_ASSIGNEE attention flag,
      * not here.
@@ -303,6 +343,9 @@ public class ProductionReadService {
                                     .filter(r -> r.getBrakCount() > 0).count())
                             .reworkItems((int) rows.stream()
                                     .filter(r -> r.getReworkCount() > 0).count())
+                            .overdueItems((int) rows.stream()
+                                    .filter(r -> r.getAttentionFlags().contains(FLAG_OVERDUE))
+                                    .count())
                             .activeSeconds(rows.stream()
                                     .mapToLong(r -> r.getActiveSeconds() == null
                                             ? 0L : r.getActiveSeconds()).sum())
@@ -503,17 +546,20 @@ public class ProductionReadService {
     }
 
     private SnapshotNames resolveNames(FlowInstance instance) {
-        if (instance.getCurrentStageId() == null || !hasText(instance.getTemplateSnapshot())) {
-            return SnapshotNames.empty();
-        }
-        try {
-            SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
-            if (snapshot.getStages() == null) {
-                return new SnapshotNames(snapshot, null, null);
+        SnapshotTemplate snapshot = null;
+        if (hasText(instance.getTemplateSnapshot())) {
+            try {
+                snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
+            } catch (IllegalArgumentException ignored) {
+                // Corrupt snapshot: surface the row with null names, like the wizard does.
             }
+        }
+        String stageName = null;
+        String stepName = null;
+        if (snapshot != null && snapshot.getStages() != null && instance.getCurrentStageId() != null) {
             for (SnapshotStage stage : snapshot.getStages()) {
                 if (Objects.equals(stage.getId(), instance.getCurrentStageId())) {
-                    String stepName = null;
+                    stageName = stage.getName();
                     if (stage.getSteps() != null && instance.getCurrentStepId() != null) {
                         for (SnapshotStep step : stage.getSteps()) {
                             if (Objects.equals(step.getId(), instance.getCurrentStepId())) {
@@ -522,19 +568,14 @@ public class ProductionReadService {
                             }
                         }
                     }
-                    return new SnapshotNames(snapshot, stage.getName(), stepName);
+                    break;
                 }
             }
-        } catch (IllegalArgumentException ignored) {
-            // Corrupt snapshot: surface the row with null names, like the wizard does.
         }
-        return SnapshotNames.empty();
+        return new SnapshotNames(snapshot, stageName, stepName);
     }
 
     private record SnapshotNames(SnapshotTemplate snapshot, String stageName, String stepName) {
-        static SnapshotNames empty() {
-            return new SnapshotNames(null, null, null);
-        }
     }
 
     /**

@@ -83,6 +83,14 @@ public class ProductionController {
         return readService.team();
     }
 
+    @GetMapping("/attention")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_PRODUCTION_VIEW')")
+    @Operation(summary = "Attention queue: flagged items, severest first (own items without VIEW_ALL)")
+    public List<ProductionWorkItemDto> attention() {
+        Long effectiveAssignee = permissionService.has(Codes.VIEW_ALL) ? null : currentUser.userId();
+        return readService.attention(effectiveAssignee);
+    }
+
     @GetMapping("/summary")
     @PreAuthorize("@permissionService.has('PROSTHETICS_PRODUCTION_VIEW')")
     @Operation(summary = "KPI summary over the caller's scope (own items without VIEW_ALL)")

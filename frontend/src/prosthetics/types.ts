@@ -511,6 +511,20 @@ export interface ProductionNormative {
   staleDays: number;
 }
 
+// Team workload row (epic #271, GET .../production/team).
+export interface ProductionTeamRow {
+  userId: number;
+  fullName: string | null;
+  inWork: number;
+  paused: number;
+  completed: number;
+  failed: number;
+  brakItems: number;
+  reworkItems: number;
+  overdueItems: number;
+  activeSeconds: number;
+}
+
 // Production detail view (epic #271, GET .../production/{id}).
 export interface ProductionPatient {
   id: string;

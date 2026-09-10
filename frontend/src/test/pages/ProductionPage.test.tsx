@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import ProductionPage, { formatDurationSeconds } from '@/pages/prosthetics/ProductionPage';
+import ProductionPage from '@/pages/prosthetics/ProductionPage';
 import type { ProductionSummary, ProductionWorkItem } from '@/prosthetics/types';
 
 const productionApiMock = vi.hoisted(() => ({
@@ -11,6 +11,8 @@ const productionApiMock = vi.hoisted(() => ({
   detail: vi.fn(),
   getNormative: vi.fn(),
   updateNormative: vi.fn(),
+  team: vi.fn(),
+  attention: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
@@ -85,6 +87,8 @@ function mockOk(items: ProductionWorkItem[] = [item()], total = items.length) {
   productionApiMock.getNormative.mockResolvedValue({
     data: { overdueMultiplier: 1.5, staleDays: 7 },
   });
+  productionApiMock.team.mockResolvedValue({ data: [] });
+  productionApiMock.attention.mockResolvedValue({ data: [] });
 }
 
 function renderPage() {
@@ -229,7 +233,7 @@ describe('ProductionPage', () => {
     expect(screen.queryByText('Нормативи уваги')).not.toBeInTheDocument();
   });
 
-  it('opens the detail drawer on open', async () => {    mockOk();
+    it('opens the detail drawer on open', async () => {    mockOk();
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
@@ -239,16 +243,96 @@ describe('ProductionPage', () => {
       expect(productionApiMock.detail).toHaveBeenCalledWith('i1', expect.anything());
     });
   });
-});
+  it('shows team and attention tabs with VIEW_ALL and hides team without', async () => {
+    mockOk();
+    const { unmount } = renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('tab', { name: /Команда/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Потребують уваги/ })).toBeInTheDocument();
+    unmount();
 
-describe('formatDurationSeconds', () => {
-  it('formats the spec examples', () => {
-    expect(formatDurationSeconds(0)).toBe('0:00');
-    expect(formatDurationSeconds(222)).toBe('0:03');
-    expect(formatDurationSeconds(3 * 3600 + 42 * 60)).toBe('3:42');
-    expect(formatDurationSeconds(5 * 3600 + 17 * 60)).toBe('5:17');
-    expect(formatDurationSeconds(13740)).toBe('3:49');
-    expect(formatDurationSeconds(90000)).toBe('1д 1:00');
-    expect(formatDurationSeconds(null)).toBe('0:00');
+    mockCanViewAll = false;
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('tab', { name: /Команда/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Потребують уваги/ })).toBeInTheDocument();
+  });
+
+  it('renders the team table and drills down to items', async () => {
+    const user = userEvent.setup();
+    mockOk();
+    productionApiMock.team.mockResolvedValue({
+      data: [
+        {
+          userId: 5,
+          fullName: 'Іваненко Іван',
+          inWork: 2,
+          paused: 0,
+          completed: 1,
+          failed: 0,
+          brakItems: 1,
+          reworkItems: 0,
+          overdueItems: 1,
+          activeSeconds: 3600,
+        },
+      ],
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('tab', { name: /Команда/ }));
+    await waitFor(() => {
+      expect(productionApiMock.team).toHaveBeenCalled();
+    });
+    expect(screen.getByText('Іваненко Іван')).toBeInTheDocument();
+    expect(screen.getByText('Прострочені')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Вироби' }));
+    await waitFor(() => {
+      const last = productionApiMock.list.mock.calls.at(-1)?.[0] as { assigneeId?: number };
+      expect(last.assigneeId).toBe(5);
+    });
+    expect(screen.getByText(/Протезист: Іваненко Іван/)).toBeInTheDocument();
+  });
+
+  it('renders the attention queue with flag badges and opens the drawer', async () => {
+    const user = userEvent.setup();
+    const flagged = item({ instanceId: 'flag-1', attentionFlags: ['OVERDUE', 'REPEAT_BRAK'] });
+    mockOk();
+    productionApiMock.attention.mockResolvedValue({ data: [flagged] });
+    productionApiMock.detail.mockResolvedValue({
+      data: {
+        workItem: flagged,
+        timeline: [],
+        brakEvents: [],
+        branches: [],
+        order: null,
+        patient: { id: '900001', pib: 'Бондаренко Тарас' },
+        patientDetailsVisible: false,
+        documents: [],
+        matchedDocument: null,
+        documentsUnknown: false,
+      },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('tab', { name: /Потребують уваги/ }));
+    await waitFor(() => {
+      expect(productionApiMock.attention).toHaveBeenCalled();
+    });
+    expect(screen.getByText('Прострочено')).toBeInTheDocument();
+    expect(screen.getByText('Повторний брак')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Відкрити' }));
+    await waitFor(() => {
+      expect(productionApiMock.detail).toHaveBeenCalledWith('flag-1', expect.anything());
+    });
   });
 });

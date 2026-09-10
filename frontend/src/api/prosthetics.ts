@@ -27,6 +27,7 @@ import type {
   ProductionNormative,
   ProductionPage,
   ProductionSummary,
+  ProductionTeamRow,
   ProductionWorkItem,
 } from '../prosthetics/types';
 
@@ -149,6 +150,10 @@ export const productionApi = {
     client.get<ProductionNormative>(`${BASE}/production/settings/normative`, { signal }),
   updateNormative: (body: ProductionNormative) =>
     client.put<ProductionNormative>(`${BASE}/production/settings/normative`, body),
+  team: (signal?: AbortSignal) =>
+    client.get<ProductionTeamRow[]>(`${BASE}/production/team`, { signal }),
+  attention: (signal?: AbortSignal) =>
+    client.get<ProductionWorkItem[]>(`${BASE}/production/attention`, { signal }),
 };
 
 export const prostheticsApi = {

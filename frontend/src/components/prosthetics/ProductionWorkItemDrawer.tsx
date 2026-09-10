@@ -15,19 +15,8 @@ import {
 import { productionApi } from '@/api/prosthetics';
 import { useAuth } from '@/services/AuthContext';
 import { getErrorMessage } from '@/utils/errorMessage';
-import { formatDurationSeconds } from '@/pages/prosthetics/ProductionPage';
+import { STATUS_LABELS, formatDurationSeconds } from '@/lib/production';
 import type { FlowInstanceStatus, ProductionDetail } from '@/prosthetics/types';
-
-const STATUS_LABELS: Record<FlowInstanceStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'link' }> = {
-  NEW: { label: 'Новий', variant: 'default' },
-  IN_PROGRESS: { label: 'В процесі', variant: 'default' },
-  PAUSED: { label: 'Призупинено', variant: 'outline' },
-  BLOCKED_PATIENT: { label: 'Заблоковано (пацієнт)', variant: 'destructive' },
-  BLOCKED_MATERIAL: { label: 'Заблоковано (матеріали)', variant: 'destructive' },
-  COMPLETED: { label: 'Завершено', variant: 'default' },
-  FAILED: { label: 'Завершено з помилкою', variant: 'destructive' },
-  BRANCHED: { label: 'Розгалужено', variant: 'outline' },
-};
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';

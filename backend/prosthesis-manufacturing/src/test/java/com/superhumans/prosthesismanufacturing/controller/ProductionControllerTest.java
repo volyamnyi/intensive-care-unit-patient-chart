@@ -171,6 +171,19 @@ class ProductionControllerTest {
     }
 
     @Test
+    void attention_scopesToOwnWithoutViewAll() throws Exception {
+        when(permissionService.has(ProductionController.Codes.VIEW_ALL)).thenReturn(false);
+        when(readService.attention(1L)).thenReturn(List.of(
+                ProductionWorkItemDto.builder().instanceId(instanceId).build()));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/production/attention"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].instanceId").value(instanceId.toString()));
+
+        verify(readService).attention(1L);
+    }
+
+    @Test
     void team_returnsOk() throws Exception {        when(readService.team()).thenReturn(List.of(
                 ProductionTeamRowDto.builder().userId(1L).fullName("Іваненко").inWork(2).build()));
 
