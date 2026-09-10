@@ -1,8 +1,7 @@
 import client from './client';
 import type {
   MisOrderDocument,
-  ProstheticsCandidate,
-  ProstheticsPatient,
+  ProstheticsCandidate,  ProstheticsPatient,
   ProstheticsOrder,
   FlowTemplate,
   FlowInstance,
@@ -25,6 +24,7 @@ import type {
   StepNotePatchRequest,
   ProductionDetail,
   ProductionListParams,
+  ProductionNormative,
   ProductionPage,
   ProductionSummary,
   ProductionWorkItem,
@@ -145,6 +145,10 @@ export const productionApi = {
     client.get<ProductionSummary>(`${BASE}/production/summary`, { signal }),
   detail: (id: string, signal?: AbortSignal) =>
     client.get<ProductionDetail>(`${BASE}/production/${id}`, { signal }),
+  getNormative: (signal?: AbortSignal) =>
+    client.get<ProductionNormative>(`${BASE}/production/settings/normative`, { signal }),
+  updateNormative: (body: ProductionNormative) =>
+    client.put<ProductionNormative>(`${BASE}/production/settings/normative`, body),
 };
 
 export const prostheticsApi = {

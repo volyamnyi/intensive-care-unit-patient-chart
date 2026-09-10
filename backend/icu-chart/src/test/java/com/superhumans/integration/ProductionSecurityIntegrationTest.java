@@ -28,6 +28,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -238,6 +239,36 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
                 .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
+    @Test
+    void normative_adminRoundtrips_prosthetistIsForbidden() throws Exception {
+        String admin = loginAs("prod_prosthadmn", PASSWORD);
+        String prosthetist = loginAs("prod_prosthetist1", PASSWORD);
+
+        assertThat(get(BASE + "/settings/normative", prosthetist).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        ResponseEntity<JsonNode> before = get(BASE + "/settings/normative", admin);
+        assertThat(before.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(before.getBody().get("overdueMultiplier").asDouble()).isPositive();
+        assertThat(before.getBody().get("staleDays").asInt()).isPositive();
+
+        assertThat(putJson(BASE + "/settings/normative", admin,
+                Map.of("overdueMultiplier", 2.0, "staleDays", 3)).getBody()
+                .get("overdueMultiplier").asDouble()).isEqualTo(2.0);
+        assertThat(putJson(BASE + "/settings/normative", admin,
+                Map.of("overdueMultiplier", 2.0, "staleDays", 3)).getBody()
+                .get("staleDays").asInt()).isEqualTo(3);
+
+        assertThat(putRaw(BASE + "/settings/normative", admin,
+                Map.of("overdueMultiplier", 0.5, "staleDays", 3)).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // Restore defaults for other tests (shared database).
+        assertThat(putRaw(BASE + "/settings/normative", admin,
+                Map.of("overdueMultiplier", 1.5, "staleDays", 7)).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+    }
+
     private ProstheticsOrder saveOrder(ProstheticsPatient patient, String orderNumber) {
         ProstheticsOrder order = orderRepository.save(ProstheticsOrder.builder()
                 .orderNumber(orderNumber)
@@ -271,12 +302,30 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
     private ResponseEntity<JsonNode> get(String url, String token) {
         ResponseEntity<String> res =
                 restTemplate.exchange(url, HttpMethod.GET, authGet(token), String.class);
+        return withJsonBody(res);
+    }
+
+    private ResponseEntity<JsonNode> putJson(String url, String token, Map<String, Object> body)
+            throws Exception {
+        return withJsonBody(putRaw(url, token, body));
+    }
+
+    private ResponseEntity<String> putRaw(String url, String token, Map<String, Object> body)
+            throws Exception {
+        String json = objectMapper.writeValueAsString(body);
+        org.springframework.http.HttpHeaders headers = authHeaders(token);
+        headers.set("Content-Type", "application/json");
+        return restTemplate.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(json, headers), String.class);
+    }
+
+    private ResponseEntity<JsonNode> withJsonBody(ResponseEntity<String> res) {
         JsonNode body = null;
         if (res.getBody() != null) {
             try {
                 body = objectMapper.readTree(res.getBody());
             } catch (Exception e) {
-                throw new IllegalStateException("Response is not JSON: " + url, e);
+                throw new IllegalStateException("Response is not JSON", e);
             }
         }
         return new ResponseEntity<>(body, res.getHeaders(), res.getStatusCode());

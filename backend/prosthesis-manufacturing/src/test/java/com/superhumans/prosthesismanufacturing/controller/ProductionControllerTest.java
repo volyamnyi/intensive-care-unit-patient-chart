@@ -3,10 +3,12 @@ package com.superhumans.prosthesismanufacturing.controller;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
+import com.superhumans.prosthesismanufacturing.dto.ProductionNormativeDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
 import com.superhumans.prosthesismanufacturing.dto.ProductionSummaryDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
+import com.superhumans.prosthesismanufacturing.service.ProductionNormativeService;
 import com.superhumans.prosthesismanufacturing.service.ProductionReadService;
 import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.service.AuditService;
@@ -20,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,6 +53,8 @@ class ProductionControllerTest {
     @MockitoBean
     ProductionReadService readService;
     @MockitoBean
+    ProductionNormativeService normativeService;
+    @MockitoBean
     PermissionService permissionService;
     @MockitoBean
     JwtTokenProvider jwtTokenProvider;
@@ -58,6 +64,8 @@ class ProductionControllerTest {
     AuditService auditService;
 
     UUID instanceId = UUID.randomUUID();
+    com.fasterxml.jackson.databind.ObjectMapper objectMapper =
+            new com.fasterxml.jackson.databind.ObjectMapper();
 
     @BeforeEach
     void setUp() {
@@ -139,6 +147,27 @@ class ProductionControllerTest {
                 .andExpect(jsonPath("$.totalItems").value(9));
 
         verify(readService).summary(null);
+    }
+
+    @Test
+    void normative_getAndUpdate() throws Exception {
+        when(normativeService.get()).thenReturn(
+                new ProductionNormativeService.Normative(1.5, 7));
+        when(normativeService.update(eq(2.0), eq(3), eq(1L))).thenReturn(
+                new ProductionNormativeService.Normative(2.0, 3));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/production/settings/normative"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.overdueMultiplier").value(1.5))
+                .andExpect(jsonPath("$.staleDays").value(7));
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/prosthesis-manufacturing/production/settings/normative")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("overdueMultiplier", 2.0, "staleDays", 3))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.overdueMultiplier").value(2.0));
+
+        verify(normativeService).update(eq(2.0), eq(3), eq(1L));
     }
 
     @Test

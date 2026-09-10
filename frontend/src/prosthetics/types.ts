@@ -505,6 +505,12 @@ export interface ProductionListParams {
   size?: number;
 }
 
+// Editable overdue/stale thresholds (epic #271, GET/PUT .../settings/normative).
+export interface ProductionNormative {
+  overdueMultiplier: number;
+  staleDays: number;
+}
+
 // Production detail view (epic #271, GET .../production/{id}).
 export interface ProductionPatient {
   id: string;

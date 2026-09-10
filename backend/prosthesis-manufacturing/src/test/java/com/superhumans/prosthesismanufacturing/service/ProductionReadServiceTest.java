@@ -50,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,19 +70,24 @@ class ProductionReadServiceTest {
     @Mock FlowInstanceService instanceService;
     @Mock BrakService brakService;
     @Mock ProstheticsOrderService orderService;
+    @Mock ProductionNormativeService normativeService;
     @Mock ProstheticsOrderMapper orderMapper;
     @Mock ProstheticsPatientMapper patientMapper;
 
     TemplateSnapshotParser parser;
     ProductionReadService service;
 
+    static final ProductionNormativeService.Normative NORM =
+            new ProductionNormativeService.Normative(1.5, 7);
+
     @BeforeEach
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         service = new ProductionReadService(instanceRepository, orderRepository, patientRepository,
                 templateRepository, executionRepository, brakEventRepository, userRepository, parser,
-                instanceService, brakService, orderService, orderMapper, patientMapper);
+                instanceService, brakService, orderService, normativeService, orderMapper, patientMapper);
         service.setClock(Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
+        lenient().when(normativeService.get()).thenReturn(NORM);
     }
 
     // --- elapsed ---
@@ -165,20 +171,53 @@ class ProductionReadServiceTest {
 
     // --- attention flags ---
 
+    private static java.util.Set<String> flags(FlowInstanceStatus status, int brak, int rework,
+            Long assignee) {
+        return ProductionReadService.attentionFlags(status, brak, rework, assignee,
+                100L, 3600L, NOW.minusHours(1), NOW, NORM);
+    }
+
     @Test
     void attentionFlags_eachRuleSeparately() {
-        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.FAILED, 0, 0, 5L))
+        assertThat(flags(FlowInstanceStatus.FAILED, 0, 0, 5L))
                 .containsExactly(ProductionReadService.FLAG_FAILED);
-        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.IN_PROGRESS, 2, 0, 5L))
+        assertThat(flags(FlowInstanceStatus.IN_PROGRESS, 2, 0, 5L))
                 .containsExactly(ProductionReadService.FLAG_REPEAT_BRAK);
-        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.IN_PROGRESS, 1, 0, 5L))
+        assertThat(flags(FlowInstanceStatus.IN_PROGRESS, 1, 0, 5L))
                 .isEmpty();
-        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.BRANCHED, 1, 2, 5L))
+        assertThat(flags(FlowInstanceStatus.BRANCHED, 1, 2, 5L))
                 .containsExactlyInAnyOrder(
                         ProductionReadService.FLAG_REWORK);
-        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.NEW, 0, 0, null))
+        assertThat(flags(FlowInstanceStatus.NEW, 0, 0, null))
                 .containsExactly(ProductionReadService.FLAG_NO_ASSIGNEE);
-        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.IN_PROGRESS, 0, 0, 5L))
+        assertThat(flags(FlowInstanceStatus.IN_PROGRESS, 0, 0, 5L))
+                .isEmpty();
+    }
+
+    @Test
+    void attentionFlags_overdueAndStale() {
+        // Overdue: elapsed beyond expected * 1.5.
+        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.IN_PROGRESS, 0, 0, 5L,
+                5401L, 3600L, NOW.minusHours(1), NOW, NORM))
+                .containsExactly(ProductionReadService.FLAG_OVERDUE);
+        // Boundary: exactly at the norm is not overdue.
+        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.IN_PROGRESS, 0, 0, 5L,
+                5400L, 3600L, NOW.minusHours(1), NOW, NORM))
+                .isEmpty();
+        // Unknown norm never flags overdue.
+        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.IN_PROGRESS, 0, 0, 5L,
+                999999L, null, NOW.minusHours(1), NOW, NORM))
+                .isEmpty();
+        // Stale: open item idle for 7+ days.
+        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.PAUSED, 0, 0, 5L,
+                100L, 3600L, NOW.minusDays(7), NOW, NORM))
+                .containsExactly(ProductionReadService.FLAG_STALE);
+        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.PAUSED, 0, 0, 5L,
+                100L, 3600L, NOW.minusDays(6), NOW, NORM))
+                .isEmpty();
+        // Terminal statuses are never stale.
+        assertThat(ProductionReadService.attentionFlags(FlowInstanceStatus.COMPLETED, 0, 0, 5L,
+                100L, 3600L, NOW.minusDays(30), NOW, NORM))
                 .isEmpty();
     }
 
@@ -262,7 +301,9 @@ class ProductionReadServiceTest {
         assertThat(row.getExpectedActiveSeconds()).isEqualTo(60 * 60);
         assertThat(row.getActiveDeviationSeconds()).isEqualTo(3000L - 3600L);
         assertThat(row.getBrakCount()).isEqualTo(2);
-        assertThat(row.getAttentionFlags()).containsExactly(ProductionReadService.FLAG_REPEAT_BRAK);
+        // 10h elapsed vs 1h norm (K=1.5) also trips OVERDUE.
+        assertThat(row.getAttentionFlags()).containsExactlyInAnyOrder(
+                ProductionReadService.FLAG_REPEAT_BRAK, ProductionReadService.FLAG_OVERDUE);
         assertThat(row.isFailed()).isFalse();
     }
 

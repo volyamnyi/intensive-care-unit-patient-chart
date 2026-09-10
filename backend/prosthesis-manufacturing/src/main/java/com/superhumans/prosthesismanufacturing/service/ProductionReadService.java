@@ -77,6 +77,10 @@ public class ProductionReadService {
     public static final String FLAG_REWORK = "REWORK";
     /** Set when no prosthetist is assigned. */
     public static final String FLAG_NO_ASSIGNEE = "NO_ASSIGNEE";
+    /** Set on elapsed time beyond the editable norm (see ProductionNormativeService). */
+    public static final String FLAG_OVERDUE = ProductionNormativeService.FLAG_OVERDUE;
+    /** Set on open items without recent activity. */
+    public static final String FLAG_STALE = ProductionNormativeService.FLAG_STALE;
 
     final FlowInstanceRepository instanceRepository;
     final ProstheticsOrderRepository orderRepository;
@@ -89,6 +93,7 @@ public class ProductionReadService {
     final FlowInstanceService instanceService;
     final BrakService brakService;
     final ProstheticsOrderService orderService;
+    final ProductionNormativeService normativeService;
     final ProstheticsOrderMapper orderMapper;
     final ProstheticsPatientMapper patientMapper;
 
@@ -399,6 +404,8 @@ public class ProductionReadService {
         if (instances.isEmpty()) {
             return batch;
         }
+        // Single normative read per query; every row shares it.
+        batch.normative = normativeService.get();
         List<UUID> ids = instances.stream().map(FlowInstance::getId).toList();
 
         List<UUID> orderIds = instances.stream().map(FlowInstance::getOrderId)
@@ -451,6 +458,9 @@ public class ProductionReadService {
         long idle = nullToZero(instance.getTotalIdleSeconds());
         Long expected = expectedActiveSeconds(names.snapshot());
         Long deviation = deviation(active, expected);
+        long elapsed = elapsedSeconds(instance, now);
+        LocalDateTime lastActivity = instance.getUpdatedAt() != null
+                ? instance.getUpdatedAt() : instance.getCreatedAt();
         int braks = batch.brakCounts.getOrDefault(instance.getId(), 0);
         int reworks = batch.reworkCounts.getOrDefault(instance.getId(), 0);
         boolean failed = instance.getStatus() == FlowInstanceStatus.FAILED;
@@ -470,7 +480,7 @@ public class ProductionReadService {
                 .lastActivityAt(instance.getUpdatedAt())
                 .createdAt(instance.getCreatedAt())
                 .updatedAt(instance.getUpdatedAt())
-                .elapsedSeconds(elapsedSeconds(instance, now))
+                .elapsedSeconds(elapsed)
                 .activeSeconds(active)
                 .idleSeconds(idle)
                 .expectedActiveSeconds(expected)
@@ -479,7 +489,8 @@ public class ProductionReadService {
                 .reworkCount(reworks)
                 .failed(failed)
                 .attentionFlags(attentionFlags(instance.getStatus(), braks, reworks,
-                        instance.getAssignedUserId()));
+                        instance.getAssignedUserId(), elapsed, expected, lastActivity, now,
+                        batch.normative));
         if (order != null) {
             row.patientPib(order.getPatient() == null ? null : order.getPatient().getPib());
             row.orderNumber(order.getOrderNumber());
@@ -574,7 +585,9 @@ public class ProductionReadService {
     }
 
     static Set<String> attentionFlags(FlowInstanceStatus status, int brakCount,
-            int reworkCount, Long assignedUserId) {
+            int reworkCount, Long assignedUserId, long elapsedSeconds, Long expectedActiveSeconds,
+            LocalDateTime lastActivityAt, LocalDateTime now,
+            ProductionNormativeService.Normative normative) {
         Set<String> flags = new HashSet<>();
         if (status == FlowInstanceStatus.FAILED) {
             flags.add(FLAG_FAILED);
@@ -587,6 +600,12 @@ public class ProductionReadService {
         }
         if (assignedUserId == null) {
             flags.add(FLAG_NO_ASSIGNEE);
+        }
+        if (ProductionNormativeService.isOverdue(elapsedSeconds, expectedActiveSeconds, normative)) {
+            flags.add(FLAG_OVERDUE);
+        }
+        if (ProductionNormativeService.isStale(status, lastActivityAt, now, normative)) {
+            flags.add(FLAG_STALE);
         }
         return flags;
     }
@@ -653,5 +672,9 @@ public class ProductionReadService {
         Map<UUID, Long> activeSeconds = new HashMap<>();
         Map<UUID, Integer> brakCounts = new HashMap<>();
         Map<UUID, Integer> reworkCounts = new HashMap<>();
+        ProductionNormativeService.Normative normative =
+                new ProductionNormativeService.Normative(
+                        ProductionNormativeService.DEFAULT_OVERDUE_MULTIPLIER,
+                        ProductionNormativeService.DEFAULT_STALE_DAYS);
     }
 }

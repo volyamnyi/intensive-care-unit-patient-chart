@@ -9,6 +9,8 @@ const productionApiMock = vi.hoisted(() => ({
   list: vi.fn(),
   summary: vi.fn(),
   detail: vi.fn(),
+  getNormative: vi.fn(),
+  updateNormative: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
@@ -80,6 +82,9 @@ function mockOk(items: ProductionWorkItem[] = [item()], total = items.length) {
     data: { content: items, totalElements: total, totalPages: 1, number: 0, size: 20 },
   });
   productionApiMock.summary.mockResolvedValue({ data: summary });
+  productionApiMock.getNormative.mockResolvedValue({
+    data: { overdueMultiplier: 1.5, staleDays: 7 },
+  });
 }
 
 function renderPage() {
@@ -207,8 +212,24 @@ describe('ProductionPage', () => {
     });
   });
 
-  it('opens the detail drawer on open', async () => {
+  it('shows normative settings with VIEW_ALL and hides without', async () => {
     mockOk();
+    const { unmount } = renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Нормативи уваги')).toBeInTheDocument();
+    unmount();
+
+    mockCanViewAll = false;
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Нормативи уваги')).not.toBeInTheDocument();
+  });
+
+  it('opens the detail drawer on open', async () => {    mockOk();
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();

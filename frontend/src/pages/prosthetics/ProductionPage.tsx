@@ -16,6 +16,7 @@ import { productionApi } from '@/api/prosthetics';
 import { useAuth } from '@/services/AuthContext';
 import { getErrorMessage } from '@/utils/errorMessage';
 import ProductionWorkItemDrawer from '@/components/prosthetics/ProductionWorkItemDrawer';
+import ProductionNormativeSettings from '@/components/prosthetics/ProductionNormativeSettings';
 import type {
   FlowInstanceStatus,
   ProductionListParams,
@@ -441,6 +442,7 @@ export default function ProductionPage() {
         onClose={() => setSelectedId(null)}
         onOpenProcess={openProcess}
       />
+      {canViewAll && <ProductionNormativeSettings />}
     </div>
   );
 }

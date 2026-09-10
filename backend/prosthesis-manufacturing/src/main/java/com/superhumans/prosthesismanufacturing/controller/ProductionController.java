@@ -2,10 +2,12 @@ package com.superhumans.prosthesismanufacturing.controller;
 
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
+import com.superhumans.prosthesismanufacturing.dto.ProductionNormativeDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
 import com.superhumans.prosthesismanufacturing.dto.ProductionSummaryDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionTeamRowDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
+import com.superhumans.prosthesismanufacturing.service.ProductionNormativeService;
 import com.superhumans.prosthesismanufacturing.service.ProductionReadService;
 import com.superhumans.service.PermissionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +19,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,6 +44,7 @@ import java.util.UUID;
 public class ProductionController {
 
     ProductionReadService readService;
+    ProductionNormativeService normativeService;
     PermissionService permissionService;
     CurrentUser currentUser;
 
@@ -93,6 +98,23 @@ public class ProductionController {
         return readService.detail(id, currentUser.userId(),
                 permissionService.has(Codes.VIEW_ALL),
                 permissionService.has(Codes.PATIENT_VIEW));
+    }
+
+    @GetMapping("/settings/normative")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_PRODUCTION_VIEW_ALL')")
+    @Operation(summary = "Editable overdue/stale thresholds")
+    public ProductionNormativeDto getNormative() {
+        return ProductionNormativeService.toDto(normativeService.get());
+    }
+
+    @PutMapping("/settings/normative")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_PRODUCTION_VIEW_ALL')")
+    @Operation(summary = "Update overdue/stale thresholds (audited)")
+    public ProductionNormativeDto updateNormative(@RequestBody ProductionNormativeDto body) {
+        return ProductionNormativeService.toDto(normativeService.update(
+                body == null ? null : body.getOverdueMultiplier(),
+                body == null ? null : body.getStaleDays(),
+                currentUser.userId()));
     }
 
     private static ProductionQuery.Quality parseQuality(String quality) {

@@ -210,4 +210,41 @@ test.describe('Production monitoring API access controls', () => {
       (await request.get(`${PROSTH}/production/00000000-0000-0000-0000-000000000000`, { headers: h9 })).status(),
     ).toBe(404);
   });
+
+  test('normative settings: admin roundtrip, prosthetist forbidden, invalid rejected', async ({ request }) => {
+    expect((await request.get(`${PROSTH}/production/settings/normative`, { headers: h7 })).status()).toBe(403);
+    expect(
+      (await request.put(`${PROSTH}/production/settings/normative`, {
+        headers: h7,
+        data: { overdueMultiplier: 2, staleDays: 3 },
+      })).status(),
+    ).toBe(403);
+
+    const before = await request.get(`${PROSTH}/production/settings/normative`, { headers: h9 });
+    expect(before.ok()).toBeTruthy();
+    const beforeBody = (await before.json()) as { overdueMultiplier: number; staleDays: number };
+    expect(typeof beforeBody.overdueMultiplier).toBe('number');
+    expect(typeof beforeBody.staleDays).toBe('number');
+
+    const updated = await request.put(`${PROSTH}/production/settings/normative`, {
+      headers: h9,
+      data: { overdueMultiplier: 2, staleDays: 3 },
+    });
+    expect(updated.ok()).toBeTruthy();
+    expect(((await updated.json()) as { overdueMultiplier: number }).overdueMultiplier).toBe(2);
+
+    expect(
+      (await request.put(`${PROSTH}/production/settings/normative`, {
+        headers: h9,
+        data: { overdueMultiplier: 0.5, staleDays: 3 },
+      })).status(),
+    ).toBe(400);
+
+    // Restore defaults so later specs see a clean matrix.
+    const restored = await request.put(`${PROSTH}/production/settings/normative`, {
+      headers: h9,
+      data: { overdueMultiplier: 1.5, staleDays: 7 },
+    });
+    expect(restored.ok()).toBeTruthy();
+  });
 });
