@@ -1,5 +1,7 @@
 # ICU Patient Chart — AI Agent Guide
 
+**2026-09-11: Production monitoring dashboard — epic #271 code-complete, #282 docs (issues #272–#281 CLOSED; final full CI pending)** — read-only manufacturing overview at `/prosthetics/production` (Guard PROSTHETIST/PROSTHETICS_ADMINISTRATOR + `MODULE_PROSTHETICS` + `PROSTHETICS_PRODUCTION_VIEW`): `ProductionQuery`/`ProductionReadService` read-model (1 instance query + batch IN-aggregates, no per-row N+1; `@Slf4j` ms timings; `ProductionNormativeService` OVERDUE = elapsed > expected×K with K default 1.5 ∈ [1.0,5.0], STALE = open idle ≥ N days default 7 ∈ [1,30], single `findByKeyIn`, PUT audited; `SystemSettings` keys `prosthetics.production.overdueMultiplier/staleDays`), 4 RBAC codes (catalog 24→28 via `core/008-prosthetics-production-permissions.sql`; defaults: PROSTHETICS_ADMIN all 4, PROSTHETIST VIEW+QUALITY, HOD VIEW+VIEW_ALL) gating `ProductionController` (GET `/production` forced-assignee without VIEW_ALL, `/team` + `/settings/normative*` VIEW_ALL-only, `/attention` severity FAILED>OVERDUE>REPEAT_BRAK>REWORK>STALE>NO_ASSIGNEE, `/summary`, `/{id}` masked `{fullName}`-only without PATIENT_VIEW, failed series hidden without QUALITY_VIEW). Frontend `ProductionPage.tsx` (9 KPI cards, filters, sticky-first-column table, pagination) + `ProductionWorkItemDrawer` + `ProductionNormativeSettings` + `ProductionTrendChart` (`recharts@3.10.1` exact + `ui/chart.tsx` + `--chart-1..5`; client-side `bucketTrend` → `TrendPoint{date,label,created,completed,failed}`: created=`startTime ?? createdAt`, terminal=`endTime`, future ignored). Time math: active=SUM(`StepExecution.activeSeconds`), rework=COUNT(children by `parentInstanceId`), failed=`status FAILED`, names/norms from immutable `templateSnapshot`, orderNumber=`MIS-{patientId}-{documentId}` → `matchDocument`. #280 wont-do (no reassignment op exists). #281 local evidence: backend integration 233/233 GREEN (fresh `*_t` DBs), backend unit clean except pre-existing `CorsConfigTest` (foreign dirty file) + `TpLl02SeedValidationTest` (Windows-Cyrillic flake), Vitest 93 files/841, `ModuleBoundaryTest` 6/6; E2E `production-access/dashboard/team` run in final CI (intermediate CI `34530390354` on #274-code failed setup `need 2 MIS order documents, Received: 0` — live-MIS data risk for the final loop). Local lessons: `-Dtest` overrides pom excludes (unit run pulled `*IntegrationTest` without profile); bare `-pl` without `-am` resolves stale `~/.m2` `common-1.0.0.jar` (pre-`8c6d7b8` users-upsert → false `SeedDataPasswordIdempotencyIntegrationTest` failure); pg-t `max_connections` 100→300 for full local integration.
+
 **2026-09-09: Migrate medicine search and selection to MIS API (issue #263, CLOSED — code-complete, CI green; close-summary recorded in issue comments)** — the shared medicine-catalog search contract now lives in one hook: new `frontend/src/components/prescription/useMedicineSearch.ts` (`useMedicineSearch(keyword, search?)` → `{ options, loading, error, active, retry }`; `MEDICINE_SEARCH_DEBOUNCE_MS=300`; debounces every keystroke, aborts the in-flight request via `AbortController`, ignores stale responses so a slow query A can never overwrite a faster query B; empty results are a real empty state NOT an error; no client-side cache and no fallback data — the catalog comes from MIS `GET /prescriptions/medicine-catalog`, errors surface honestly as «Не вдалося завантажити каталог ліків з MIS» + retry). `MedicineSearchInput` (the «Листок» add row, production) and `PrescriptionItemForm` (item creation) both moved onto the hook; their `onSearchMedicine` prop is now optional (defaults to the live catalog via `prescriptionApi.getMedicineCatalog(keyword, signal)`) and accepts an `AbortSignal`. Disabled rendering: an item with `itemKindIsDisabled === true` renders non-selectable (muted, `cursor-not-allowed`, `aria-disabled`, no-op click) — never hidden; `MedicineSearchInput` keeps the typed-name (free-text) submit so `prescription-add-drug.spec.ts` stays green; `PrescriptionItemForm` requires an explicit selection. TypeScript: `MedicationCatalogItem` gains `itemKindIsDisabled?: boolean | null` (backend `MedicineCatalogResponse.itemKindIsDisabled` already maps from `MedicineMisDTO`). Prescription/dose logic and the E2E contract are unchanged. Tests: co-located `useMedicineSearch.test.ts` (fake timers — debounce, sub-threshold no-call, abort+ignore-stale, result resolution, empty-not-error, rejection → error, retry re-runs last query, default catalog-API fallback), `MedicineSearchInput.test.tsx` (disabled-not-selectable, empty state, retry) + `PrescriptionItemForm.test.tsx` (call-arg + disabled/empty/error dropdown). `tests/helpers/medication.ts` `firstCatalogMedicine` prefers a non-disabled item so E2E never targets a non-selectable row. Pre-flight: `tsc` clean, lint 0 errors, build green.
 
 **2026-09-09: PDF transfer to MIS banned, in-module printing (issue #269, CLOSED — CI green run `34390932379`, head `136ce12`; close-summary recorded in issue comments)** — MIS is now strictly read-only with no exceptions: deleted `MisService.sendPdf` + impl (was a stub: audit + log only, never called MIS), stripped `PdfGeneratorService` (local generate/store, single save), deleted `TransferStatus` enum + entity fields + `findByTransferStatus` + `PdfResponse` transfer fields + `GET /pdf/status` (404-regression test), new `GET /clinical-days/{id}/pdf/file` serves bytes (`application/pdf`); Liquibase `icu/007-drop-pdf-transfer.sql` drops the 3 columns (full rollback). Frontend: new `lib/printPdf.ts` (hidden-iframe print) + Vitest; ICU day page gains «Завантажити»/«Друкувати» on closed days; prosthetics Done/Failed screens gain «Друкувати PDF». Tests: `PdfGeneratorServiceTest` local-only (+ getPdfBytes cases), `PdfControllerTest` bytes + status-404, new `MisWriteBanTripwireTest` (no `sendPdf` in `src/main`), endpoints + PatientDayPage Vitest, pdf-generation E2E (+ file-bytes `%PDF` + status-404). Docs: MIS Data Policy absolute in AGENTS.md/README/Javadoc, UseManual print section, runbook/SKILL mock-vars rewritten to single-mode reality. Pre-flight: `mvn test-compile` clean, lint 0 errors, `tsc` clean, build green, `--list` 412 tests.
@@ -200,10 +202,10 @@ frontend/  (React 19 + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Base UI, single 
   src/services/, src/layouts/, src/lib/, src/utils/  ← AuthContext, Doctor/Nurse/Global layouts, shared helpers
 backend/   (Spring Boot 4.1.0 + Java 25 + Maven, multi-module; dependency direction: common ← feature modules ← app)
   pom.xml                   ← parent POM (pom packaging, 5 modules)
-  common/                   ← shared platform leaf (no internal deps; 119 main sources): `@SpringBootApplication` main class `com.superhumans.IcuPatientChartApplication` (mainClass of the runnable JAR), platform controllers (auth/user/patient/admin/audit/settings), `entity/base` (BaseEntity) + `entity/core` (User, UserRole, Permission, RolePermission, AuditLog, SystemSettings, ReferenceValue), `repository/core`, auth (JWT), config (security, CORS, multi-DB wiring, SpringContext), exception, mapper, mis, service (AuthService, AuditService, PermissionService, PermissionCatalog), util
-  icu-chart/                ← ICU chart feature (84 main sources): `com.superhumans.icu.*` (entities + repositories) + ICU domain root packages (controller ×13, service ×20, dto, mapper); depends on common
-  medication-sheet/         ← medication sheet feature (61 main sources): `com.superhumans.medicationsheet.*` (entity/dto/repository/service/controller/mapper/config); depends on common
-  prosthesis-manufacturing/ ← prosthetics manufacturing feature (84 main sources): `com.superhumans.prosthesismanufacturing.*` (entity/dto/repository/service/controller/mapper/config); depends on common
+  common/                   ← shared platform leaf (no internal deps; 125 main sources): `@SpringBootApplication` main class `com.superhumans.IcuPatientChartApplication` (mainClass of the runnable JAR), platform controllers (auth/user/patient/admin/audit/settings), `entity/base` (BaseEntity) + `entity/core` (User, UserRole, Permission, RolePermission, AuditLog, SystemSettings, ReferenceValue), `repository/core`, auth (JWT), config (security, CORS, multi-DB wiring, SpringContext), exception, mapper, mis, service (AuthService, AuditService, PermissionService, PermissionCatalog), util
+  icu-chart/                ← ICU chart feature (83 main sources): `com.superhumans.icu.*` (entities + repositories) + ICU domain root packages (controller ×13, service ×20, dto, mapper); depends on common
+  medication-sheet/         ← medication sheet feature (54 main sources): `com.superhumans.medicationsheet.*` (entity/dto/repository/service/controller/mapper/config); depends on common
+  prosthesis-manufacturing/ ← prosthetics manufacturing feature (89 main sources): `com.superhumans.prosthesismanufacturing.*` (entity/dto/repository/service/controller/mapper/config); depends on common
   app/                      ← deployable shell (no production code): depends on common + 3 features; the spring-boot plugin repackages the runnable JAR (mainClass in common); hosts the ArchUnit boundary test (`app/src/test/java/com/superhumans/architecture/ModuleBoundaryTest.java`)
 tests/     (Playwright 1.61)
 ```
@@ -216,7 +218,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 - JWT auth delivered via an **httpOnly `jwt` cookie** (SameSite=Lax) set on login and cleared on logout; axios uses `withCredentials: true` with no Authorization header. `localStorage` holds only a lightweight `auth:session` flag - never the token.
 - Backend port: **8085** (`application.yml`).
-- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (25 SQL files total: core 7, icu 7, med 2, prosth 9 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`; `core/007-ldap-auth-provider.sql` adds `users.auth_provider` and relaxes `password_hash` nullability with a guarded rollback):
+- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (26 SQL files total: core 8, icu 7, med 2, prosth 9 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`; `core/007-ldap-auth-provider.sql` adds `users.auth_provider` and relaxes `password_hash` nullability with a guarded rollback):
 
   | Database | Module | Purpose / contents |
   |---|---|---|
@@ -326,9 +328,9 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 ## Testing
 
-- **Backend**: 340 main sources / 154 test files across the multi-module reactor (common 125/25, icu-chart 83/75, medication-sheet 54/16, prosthesis-manufacturing 78/37, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 796 Vitest tests across 87 test files (134 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 410 Playwright tests across 88 spec files in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Backend**: 351 main sources / 167 test files across the multi-module reactor (common 125/25, icu-chart 83/76, medication-sheet 54/16, prosthesis-manufacturing 89/49, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 841 Vitest tests across 93 test files (141 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **E2E**: 438 Playwright tests across 94 spec files in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
@@ -419,7 +421,7 @@ AuditLog (standalone, no BaseEntity)
 | `ScaleResult` | BaseEntity | clinicalDay(M→1)(nullable), scale(M→1), result(text), episodeId(UUID), rawData(jsonb), calculatedAt, calculatedBy | Auto-calculates GCS/RASS from consciousness |
 | `FluidBalance` | BaseEntity | clinicalDay(M→1), hour, intake, output, balance, cumulativeBalance | Recalculated on HourlyRecord changes |
 | `Signature` | BaseEntity | clinicalDay(M→1), userId, role, signedAt, hash, status | — |
-| `Permission` | — | code(PK), label, description, category | Dictionary of the RBAC catalog (25 codes) |
+| `Permission` | — | code(PK), label, description, category | Dictionary of the RBAC catalog (28 codes) |
 | `RolePermission` | — | role(PK, UserRole), permissionCode(PK→Permission) | Default-deny grants; presence = granted |
 | `GeneratedPdf` | BaseEntity | clinicalDay(M→1), fileName, fileVersion, generatedAt, generatedBy, checksum, fileData(byte[]) | Transfer columns + `TransferStatus` removed in #269 (PDFs stay local — see Liquibase `icu/007-drop-pdf-transfer.sql`) |
 | `SystemSettings` | BaseEntity | key(unique), value(TEXT), description(TEXT) | — |
@@ -566,6 +568,13 @@ All endpoints prefixed with `/api`.
 | GET | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | Yes | Get failure snapshot |
 | GET | `/api/prosthesis-manufacturing/instances/{id}/pdf` | Yes | Generate PDF report for instance |
 | POST | `/api/prosthesis-manufacturing/evidence-files` | Yes (PROSTHETIST) | Upload evidence file |
+| GET | `/api/prosthesis-manufacturing/production` | Yes (`PROSTHETICS_PRODUCTION_VIEW`; assignee forced to self without `VIEW_ALL`) | Production work items, paged |
+| GET | `/api/prosthesis-manufacturing/production/summary` | Yes (`PROSTHETICS_PRODUCTION_VIEW`) | 9 KPI cards |
+| GET | `/api/prosthesis-manufacturing/production/attention` | Yes (`PROSTHETICS_PRODUCTION_VIEW`) | Attention queue, severest first |
+| GET | `/api/prosthesis-manufacturing/production/team` | Yes (`PROSTHETICS_PRODUCTION_VIEW_ALL`) | Workload per prosthetist |
+| GET | `/api/prosthesis-manufacturing/production/{id}` | Yes (`PROSTHETICS_PRODUCTION_VIEW`; masked without `PATIENT_VIEW`) | Work-item detail |
+| GET | `/api/prosthesis-manufacturing/production/settings/normative` | Yes (`PROSTHETICS_PRODUCTION_VIEW_ALL`) | Read overdue/stale normatives |
+| PUT | `/api/prosthesis-manufacturing/production/settings/normative` | Yes (`PROSTHETICS_PRODUCTION_VIEW_ALL`) | Update normatives (audited) |
 
 ## Frontend Routes
 
@@ -585,6 +594,7 @@ All endpoints prefixed with `/api`.
 | `/prescriptions/nurse` | `NursePrescriptionPage` | NURSE (or `MODULE_MEDICATION_ACCESS`, excl. DOCTOR/HOD) |
 | `/prescriptions/nurse/:id` | `PrescriptionDetailPage` | NURSE (or module perm) |
 | `/prosthetics` | `ProstheticsDashboard` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR (or `MODULE_PROSTHETICS_ACCESS`) |
+| `/prosthetics/production` | `ProductionPage` | PROSTHETIST, PROSTHETICS_ADMINISTRATOR (or `MODULE_PROSTHETICS_ACCESS`) + `PROSTHETICS_PRODUCTION_VIEW` |
 | `/prosthetics/new/select-patient` | `PatientSearchPage` | same |
 | `/prosthetics/new/select-order` | `OrderSelectPage` | same |
 | `/prosthetics/new/review-order` | `OrderReviewPage` | same |
@@ -598,14 +608,14 @@ All endpoints prefixed with `/api`.
 
 ## Frontend Components
 
-### Pages (28)
+### Pages (29)
 | Area | Files |
 |---|---|
 | root | `LoginPage.tsx`, `AppSelectorPage.tsx` |
 | `doctor/` | `DashboardPage.tsx`, `DepartmentDashboardPage.tsx` (HOD), `CreateCardPage.tsx`, `PatientDayPage.tsx` |
 | `nurse/` | `NurseDashboardPage.tsx` |
 | `prescription/` | `PrescriptionPage.tsx`, `PrescriptionDetailPage.tsx`, `NursePrescriptionPage.tsx` |
-| `prosthetics/` | `ProstheticsDashboard.tsx`, `DashboardPage.tsx`; `setup/` — `PatientSearchPage`, `OrderSelectPage`, `OrderReviewPage`, `TemplateSelectPage` + steps (`OrderStep`, `PatientStep`, `ReviewStep`, `TemplateStep`); `process/` — `ProcessDetail`, `ProcessHistoryPage`, `ProcessLayout`, `ProcessOverview`, `WizardScreen`, `DoneScreen`, `FailedScreen`, `MeasurementForms` |
+| `prosthetics/` | `ProstheticsDashboard.tsx`, `DashboardPage.tsx`, `ProductionPage.tsx`; `setup/` — `PatientSearchPage`, `OrderSelectPage`, `OrderReviewPage`, `TemplateSelectPage` + steps (`OrderStep`, `PatientStep`, `ReviewStep`, `TemplateStep`); `process/` — `ProcessDetail`, `ProcessHistoryPage`, `ProcessLayout`, `ProcessOverview`, `WizardScreen`, `DoneScreen`, `FailedScreen`, `MeasurementForms` |
 | `admin/` | `AdminPage.tsx` (users, RBAC matrix «Доступи та ролі», audit log gated by `AUDIT_ACCESS`, stats) |
 
 ### Components by feature
@@ -615,13 +625,13 @@ All endpoints prefixed with `/api`.
 | `components/monitoring/` | `HourlyGrid` (24-h grid, therapy cells, plan/execute, critical flash), `HourlyGridDialog` (fullscreen modal with undo/status/critical chip), `IntensiveCareCard` (central ICU card), `DoctorDashboard`, `NurseDashboard`, `PatientSidebar`, `criticalRanges.ts` (alarm thresholds), `dashboardTypes.ts` |
 | `components/prescription/` | `PrescriptionGrid`, `PrescriptionSpreadsheet`, `PrescriptionTable`, `PrescriptionItemTable`, `PrescriptionItemForm`, `PrescriptionExecutionPanel`, `VitalSignGrid`, `VitalSignForm`, `DayPartPlanner`, `MedicineSearchInput`, `AllergyWarning`, `ClosePrescriptionDialog`, `DeleteConfirmPopover`, `ExecuteDosePopover`, `prescriptionDayParts.ts` |
 | `components/common/` | `PatientSearch.tsx`, `ThemeToggle.tsx`, `AuditLogTable.tsx` (shared, feature-free) |
-| `components/prosthetics/` | `StatusBadge`, `SetupSteps`, `ProcessStat` |
+| `components/prosthetics/` | `StatusBadge`, `SetupSteps`, `ProcessStat`, `ProductionWorkItemDrawer`, `ProductionNormativeSettings`, `ProductionTrendChart` |
 | `components/navigation/` | `AppSidebar.tsx`, `Breadcrumbs.tsx` |
-| `components/ui/` | shadcn-style Base UI primitives: `button`, `input`, `card`, `dialog`, `table`, `select`, `tabs`, `switch`, `checkbox`, `radio-group`, `dropdown-menu`, `popover`, `tooltip`, `progress`, `skeleton`, `sonner`, … |
+| `components/ui/` | shadcn-style Base UI primitives: `button`, `input`, `card`, `dialog`, `table`, `select`, `tabs`, `switch`, `checkbox`, `radio-group`, `dropdown-menu`, `popover`, `tooltip`, `progress`, `skeleton`, `sonner`, `chart` (Recharts port for the production trend), … |
 
 ### API Client (`frontend/src/api/`)
 - **`client.ts`**: Axios instance → `http://localhost:8085/api`, JWT interceptor
-- **Per-feature modules** (no barrel): `platform.ts` (auth, patient, user, settings, audit, admin), `icu.ts` (episode, clinicalDay, hourlyRecord, medicalOrder, orderExecution, medicalNote, clinicalScale, fluidBalance, pdf, patientState, ventilation, labResult, department), `medication.ts` (prescription, vitalSign); prosthetics APIs in `prosthetics.ts` (isolated). Shared DTO types live in `types/core.ts`, ICU types in `types/icu.ts`, medication types in `types/medication.ts`.
+- **Per-feature modules** (no barrel): `platform.ts` (auth, patient, user, settings, audit, admin), `icu.ts` (episode, clinicalDay, hourlyRecord, medicalOrder, orderExecution, medicalNote, clinicalScale, fluidBalance, pdf, patientState, ventilation, labResult, department), `medication.ts` (prescription, vitalSign); prosthetics APIs in `prosthetics.ts` (isolated, incl. `productionApi`: list/team/attention/summary/detail/normative). Shared DTO types live in `types/core.ts`, ICU types in `types/icu.ts`, medication types in `types/medication.ts`; production DTOs live in `src/prosthetics/types.ts`, the trend `TrendPoint` in `lib/productionTrend.ts`.
 
 ### Auth (`frontend/src/services/AuthContext.tsx`)
 - `AuthProvider` with user/token state, login/logout, role checking
@@ -634,7 +644,7 @@ All endpoints prefixed with `/api`.
 `LoginRequest`, `EpisodeCreateRequest`, `EpisodePatchRequest`, `EpisodeCloseRequest`, `ClinicalDayCreateRequest`, `ClinicalDayPatchRequest`, `HourlyRecordCreateRequest`, `HourlyRecordPatchRequest`, `MedicalOrderCreateRequest`, `MedicalOrderPatchRequest`, `MedicalNoteCreateRequest`, `MedicalNotePatchRequest`, `ScaleResultCreateRequest`, `ScaleResultPatchRequest`, `ScaleResultCalculateRequest`, `OrderExecutionCreateRequest`, `OrderExecutionPatchRequest`, `SignRequest`, `ReopenRequest` (19 total)
 
 ### Response DTOs
-`LoginResponse`, `EpisodeResponse`, `ClinicalDayResponse`, `HourlyRecordResponse`, `MedicalOrderResponse`, `OrderExecutionResponse`, `MedicalNoteResponse`, `ScaleResultResponse`, `FluidBalanceResponse`, `SignResponse`, `PdfResponse`, `UserResponse`, `AuditLogResponse`, `ErrorResponse` (14 total)
+`LoginResponse`, `EpisodeResponse`, `ClinicalDayResponse`, `HourlyRecordResponse`, `MedicalOrderResponse`, `OrderExecutionResponse`, `MedicalNoteResponse`, `ScaleResultResponse`, `FluidBalanceResponse`, `SignResponse`, `PdfResponse`, `UserResponse`, `AuditLogResponse`, `ErrorResponse` (14 total). Prosthetics production DTOs (`ProductionWorkItemDto`, `ProductionSummaryDto`, `ProductionDetailDto`, `ProductionTeamRowDto`, `ProductionNormativeDto`) live in the prosthesis-manufacturing module.
 
 ## Backend Services (by module)
 
@@ -644,7 +654,7 @@ All endpoints prefixed with `/api`.
 | `AuthService` | Login with password verification + JWT generation |
 | `AuditService` | Create/query audit log entries with pagination |
 | `PermissionService` | Dynamic RBAC: `has/hasAny/hasForRole` (SpEL for `@PreAuthorize`), matrix read, grant/revoke with cache invalidation + audit, first-boot seeding of defaults |
-| `PermissionCatalog` | RBAC catalog: 24 permission codes across 8 categories, role defaults for seeding |
+| `PermissionCatalog` | RBAC catalog: 28 permission codes across 8 categories, role defaults for seeding |
 
 ### ICU chart (`icu-chart`, 16)
 | Service | Responsibility |
@@ -671,7 +681,7 @@ All endpoints prefixed with `/api`.
 | `MedicineCatalogService`, `DrugInteractionService` | Medicine catalog + allergy/drug-interaction checks |
 | `NotificationService`, `LogNotificationService`, `LogEmailService`, `EmailService` | Telegram/e-mail notifications (logging fallbacks in tests) |
 
-### Prosthetics manufacturing (`prosthesis-manufacturing`, 10)
+### Prosthetics manufacturing (`prosthesis-manufacturing`, 12)
 | Service | Responsibility |
 |---|---|
 | `ProstheticsPatientService`, `ProstheticsOrderService`, `ProstheticsPdfService` | Patient/order CRUD + PDF generation |
@@ -679,6 +689,8 @@ All endpoints prefixed with `/api`.
 | `FlowInstanceService` | Instance lifecycle (create, pause, resume, complete steps) |
 | `FailureSnapshotService` | Failure capture + PDF report |
 | `EvidenceFileService` | File upload (images/PDFs, 10MB limit) |
+| `ProductionReadService` | Production read-model: list/summary/attention/team/detail with batch aggregates + flags |
+| `ProductionNormativeService` | Overdue/stale normatives over `SystemSettings` (defaults K=1.5, 7 days) |
 | `MisOrderTemplateDataService`, `TemplateSnapshotParser`, `MisOrderTemplateData` | Template parsing from MIS order data |
 
 ## Compliance Fixes Applied
@@ -700,7 +712,7 @@ All endpoints prefixed with `/api`.
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer to MIS banned (#269) | `TransferStatus` + `GeneratedPdf.transferStatus/transferError/transferredAt` removed (Liquibase `icu/007-drop-pdf-transfer.sql`); PDFs stay local — `GET /clinical-days/{id}/pdf/file` serves bytes, in-module print via `lib/printPdf.ts` |
 | §98 | MIS calls audited | `MisServiceImpl` methods call `auditService.logAction()`; `sendPdf()` removed in #269 (guarded by `MisWriteBanTripwireTest`) |
-| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (25 SQL files: core 7, icu 7, med 2, prosth 9); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
+| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (26 SQL files: core 8, icu 7, med 2, prosth 9); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
 
 ## Key Patterns
 
@@ -737,7 +749,7 @@ All endpoints prefixed with `/api`.
 - **TypeScript**: `erasableSyntaxOnly: true` — no enums, no namespaces
 - **Roles**: Gate in backend (Spring Security `@PreAuthorize`) and frontend (`Guard` component)
 - **Routing**: `/icu/doctor/*` for DOCTOR/HOD, `/icu/nurse/*` for NURSE, `/prescriptions/*` for medication sheet, `/prosthetics/*` for prosthetics, `/admin/*` for ADMINISTRATOR
-- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 25 SQL files); never write manual DDL
+- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 26 SQL files); never write manual DDL
 - **Data seeding**: Only via `SeedDataInitializer` — one script per module: `data-core.sql`, `data-icu.sql`, `data-med.sql`, `data-prosth.sql` (in `backend/common/src/main/resources/`), executed on the matching datasource; gated by `app.seed-data.enabled: true`. Never write manual seed DDL.
 - **Test seed data**: Integration tests use `data-test-core.sql` / `data-test-icu.sql` / `data-test-med.sql` (in `backend/icu-chart/src/test/resources/`) with plain INSERTs, routed per-datasource via `@Sql` + `@SqlConfig(dataSource = ...)` (plus `data-prescription.sql` with `@SqlConfig(dataSource = "medDataSource", separator = "GO")`) on a fresh PostgreSQL database. The production seed files keep `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). The `users` inserts in `data-core.sql` use `ON CONFLICT (login) DO NOTHING` — a demo password is **never** overwritten on restart (A2, CWE-798). Modified data may persist across restarts. Reset each DB with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 

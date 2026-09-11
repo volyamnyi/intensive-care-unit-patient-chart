@@ -58,6 +58,7 @@
 - **Failure Handling** — Failure snapshot capture (allowlisted category, description, attachments); FAILED is terminal (no replacement)
 - **PDF Reports** — Recipe PDF (order review), Instance PDF (Done screen), Failure PDF (Failed screen)
 - **Evidence Upload** — Image/PDF uploads (10 MB limit) per step
+- **Production Monitoring** — Read-only manufacturing overview at `/prosthetics/production`: 9 KPI cards, status/assignee/overdue filters, work-item table with pagination, detail drawer, team workload, attention queue, editable overdue/stale normatives, throughput area chart (`recharts`)
 
 ### Global UI
 - **GlobalLayout** — Unified AppBar header with dynamic route-based titles for all pages
@@ -98,6 +99,7 @@
 | React Router DOM | 7.18 | Client-side routing |
 | Sonner | 2.0 | Toast notifications |
 | Day.js | 1.11 | Date manipulation |
+| Recharts | 3.10.1 (exact pin) | Throughput area chart on the production monitoring page |
 | Oxlint | 1.73 | Linter |
 | Vitest | 3.2 | Unit testing |
 
@@ -418,6 +420,13 @@ java -jar app/target/app-*.jar
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | PROSTHETIST, PROSTHETICS_ADMIN | Get failure snapshot |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/pdf` | PROSTHETIST, PROSTHETICS_ADMIN | Generate PDF report for instance |
 | `POST` | `/api/prosthesis-manufacturing/evidence-files` | PROSTHETIST | Upload evidence file |
+| `GET` | `/api/prosthesis-manufacturing/production` | `PROSTHETICS_PRODUCTION_VIEW` | Production work items, paged (assignee forced to self without `VIEW_ALL`) |
+| `GET` | `/api/prosthesis-manufacturing/production/summary` | `PROSTHETICS_PRODUCTION_VIEW` | 9 KPI cards for the dashboard |
+| `GET` | `/api/prosthesis-manufacturing/production/attention` | `PROSTHETICS_PRODUCTION_VIEW` | Attention queue, severest first (FAILED > OVERDUE > REPEAT_BRAK > REWORK > STALE > NO_ASSIGNEE) |
+| `GET` | `/api/prosthesis-manufacturing/production/team` | `PROSTHETICS_PRODUCTION_VIEW_ALL` | Workload per prosthetist |
+| `GET` | `/api/prosthesis-manufacturing/production/{id}` | `PROSTHETICS_PRODUCTION_VIEW` | Work-item detail (patient masked without `PATIENT_VIEW`) |
+| `GET` | `/api/prosthesis-manufacturing/production/settings/normative` | `PROSTHETICS_PRODUCTION_VIEW_ALL` | Read overdue/stale normatives |
+| `PUT` | `/api/prosthesis-manufacturing/production/settings/normative` | `PROSTHETICS_PRODUCTION_VIEW_ALL` | Update normatives (audited) |
 
 ### Vital Signs
 | Method | URL | Auth | Description |
@@ -474,8 +483,8 @@ icu-patient-chart/
 │   │   │                         security config, multi-DB wiring, platform controllers (auth/user/patient/admin/audit/
 │   │   │                         settings), `entity/base` + `entity/core` (User, Permission, RolePermission,
 │   │   │                         AuditLog, ...), `repository/core`, exception handlers, MIS client, services (Auth,
-│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 21
-│   │   │                         SQL files in `db/changelog/{core (7), icu (7), med (2), prosth (9)}/`)
+│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 26
+│   │   │                         SQL files in `db/changelog/{core (8), icu (7), med (2), prosth (9)}/`)
 │   ├── icu-chart/              ← ICU chart feature: `com.superhumans.icu.*` (entities + repositories) + ICU domain
 │   │                             packages (controller ×13, service ×16, dto, mapper); depends on common
 │   ├── medication-sheet/       ← medication sheet feature (`com.superhumans.medicationsheet.*`); depends on common
@@ -497,8 +506,8 @@ icu-patient-chart/
 │       ├── services/           # AuthContext
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
-│       └── test/               # Vitest tests (87 files)
-├── tests/                      # Playwright E2E (88 spec files, 10 projects)
+│       └── test/               # Vitest tests (93 files)
+├── tests/                      # Playwright E2E (94 spec files, 10 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -519,8 +528,8 @@ icu-patient-chart/
 | `mvn -pl app spring-boot:run` | Dev server on `:8085` |
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
-| `mvn test` | Run unit tests (154 test files) |
-| `mvn test -Pintegration-test` | Run integration tests (85) — requires Docker/PostgreSQL |
+| `mvn test` | Run unit tests (167 test files) |
+| `mvn test -Pintegration-test` | Run integration tests (233) — requires Docker/PostgreSQL |
 
 #### Frontend
 | Command | Action |
@@ -529,12 +538,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (796 across 87 files) |
+| `npm t` | Run Vitest tests (841 across 93 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (88 spec files, 410 tests) |
+| `npx playwright test` | Run all E2E tests (94 spec files, 438 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -585,7 +594,7 @@ chore: maintenance tasks
 
 ### Role Permissions
 
-Access is enforced by a **dynamic role-permission matrix** (24 permission codes across 8 categories in `PermissionCatalog`). The table below lists each permission (code and label) and the roles **granted it by default** via `PermissionCatalog.defaultMatrix()`. Administrators can change these grants at runtime through the admin UI («Доступи та ролі»), and the changes take effect immediately.
+Access is enforced by a **dynamic role-permission matrix** (28 permission codes across 8 categories in `PermissionCatalog`). The table below lists each permission (code and label) and the roles **granted it by default** via `PermissionCatalog.defaultMatrix()`. Administrators can change these grants at runtime through the admin UI («Доступи та ролі»), and the changes take effect immediately.
 
 | Permission (code → label) | DOCTOR | NURSE | HOD | ADMIN | AUDITOR | ADJ. SPECIALIST | PROSTHETIST | PROSTH. ADMIN |
 |---|---|---|---|---|---|---|---|---|
@@ -613,6 +622,10 @@ Access is enforced by a **dynamic role-permission matrix** (24 permission codes 
 | `MODULE_MEDICATION_ACCESS` — Модуль: Листок призначень | ✓ | ✓ | ✓ | — | — | — | — | — |
 | `MODULE_PROSTHETICS_ACCESS` — Модуль: Виробництво протезів | — | — | — | — | — | — | ✓ | ✓ |
 | `MODULE_ADMIN_ACCESS` — Модуль: Адміністрування | — | — | — | ✓ | ✓ | — | — | — |
+| `PROSTHETICS_PRODUCTION_VIEW` — Моніторинг виробництва | — | — | ✓ | — | — | — | ✓ | ✓ |
+| `PROSTHETICS_PRODUCTION_VIEW_ALL` — Виробництво всіх протезистів | — | — | ✓ | — | — | — | — | ✓ |
+| `PROSTHETICS_PRODUCTION_PATIENT_VIEW` — Дані пацієнта у виробництві | — | — | — | — | — | — | — | ✓ |
+| `PROSTHETICS_PRODUCTION_QUALITY_VIEW` — Якість виробництва | — | — | — | — | — | — | ✓ | ✓ |
 
 > **Notes**
 > - `HOD` = `HEAD_OF_DEPARTMENT`; `ADJ. SPECIALIST` = `ADJACENT_SPECIALIST`; `PROSTH. ADMIN` = `PROSTHETICS_ADMINISTRATOR`.
