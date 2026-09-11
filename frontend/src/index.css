@@ -61,6 +61,15 @@
   --breakpoint-xl: 80rem;
 }
 
+/* Chart palette (brand-derived, epic #271): created / completed / failed. */
+:root {
+  --chart-1: #64B5F6;
+  --chart-2: #059669;
+  --chart-3: #FF5252;
+  --chart-4: #FFC107;
+  --chart-5: #FF8C66;
+}
+
 .dark {
   --color-background: #0D0D0D;
   --color-foreground: #FFFFFF;
@@ -83,6 +92,14 @@
   --color-mint-foreground: #020617;
   --color-success-foreground: #1F1F1F;
   --color-warning-foreground: #1F1F1F;
+}
+
+.dark {
+  --chart-1: #7FBDF7;
+  --chart-2: #10b981;
+  --chart-3: #FF6B6B;
+  --chart-4: #FFD54F;
+  --chart-5: #FF8C66;
 }
 
 /* Base animations */

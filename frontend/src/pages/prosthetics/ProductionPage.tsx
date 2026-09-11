@@ -19,6 +19,7 @@ import { getErrorMessage } from '@/utils/errorMessage';
 import { FLAG_LABELS, STATUS_LABELS, formatDurationSeconds } from '@/lib/production';
 import ProductionWorkItemDrawer from '@/components/prosthetics/ProductionWorkItemDrawer';
 import ProductionNormativeSettings from '@/components/prosthetics/ProductionNormativeSettings';
+import ProductionTrendChart from '@/components/prosthetics/ProductionTrendChart';
 import type {
   FlowInstanceStatus,
   ProductionListParams,
@@ -359,6 +360,11 @@ export default function ProductionPage() {
 
         {section === 'items' && (
           <>
+            {canViewAll && (
+              <div className="mb-6">
+                <ProductionTrendChart />
+              </div>
+            )}
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {canViewAll && (
                 <Select
@@ -448,7 +454,7 @@ export default function ProductionPage() {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
-            ) : rows.length === 0 ? (
+            ) : error || denied ? null : rows.length === 0 ? (
               <div className="py-12 text-center">
                 <p className="text-muted-foreground">Немає виробів за поточними фільтрами</p>
               </div>
@@ -531,13 +537,13 @@ export default function ProductionPage() {
         )}
 
         {section === 'team' && canViewAll && (
-          teamLoading || team === null ? (
+          teamLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : team.length === 0 ? (
+          ) : team === null ? null : team.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-muted-foreground">Немає даних про навантаження команди</p>
             </div>
@@ -584,13 +590,13 @@ export default function ProductionPage() {
         )}
 
         {section === 'attention' && (
-          attentionLoading || attention === null ? (
+          attentionLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : attention.length === 0 ? (
+          ) : attention === null ? null : attention.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-muted-foreground">Проблемних виробів немає — усе в нормі</p>
             </div>

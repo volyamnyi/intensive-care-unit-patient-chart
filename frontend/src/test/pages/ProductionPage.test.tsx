@@ -143,13 +143,27 @@ describe('ProductionPage', () => {
   });
 
   it('shows an error with retry and reloads on retry', async () => {
-    productionApiMock.list.mockRejectedValueOnce(new Error('boom'));
+    // Route by params: the trend chart fetches with size 1000 and must not
+    // consume the page's rejection (two list consumers race on mount).
+    productionApiMock.list.mockImplementation(async (params) => {
+      if ((params as { size?: number })?.size === 1000) {
+        return { data: { content: [], totalElements: 0 } };
+      }
+      throw new Error('boom');
+    });
     productionApiMock.summary.mockResolvedValue({ data: summary });
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Помилка')).toBeInTheDocument();
     });
-    mockOk();
+    productionApiMock.list.mockImplementation(async (params) => {
+      if ((params as { size?: number })?.size === 1000) {
+        return { data: { content: [], totalElements: 0 } };
+      }
+      return {
+        data: { content: [item()], totalElements: 1, totalPages: 1, number: 0, size: 20 },
+      };
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Спробувати знову' }));
     await waitFor(() => {
       expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
@@ -195,16 +209,22 @@ describe('ProductionPage', () => {
   });
 
   it('paginates forward', async () => {
-    mockOk([item()], 45);
-    productionApiMock.list.mockResolvedValueOnce({
-      data: {
-        content: [item()],
-        totalElements: 45,
-        totalPages: 3,
-        number: 0,
-        size: 20,
-      },
+    productionApiMock.list.mockImplementation(async (params) => {
+      const page = (params as { page?: number })?.page ?? 0;
+      if ((params as { size?: number })?.size === 1000) {
+        return { data: { content: [], totalElements: 0 } };
+      }
+      return {
+        data: {
+          content: [item()],
+          totalElements: 45,
+          totalPages: 3,
+          number: page,
+          size: 20,
+        },
+      };
     });
+    productionApiMock.summary.mockResolvedValue({ data: summary });
     renderPage();
     await waitFor(() => {
       expect(screen.getByText(/Сторінка 1 з 3/)).toBeInTheDocument();
@@ -214,6 +234,7 @@ describe('ProductionPage', () => {
       const last = productionApiMock.list.mock.calls.at(-1)?.[0] as { page: number };
       expect(last.page).toBe(1);
     });
+    expect(screen.getByText(/Сторінка 2 з 3/)).toBeInTheDocument();
   });
 
   it('shows normative settings with VIEW_ALL and hides without', async () => {
@@ -233,7 +254,23 @@ describe('ProductionPage', () => {
     expect(screen.queryByText('Нормативи уваги')).not.toBeInTheDocument();
   });
 
-    it('opens the detail drawer on open', async () => {    mockOk();
+    it('shows the analytics section with VIEW_ALL and hides without', async () => {
+    mockOk();
+    const { unmount } = renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Динаміка виробництва')).toBeInTheDocument();
+    });
+    unmount();
+
+    mockCanViewAll = false;
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Динаміка виробництва')).not.toBeInTheDocument();
+  });
+
+  it('opens the detail drawer on open', async () => {    mockOk();
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Бондаренко Тарас')).toBeInTheDocument();

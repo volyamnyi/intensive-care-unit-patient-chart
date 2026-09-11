@@ -45,4 +45,20 @@ test.describe('Production team and attention', () => {
     await expect(page.getByRole('tab', { name: /Команда/ })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: /Потребують уваги/ })).toBeVisible();
   });
+
+  test('prosthetist without VIEW_ALL sees no analytics section', async ({ page }) => {
+    await page.goto('/prosthetics/production');
+    await expect(page.getByRole('heading', { name: 'Моніторинг виробництва' })).toBeVisible();
+    await expect(page.getByText('Динаміка виробництва')).toHaveCount(0);
+  });
+
+  test('admin sees the trend chart and switches ranges', async ({ adminPage }) => {
+    await adminPage.goto('/prosthetics/production');
+    await expect(adminPage.getByText('Динаміка виробництва')).toBeVisible();
+    await expect(adminPage.getByText('Створено')).toBeVisible();
+    await adminPage.getByRole('tab', { name: '7д' }).click();
+    await expect(adminPage.getByText('Динаміка виробництва')).toBeVisible();
+    await adminPage.getByRole('tab', { name: '90д' }).click();
+    await expect(adminPage.getByText('Динаміка виробництва')).toBeVisible();
+  });
 });
