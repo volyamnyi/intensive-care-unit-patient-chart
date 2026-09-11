@@ -240,7 +240,7 @@ export function LowerLimbMeasurementForm({
         <h1 className="min-w-0 truncate text-lg font-bold tracking-tight text-secondary-foreground sm:text-2xl">Бланк замірів №</h1>
         <input
           type="number"
-          inputMode="numeric"
+          inputMode="text"
           aria-label="Номер бланку замірів"
           placeholder="№"
           value={getVal(LOWER_LIMB_ELEMENT_IDS.blankNumber)}
