@@ -1,4 +1,12 @@
 import * as React from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { LOWER_LIMB_MOBILITY_OPTIONS } from '@/prosthetics/lowerLimbPrefill';
 
 /**
  * Lower-limb measurement form — pixel-perfect adaptation of measurement-master
@@ -300,15 +308,25 @@ export function LowerLimbMeasurementForm({
           />
         </Field>
         <Field label="Рівень мобільності">
-          <input
-            type="text"
-            aria-label="Рівень мобільності"
-            placeholder="Рівень"
+          <Select
             value={getVal(LOWER_LIMB_ELEMENT_IDS.mobilityLevel)}
+            onValueChange={(v) => setVal(LOWER_LIMB_ELEMENT_IDS.mobilityLevel, v ?? '')}
             disabled={disabled}
-            onChange={(e) => setVal(LOWER_LIMB_ELEMENT_IDS.mobilityLevel, e.target.value)}
-            className={`field-input ${errors[LOWER_LIMB_ELEMENT_IDS.mobilityLevel] ? 'border-destructive ring-1 ring-destructive' : ''}`}
-          />
+          >
+            <SelectTrigger
+              aria-label="Рівень мобільності"
+              className={`w-full ${errors[LOWER_LIMB_ELEMENT_IDS.mobilityLevel] ? 'border-destructive ring-1 ring-destructive' : ''}`}
+            >
+              <SelectValue placeholder="Рівень" />
+            </SelectTrigger>
+            <SelectContent>
+              {LOWER_LIMB_MOBILITY_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Стать">
           <select

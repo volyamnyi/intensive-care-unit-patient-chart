@@ -286,6 +286,22 @@ class MisServiceImplTest {
     }
 
     @Test
+    void getPatientDocuments_parsesOrderNumber_andLeavesNullWhenAbsent() {
+        stubDocumentList("""
+                {"spiDocumentProsthesCheck":[
+                  {"documentTemplateID":121,"orderNumber":"BZ-2026-0042"},
+                  {"documentTemplateID":121,"documentNumber":77123},
+                  {"documentTemplateID":121}
+                ]}
+                """);
+        List<DocumentMisDTO> docs = service.getPatientDocuments(900001L);
+        assertThat(docs).hasSize(3);
+        assertThat(docs.get(0).getOrderNumber()).isEqualTo("BZ-2026-0042");
+        assertThat(docs.get(1).getOrderNumber()).isEqualTo("77123");
+        assertThat(docs.get(2).getOrderNumber()).isNull();
+    }
+
+    @Test
     void getPatientDocuments_returnsEmpty_forNullPatientId() {
         assertThat(service.getPatientDocuments(null)).isEmpty();
         verifyNoInteractions(client);

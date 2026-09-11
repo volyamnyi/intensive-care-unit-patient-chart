@@ -307,6 +307,8 @@ export interface MisOrderDocument {
   documentUrl?: string;
   patientId?: number;
   orderDate?: string;
+  /** Blank/order number from spiDocumentProsthesCheck (#283); absent stays undefined — never synthesised. */
+  orderNumber?: string;
   patientFullName?: string;
   patientAddress?: string;
   productCode?: string;

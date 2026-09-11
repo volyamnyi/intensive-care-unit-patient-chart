@@ -103,6 +103,12 @@ describe('prostheticsOrderApi', () => {
     });
   });
 
+  it('exposes orderNumber from MIS documents for the Step 1 prefill (#283)', async () => {
+    clientMock.get.mockReturnValue(ok([{ documentId: 681078, orderNumber: 'BZ-2026-0042' }]));
+    const res = await prostheticsOrderApi.listMisDocuments('13373');
+    expect(res.data[0].orderNumber).toBe('BZ-2026-0042');
+  });
+
   it('provisions the local order from an MIS document', async () => {
     clientMock.post.mockReturnValue(ok({ id: 'ord-1' }));
     await prostheticsOrderApi.provisionFromMis({ patientId: '13373', documentId: 681078 });

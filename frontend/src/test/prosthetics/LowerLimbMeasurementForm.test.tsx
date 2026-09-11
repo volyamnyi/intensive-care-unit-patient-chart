@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   LowerLimbMeasurementForm,
   LOWER_LIMB_ELEMENT_IDS,
@@ -7,6 +8,7 @@ import {
   countFilledLowerLimbDiagram,
   countFilledLowerLimbAll,
 } from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
+import { LOWER_LIMB_MOBILITY_OPTIONS } from '@/prosthetics/lowerLimbPrefill';
 
 describe('LowerLimbMeasurementForm', () => {
   it('renders header fields and diagram section', () => {
@@ -19,7 +21,7 @@ describe('LowerLimbMeasurementForm', () => {
     expect(screen.getByLabelText('Адреса')).toBeInTheDocument();
     expect(screen.getByLabelText('Шифр виробу')).toBeInTheDocument();
     expect(screen.getByLabelText('Найменування виробу')).toBeInTheDocument();
-    expect(screen.getByLabelText('Рівень мобільності')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Рівень мобільності' })).toBeInTheDocument();
     expect(screen.getByLabelText('Стать')).toBeInTheDocument();
     expect(screen.getByLabelText('Вік')).toBeInTheDocument();
     expect(screen.getByLabelText('Зріст')).toBeInTheDocument();
@@ -83,6 +85,57 @@ describe('LowerLimbMeasurementForm', () => {
     expect(screen.getByLabelText('П.І.Б')).toBeDisabled();
     expect(screen.getByLabelText('Стегно, R')).toBeDisabled();
     expect(screen.getByLabelText('Висота каблука')).toBeDisabled();
+  });
+
+  it('renders mobility as a dropdown with exactly the 5 agreed options', async () => {
+    const user = userEvent.setup();
+    render(<LowerLimbMeasurementForm values={{}} onChange={vi.fn()} />);
+    const trigger = screen.getByRole('combobox', { name: 'Рівень мобільності' });
+    expect(trigger).toHaveTextContent('Рівень');
+    await user.click(trigger);
+    const listbox = await screen.findByRole('listbox');
+    const options = within(listbox).getAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual([...LOWER_LIMB_MOBILITY_OPTIONS]);
+    expect(options).toHaveLength(5);
+  });
+
+  it('selects a mobility option via onChange with the UUID key', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<LowerLimbMeasurementForm values={{}} onChange={onChange} />);
+    await user.click(screen.getByRole('combobox', { name: 'Рівень мобільності' }));
+    await user.click(await screen.findByRole('option', { name: '2 рівень' }));
+    expect(onChange).toHaveBeenCalledWith(LOWER_LIMB_ELEMENT_IDS.mobilityLevel, '2 рівень');
+  });
+
+  it('displays the existing mobility value', () => {
+    render(
+      <LowerLimbMeasurementForm
+        values={{ [LOWER_LIMB_ELEMENT_IDS.mobilityLevel]: '3 рівень' }}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Рівень мобільності' })).toHaveTextContent(
+      '3 рівень',
+    );
+  });
+
+  it('disables the mobility dropdown when disabled', () => {
+    render(<LowerLimbMeasurementForm values={{}} onChange={vi.fn()} disabled />);
+    expect(screen.getByRole('combobox', { name: 'Рівень мобільності' })).toBeDisabled();
+  });
+
+  it('marks the mobility trigger with destructive styling on error', () => {
+    render(
+      <LowerLimbMeasurementForm
+        values={{}}
+        onChange={vi.fn()}
+        errors={{ [LOWER_LIMB_ELEMENT_IDS.mobilityLevel]: 'Required' }}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Рівень мобільності' })).toHaveClass(
+      'border-destructive',
+    );
   });
 
   it('has correct select options for gender', () => {

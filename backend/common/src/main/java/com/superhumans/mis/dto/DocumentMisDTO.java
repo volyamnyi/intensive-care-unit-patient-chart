@@ -29,6 +29,12 @@ public class DocumentMisDTO {
     String documentUrl;
     Long patientId;
     LocalDateTime orderDate;
+    /**
+     * Order/blank number from {@code spiDocumentProsthesCheck} (issue #283).
+     * Parsed tolerantly (String or numeric JSON); absent/blank stays null —
+     * no synthetic fallback is ever generated (MIS is read-only).
+     */
+    String orderNumber;
     String patientFullName;
     String patientAddress;
     String productCode;

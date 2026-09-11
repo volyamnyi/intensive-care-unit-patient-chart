@@ -45,8 +45,15 @@ import { computeProgress, fmt, validateElementValues } from '@/prosthetics/valid
 import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
 import {
   LowerLimbMeasurementForm,
+  LOWER_LIMB_ELEMENT_IDS,
   LOWER_LIMB_STEP_ID,
 } from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
+import {
+  applyLowerLimbPrefill,
+  getLocalTodayDate,
+  readDraftMisDocumentId,
+  selectMisDocumentForPrefill,
+} from '@/prosthetics/lowerLimbPrefill';
 import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
 import { ALLOWED_RETURN_STAGE_IDS, ALLOWED_RETURN_STAGE_LABELS } from '@/prosthetics/types';
 import StepNoteAttachments from '@/components/prosthetics/StepNoteAttachments';
@@ -1373,6 +1380,13 @@ export default function WizardScreen() {
   const [orderInfo, setOrderInfo] = useState<{ orderNumber: string; patientPib: string } | null>(null);
   const restoredKey = useRef<string | null>(null);
   const prevStepId = useRef<string | null>(null);
+  // Settles to the execution key once the draft-restore attempt finishes
+  // (success or failure) — the Step 1 prefill waits for it so restored
+  // values always win over MIS data (#283).
+  const [restoredExecutionKey, setRestoredExecutionKey] = useState<string | null>(null);
+  // One prefill per step execution — re-renders/refetches never overwrite
+  // user-entered values (#283).
+  const prefillAppliedRef = useRef<string | null>(null);
   // Retains the measurement-form values captured on «Зняття мірок» so they can
   // be shown read-only in a later step («Перевірка якості гіпсового позитива»).
   const measurementValuesRef = useRef<Record<string, unknown>>({});
@@ -1457,7 +1471,10 @@ export default function WizardScreen() {
       .listExecutions(instance.id)
       .then((res) => {
         const current = res.data.find((e) => e.id === instance.currentExecutionId);
-        if (!current) return;
+        if (!current) {
+          setRestoredExecutionKey(key);
+          return;
+        }
         if (current.values) {
           try {
             setValues(JSON.parse(current.values) as Record<string, unknown>);
@@ -1472,9 +1489,11 @@ export default function WizardScreen() {
           );
           setSeconds(baseline + elapsed);
         }
+        setRestoredExecutionKey(key);
       })
       .catch(() => {
         // draft restore is best-effort; the timer keeps the process baseline
+        setRestoredExecutionKey(key);
       });
   }, [instance]);
 
@@ -1487,6 +1506,51 @@ export default function WizardScreen() {
     if (!stage || !instance?.currentStepId) return null;
     return stage.steps.find((s) => s.id === instance.currentStepId) ?? null;
   }, [stage, instance?.currentStepId]);
+
+  // TP-LL-02 Step 1 autofill (#283): map the picked MIS limb-order document
+  // onto the 12 header fields of the measurement blank. Runs once per step
+  // execution, only after the draft restore settled, and fills solely empty
+  // fields (`existing > MIS > empty`) — manual input is never overwritten.
+  // MIS stays read-only: only local wizard state changes. Failures are
+  // silent — the blank remains manually fillable.
+  useEffect(() => {
+    if (!instance || instance.status !== 'IN_PROGRESS' || !instance.currentExecutionId) return;
+    if (step?.id !== LOWER_LIMB_MEASUREMENT_STEP_ID) return;
+    const key = `${instance.id}:${instance.currentExecutionId}`;
+    if (restoredExecutionKey !== key) return;
+    if (prefillAppliedRef.current === key) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const patientId = instance.patientId;
+        if (!patientId) return;
+        let orderNumber: string | null = null;
+        try {
+          const orderRes = await prostheticsOrderApi.getById(instance.orderId);
+          if (cancelled) return;
+          orderNumber = orderRes.data?.orderNumber ?? null;
+        } catch {
+          // order number only refines document matching; continue without it
+        }
+        const docsRes = await prostheticsOrderApi.listMisDocuments(patientId);
+        if (cancelled) return;
+        const doc = selectMisDocumentForPrefill(
+          docsRes.data ?? [],
+          readDraftMisDocumentId(),
+          orderNumber,
+        );
+        if (!doc) return;
+        prefillAppliedRef.current = key;
+        const today = getLocalTodayDate();
+        setValues((prev) => applyLowerLimbPrefill(prev, doc, LOWER_LIMB_ELEMENT_IDS, today).next);
+      } catch {
+        // best-effort: MIS failures never block the wizard
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [instance, step?.id, restoredExecutionKey]);
 
   // Saved measurement-form values from the earlier «Зняття мірок» step, used to
   // render its read-only copy in later steps. Prefers the backend's persisted

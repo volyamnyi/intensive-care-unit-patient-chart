@@ -125,6 +125,8 @@ public class MisServiceImpl implements MisService {
                     .documentUrl(textOrNull(node, "documentUrl", "documentURL"))
                     .patientId(longOrNull(node, "patientID", "patientId"))
                     .orderDate(parseFlexibleDateTime(node, "orderDate"))
+                    .orderNumber(textOrNull(node, "orderNumber", "orderNum", "orderNo",
+                            "documentNumber", "blankNumber", "formNumber"))
                     .patientFullName(textOrNull(node, "patientFullName", "patientName"))
                     .patientAddress(textOrNull(node, "patientAddress"))
                     .productCode(textOrNull(node, "productCode"))

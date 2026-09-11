@@ -106,6 +106,24 @@ class ProstheticsOrderDocumentsTest {
     }
 
     @Test
+    void preservesOrderNumber_fromMisSource() {
+        when(documentUrlAvailability.isAvailable(any())).thenReturn(true);
+        DocumentMisDTO withNumber = DocumentMisDTO.builder()
+                .documentId(681078L)
+                .documentTemplateId(121L)
+                .documentTemplateName("Замовлення на протези нижніх кінцівок")
+                .documentUrl("https://mis/docs/1")
+                .orderNumber("BZ-2026-0042")
+                .build();
+        when(misService.getPatientDocuments(13373L)).thenReturn(List.of(withNumber));
+
+        List<DocumentMisDTO> res = orderService.getAllLowerLimbsOrdersForByPatientId("13373");
+
+        assertThat(res).hasSize(1);
+        assertThat(res.get(0).getOrderNumber()).isEqualTo("BZ-2026-0042");
+    }
+
+    @Test
     void nonNumericPatientId_throwsNotFoundWithoutMisCall() {
         assertThatThrownBy(() -> orderService.getAllLowerLimbsOrdersForByPatientId("abc"))
                 .isInstanceOf(NotFoundException.class);

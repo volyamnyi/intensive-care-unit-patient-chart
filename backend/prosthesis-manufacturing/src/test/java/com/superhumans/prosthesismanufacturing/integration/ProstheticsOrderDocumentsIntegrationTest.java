@@ -78,6 +78,24 @@ class ProstheticsOrderDocumentsIntegrationTest {
                 .allMatch(url -> url.startsWith(baseUrl + "/live"));
     }
 
+    @Test
+    void preservesOrderNumber_endToEnd() {
+        when(misService.getPatientDocuments(13373L)).thenReturn(List.of(
+                DocumentMisDTO.builder()
+                        .documentId(681078L)
+                        .documentTemplateId(121L)
+                        .documentTemplateName("Замовлення на протези нижніх кінцівок")
+                        .documentUrl(baseUrl + "/live")
+                        .patientId(13373L)
+                        .orderNumber("BZ-2026-0042")
+                        .build()));
+
+        List<DocumentMisDTO> res = orderService.getAllLowerLimbsOrdersForByPatientId("13373");
+
+        assertThat(res).hasSize(1);
+        assertThat(res.get(0).getOrderNumber()).isEqualTo("BZ-2026-0042");
+    }
+
     private static DocumentMisDTO doc(long templateId, String url, String templateName) {
         return DocumentMisDTO.builder()
                 .documentId(templateId)
