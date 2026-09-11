@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { Loader2, X, RefreshCw } from 'lucide-react'
+import { Loader2, X, RefreshCw, Download, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertAction } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 
 import { prescriptionApi, vitalSignApi } from '../../api/medication';
+import { printPdfBlob } from '../../lib/printPdf'
 import { useAuth } from '../../services/AuthContext'
 import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid'
 import VitalSignGrid from '../../components/prescription/VitalSignGrid'
@@ -27,6 +28,7 @@ export default function PrescriptionDetailPage() {
   const [vitalLoading, setVitalLoading] = useState(false)
   const [closing, setClosing] = useState(false)
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isFinished = prescription?.status === 'Finished'
@@ -189,6 +191,47 @@ export default function PrescriptionDetailPage() {
     }
   }
 
+  // Form №003-4/о PDF batch (Phase 17): backend returns every sheet at once
+  // (ZIP, one PDF per form page); printing goes page by page from PDF bytes,
+  // never from the HTML grid.
+  const handleDownloadPdf = async () => {
+    if (!id || pdfBusy) return
+    setPdfBusy(true)
+    try {
+      const res = await prescriptionApi.getPdfZip(id)
+      const url = window.URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `prescription-${id}.zip`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('PDF завантажено')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося завантажити PDF'))
+    } finally {
+      setPdfBusy(false)
+    }
+  }
+
+  const handlePrintPdf = async () => {
+    if (!id || pdfBusy) return
+    setPdfBusy(true)
+    try {
+      const info = await prescriptionApi.getPdfInfo(id)
+      for (let i = 0; i < info.data.pages; i++) {
+        const res = await prescriptionApi.getPdfPage(id, i)
+        await printPdfBlob(res.data)
+      }
+      toast.success(`PDF надіслано на друк (${info.data.pages} стор.)`)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Не вдалося надрукувати PDF'))
+    } finally {
+      setPdfBusy(false)
+    }
+  }
+
   if (loading && !prescription) return <Loader2 className="mx-auto mt-4 size-6 animate-spin text-primary" />
   if (!prescription) return <Alert>Листок призначень не знайдено</Alert>
 
@@ -203,16 +246,22 @@ export default function PrescriptionDetailPage() {
             Пацієнт ID: {prescription.patientId} · Статус: {prescription.status === 'Finished' ? 'Закрито' : 'Відкрито'}
           </p>
         </div>
-        {!isNurseUser && (
-          <div className="flex items-center gap-1">
-            {!isFinished && (
-              <Button variant="secondary" onClick={() => setCloseDialogOpen(true)}>
-                <X />
-                Закрити листок
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={pdfBusy}>
+            <Download />
+            Завантажити PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePrintPdf} disabled={pdfBusy}>
+            <Printer />
+            Друкувати PDF
+          </Button>
+          {!isNurseUser && !isFinished && (
+            <Button variant="secondary" onClick={() => setCloseDialogOpen(true)}>
+              <X />
+              Закрити листок
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && (

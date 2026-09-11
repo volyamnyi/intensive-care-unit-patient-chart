@@ -263,6 +263,21 @@ describe('prescriptionApi', () => {
     prescriptionApi.getMedicineCatalog('Penicillin');
     expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/medicine-catalog', { params: { keyword: 'Penicillin' }, signal: undefined });
   });
+
+  it('getPdfInfo calls /prescriptions/:id/pdf/info', () => {
+    prescriptionApi.getPdfInfo('list-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/list-1/pdf/info');
+  });
+
+  it('getPdfZip downloads the ZIP batch as blob', () => {
+    prescriptionApi.getPdfZip('list-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/list-1/pdf/file', { responseType: 'blob' });
+  });
+
+  it('getPdfPage downloads one sheet as blob', () => {
+    prescriptionApi.getPdfPage('list-1', 2);
+    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/list-1/pdf/pages/2', { responseType: 'blob' });
+  });
 });
 
 describe('vitalSignApi', () => {

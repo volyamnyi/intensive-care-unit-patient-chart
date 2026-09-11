@@ -3,6 +3,7 @@ import type {
   PrescriptionList, PrescriptionListCreateRequest,
   PrescriptionItem, PrescriptionItemAddRequest,
   PrescriptionDayPart, PrescriptionExecutionCreateRequest,
+  PrescriptionPdfInfo,
   MedicineCatalogItem,
   VitalSignEntry, VitalSignDay, VitalSignEntryCreateRequest, VitalGridDay,
 } from '../types/medication';
@@ -42,6 +43,12 @@ export const prescriptionApi = {
     client.post<void>(`/prescriptions/day-parts/${dayPartId}/execute`, data),
   getMedicineCatalog: (keyword?: string, signal?: AbortSignal) =>
     client.get<MedicineCatalogItem[]>('/prescriptions/medicine-catalog', { params: { keyword }, signal }),
+  getPdfInfo: (id: string) =>
+    client.get<PrescriptionPdfInfo>(`/prescriptions/${id}/pdf/info`),
+  getPdfZip: (id: string) =>
+    client.get<Blob>(`/prescriptions/${id}/pdf/file`, { responseType: 'blob' }),
+  getPdfPage: (id: string, pageIndex: number) =>
+    client.get<Blob>(`/prescriptions/${id}/pdf/pages/${pageIndex}`, { responseType: 'blob' }),
 };
 
 export const vitalSignApi = {

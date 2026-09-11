@@ -4,6 +4,7 @@ import lombok.experimental.FieldDefaults;
 
 import com.superhumans.medicationsheet.dto.*;
 import com.superhumans.medicationsheet.mapper.*;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfService;
 import com.superhumans.mis.MisService;
 import com.superhumans.medicationsheet.service.PrescriptionExecutionService;
 import com.superhumans.medicationsheet.service.PrescriptionItemService;
@@ -18,6 +19,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +31,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/prescriptions")
 @RequiredArgsConstructor
-@Tag(name = "Prescriptions", description = "Prescription management - листок лікарських призначень (Form 003-15/о)")
+@Tag(name = "Prescriptions", description = "Prescription management - листок лікарських призначень (Form 003-4/о)")
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionController {
 
@@ -36,6 +39,7 @@ public class PrescriptionController {
     PrescriptionItemService itemService;
     PrescriptionExecutionService executionService;
     VitalSignService vitalSignService;
+    PrescriptionPdfService prescriptionPdfService;
     MisService misService;
     PrescriptionListMapper prescriptionListMapper;
     PrescriptionItemMapper prescriptionItemMapper;
@@ -274,5 +278,67 @@ public class PrescriptionController {
         return misService.searchMedicineCatalog(keyword == null ? "" : keyword).stream()
                 .map(medicineCatalogMapper::toResponse)
                 .toList();
+    }
+
+    @GetMapping("/{id}/pdf/info")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
+    @Operation(summary = "Prescription PDF batch info (Form 003-4/о)",
+            description = "Returns the page count and deterministic ZIP file name for the list. "
+                    + "One page of the form is one PDF file; the batch endpoint below returns them all.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Batch info returned"),
+            @ApiResponse(responseCode = "404", description = "Prescription list not found")
+    })
+    public PrescriptionPdfInfoResponse pdfInfo(@PathVariable UUID id) {
+        PrescriptionPdfService.PdfBatchInfo info = prescriptionPdfService.info(id);
+        return new PrescriptionPdfInfoResponse(info.pages(), info.fileName());
+    }
+
+    @GetMapping(value = "/{id}/pdf/file", produces = "application/zip")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
+    @Operation(summary = "Download prescription PDF batch (Form 003-4/о)",
+            description = "Returns a ZIP with one PDF file per form sheet "
+                    + "(prescription-{id}-p{NN}.pdf, no PII in names). Never truncated to the first page.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "ZIP batch returned"),
+            @ApiResponse(responseCode = "404", description = "Prescription list not found")
+    })
+    public ResponseEntity<byte[]> pdfFile(@PathVariable UUID id) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        PrescriptionPdfService.PdfBatchInfo info = prescriptionPdfService.info(id);
+        byte[] zip = prescriptionPdfService.generateZip(id, currentUserId);
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("X-Total-Pages", String.valueOf(info.pages()))
+                .header("Content-Disposition", "attachment; filename=\"" + info.fileName() + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(zip.length)
+                .body(zip);
+    }
+
+    @GetMapping(value = "/{id}/pdf/pages/{pageIndex}", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
+    @Operation(summary = "Download one prescription PDF sheet (Form 003-4/о)",
+            description = "Returns a single form sheet (0-based pageIndex) for in-module printing. "
+                    + "Filenames carry no PII.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "PDF sheet returned"),
+            @ApiResponse(responseCode = "404", description = "Prescription list or page not found")
+    })
+    public ResponseEntity<byte[]> pdfPage(@PathVariable UUID id, @PathVariable int pageIndex) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        byte[] pdf = prescriptionPdfService.generatePage(id, pageIndex, currentUserId);
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Disposition",
+                        "attachment; filename=\"prescription-" + id + "-p"
+                                + String.format("%02d", pageIndex + 1) + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(pdf.length)
+                .body(pdf);
     }
 }

@@ -55,6 +55,12 @@ export interface PrescriptionExecutionCreateRequest {
   secondPersonPassword: string;
 }
 
+/** Batch metadata for the Form №003-4/о PDF download (Phase 17, no PII). */
+export interface PrescriptionPdfInfo {
+  pages: number;
+  fileName: string;
+}
+
 export interface MedicineCatalogItem {
   id: number;
   name: string;

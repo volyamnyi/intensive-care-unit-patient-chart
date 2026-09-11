@@ -78,6 +78,9 @@ class PrescriptionControllerTest {
     private VitalSignService vitalSignService;
 
     @MockitoBean
+    private com.superhumans.medicationsheet.pdf.PrescriptionPdfService prescriptionPdfService;
+
+    @MockitoBean
     private MisService misService;
 
     @MockitoBean

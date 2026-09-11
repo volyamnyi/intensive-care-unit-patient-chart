@@ -12,6 +12,10 @@ const mockRemoveItemDay = vi.fn();
 const mockCancelMedication = vi.fn();
 const mockRestoreToPlanned = vi.fn();
 const mockCancelAssignment = vi.fn();
+const mockGetPdfZip = vi.fn();
+const mockGetPdfInfo = vi.fn();
+const mockGetPdfPage = vi.fn();
+const mockPrintPdfBlob = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 let mockAuth: () => unknown = () => doctorAuth;
@@ -35,6 +39,9 @@ vi.mock('../../api/medication', () => ({
     addItem: vi.fn(), removeItem: vi.fn(), create: vi.fn(), delete: vi.fn(), close: vi.fn(),
     getByPatient: vi.fn(),
     getMedicineCatalog: () => Promise.resolve({ data: [] }),
+    getPdfZip: (...a: unknown[]) => mockGetPdfZip(...a),
+    getPdfInfo: (...a: unknown[]) => mockGetPdfInfo(...a),
+    getPdfPage: (...a: unknown[]) => mockGetPdfPage(...a),
   },
   vitalSignApi: {
     getGrid: (...a: unknown[]) => mockGetGrid(...a),
@@ -57,6 +64,10 @@ const nurseAuth = { ...doctorAuth, user: { ...doctorAuth.user, id: 2, login: 'nu
 
 vi.mock('../../services/AuthContext', () => ({
   useAuth: () => mockAuth(),
+}));
+
+vi.mock('../../lib/printPdf', () => ({
+  printPdfBlob: (...a: unknown[]) => mockPrintPdfBlob(...a),
 }));
 
 vi.mock('sonner', () => ({
@@ -274,5 +285,52 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     await screen.findByText('Dopamine');
     expect(screen.queryByRole('button', { name: 'Додати день' })).not.toBeInTheDocument();
     expect(mockAddItemDay).not.toHaveBeenCalled();
+  });
+});
+
+describe('PrescriptionDetailPage — Form 003-4/о PDF actions', () => {
+  beforeEach(() => {
+    mockGetPdfZip.mockReset().mockResolvedValue({ data: new Blob(['PK'], { type: 'application/zip' }) });
+    mockGetPdfInfo.mockReset().mockResolvedValue({ data: { pages: 2, fileName: 'prescription-list-1.zip' } });
+    mockGetPdfPage.mockReset().mockResolvedValue({ data: new Blob(['%PDF'], { type: 'application/pdf' }) });
+    mockPrintPdfBlob.mockReset().mockResolvedValue(undefined);
+    mockToastSuccess.mockClear();
+    mockToastError.mockClear();
+  });
+
+  it('«Завантажити PDF» downloads the backend ZIP batch', async () => {
+    const createObjectURL = vi.fn(() => 'blob:mock-zip');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+    renderPage(() => doctorAuth);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Завантажити PDF/ }));
+
+    await waitFor(() => expect(mockGetPdfZip).toHaveBeenCalledWith('list-1'));
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-zip');
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('PDF завантажено'));
+    vi.unstubAllGlobals();
+  });
+
+  it('«Друкувати PDF» prints every backend sheet from PDF bytes', async () => {
+    renderPage(() => doctorAuth);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Друкувати PDF/ }));
+
+    await waitFor(() => expect(mockGetPdfInfo).toHaveBeenCalledWith('list-1'));
+    await waitFor(() => expect(mockGetPdfPage).toHaveBeenCalledTimes(2));
+    expect(mockGetPdfPage).toHaveBeenNthCalledWith(1, 'list-1', 0);
+    expect(mockGetPdfPage).toHaveBeenNthCalledWith(2, 'list-1', 1);
+    expect(mockPrintPdfBlob).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('PDF надіслано на друк (2 стор.)'));
+  });
+
+  it('PDF buttons are visible for the nurse view too', async () => {
+    renderPage(() => nurseAuth);
+    await screen.findByText('Dopamine');
+    expect(screen.getByRole('button', { name: /Завантажити PDF/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Друкувати PDF/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Закрити листок/ })).not.toBeInTheDocument();
   });
 });

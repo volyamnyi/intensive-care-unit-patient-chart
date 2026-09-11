@@ -1,5 +1,7 @@
 # ICU Patient Chart — AI Agent Guide
 
+**2026-09-11: Prescription PDF Form №003-4/о — implementation (issue #284, code-complete, CI pending)** — batch PDF for a `PrescriptionList`: new `medicationsheet.pdf` package (`PrescriptionPdfService` orchestration + stateless ZIP, `PrescriptionPdfPagePlanner` pure deterministic chunks 10 dates × 9 items → `PrescriptionPdfPagePlan` (no iText), `PrescriptionPdfUsernameResolver` (`nameUUID(login)→login` via `UserRepository`, attending = first DOCTOR by id, fail-closed, `secondPersonId` never resolved), `PrescriptionPdfDataLoader` (one read-only snapshot + MIS patient + `institution_name/edrpou`), `PrescriptionPdfRenderer` (iText 8.0.5 A4 landscape, 13 cols / 21 rows, DejaVu IDENTITY_H, fresh fonts per render — singleton reuse throws `Pdf indirect object belongs to other PDF document`, caught live), `findByDayPartIdIn` batch (no N+1); endpoints `GET /{id}/pdf/info|/pdf/file` (STORED ZIP `prescription-{id}.zip`, `X-Total-Pages`, no PII) `|/pdf/pages/{i}` all `PATIENT_VIEW`; controller `@Tag` fixed `003-15/о→003-4/о`; itext-core added to `medication-sheet/pom.xml` (allowlist already permits). Frontend: `prescriptionApi.getPdfInfo/getPdfZip/getPdfPage` + «Завантажити PDF»/«Друкувати PDF» on detail page (ZIP download, per-sheet `printPdfBlob`, nurse-visible). Tests: planner 17-state matrix, signatures (incl. `markCompleted`-without-execution, combined `nurseName`, no raw UUIDs), renderer (`PdfTextExtractor`, whitespace-normalized — extractor splits long lines), controller slice (ZIP/`%PDF`/404/headers), service integration (Docker PG, `em.clear()` before reads — EAGER bags go stale in setup tx), E2E `prescription-pdf.spec.ts` (3/3 live: ZIP entries/`%PDF`/names/no-PII, single sheet, 404 + nurse read). Local evidence: med unit 184/184, integration 4/4, Vitest 883 + 1 pre-existing `ProcessLayout` failure (proven pre-existing via stash — fails without these changes), E2E spec 3/3 live. Pre-existing, untouched: `CorsConfigTest` (foreign dirty file), 3 broken icu-chart integration test files (block local full `install`), `ProcessLayout.test.tsx`. Plan in issue body re-verified against code before implementation (11 codebase corrections).
+
 **2026-09-11: Production monitoring dashboard — epic #271 code-complete, #282 docs (issues #272–#282 CLOSED; final full CI GREEN run `34572771435`, epic CLOSED)** — read-only manufacturing overview at `/prosthetics/production` (Guard PROSTHETIST/PROSTHETICS_ADMINISTRATOR + `MODULE_PROSTHETICS` + `PROSTHETICS_PRODUCTION_VIEW`): `ProductionQuery`/`ProductionReadService` read-model (1 instance query + batch IN-aggregates, no per-row N+1; `@Slf4j` ms timings; `ProductionNormativeService` OVERDUE = elapsed > expected×K with K default 1.5 ∈ [1.0,5.0], STALE = open idle ≥ N days default 7 ∈ [1,30], single `findByKeyIn`, PUT audited; `SystemSettings` keys `prosthetics.production.overdueMultiplier/staleDays`), 4 RBAC codes (catalog 24→28 via `core/008-prosthetics-production-permissions.sql`; defaults: PROSTHETICS_ADMIN all 4, PROSTHETIST VIEW+QUALITY, HOD VIEW+VIEW_ALL) gating `ProductionController` (GET `/production` forced-assignee without VIEW_ALL, `/team` + `/settings/normative*` VIEW_ALL-only, `/attention` severity FAILED>OVERDUE>REPEAT_BRAK>REWORK>STALE>NO_ASSIGNEE, `/summary`, `/{id}` masked `{fullName}`-only without PATIENT_VIEW, failed series hidden without QUALITY_VIEW). Frontend `ProductionPage.tsx` (9 KPI cards, filters, sticky-first-column table, pagination) + `ProductionWorkItemDrawer` + `ProductionNormativeSettings` + `ProductionTrendChart` (`recharts@3.10.1` exact + `ui/chart.tsx` + `--chart-1..5`; client-side `bucketTrend` → `TrendPoint{date,label,created,completed,failed}`: created=`startTime ?? createdAt`, terminal=`endTime`, future ignored). Time math: active=SUM(`StepExecution.activeSeconds`), rework=COUNT(children by `parentInstanceId`), failed=`status FAILED`, names/norms from immutable `templateSnapshot`, orderNumber=`MIS-{patientId}-{documentId}` → `matchDocument`. #280 wont-do (no reassignment op exists). #281 local evidence: backend integration 233/233 GREEN (fresh `*_t` DBs), backend unit clean except pre-existing `CorsConfigTest` (foreign dirty file) + `TpLl02SeedValidationTest` (Windows-Cyrillic flake), Vitest 93 files/841, `ModuleBoundaryTest` 6/6; E2E in final CI all green (dashboard 6/6, team 5/5, access API incl. masked-detail/handoff/normative; suite 389 passed / 1 flaky / 17 skipped). Final-loop triage (`34569555929` red): backend-integration `too many clients` → `APP_DATASOURCE_POOL_MAX` pool bound (`MultiDatabaseSupport`, CI sets 2, default 10); team spec logged in as slot-6 `adminPage` (no prosthetics module) → new `prostheticsAdminPage` fixture (`.auth/prosthetics_admin.json`); dashboard KPI locator `getByText('В роботі')` matched 2 cards → exact match; access spec skips honestly with a counts log when live MIS has no order documents (same contract as #267). Intermediate `34530390354` had failed the same setup (`need 2 MIS order documents, Received: 0`). Local lessons: `-Dtest` overrides pom excludes (unit run pulled `*IntegrationTest` without profile); bare `-pl` without `-am` resolves stale `~/.m2` `common-1.0.0.jar` (pre-`8c6d7b8` users-upsert → false `SeedDataPasswordIdempotencyIntegrationTest` failure); pg-t `max_connections` 100→300 for full local integration.
 
 **2026-09-09: Migrate medicine search and selection to MIS API (issue #263, CLOSED — code-complete, CI green; close-summary recorded in issue comments)** — the shared medicine-catalog search contract now lives in one hook: new `frontend/src/components/prescription/useMedicineSearch.ts` (`useMedicineSearch(keyword, search?)` → `{ options, loading, error, active, retry }`; `MEDICINE_SEARCH_DEBOUNCE_MS=300`; debounces every keystroke, aborts the in-flight request via `AbortController`, ignores stale responses so a slow query A can never overwrite a faster query B; empty results are a real empty state NOT an error; no client-side cache and no fallback data — the catalog comes from MIS `GET /prescriptions/medicine-catalog`, errors surface honestly as «Не вдалося завантажити каталог ліків з MIS» + retry). `MedicineSearchInput` (the «Листок» add row, production) and `PrescriptionItemForm` (item creation) both moved onto the hook; their `onSearchMedicine` prop is now optional (defaults to the live catalog via `prescriptionApi.getMedicineCatalog(keyword, signal)`) and accepts an `AbortSignal`. Disabled rendering: an item with `itemKindIsDisabled === true` renders non-selectable (muted, `cursor-not-allowed`, `aria-disabled`, no-op click) — never hidden; `MedicineSearchInput` keeps the typed-name (free-text) submit so `prescription-add-drug.spec.ts` stays green; `PrescriptionItemForm` requires an explicit selection. TypeScript: `MedicationCatalogItem` gains `itemKindIsDisabled?: boolean | null` (backend `MedicineCatalogResponse.itemKindIsDisabled` already maps from `MedicineMisDTO`). Prescription/dose logic and the E2E contract are unchanged. Tests: co-located `useMedicineSearch.test.ts` (fake timers — debounce, sub-threshold no-call, abort+ignore-stale, result resolution, empty-not-error, rejection → error, retry re-runs last query, default catalog-API fallback), `MedicineSearchInput.test.tsx` (disabled-not-selectable, empty state, retry) + `PrescriptionItemForm.test.tsx` (call-arg + disabled/empty/error dropdown). `tests/helpers/medication.ts` `firstCatalogMedicine` prefers a non-disabled item so E2E never targets a non-selectable row. Pre-flight: `tsc` clean, lint 0 errors, build green.
@@ -70,17 +72,11 @@
 
 **2026-08-18: Phase 8 — documentation update (issues #157/#158 milestone complete)** — AGENTS.md + README.md rewritten (commit `0f015b6`) to reflect the post-refactor reality: backend Maven module layout with dependency direction (`common` leaf ← `icu-chart`/`medication-sheet`/`prosthesis-manufacturing` ← `app` shell), real frontend layout (`pages/`, per-feature `components/`, `api/` + `types/` modules, isolated `prosthetics/`), new «Module Boundaries» section (ArchUnit allowlist + oxlint `no-restricted-imports`), route prefixes `/icu/doctor/*`/`/icu/nurse/*`, Playwright 9 projects / 6 roles, UserRole 7 values, services grouped by module (common 4, icu-chart 16, med 11, prosth 11), Liquibase 15 changesets (core 4, icu 6, med 1, prosth 4), file counts (Java 348 main/112 test; TS 127 sources/69 test files; E2E 55 specs/~228 tests). README: MUI/Emotion → Base UI + Tailwind CSS (badges, Tech Stack, Project Structure tree), JDK 25, stale test counts replaced with file-based numbers, Module Boundaries paragraph. UseManual.md unchanged (no user-facing change). CI run `32119777622` all 6 jobs green (Code Quality 49s, E2E 11m55s); issue #158 closed. Docs-only commits — Phase 7 (import boundaries, `e7aab6f` + `cf874b2`, run `32116832684` green, #157 closed) and Phase 8 close the Module Separation milestone; only the historical removal notes mention `PRESCRIBER`/`user.permissions`/`src/medication-sheet` — no live references remain.
 
-## CI RULE (EXECUTE TEST SUITE (UNIT, INTEGRATION, PLAYWRIGHT E2E TESTS) ONLY LOCALLY)
+## Testing Policy (local-first)
 
-**TESTS RUNNING.** The only valid testing workflow is:
+**Tests run locally by default.** Valid workflow: run the relevant suite locally (unit, integration, Vitest, Playwright E2E) → fix failures → re-run until green → commit.
 
-```
-ASK USER RUN LOCALLY OR execute workflow: EXECUTE TEST SUITE (UNIT, INTEGRATION, PLAYWRIGHT E2E TESTS) -> FIX FAILURES -> RUN TESTS AGAIN IF FAILS -> COMMIT AND PUSH IF ALL TESTS ARE GREEN
-```
-
-ALL test suites: unit tests, integration tests, Playwright E2E.
-Local `mvn test` is FORBIDDEN. Local `mvn compile` is permitted for verifying compilation only.
-This rule is documented in AGENTS.md, README.md, and checked by CI pipeline.
+**CI (`.github/workflows/playwright.yml`) runs only on explicit user request.** Do not push just to trigger CI; do not run `gh run watch` / poll CI unless the user explicitly asked for a CI run.
 
 ---
 
@@ -245,23 +241,21 @@ Everything else under `com.superhumans` — the ICU domain root packages (`contr
 
 **Frontend — oxlint** (`frontend/.oxlintrc.json` `overrides` with `no-restricted-imports`, enforced by CI `format-check` via `npm run lint`): `pages/prescription` → forbid `components/icu` + `components/monitoring`; `pages/prosthetics` → forbid `components/icu` + `components/prescription`; `components/icu` → forbid `components/prescription` + `components/monitoring`; `components/prescription` → forbid `components/icu` + `components/monitoring`; `components/common` → forbid all feature components (`icu`, `monitoring`, `prescription`, `prosthetics`). Patterns are regex-based and match both relative specifiers and the `@/` alias form; shared code (api/, types/, lib/, utils/, ui/, navigation/) is importable from everywhere. `src/prosthetics/` is a fully isolated feature root (own API client, types, context).
 
-## Repeatable CI Development Workflow (THE Loop)
+## Development Workflow (local-first)
 
-**All tests run exclusively via GitHub Actions CI — never locally (may be violated if the user explicitly states so).** Local `mvn test` / `npm test` / Playwright are FORBIDDEN; `mvn compile`, `npm run lint`, `npx tsc --noEmit` are permitted for pre-flight only.
+**Tests run locally by default. CI runs only on explicit user request.**
 
 The complete development loop:
 
 ```
-1. PRE-FLIGHT   → local checks only (fast feedback, no tests)
+1. PRE-FLIGHT   → local checks (compile, lint, types, build)
 2. IMPLEMENT    → make code changes for the issue
-3. STAGE/COMMIT → git add intended files only + Conventional Commits message
-4. PUSH/TRIGGER → git push → GitHub Actions starts automatically
-5. POLL         → gh run watch / periodic gh run list until all jobs finish
-6. TRIAGE       → failing jobs: view logs, download artifacts, root-cause, fix code or tests
-7. REPEAT       → steps 3–6 until every check passes
+3. TEST LOCALLY → run the relevant suite(s) locally, fix, re-run until green
+4. STAGE/COMMIT → git add intended files only + Conventional Commits message
+5. CI (OPT-IN)   → only if the user explicitly asked: push, poll, triage
 ```
 
-### Phase 0 — Pre-flight (local, test-free)
+### Phase 0 — Pre-flight (local)
 | Check | Command | Catches |
 |---|---|---|
 | Backend compiles | `mvn compile` (in `backend/`) | Compile errors |
@@ -277,15 +271,18 @@ The complete development loop:
 - `git status` / `git diff` first; stage ONLY intended files (never secrets, never `playwright-results/`).
 - Conventional Commits: `feat:` / `fix:` / `refactor:` / `docs:` / `chore:` / `test:`.
 
-### Phase 3 — Push & trigger
+### Phase 3 — Test locally (default)
+- Run the relevant suite(s) locally and re-run until green: `mvn test` / `mvn test -Pintegration-test` (backend), `npm t` / `npx vitest run` (frontend), `npx playwright test` (E2E) — see Commands below.
+- Fix failures locally; commit only when the local suites are green.
+
+### Phase 4 — Push & trigger (CI opt-in, only on explicit user request)
 - `git push origin main` (or push a feature branch and open a PR to `main`).
 - Workflow `.github/workflows/playwright.yml` triggers on push to `main`/`develop` and PR to `main`; the push output prints the run URL.
+- Do not push just to trigger CI unless the user explicitly asked for a CI run.
 
-### Phase 4 — Poll
+### Phase 5 — Poll & triage (CI opt-in, only on explicit user request)
 - `gh run list --limit 5` → find the run ID; `gh run watch <run-id>` blocks until completion, or poll with periodic `gh run list`.
 - `gh run view <run-id>` → per-job status; `gh run view <run-id> --job <job-id> --log` → failed-job logs.
-
-### Phase 5 — Triage failures
 | Job (actual ID) | What it runs | Failure artifacts (`gh run download <run-id> -n <name> -D <dir>`) |
 |---|---|---|
 | `format-check` | Checkstyle + oxlint + `tsc --noEmit` | — |
@@ -296,7 +293,7 @@ The complete development loop:
 | `build` | JAR + frontend dist artifacts (main push only; needs all 5 jobs) | — |
 
 ### Exit criteria
-All checks pass: `format-check`, `backend-test`, `backend-integration`, `frontend-test`, `e2e-test` (plus `build` on `main`). Green run = done; start the next issue at Phase 1.
+Local suites green = done; start the next issue at Phase 1. When CI was explicitly requested, all CI checks must pass: `format-check`, `backend-test`, `backend-integration`, `frontend-test`, `e2e-test` (plus `build` on `main`).
 
 ## Commands
 
@@ -328,9 +325,9 @@ All checks pass: `format-check`, `backend-test`, `backend-integration`, `fronten
 
 ## Testing
 
-- **Backend**: 351 main sources / 167 test files across the multi-module reactor (common 125/25, icu-chart 83/76, medication-sheet 54/16, prosthesis-manufacturing 89/49, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
-- **Frontend**: 841 Vitest tests across 93 test files (141 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
-- **E2E**: 438 Playwright tests across 94 spec files in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
+- **Backend**: 361 main sources / 172 test files across the multi-module reactor (common 125/25, icu-chart 83/76, medication-sheet 64/21, prosthesis-manufacturing 89/49, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Frontend**: 884 Vitest tests across 94 test files (141 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **E2E**: 442 Playwright tests across 95 spec files in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
 ## Playwright Projects
 
