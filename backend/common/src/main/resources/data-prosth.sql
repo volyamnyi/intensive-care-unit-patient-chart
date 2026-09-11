@@ -259,7 +259,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 INSERT INTO prosthetics_template_elements (id, step_id, order_index, element_type, label, placeholder, required, unit, min_value, max_value, options, validation_rules)
 VALUES
-    ('f0000300-0000-0000-0000-000000000300', 'e0000020-0000-0000-0000-000000000020', 4, 'NUMERIC_INPUT', 'Бланк замірів №', 'Введіть номер', false, NULL, 0, NULL, NULL, NULL),
+    ('f0000300-0000-0000-0000-000000000300', 'e0000020-0000-0000-0000-000000000020', 4, 'TEXT_INPUT', 'Бланк замірів №', 'Введіть номер', false, NULL, NULL, NULL, NULL, NULL),
     ('f0000301-0000-0000-0000-000000000301', 'e0000020-0000-0000-0000-000000000020', 5, 'DATE_PICKER', 'Дата', 'Оберіть дату', false, NULL, NULL, NULL, NULL, NULL),
     ('f0000302-0000-0000-0000-000000000302', 'e0000020-0000-0000-0000-000000000020', 6, 'TEXT_INPUT', 'П.І.Б', 'Введіть П.І.Б', false, NULL, NULL, NULL, NULL, NULL),
     ('f0000303-0000-0000-0000-000000000303', 'e0000020-0000-0000-0000-000000000020', 7, 'TEXT_INPUT', 'Адреса', 'Введіть адресу', false, NULL, NULL, NULL, NULL, NULL),

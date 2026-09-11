@@ -87,6 +87,31 @@ describe('LowerLimbMeasurementForm', () => {
     expect(screen.getByLabelText('Висота каблука')).toBeDisabled();
   });
 
+  it('renders the blank number as a text input accepting alphanumeric order numbers', () => {
+    render(<LowerLimbMeasurementForm values={{}} onChange={vi.fn()} />);
+    const blank = screen.getByLabelText('Номер бланку замірів');
+    expect(blank).toHaveAttribute('type', 'text');
+  });
+
+  it('passes blank-number text through without numeric filtering', () => {
+    const onChange = vi.fn();
+    render(<LowerLimbMeasurementForm values={{}} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('Номер бланку замірів'), {
+      target: { value: 'BZ-2026-0042' },
+    });
+    expect(onChange).toHaveBeenCalledWith(LOWER_LIMB_ELEMENT_IDS.blankNumber, 'BZ-2026-0042');
+  });
+
+  it('displays an existing alphanumeric blank number', () => {
+    render(
+      <LowerLimbMeasurementForm
+        values={{ [LOWER_LIMB_ELEMENT_IDS.blankNumber]: 'BZ-2026-0042' }}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Номер бланку замірів')).toHaveValue('BZ-2026-0042');
+  });
+
   it('renders mobility as a dropdown with exactly the 5 agreed options', async () => {
     const user = userEvent.setup();
     render(<LowerLimbMeasurementForm values={{}} onChange={vi.fn()} />);

@@ -239,13 +239,13 @@ export function LowerLimbMeasurementForm({
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border bg-secondary px-4 py-5 sm:px-8">
         <h1 className="min-w-0 truncate text-lg font-bold tracking-tight text-secondary-foreground sm:text-2xl">Бланк замірів №</h1>
         <input
-          type="number"
+          type="text"
           inputMode="text"
           aria-label="Номер бланку замірів"
           placeholder="№"
           value={getVal(LOWER_LIMB_ELEMENT_IDS.blankNumber)}
           disabled={disabled}
-          onChange={(e) => setVal(LOWER_LIMB_ELEMENT_IDS.blankNumber, numericFilter(e.target.value))}
+          onChange={(e) => setVal(LOWER_LIMB_ELEMENT_IDS.blankNumber, e.target.value)}
           className={`field-input w-24 shrink-0 text-center font-semibold sm:w-32 ${errors[LOWER_LIMB_ELEMENT_IDS.blankNumber] ? 'border-destructive ring-1 ring-destructive' : ''}`}
         />
       </header>

@@ -92,6 +92,9 @@ class TpLl02SeedValidationTest {
         assertThat(sql).contains("'Розмір стопи'");
         assertThat(sql).contains("'Комплектуючі'");
         assertThat(sql).contains("'f0000300-0000-0000-0000-000000000300'");
+        // Blank number accepts alphanumeric MIS order numbers (#283 follow-up)
+        assertThat(sql).contains(
+                "'f0000300-0000-0000-0000-000000000300', 'e0000020-0000-0000-0000-000000000020', 4, 'TEXT_INPUT'");
         assertThat(sql).contains("'f0000344-0000-0000-0000-000000000344'");
         // DATE_PICKER and DROPDOWN for lower limb header
         assertThat(sql).contains("'DATE_PICKER'");

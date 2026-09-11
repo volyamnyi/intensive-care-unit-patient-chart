@@ -105,15 +105,9 @@ test.describe('TP-LL-02 — Step 1 prefill from MIS (#283)', () => {
       }
 
       // Full mapping assertions (only for sources the document provides).
+      // The blank field is text: alphanumeric MIS order numbers display verbatim.
       if (doc.orderNumber) {
-        if (/^\d+(\.\d+)?$/.test(String(doc.orderNumber))) {
-          await expect(blankInput).toHaveValue(String(doc.orderNumber));
-        } else {
-          // The blank field is numeric: browsers sanitise alphanumeric
-          // prefill to empty rather than showing a misleading value.
-          console.log(`[step1-prefill] non-numeric orderNumber=${doc.orderNumber}`);
-          await expect(blankInput).toHaveValue('');
-        }
+        await expect(blankInput).toHaveValue(String(doc.orderNumber));
       }
       await expect(dateInput).toHaveValue(localToday());
       if (doc.patientFullName) await expect(pibInput).toHaveValue(doc.patientFullName);
