@@ -562,7 +562,7 @@ icu-patient-chart/
 | `e2e-test` | Playwright (88 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
-Push → CI runs jobs in parallel → if any fails, fix and repeat until every check passes.
+CI jobs run in parallel when triggered; if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
 - **Backend tests**: 154 test files across the multi-module reactor — common (25) + icu-chart (75) + medication-sheet (16) + prosthesis-manufacturing (37) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
