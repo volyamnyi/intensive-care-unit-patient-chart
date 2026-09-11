@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -61,7 +64,19 @@ public class ProductionNormativeService {
 
     @Transactional(readOnly = true)
     public Normative get() {
-        return new Normative(readMultiplier(), readStaleDays());
+        // Single IN-query for both keys (dashboard calls this per read).
+        Map<String, String> values = new HashMap<>();
+        try {
+            for (SystemSettings row : settingsRepository
+                    .findByKeyIn(List.of(OVERDUE_MULTIPLIER_KEY, STALE_DAYS_KEY))) {
+                values.put(row.getKey(), row.getValue());
+            }
+        } catch (RuntimeException e) {
+            return new Normative(DEFAULT_OVERDUE_MULTIPLIER, DEFAULT_STALE_DAYS);
+        }
+        return new Normative(
+                parseDouble(values.get(OVERDUE_MULTIPLIER_KEY), DEFAULT_OVERDUE_MULTIPLIER),
+                parseStaleDays(values.get(STALE_DAYS_KEY)));
     }
 
     /**
@@ -71,8 +86,9 @@ public class ProductionNormativeService {
      */
     @Transactional
     public Normative update(Double overdueMultiplier, Integer staleDays, Long userId) {
-        double multiplier = overdueMultiplier == null ? readMultiplier() : overdueMultiplier;
-        int days = staleDays == null ? readStaleDays() : staleDays;
+        Normative current = get();
+        double multiplier = overdueMultiplier == null ? current.overdueMultiplier() : overdueMultiplier;
+        int days = staleDays == null ? current.staleDays() : staleDays;
         if (multiplier < MIN_OVERDUE_MULTIPLIER || multiplier > MAX_OVERDUE_MULTIPLIER) {
             throw new BadRequestException("Коефіцієнт прострочення має бути від "
                     + MIN_OVERDUE_MULTIPLIER + " до " + MAX_OVERDUE_MULTIPLIER);
@@ -112,25 +128,20 @@ public class ProductionNormativeService {
         return Duration.between(lastActivityAt, now).toDays() >= normative.staleDays();
     }
 
-    private double readMultiplier() {
-        return readDouble(OVERDUE_MULTIPLIER_KEY, DEFAULT_OVERDUE_MULTIPLIER);
-    }
-
-    private int readStaleDays() {
-        double value = readDouble(STALE_DAYS_KEY, DEFAULT_STALE_DAYS);
+    private int parseStaleDays(String raw) {
+        double value = parseDouble(raw, DEFAULT_STALE_DAYS);
         int days = (int) value;
         return days == value && days >= MIN_STALE_DAYS && days <= MAX_STALE_DAYS
                 ? days : DEFAULT_STALE_DAYS;
     }
 
-    private double readDouble(String key, double fallback) {
+    private static double parseDouble(String raw, double fallback) {
+        if (raw == null) {
+            return fallback;
+        }
         try {
-            return settingsRepository.findByKey(key)
-                    .map(SystemSettings::getValue)
-                    .map(String::trim)
-                    .map(Double::parseDouble)
-                    .filter(v -> !v.isNaN() && !v.isInfinite())
-                    .orElse(fallback);
+            double value = Double.parseDouble(raw.trim());
+            return !Double.isNaN(value) && !Double.isInfinite(value) ? value : fallback;
         } catch (RuntimeException e) {
             return fallback;
         }

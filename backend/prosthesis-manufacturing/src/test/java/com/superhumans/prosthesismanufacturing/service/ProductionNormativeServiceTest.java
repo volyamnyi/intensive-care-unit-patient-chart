@@ -13,11 +13,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,7 +41,7 @@ class ProductionNormativeServiceTest {
 
     @Test
     void get_absentRows_returnsDefaults() {
-        when(settingsRepository.findByKey(any())).thenReturn(Optional.empty());
+        when(settingsRepository.findByKeyIn(anyCollection())).thenReturn(List.of());
 
         ProductionNormativeService.Normative normative = service.get();
 
@@ -49,7 +51,7 @@ class ProductionNormativeServiceTest {
 
     @Test
     void get_corruptRows_returnsDefaults() {
-        when(settingsRepository.findByKey(any())).thenReturn(Optional.of(
+        when(settingsRepository.findByKeyIn(anyCollection())).thenReturn(List.of(
                 SystemSettings.builder().key("k").value("not-a-number").build()));
 
         assertThat(service.get().overdueMultiplier()).isEqualTo(1.5);
@@ -58,12 +60,11 @@ class ProductionNormativeServiceTest {
 
     @Test
     void get_storedRows_areReturned() {
-        when(settingsRepository.findByKey(ProductionNormativeService.OVERDUE_MULTIPLIER_KEY))
-                .thenReturn(Optional.of(SystemSettings.builder()
+        when(settingsRepository.findByKeyIn(anyCollection())).thenReturn(List.of(
+                SystemSettings.builder()
                         .key(ProductionNormativeService.OVERDUE_MULTIPLIER_KEY)
-                        .value("2.0").build()));
-        when(settingsRepository.findByKey(ProductionNormativeService.STALE_DAYS_KEY))
-                .thenReturn(Optional.of(SystemSettings.builder()
+                        .value("2.0").build(),
+                SystemSettings.builder()
                         .key(ProductionNormativeService.STALE_DAYS_KEY).value("3").build()));
 
         ProductionNormativeService.Normative normative = service.get();
@@ -74,6 +75,7 @@ class ProductionNormativeServiceTest {
 
     @Test
     void update_persistsAndAudits() {
+        when(settingsRepository.findByKeyIn(anyCollection())).thenReturn(List.of());
         when(settingsRepository.findByKey(any())).thenReturn(Optional.empty());
         when(settingsRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -92,12 +94,11 @@ class ProductionNormativeServiceTest {
 
     @Test
     void update_nullKeepsCurrent() {
-        when(settingsRepository.findByKey(ProductionNormativeService.OVERDUE_MULTIPLIER_KEY))
-                .thenReturn(Optional.of(SystemSettings.builder()
+        when(settingsRepository.findByKeyIn(anyCollection())).thenReturn(List.of(
+                SystemSettings.builder()
                         .key(ProductionNormativeService.OVERDUE_MULTIPLIER_KEY)
                         .value("2.5").build()));
-        when(settingsRepository.findByKey(ProductionNormativeService.STALE_DAYS_KEY))
-                .thenReturn(Optional.empty());
+        when(settingsRepository.findByKey(any())).thenReturn(Optional.empty());
         when(settingsRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         ProductionNormativeService.Normative normative = service.update(null, null, 9L);

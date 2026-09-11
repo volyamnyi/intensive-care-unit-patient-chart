@@ -157,6 +157,14 @@ class ProductionSecurityIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void unauthenticated_isUnauthorized() {
+        ResponseEntity<String> res = restTemplate.exchange(
+                BASE, HttpMethod.GET, new HttpEntity<>((Void) null), String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void nurse_withoutView_isForbiddenEverywhere() {
         String nurse = getNurseToken();
 

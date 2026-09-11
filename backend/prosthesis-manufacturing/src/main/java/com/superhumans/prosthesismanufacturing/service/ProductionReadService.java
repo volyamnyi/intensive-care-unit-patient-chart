@@ -33,6 +33,7 @@ import com.superhumans.repository.core.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -67,6 +68,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Slf4j
 public class ProductionReadService {
 
     /** Set when the instance finished with a failure. */
@@ -112,6 +114,7 @@ public class ProductionReadService {
      */
     @Transactional(readOnly = true)
     public Page<ProductionWorkItemDto> list(ProductionQuery query) {
+        long started = System.currentTimeMillis();
         if (query.getPage() < 0) {
             throw new BadRequestException("Page must not be negative");
         }
@@ -140,7 +143,11 @@ public class ProductionReadService {
         int total = rows.size();
         int from = Math.min(query.getPage() * query.getSize(), total);
         int to = Math.min(from + query.getSize(), total);
-        return new PageImpl<>(rows.subList(from, to), PageRequest.of(query.getPage(), query.getSize()), total);
+        Page<ProductionWorkItemDto> result =
+                new PageImpl<>(rows.subList(from, to), PageRequest.of(query.getPage(), query.getSize()), total);
+        log.debug("Production list: {} rows ({} total) in {} ms",
+                result.getNumberOfElements(), total, System.currentTimeMillis() - started);
+        return result;
     }
 
     /**
@@ -168,6 +175,7 @@ public class ProductionReadService {
     @Transactional(readOnly = true)
     public ProductionDetailDto detail(UUID instanceId, Long userId,
             boolean viewAll, boolean includePatientDetails) {
+        long started = System.currentTimeMillis();
         FlowInstance instance = instanceRepository.findById(instanceId)
                 .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
         if (!viewAll && !Objects.equals(instance.getAssignedUserId(), userId)) {
@@ -212,7 +220,7 @@ public class ProductionReadService {
                 documentsUnknown = true;
             }
         }
-        return ProductionDetailDto.builder()
+        ProductionDetailDto result = ProductionDetailDto.builder()
                 .workItem(row)
                 .timeline(timeline)
                 .brakEvents(brakEvents)
@@ -224,19 +232,23 @@ public class ProductionReadService {
                 .matchedDocument(matched)
                 .documentsUnknown(documentsUnknown)
                 .build();
+        log.debug("Production detail {}: {} timeline entries, {} braks, {} branches in {} ms",
+                instanceId, timeline.size(), brakEvents.size(), branches.size(),
+                System.currentTimeMillis() - started);
+        return result;
     }
-
     /**
      * KPI summary over the caller's scope. Pass the effective assignee
      * (own id without {@code VIEW_ALL}, {@code null} for the team scope).
      */
     @Transactional(readOnly = true)
     public ProductionSummaryDto summary(Long assigneeOrNull) {
+        long started = System.currentTimeMillis();
         List<FlowInstance> instances = assigneeOrNull == null
                 ? instanceRepository.findAll()
                 : instanceRepository.findByAssignedUserId(assigneeOrNull);
         List<ProductionWorkItemDto> rows = buildRows(instances);
-        return ProductionSummaryDto.builder()
+        ProductionSummaryDto result = ProductionSummaryDto.builder()
                 .totalItems(rows.size())
                 .inWork((int) rows.stream().filter(ProductionReadService::isInWork).count())
                 .active((int) rows.stream()
@@ -250,6 +262,9 @@ public class ProductionReadService {
                 .avgElapsedSeconds(average(rows, ProductionWorkItemDto::getElapsedSeconds))
                 .avgActiveSeconds(average(rows, ProductionWorkItemDto::getActiveSeconds))
                 .build();
+        log.debug("Production summary: {} items in {} ms",
+                result.getTotalItems(), System.currentTimeMillis() - started);
+        return result;
     }
 
     private static boolean isInWork(ProductionWorkItemDto row) {
@@ -283,16 +298,20 @@ public class ProductionReadService {
      */
     @Transactional(readOnly = true)
     public List<ProductionWorkItemDto> attention(Long assigneeOrNull) {
+        long started = System.currentTimeMillis();
         List<FlowInstance> instances = assigneeOrNull == null
                 ? instanceRepository.findAll()
                 : instanceRepository.findByAssignedUserId(assigneeOrNull);
-        return buildRows(instances).stream()
+        List<ProductionWorkItemDto> result = buildRows(instances).stream()
                 .filter(r -> !r.getAttentionFlags().isEmpty())
                 .sorted(Comparator.comparingInt(ProductionReadService::severity).reversed()
                         .thenComparing(ProductionWorkItemDto::getElapsedSeconds,
                                 Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(ProductionWorkItemDto::getInstanceId))
                 .toList();
+        log.debug("Production attention: {} flagged rows in {} ms",
+                result.size(), System.currentTimeMillis() - started);
+        return result;
     }
 
     private static int severity(ProductionWorkItemDto row) {
@@ -322,11 +341,12 @@ public class ProductionReadService {
      */
     @Transactional(readOnly = true)
     public List<ProductionTeamRowDto> team() {
+        long started = System.currentTimeMillis();
         Map<Long, List<ProductionWorkItemDto>> byUser = buildRows(instanceRepository.findAll())
                 .stream()
                 .filter(r -> r.getProsthetistUserId() != null)
                 .collect(Collectors.groupingBy(ProductionWorkItemDto::getProsthetistUserId));
-        return byUser.entrySet().stream()
+        List<ProductionTeamRowDto> result = byUser.entrySet().stream()
                 .map(e -> {
                     List<ProductionWorkItemDto> rows = e.getValue();
                     return ProductionTeamRowDto.builder()
@@ -354,6 +374,9 @@ public class ProductionReadService {
                 .sorted(Comparator.comparingInt(ProductionTeamRowDto::getInWork).reversed()
                         .thenComparing(ProductionTeamRowDto::getUserId))
                 .toList();
+        log.debug("Production team: {} members in {} ms",
+                result.size(), System.currentTimeMillis() - started);
+        return result;
     }
 
     /**

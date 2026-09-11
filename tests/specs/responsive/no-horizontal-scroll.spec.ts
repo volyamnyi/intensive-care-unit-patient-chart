@@ -19,7 +19,7 @@ const DOCTOR_ROUTES = [
   '/prescriptions/doctor',
 ];
 
-const PROSTHETIST_ROUTES = ['/prosthetics', '/prosthetics/new/select-patient'];
+const PROSTHETIST_ROUTES = ['/prosthetics', '/prosthetics/production', '/prosthetics/new/select-patient'];
 
 // Phase 5 (#179): every clinical route is audited — nurse surfaces included.
 const NURSE_ROUTES = [

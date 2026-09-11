@@ -19,6 +19,7 @@ import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderReposi
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
 import com.superhumans.prosthesismanufacturing.service.ProductionNormativeService;
 import com.superhumans.prosthesismanufacturing.service.ProductionReadService;
+import com.superhumans.repository.core.SystemSettingsRepository;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -43,11 +45,22 @@ class ProductionNormativeIntegrationTest {
 
     @Autowired private ProductionNormativeService normativeService;
     @Autowired private ProductionReadService readService;
+    @Autowired private SystemSettingsRepository settingsRepository;
     @Autowired private TemplateSnapshotParser snapshotParser;
     @Autowired private FlowInstanceRepository instanceRepository;
     @Autowired private ProstheticsOrderRepository orderRepository;
     @Autowired private ProstheticsPatientRepository patientRepository;
     @Autowired private FlowTemplateRepository templateRepository;
+
+    @AfterEach
+    void cleanNormative() {
+        // update() commits to the CORE database (outside the prosth
+        // transaction): remove the keys so later tests see defaults.
+        settingsRepository.findByKey(
+                ProductionNormativeService.OVERDUE_MULTIPLIER_KEY).ifPresent(settingsRepository::delete);
+        settingsRepository.findByKey(
+                ProductionNormativeService.STALE_DAYS_KEY).ifPresent(settingsRepository::delete);
+    }
 
     @Test
     void update_roundtripsThroughDatabase() {
