@@ -85,13 +85,21 @@ test.beforeAll(async ({ request }) => {
   me9 = ((await (await request.get(`${API}/users/me`, { headers: h9 })).json()) as { id: number }).id;
 
   // One live MIS document is enough: the order is handed from inst7 to inst9.
+  // Live-MIS data is outside our control (dept 19/27/37 + docs 120/121): when
+  // no candidate carries documents, skip honestly instead of failing on
+  // absent data (same contract as prosthetics-e2e.spec.ts, see #267).
   const cands = (await (await request.get(`${PROSTH}/patients/candidates`, { headers: h9 })).json()) as Array<{
     patient: { id: string };
     documents: Array<{ documentId: number }>;
+    documentsUnknown?: boolean;
   }>;
+  const withDocs = (cands ?? []).filter((c) => (c.documents ?? []).length > 0).length;
+  const unknown = (cands ?? []).filter((c) => c.documentsUnknown === true).length;
+  console.log(`[production-access] candidates=${(cands ?? []).length} withDocs=${withDocs} documentsUnknown=${unknown}`);
   const pair = (cands ?? []).flatMap((c) =>
     (c.documents ?? []).map((d) => ({ patientId: c.patient.id, documentId: d.documentId })),
   )[0];
+  test.skip(!pair, 'need 1 MIS order document for the production spec (live MIS has none right now)');
   expect(pair, 'need 1 MIS order document for the production spec').toBeTruthy();
 
   templateId = await findTemplateByIdName(request, h9, 'TP-UL-01');

@@ -36,7 +36,7 @@ test.describe('Production monitoring dashboard', () => {
   test('renders KPI cards and the workload table (prosthetist first)', async ({ page }) => {
     await page.goto('/prosthetics/production');
     await expect(page.getByRole('heading', { name: 'Моніторинг виробництва' })).toBeVisible();
-    await expect(page.getByText('В роботі')).toBeVisible();
+    await expect(page.getByText('В роботі', { exact: true })).toBeVisible();
     await expect(page.getByText('Сер. активний час')).toBeVisible();
 
     const table = page.getByRole('table');

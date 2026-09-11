@@ -178,6 +178,10 @@ jobs:
         run: mvn test -Pintegration-test
         working-directory: backend
         env:
+          # Bound every module Hikari pool: the suite boots many Spring test
+          # contexts against stock PostgreSQL (max_connections=100); without
+          # this the run dies with "sorry, too many clients already".
+          APP_DATASOURCE_POOL_MAX: "2"
           APP_DATASOURCE_CORE_URL: jdbc:postgresql://localhost:5432/my_fullstack_core
           APP_DATASOURCE_CORE_USERNAME: icu_user
           APP_DATASOURCE_CORE_PASSWORD: icu_pass

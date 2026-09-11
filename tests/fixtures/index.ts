@@ -5,6 +5,7 @@ export const test = base.extend<{
   nursePage: Page;
   hodPage: Page;
   adminPage: Page;
+  prostheticsAdminPage: Page;
 }>({
   doctorPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({ storageState: '.auth/doctor.json' });
@@ -26,6 +27,12 @@ export const test = base.extend<{
   },
   adminPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({ storageState: '.auth/admin.json' });
+    const page = await ctx.newPage();
+    await use(page);
+    await ctx.close();
+  },
+  prostheticsAdminPage: async ({ browser }, use) => {
+    const ctx = await browser.newContext({ storageState: '.auth/prosthetics_admin.json' });
     const page = await ctx.newPage();
     await use(page);
     await ctx.close();

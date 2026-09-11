@@ -4,39 +4,39 @@ import { test, expect } from '../../fixtures';
 // Read-only structural assertions: no data setup, no mutations.
 
 test.describe('Production team and attention', () => {
-  test('admin sees team and attention tabs with tables', async ({ adminPage }) => {
-    await adminPage.goto('/prosthetics/production');
-    await expect(adminPage.getByRole('heading', { name: 'Моніторинг виробництва' })).toBeVisible();
+  test('admin sees team and attention tabs with tables', async ({ prostheticsAdminPage }) => {
+    await prostheticsAdminPage.goto('/prosthetics/production');
+    await expect(prostheticsAdminPage.getByRole('heading', { name: 'Моніторинг виробництва' })).toBeVisible();
 
-    await adminPage.getByRole('tab', { name: /Команда/ }).click();
-    const teamTable = adminPage.getByRole('table');
+    await prostheticsAdminPage.getByRole('tab', { name: /Команда/ }).click();
+    const teamTable = prostheticsAdminPage.getByRole('table');
     await expect(teamTable).toBeVisible();
     const teamHeaders = await teamTable.getByRole('columnheader').allTextContents();
     expect(teamHeaders[0]).toContain('Протезист');
     expect(teamHeaders).toContain('Прострочені');
 
-    await adminPage.getByRole('tab', { name: /Потребують уваги/ }).click();
-    const attentionTable = adminPage.getByRole('table');
-    const emptyNote = adminPage.getByText('Проблемних виробів немає — усе в нормі');
+    await prostheticsAdminPage.getByRole('tab', { name: /Потребують уваги/ }).click();
+    const attentionTable = prostheticsAdminPage.getByRole('table');
+    const emptyNote = prostheticsAdminPage.getByText('Проблемних виробів немає — усе в нормі');
     await expect(attentionTable.or(emptyNote)).toBeVisible();
   });
 
-  test('team drill-down filters items by prosthetist', async ({ adminPage }) => {
-    await adminPage.goto('/prosthetics/production');
-    await adminPage.getByRole('tab', { name: /Команда/ }).click();
-    const teamTable = adminPage.getByRole('table');
+  test('team drill-down filters items by prosthetist', async ({ prostheticsAdminPage }) => {
+    await prostheticsAdminPage.goto('/prosthetics/production');
+    await prostheticsAdminPage.getByRole('tab', { name: /Команда/ }).click();
+    const teamTable = prostheticsAdminPage.getByRole('table');
     await expect(teamTable).toBeVisible();
 
     const rows = teamTable.getByRole('row');
     if ((await rows.count()) <= 1) {
       // No team data in this run: nothing to drill into.
-      await expect(adminPage.getByText('Немає даних про навантаження команди')).toBeVisible();
+      await expect(prostheticsAdminPage.getByText('Немає даних про навантаження команди')).toBeVisible();
       return;
     }
     const name = ((await rows.nth(1).getByRole('cell').first().textContent()) ?? '').trim();
     await rows.nth(1).getByRole('button', { name: 'Вироби' }).click();
-    await expect(adminPage.getByRole('tab', { name: 'Вироби' })).toBeVisible();
-    await expect(adminPage.getByText(`Протезист: ${name}`)).toBeVisible();
+    await expect(prostheticsAdminPage.getByRole('tab', { name: 'Вироби' })).toBeVisible();
+    await expect(prostheticsAdminPage.getByText(`Протезист: ${name}`)).toBeVisible();
   });
 
   test('prosthetist has no team tab but sees the attention tab', async ({ page }) => {
@@ -52,13 +52,13 @@ test.describe('Production team and attention', () => {
     await expect(page.getByText('Динаміка виробництва')).toHaveCount(0);
   });
 
-  test('admin sees the trend chart and switches ranges', async ({ adminPage }) => {
-    await adminPage.goto('/prosthetics/production');
-    await expect(adminPage.getByText('Динаміка виробництва')).toBeVisible();
-    await expect(adminPage.getByText('Створено')).toBeVisible();
-    await adminPage.getByRole('tab', { name: '7д' }).click();
-    await expect(adminPage.getByText('Динаміка виробництва')).toBeVisible();
-    await adminPage.getByRole('tab', { name: '90д' }).click();
-    await expect(adminPage.getByText('Динаміка виробництва')).toBeVisible();
+  test('admin sees the trend chart and switches ranges', async ({ prostheticsAdminPage }) => {
+    await prostheticsAdminPage.goto('/prosthetics/production');
+    await expect(prostheticsAdminPage.getByText('Динаміка виробництва')).toBeVisible();
+    await expect(prostheticsAdminPage.getByText('Створено')).toBeVisible();
+    await prostheticsAdminPage.getByRole('tab', { name: '7д' }).click();
+    await expect(prostheticsAdminPage.getByText('Динаміка виробництва')).toBeVisible();
+    await prostheticsAdminPage.getByRole('tab', { name: '90д' }).click();
+    await expect(prostheticsAdminPage.getByText('Динаміка виробництва')).toBeVisible();
   });
 });
