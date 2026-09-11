@@ -549,9 +549,9 @@ icu-patient-chart/
 | `npx playwright test --list` | List tests |
 | `npx playwright show-report` | View HTML report |
 
-### Repeatable CI Development Workflow
+### Development Workflow (local-first)
 
-**All tests run exclusively via GitHub Actions CI — never locally.** The loop: pre-flight local checks → implement → stage/commit (Conventional Commits) → `git push origin main` → GitHub Actions auto-triggers → poll with `gh run watch <run-id>` (or `gh run list`) → triage failures via `gh run view <run-id> --job <job-id> --log` and `gh run download <run-id>` → fix in a new commit → repeat until green.
+**Tests run locally by default; CI only on explicit user request.** The loop: local checks → implement → run the relevant suite(s) locally → fix, re-run until green → stage/commit (Conventional Commits). Push / poll / triage CI (`gh run watch`, `gh run view`, `gh run download`) only when the user explicitly asked for a CI run.
 
 | Job | What it runs | Trigger |
 |---|---|---|
