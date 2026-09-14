@@ -42,3 +42,5 @@ merge_the_project_with_current/
 medicinelist/
 pixel-perfect-studio-main/
 *.png
+# Виняток: ілюстрації ЗІЗ для візарда «Виробництво протезів» мають жити в git (#293)
+!frontend/public/ppe/*.png
