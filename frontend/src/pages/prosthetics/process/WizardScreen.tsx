@@ -57,6 +57,8 @@ import {
 import { FAILURE_CATEGORIES } from '@/prosthetics/failureCategories';
 import { ALLOWED_RETURN_STAGE_IDS, ALLOWED_RETURN_STAGE_LABELS } from '@/prosthetics/types';
 import StepNoteAttachments from '@/components/prosthetics/StepNoteAttachments';
+import PpeNoticeBanner from '@/components/prosthetics/PpeNoticeBanner';
+import { getPpeNotices } from '@/prosthetics/ppeNotices';
 import {
   isSoftLinerComboAllowed,
   NOT_REQUIRED_SOFT_LINER_KEY,
@@ -2016,6 +2018,9 @@ export default function WizardScreen() {
               </Alert>
             )}
             <div key={step.id} className="step-fade-in space-y-5">
+              {getPpeNotices(step?.id).map((n) => (
+                <PpeNoticeBanner key={n.kind} notice={n} />
+              ))}
               {step.id === 'e0000005-0000-0000-0000-000000000005' ? (
                 <div className="space-y-5">
                   <div className="space-y-3 rounded-xl border bg-muted/40 p-5">
