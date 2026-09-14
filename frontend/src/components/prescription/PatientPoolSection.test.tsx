@@ -3,7 +3,8 @@ import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PatientPoolSection from './PatientPoolSection';
 import { patientApi } from '../../api/platform';
-import { prescriptionApi } from '../../api/medication';
+import type { AxiosResponse } from 'axios';
+import type { PageResponse, PatientDto } from '../../types/core';
 
 vi.mock('../../api/platform', () => ({
   patientApi: {
@@ -21,7 +22,7 @@ vi.mock('../../api/medication', () => ({
 
 const mockedPool = vi.mocked(patientApi.getPatientPool);
 
-function patient(id: number, over: Record<string, unknown> = {}) {
+function patient(id: number, over: Record<string, unknown> = {}): PatientDto {
   return {
     id,
     fullName: `Пацієнт ${id}`,
@@ -40,7 +41,7 @@ function patient(id: number, over: Record<string, unknown> = {}) {
   };
 }
 
-function pageOf(rows: ReturnType<typeof patient>[], totalPages = 1, number = 0) {
+function pageOf(rows: PatientDto[], totalPages = 1, number = 0): AxiosResponse<PageResponse<PatientDto>> {
   return {
     data: {
       content: rows,
@@ -49,6 +50,10 @@ function pageOf(rows: ReturnType<typeof patient>[], totalPages = 1, number = 0) 
       number,
       size: 20,
     },
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config: {} as AxiosResponse['config'],
   };
 }
 
@@ -72,7 +77,7 @@ describe('PatientPoolSection', () => {
   }
 
   it('loads page 0 on open and pages forward/back', async () => {
-    mockedPool.mockImplementation((params?: { page?: number }) => {
+    mockedPool.mockImplementation((params?: { query?: string; status?: string; page?: number; size?: number }) => {
       const page = params?.page ?? 0;
       const rows = page === 0 ? [patient(1), patient(2)] : [patient(3)];
       return Promise.resolve(pageOf(rows, 2, page));
