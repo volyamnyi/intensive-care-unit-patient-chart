@@ -5,6 +5,7 @@ import {
   getPpeNotices,
   PPE_FULL_KIT_TEXT,
   PPE_FULL_KIT_TITLE,
+  PPE_NITRILE_TEXT,
 } from '@/prosthetics/ppeNotices';
 
 const STEP_TRAINING_SOCKET = 'e0000024-0000-0000-0000-000000000024';
@@ -38,14 +39,28 @@ describe('PpeNoticeBanner', () => {
     expect(container.querySelectorAll('[role="checkbox"], [role="button"]').length).toBe(0);
   });
 
-  it('nitrile гілка до #295 рендериться в null (без падінь)', () => {
+  it('nitrile: role=alert, title «Захист рук», точний текст, 1 фото, default-варіант', () => {
     const nitrile = getPpeNotices(STEP_TRAINING_SOCKET)[1];
     expect(nitrile?.kind).toBe('nitrile');
     const { container } = render(<PpeNoticeBanner notice={nitrile!} />);
-    expect(container).toBeEmptyDOMElement();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveAttribute('data-testid', 'ppe-notice-nitrile');
+    // візуально відмінний від full-kit: базовий варіант без warning-бордера
+    expect(alert.className).toContain('bg-card');
+    expect(alert.className).not.toContain('border-warning/50');
+    expect(within(alert).getByText('Захист рук')).toBeDefined();
+    expect(within(alert).getByText(PPE_NITRILE_TEXT)).toBeDefined();
+    const imgs = within(alert).getAllByRole('img');
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]?.getAttribute('src')).toBe('/ppe/nitrile-gloves.png');
+    expect(imgs[0]?.getAttribute('alt')?.trim()).not.toBe('');
+    expect(within(alert).getByText('Нітрилові рукавиці')).toBeDefined();
+    expect(container.querySelectorAll('figure')).toHaveLength(1);
+    expect(container.querySelectorAll('button, a, input, select, textarea').length).toBe(0);
+    expect(container.querySelectorAll('[role="checkbox"], [role="button"]').length).toBe(0);
   });
 
-  it('стек e0000024: першим рендериться full-kit', () => {
+  it('стек e0000024: обидва банери у порядку [full-kit, nitrile]', () => {
     const { container } = render(
       <>
         {getPpeNotices(STEP_TRAINING_SOCKET).map((n) => (
@@ -54,7 +69,8 @@ describe('PpeNoticeBanner', () => {
       </>,
     );
     const alerts = container.querySelectorAll('[role="alert"]');
-    expect(alerts).toHaveLength(1);
+    expect(alerts).toHaveLength(2);
     expect(alerts[0]?.getAttribute('data-testid')).toBe('ppe-notice-full-kit');
+    expect(alerts[1]?.getAttribute('data-testid')).toBe('ppe-notice-nitrile');
   });
 });
