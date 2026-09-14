@@ -17,8 +17,15 @@ export const patientApi = {
   /** Module roster (Phases 7–8, #260/#261): backend narrows to the module departments. */
   searchByModule: (module: string, query?: string, signal?: AbortSignal) =>
     client.get<PatientDto[]>('/patients', { params: { query, module }, signal }),
-  getById: (id: string) =>
-    client.get<PatientDto>(`/patients/${id}`),
+  getById: (id: string, signal?: AbortSignal) =>
+    client.get<PatientDto>(`/patients/${id}`, { signal }),
+  getPatientPool: (params?: {
+    query?: string;
+    status?: string;
+    page?: number;
+    size?: number;
+  }, signal?: AbortSignal) =>
+    client.get<PageResponse<PatientDto>>('/patients/pool', { params, signal }),
 };
 
 export const userApi = {

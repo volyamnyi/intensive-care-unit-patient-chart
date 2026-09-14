@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import NursePrescriptionPage from '../../pages/prescription/NursePrescriptionPage';
@@ -45,6 +45,20 @@ function makePatient(over: Record<string, unknown> = {}) {
   };
 }
 
+function makeList(id: string, patientId: number, status: 'Active' | 'Finished' = 'Active') {
+  return {
+    id,
+    patientId,
+    hospitalizationId: null,
+    departmentId: null,
+    documentName: 'Листок',
+    status,
+    editingUserId: null,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  };
+}
+
 function renderPage() {
   return render(
     <ThemeModeProvider>
@@ -66,7 +80,11 @@ describe('NursePrescriptionPage', () => {
 
     expect(await screen.findByText('Сидоренко Олег')).toBeInTheDocument();
     expect(mockSearchByModule).toHaveBeenCalledTimes(1);
-    expect(mockSearchByModule).toHaveBeenCalledWith('medication', '');
+    expect(mockSearchByModule).toHaveBeenCalledWith(
+      'medication',
+      '',
+      expect.any(AbortSignal),
+    );
   });
 
   it('toggle splits surgery (19) and rehab (37) and persists the choice', async () => {
@@ -110,5 +128,31 @@ describe('NursePrescriptionPage', () => {
     renderPage();
 
     expect(await screen.findByText('Немає пацієнтів у відділенні')).toBeInTheDocument();
+  });
+
+  it('row status: empty and open lists show «В ході», finished-only shows «Завершено»', async () => {
+    // same contract as the doctor page: roster rows are patients under
+    // treatment, so no row ever shows «Заплановано»
+    mockSearchByModule.mockResolvedValue({ data: [
+      makePatient({ id: 1003 }),
+      makePatient({ id: 1002, fullName: 'Коваленко Олена' }),
+      makePatient({ id: 1001, fullName: 'Петренко Іван' }),
+    ]});
+    mockGetByPatient.mockImplementation((patientId: number) => {
+      if (patientId === 1002) return Promise.resolve({ data: [makeList('L-1002', 1002)] });
+      if (patientId === 1001) {
+        return Promise.resolve({ data: [makeList('L-1001', 1001, 'Finished')] });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    renderPage();
+    await screen.findByText('Петренко Іван');
+
+    const rowOf = (name: string) => screen.getByText(name).closest('tr') as HTMLElement;
+    expect(within(rowOf('Сидоренко Олег')).getByText('В ході')).toBeInTheDocument();
+    expect(within(rowOf('Коваленко Олена')).getByText('В ході')).toBeInTheDocument();
+    expect(within(rowOf('Петренко Іван')).getByText('Завершено')).toBeInTheDocument();
+    expect(screen.queryByText('Заплановано')).not.toBeInTheDocument();
   });
 });

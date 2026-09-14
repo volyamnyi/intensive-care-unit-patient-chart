@@ -22,7 +22,7 @@ class RemovedEndpointsIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void stubMisLeniently() {
         lenient().when(misService.searchPatients(any())).thenReturn(List.of());
-        lenient().when(misService.getAllPatientsUnderTreatment()).thenReturn(List.of());
+        lenient().when(misService.getPatientsUnderTreatment()).thenReturn(List.of());
         lenient().when(misService.searchMedicineCatalog(any())).thenReturn(List.of());
         lenient().when(misService.getPatientDocuments(any())).thenReturn(List.of());
     }

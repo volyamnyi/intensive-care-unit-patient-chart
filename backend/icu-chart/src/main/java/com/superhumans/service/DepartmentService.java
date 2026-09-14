@@ -84,7 +84,7 @@ public class DepartmentService {
         // One roster fetch for the whole list (same N+1 rationale as
         // EpisodeService.searchEpisodes over real MIS).
         Map<Long, String> patientNames = new HashMap<>();
-        for (PatientDTO p : misService.getAllPatientsUnderTreatment()) {
+        for (PatientDTO p : misService.getPatientsUnderTreatment()) {
             if (p.getId() != null && !patientNames.containsKey(p.getId())) {
                 patientNames.put(p.getId(), p.getFullName());
             }

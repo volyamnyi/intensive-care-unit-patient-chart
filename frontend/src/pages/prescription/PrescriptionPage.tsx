@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ExternalLink, FileText, Plus, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,10 +24,13 @@ import {
 } from '@/components/ui/table';
 import { patientApi } from '../../api/platform';
 import { prescriptionApi } from '../../api/medication';
+import { getPatientStatusText, getPatientRowClasses } from '../../components/prescription/patientStatus';
+import PatientPoolSection from '../../components/prescription/PatientPoolSection';
 import { useAuth } from '../../services/AuthContext';
 import { useThemeMode } from '../../styles/ThemeContext';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { MEDICATION_DEPARTMENTS, MEDICATION_MODULE, type MedicationDepartment } from '../../lib/medicationDepartments';
+import { mapWithConcurrency, PRESCRIPTION_FANOUT_LIMIT } from '../../lib/async';
 import type { PatientDto } from '../../types/core';
 import type { PrescriptionList } from '../../types/medication';
 
@@ -65,35 +68,58 @@ export default function PrescriptionPage() {
   const [closingId, setClosingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [creatingPatientId, setCreatingPatientId] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadPatients = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(null);
     try {
       // Backend roster (module=medication) already narrows to departments
       // 19/37; the toggle splits the roster client-side without extra calls.
-      const res = await patientApi.searchByModule(MEDICATION_MODULE, '');
+      const res = await patientApi.searchByModule(MEDICATION_MODULE, '', controller.signal);
       const deptPatients = res.data.filter(p => p.departmentId === MEDICATION_DEPARTMENTS[dept]);
 
-      const listResults = await Promise.all(
-        deptPatients.map(async (p) => {
+      const listResults = await mapWithConcurrency(
+        deptPatients,
+        PRESCRIPTION_FANOUT_LIMIT,
+        async (p, signal) => {
           try {
-            const lr = await prescriptionApi.getByPatient(p.id);
+            const lr = await prescriptionApi.getByPatient(p.id, signal);
             return { patient: p, lists: lr.data, loading: false };
-          } catch {
+          } catch (err) {
+            if (signal?.aborted) {
+              throw err;
+            }
             return { patient: p, lists: [], loading: false };
           }
-        }),
+        },
+        controller.signal,
       );
+      if (controller.signal.aborted) {
+        return;
+      }
       setRows(listResults);
     } catch (err) {
+      if (controller.signal.aborted) {
+        return;
+      }
       setError(getErrorMessage(err, 'Не вдалося завантажити пацієнтів'));
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [dept]);
 
-  useEffect(() => { loadPatients(); }, [loadPatients]);
+  useEffect(() => {
+    loadPatients();
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [loadPatients]);
 
   const handleOpenDrawer = (patient: PatientDto, lists: PrescriptionList[]) => {
     setDrawerPatient(patient);
@@ -176,17 +202,12 @@ export default function PrescriptionPage() {
     }
   };
 
-  const getStatusText = (lists: PrescriptionList[]) => {
-    if (lists.length === 0) return 'Заплановано';
-    if (lists.some(l => l.status !== 'Finished')) return 'В ході';
-    return 'Завершено';
-  };
-
-  const getRowClasses = (lists: PrescriptionList[]) => {
-    if (lists.length === 0) return 'bg-yellow-100 dark:bg-yellow-900/30';
-    if (lists.every(l => l.status === 'Finished')) return 'bg-muted/50';
-    return '';
-  };
+  // Roster rows are patients currently under treatment by construction
+  // (backend returns getPatientsUnderTreatment narrowed to 19/37), so a
+  // row without lists is still "in progress" — never "planned".
+  // A reported MIS stay state (MOV/CMP/…) always wins over list-derived text.
+  const getStatusText = (patient: PatientDto, lists: PrescriptionList[]) =>
+    getPatientStatusText(patient.patientStatus, lists);
 
   const formatDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '';
@@ -224,7 +245,8 @@ export default function PrescriptionPage() {
           cmp = (a.patient.doctorName ?? '').localeCompare(b.patient.doctorName ?? '', 'uk');
           break;
         case 'status':
-          cmp = getStatusText(a.lists).localeCompare(getStatusText(b.lists), 'uk');
+          cmp = getStatusText(a.patient, a.lists).localeCompare(
+            getStatusText(b.patient, b.lists), 'uk');
           break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
@@ -330,7 +352,7 @@ export default function PrescriptionPage() {
               </TableRow>
             ) : (
               filteredRows.map(row => (
-                <TableRow key={row.patient.id} className={getRowClasses(row.lists)}>
+                <TableRow key={row.patient.id} className={getPatientRowClasses(row.lists)}>
                   <TableCell>{row.patient.id}</TableCell>
                   <TableCell>
                     <span className="font-semibold">{row.patient.fullName}</span>
@@ -338,7 +360,7 @@ export default function PrescriptionPage() {
                   <TableCell>{row.patient.room || '—'}</TableCell>
                   <TableCell>{row.patient.bed || '—'}</TableCell>
                   <TableCell>{row.patient.doctorName || '—'}</TableCell>
-                  <TableCell>{getStatusText(row.lists)}</TableCell>
+                  <TableCell>{getStatusText(row.patient, row.lists)}</TableCell>
                   <TableCell>
                     <Button
                       size="sm"
@@ -356,6 +378,8 @@ export default function PrescriptionPage() {
           </TableBody>
         </Table>
       )}
+
+      <PatientPoolSection onOpenDrawer={handleOpenDrawer} storageKey="prescPool" />
 
       {/* Drawer */}
       {drawerOpen && (

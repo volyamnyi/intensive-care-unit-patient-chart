@@ -24,7 +24,7 @@ import java.util.Optional;
  * <p>
  * <b>SINGLE SOURCE OF TRUTH POLICY:</b> all demographic patient data (ПІБ, date
  * of birth, sex, address, phone, email) comes from the MIS Integration Layer
- * (common module, 13-field {@code spiPatientProsthesCheck} contract) — never
+ * (common module, 14-field {@code spiPatientProsthesCheck} contract) — never
  * from the local database. MIS no longer supplies height/weight, so
  * {@code heightCm}/{@code weightKg} fall back to the local
  * {@code prosthetics_patients} record when present. The local table otherwise

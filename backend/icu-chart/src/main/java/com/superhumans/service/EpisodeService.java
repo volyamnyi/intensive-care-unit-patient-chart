@@ -70,7 +70,7 @@ public class EpisodeService {
         // (each fetch costs seconds; the roster load never settles inside UI
         // budgets). First-wins + null-name semantics match getPatient exactly.
         Map<Long, String> namesByPatientId = new HashMap<>();
-        for (PatientDTO p : misService.getAllPatientsUnderTreatment()) {
+        for (PatientDTO p : misService.getPatientsUnderTreatment()) {
             if (p.getId() != null && !namesByPatientId.containsKey(p.getId())) {
                 namesByPatientId.put(p.getId(), p.getFullName());
             }

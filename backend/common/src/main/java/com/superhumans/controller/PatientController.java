@@ -4,6 +4,9 @@ import com.superhumans.mis.MisService;
 import com.superhumans.mis.PatientModuleFilter;
 import com.superhumans.mis.dto.PatientDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,5 +45,19 @@ public class PatientController {
         return misService.getPatient(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Pool of all patients with server-side paging (any stay status).
+     * One bulk MIS fetch per call, sliced in memory — renders any page with
+     * a bounded number of follow-up requests instead of fanning out over
+     * the whole pool.
+     */
+    @GetMapping("/pool")
+    public ResponseEntity<Page<PatientDTO>> getPatientPool(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String status,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(misService.getPatientPool(query, status, pageable));
     }
 }

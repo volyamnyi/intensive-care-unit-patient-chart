@@ -6,6 +6,10 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 
@@ -41,18 +45,36 @@ public class MisServiceImpl implements MisService {
 
     @Override
     public Optional<PatientDTO> getPatient(Long patientId) {
-        return getAllPatientsUnderTreatment().stream()
+        return getAllPatients().stream()
                 .filter(patient -> patient.getId() != null && patient.getId().equals(patientId))
                 .findFirst();
     }
 
     @Override
     public List<PatientDTO> searchPatients(String query) {
-        return filterPatients(getAllPatientsUnderTreatment(), query);
+        return filterPatients(getPatientsUnderTreatment(), query);
     }
 
     @Override
-    public List<PatientDTO> getAllPatientsUnderTreatment() {
+    public Page<PatientDTO> getPatientPool(String query, String status, Pageable pageable) {
+        List<PatientDTO> pool = getAllPatients();
+        if (query != null && !query.isBlank()) {
+            pool = filterPatients(pool, query);
+        }
+        if (status != null && !status.isBlank()) {
+            pool = pool.stream()
+                    .filter(patient -> status.equals(patient.getPatientStatus()))
+                    .toList();
+        }
+        int size = Math.min(Math.max(pageable.getPageSize(), 1), 100);
+        int page = Math.max(pageable.getPageNumber(), 0);
+        int from = (int) Math.min((long) page * size, pool.size());
+        int to = Math.min(from + size, pool.size());
+        return new PageImpl<>(pool.subList(from, to), PageRequest.of(page, size), pool.size());
+    }
+
+    @Override
+    public List<PatientDTO> getAllPatients() {
         JsonNode response = misApiClient.callMethod(SPI_PATIENT_PROCEDURE);
         auditService.logAction("MIS", null, "GET_ALL_PATIENTS", getUserId());
         return parsePatientList(response);
@@ -201,9 +223,9 @@ public class MisServiceImpl implements MisService {
     }
 
     /**
-     * Parses the exact 13-field {@code spiPatientProsthesCheck} contract
+     * Parses the exact 14-field {@code spiPatientProsthesCheck} contract
      * ({@code id, fullName, birthDate, sexCode, address, phone, email,
-     * bloodGroup, rhFactor, departmentId, room, bed, doctorName}).
+     * bloodGroup, rhFactor, departmentId, room, bed, doctorName, patientStatus}).
      * No legacy aliases, no fallbacks: unknown keys are ignored and absent
      * keys stay null. {@code birthDate} accepts {@code "1962-07-08T00:00:00"},
      * {@code "1962-07-08"} and {@code "1962-07-08 00:00:00"} shapes.
@@ -230,6 +252,7 @@ public class MisServiceImpl implements MisService {
                     .room(textOrNull(node, "room"))
                     .bed(textOrNull(node, "bed"))
                     .doctorName(textOrNull(node, "doctorName"))
+                    .patientStatus(textOrNull(node, "patientStatus"))
                     .build();
             result.add(patient);
         }

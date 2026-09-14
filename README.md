@@ -474,6 +474,38 @@ Prosthetics E2E isolation uses fixed seed IDs per spec (no `.first()` race).
 
 ---
 
+## Legacy Data Import (MedicineList → Medication Sheet)
+
+One-shot migration of prescription lists and vital-sign lists from the legacy export (`codebase_examples/MedicineList.csv` — 2372 rows, `MedicineListItem.csv` — 1:1 rows with JSON payloads; 1544 prescription sheets + 828 vital-sign sheets across 732 MIS patients) into `my_fullstack_med`, implemented in `backend/medication-sheet/.../migration/` (issues #285–#292, CLOSED).
+
+- Two-pass `migration`-profile job: pass 1 creates all 1544 prescription lists (`Saved`); pass 2 merges the 828 vital lists into parents (chronological rule; 11 shell lists `Листок лікарських призначень (імпорт ЛЖП №<id>)` for vital-only patients). One legacy list = one med-DB transaction; idempotent re-runs via `import_id_map` (`UNIQUE(old_kind, old_id)`); `rollback` mode deletes by list (FK-reverse, chunked); `validate` mode runs 14 deterministic checks (non-zero exit on failure).
+- Proven dry-run results: 1555 lists / 10945 items / 264304 days / 1057216 parts; vitals 16196 inserted + 8251 skipped (fill-empty-only) + 1314 quarantined = 25761; quarantine 289 nameless items + 1482 bad vital values + 6 garbage logins; 0 orphans; 2372 IMPORT audit rows.
+- Known limits: dose execution history is flags-only (no who/when, so no `prescription_executions` rows are reconstructed); no signatures; future dates imported as-is; authorship collapses to `createdBy=0` plus IMPORT audit rows; `MakeDEDocument` ignored (dead MIS feature).
+- MIS stays read-only (the importer only calls read-only `getPatient` for the pre-check).
+- Build with `mvn -f backend/pom.xml clean package -DskipTests` (clean is required — an incremental build once left stale nested jars in the fat JAR and the migration beans silently never loaded).
+
+```powershell
+java -Xmx4g -jar backend\app\target\app-1.0.0.jar --spring.profiles.active=migration --spring.main.web-application-type=none --app.datasource.core.url=<core> --app.datasource.icu.url=<icu> --app.datasource.med.url=<med> --app.datasource.prosth.url=<prosth> --app.seed-data.enabled=false --app.import.csv-dir=<dir> [--app.import.skip-patient-check=true]
+# re-run = same command (0 new rows when done)
+# rollback: append --app.import.mode=rollback --app.import.rollback-run-id=<uuid>
+# validate: append --app.import.mode=validate --app.import.validate-run-id=<uuid>
+#   (--app.import.csv-dir is still required: validation recomputes expectations from source)
+# recon (read-only MIS census, no DB writes): --app.import.mode=recon --app.import.csv-dir=<dir> --app.import.recon-out=<path.csv>
+#   (writes patientRef;exists;departmentId;fullName;lists — keep full names local)
+```
+
+Conventions used above (run from the repo root; on Git Bash/WSL use forward slashes):
+
+- `<core>` etc. are full JDBC URLs, e.g. `--app.datasource.med.url=jdbc:postgresql://localhost:5432/my_fullstack_med`. User/password default to `postgres` / `admin` from `application.yml` (override per DB with `--app.datasource.<db>.username=` / `.password=`, or the `APP_DATASOURCE_*` env vars).
+- `<dir>` is the directory holding **both** CSVs (e.g. `codebase_examples`), not a file path.
+- `<uuid>` is the run ID from the runner stdout (`Pre-report …` / `Post-report run <uuid>`) or `SELECT run_id FROM import_run;`.
+- Rollback/validate fragments are appended to the base command, not run standalone.
+- Freshness check (migration classes live in the nested module jar, not the outer one): inspect `BOOT-INF/lib/medication-sheet-1.0.0.jar` inside `app-1.0.0.jar` for the `migration` package.
+
+Flags (`--app.import.*`): `skip-patient-check` (default false; local dry-runs without MIS access), `allow-missing-patients` (default false; quarantine instead of abort), `audit-enabled` (default true). Crash recovery: a killed run stays `RUNNING` and blocks new runs — roll it back (or flip it to `FINISHED` manually only in order to roll back); never delete map rows by hand.
+
+---
+
 ## Project Structure
 
 ```

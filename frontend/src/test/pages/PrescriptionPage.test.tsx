@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 import PrescriptionPage from '../../pages/prescription/PrescriptionPage';
@@ -97,7 +97,22 @@ describe('PrescriptionPage', () => {
 
     await screen.findByText('Петренко Іван');
     expect(mockSearchByModule).toHaveBeenCalledTimes(1);
-    expect(mockSearchByModule).toHaveBeenCalledWith('medication', '');
+    expect(mockSearchByModule).toHaveBeenCalledWith(
+      'medication',
+      '',
+      expect.any(AbortSignal),
+    );
+  });
+
+  it('passes an abort signal to per-patient list requests', async () => {
+    mockGetByPatient.mockResolvedValue({ data: [] });
+    renderPage();
+
+    await screen.findByText('Петренко Іван');
+    expect(mockGetByPatient).toHaveBeenCalled();
+    for (const call of mockGetByPatient.mock.calls) {
+      expect(call[1]).toBeInstanceOf(AbortSignal);
+    }
   });
 
   it('shows Відкрити for every patient, creation lives inside the drawer', async () => {
@@ -234,5 +249,35 @@ describe('PrescriptionPage', () => {
     expect(await screen.findByText('Немає листків призначень')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Створити листок/ })).not.toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('row status: empty and open lists show «В ході», finished-only shows «Завершено»', async () => {
+    // roster rows are patients under treatment by construction: even a row
+    // without lists is «В ході», never «Заплановано»
+    mockSearchByModule.mockResolvedValue({ data: [
+      makePatient({ id: 1001 }),
+      makePatient({ id: 1002, fullName: 'Коваленко Олена' }),
+      makePatient({ id: 1003, fullName: 'Сидоренко Василь' }),
+      makePatient({ id: 1004, fullName: 'Тест Виписаний', patientStatus: 'CMP' }),
+    ]});
+    mockGetByPatient.mockImplementation((patientId: number) => {
+      if (patientId === 1002) return Promise.resolve({ data: [makeList('L-1002')] });
+      if (patientId === 1003) {
+        return Promise.resolve({ data: [{ ...makeList('L-1003'), status: 'Finished' as const }] });
+      }
+      if (patientId === 1004) return Promise.resolve({ data: [makeList('L-1004')] });
+      return Promise.resolve({ data: [] });
+    });
+
+    renderPage();
+    await screen.findByText('Сидоренко Василь');
+
+    const rowOf = (name: string) => screen.getByText(name).closest('tr') as HTMLElement;
+    expect(within(rowOf('Петренко Іван')).getByText('В ході')).toBeInTheDocument();
+    expect(within(rowOf('Коваленко Олена')).getByText('В ході')).toBeInTheDocument();
+    expect(within(rowOf('Сидоренко Василь')).getByText('Завершено')).toBeInTheDocument();
+    // MIS stay state wins over the open list
+    expect(within(rowOf('Тест Виписаний')).getByText('Виписано')).toBeInTheDocument();
+    expect(screen.queryByText('Заплановано')).not.toBeInTheDocument();
   });
 });

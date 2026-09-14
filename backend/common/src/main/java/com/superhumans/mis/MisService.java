@@ -5,6 +5,9 @@ import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.mis.dto.PatientDTO;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * MIS integration interface.
@@ -19,17 +22,49 @@ import java.util.Optional;
  */
 public interface MisService {
 
+    /** MIS stay states that exclude a patient from treatment views. */
+    Set<String> NON_TREATMENT_STATUSES = Set.of("MOV", "CMP", "CNC", "REJ");
+
+    /**
+     * Treatment check: a patient counts as under treatment unless MIS reports
+     * a known terminal status. Null, blank and unknown codes fail open — a
+     * patient is never hidden from care delivery because of an unrecognized
+     * code (unknown codes surface verbatim in the UI instead).
+     */
+    static boolean isUnderTreatment(PatientDTO patient) {
+        if (patient == null || patient.getPatientStatus() == null
+                || patient.getPatientStatus().isBlank()) {
+            return true;
+        }
+        return !NON_TREATMENT_STATUSES.contains(patient.getPatientStatus().strip());
+    }
+
     Optional<PatientDTO> getPatient(Long patientId);
 
     List<PatientDTO> searchPatients(String query);
 
     /**
-     * Returns every patient currently under treatment — the single base source
-     * of patient data for all modules (real MIS: {@code spiPatientProsthesCheck}).
-     * Module use-cases apply their own department rules on top of this list and
-     * must not implement alternative patient sources.
+     * Paged pool of patients for the «all patients» views, with optional
+     * query/status filters. One bulk MIS fetch per call, sliced in memory —
+     * callers must never fan out per-patient requests over the pool.
      */
-    List<PatientDTO> getAllPatientsUnderTreatment();
+    Page<PatientDTO> getPatientPool(String query, String status, Pageable pageable);
+
+    /**
+     * Returns every patient the procedure currently reports, regardless of
+     * stay status — the raw pool (real MIS: {@code spiPatientProsthesCheck}).
+     * Callers that need only patients under treatment must use
+     * {@link #getPatientsUnderTreatment()} instead.
+     */
+    List<PatientDTO> getAllPatients();
+
+    /**
+     * Patients under treatment: the raw pool minus {@link #NON_TREATMENT_STATUSES}.
+     * The single base source of patient data for treatment views in all modules.
+     */
+    default List<PatientDTO> getPatientsUnderTreatment() {
+        return getAllPatients().stream().filter(MisService::isUnderTreatment).toList();
+    }
 
     /**
      * Searches the medicine catalog from MIS (real mode:

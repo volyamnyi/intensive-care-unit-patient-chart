@@ -81,7 +81,7 @@ class ProstheticsEligibilityServiceTest {
     }
 
     private void eligibleSetup(long misId, long departmentId, List<DocumentMisDTO> docs) {
-        when(misService.getAllPatientsUnderTreatment())
+        when(misService.getPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(misId, departmentId)));
         when(orderService.list(String.valueOf(misId), null)).thenReturn(List.of(order("PR-1")));
         when(misService.getPatientDocuments(misId)).thenReturn(docs);
@@ -117,7 +117,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void dept27_and_37_withMatchingTemplate_returnCandidates() {
-        when(misService.getAllPatientsUnderTreatment()).thenReturn(
+        when(misService.getPatientsUnderTreatment()).thenReturn(
                 List.of(misPatient(900001L, 27L), misPatient(900002L, 37L)));
         when(orderService.list(eq("900001"), isNull())).thenReturn(List.of(order("PR-1")));
         when(orderService.list(eq("900002"), isNull())).thenReturn(List.of(order("PR-2")));
@@ -135,7 +135,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void otherDepartment_excludedSilentlyWithoutDocumentFetch() {
-        when(misService.getAllPatientsUnderTreatment())
+        when(misService.getPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(900001L, 2L)));
 
         assertThat(service.getCandidates()).isEmpty();
@@ -146,7 +146,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void nullDepartment_excludedSilentlyWithoutDocumentFetch() {
-        when(misService.getAllPatientsUnderTreatment())
+        when(misService.getPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(900001L, null)));
 
         assertThat(service.getCandidates()).isEmpty();
@@ -156,7 +156,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void otherTemplate_excludedSilently() {
-        when(misService.getAllPatientsUnderTreatment())
+        when(misService.getPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(900001L, 19L)));
         when(orderService.list("900001", null)).thenReturn(List.of(order("PR-1")));
         when(misService.getPatientDocuments(900001L))
@@ -167,7 +167,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void noLocalOrders_excludedSilentlyWithoutDocumentFetch() {
-        when(misService.getAllPatientsUnderTreatment())
+        when(misService.getPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(900001L, 19L)));
         when(orderService.list("900001", null)).thenReturn(List.of());
 
@@ -178,7 +178,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void documentsError_marksUnknownAndKeepsPatient() {
-        when(misService.getAllPatientsUnderTreatment())
+        when(misService.getPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(900001L, 19L)));
         when(orderService.list("900001", null)).thenReturn(List.of(order("PR-1")));
         when(misService.getPatientDocuments(900001L)).thenThrow(new RuntimeException("MIS down"));
@@ -225,7 +225,7 @@ class ProstheticsEligibilityServiceTest {
         ProstheticsEligibilityService ticking =
                 new ProstheticsEligibilityService(misService, orderService,
                         patientService, patientRepository, clock);
-        when(misService.getAllPatientsUnderTreatment())
+        when(misService.getPatientsUnderTreatment())
                 .thenReturn(List.of(misPatient(900001L, 19L)));
         when(orderService.list("900001", null)).thenReturn(List.of(order("PR-1")));
         when(misService.getPatientDocuments(900001L))
@@ -244,7 +244,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void query_filtersCandidatesByNameOrMisId() {
-        when(misService.getAllPatientsUnderTreatment()).thenReturn(
+        when(misService.getPatientsUnderTreatment()).thenReturn(
                 List.of(misPatient(900001L, 19L), misPatient(900002L, 19L)));
         when(orderService.list(eq("900001"), isNull())).thenReturn(List.of(order("PR-1")));
         when(orderService.list(eq("900002"), isNull())).thenReturn(List.of(order("PR-2")));
@@ -265,7 +265,7 @@ class ProstheticsEligibilityServiceTest {
 
     @Test
     void emptyBaseList_returnsEmptyWithoutFurtherCalls() {
-        when(misService.getAllPatientsUnderTreatment()).thenReturn(List.of());
+        when(misService.getPatientsUnderTreatment()).thenReturn(List.of());
 
         assertThat(service.getCandidates()).isEmpty();
 

@@ -79,4 +79,6 @@ export interface PatientDto {
   room?: string;
   bed?: string;
   doctorName?: string;
+  /** MIS stay state (MOV/CMP/CNC/REJ/…, absent when unknown). */
+  patientStatus?: string | null;
 }

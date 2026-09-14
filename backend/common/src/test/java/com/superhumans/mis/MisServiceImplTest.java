@@ -19,7 +19,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Unit tests for the real MIS {@link MisServiceImpl}: exact 13-field patient
+ * Unit tests for the real MIS {@link MisServiceImpl}: exact 14-field patient
  * contract parsing ({@code spiPatientProsthesCheck}), the 16-field
  * {@link MedicineMisDTO} mapping, the tri-state {@code itemKindIsDisabled}
  * flag, and the empty / filter / error behaviour of each SPI wrapper.
@@ -70,7 +70,7 @@ class MisServiceImplTest {
     // ---------------------- patient parsing ----------------------
 
     @Test
-    void searchPatients_parsesExact13FieldContract_andFiltersByQuery() {
+    void searchPatients_parsesExact14FieldContract_andFiltersByQuery() {
         stubPatientList("""
                 {"spiPatientProsthesCheck":[
                   {"id":13372,"fullName":"Сидоренко Василь Тестович","birthDate":"1962-07-08T00:00:00",
@@ -99,6 +99,7 @@ class MisServiceImplTest {
         assertThat(first.getRoom()).isEqualTo("411A-Тестова");
         assertThat(first.getBed()).isEqualTo("Лжко №1\n");
         assertThat(first.getDoctorName()).isEqualTo("Ямний В. М.");
+        assertThat(first.getPatientStatus()).isNull();
 
         // second row: optional address absent stays null, datetime parses
         PatientDTO second = all.get(1);
@@ -145,22 +146,142 @@ class MisServiceImplTest {
     }
 
     @Test
-    void getAllPatientsUnderTreatment_returnsEmpty_whenNoKnownWrapperKey() {
-        when(client.callMethod(MisServiceImpl.SPI_PATIENT_PROCEDURE))
-                .thenReturn(json("{\"unrelated\":[]}"));
-        assertThat(service.getAllPatientsUnderTreatment()).isEmpty();
+    void getAllPatients_readsPatientStatus() {
+        stubPatientList("""
+                {"spiPatientProsthesCheck":[
+                  {"id":1,"fullName":"Moved","patientStatus":"MOV"},
+                  {"id":2,"fullName":"Done","patientStatus":"CMP"},
+                  {"id":3,"fullName":"Plain"}
+                ]}
+                """);
+        List<PatientDTO> all = service.getAllPatients();
+        assertThat(all).hasSize(3);
+        assertThat(all.get(0).getPatientStatus()).isEqualTo("MOV");
+        assertThat(all.get(1).getPatientStatus()).isEqualTo("CMP");
+        assertThat(all.get(2).getPatientStatus()).isNull();
     }
 
     @Test
-    void getAllPatientsUnderTreatment_propagatesClientFailure() {
+    void patientStatus_passesThroughUnknownAndAbsent() {
+        stubPatientList("""
+                {"spiPatientProsthesCheck":[
+                  {"id":1,"fullName":"A","patientStatus":"XYZ"},
+                  {"id":2,"fullName":"B"}
+                ]}
+                """);
+        List<PatientDTO> all = service.searchPatients(null);
+        assertThat(all).hasSize(2);
+        assertThat(all.get(0).getPatientStatus()).isEqualTo("XYZ");
+        assertThat(all.get(1).getPatientStatus()).isNull();
+    }
+
+    @Test
+    void isUnderTreatment_matrix() {
+        assertThat(MisService.isUnderTreatment(null)).isTrue();
+        assertThat(MisService.isUnderTreatment(PatientDTO.builder().build())).isTrue();
+        assertThat(MisService.isUnderTreatment(
+                PatientDTO.builder().patientStatus("  ").build())).isTrue();
+        assertThat(MisService.isUnderTreatment(
+                PatientDTO.builder().patientStatus("XYZ").build())).isTrue();
+        for (String code : List.of("MOV", "CMP", "CNC", "REJ")) {
+            assertThat(MisService.isUnderTreatment(
+                    PatientDTO.builder().patientStatus(code).build())).isFalse();
+        }
+    }
+
+    @Test
+    void getPatientsUnderTreatment_excludesTerminalStatuses() {
+        stubPatientList("""
+                {"spiPatientProsthesCheck":[
+                  {"id":1,"fullName":"Active","patientStatus":null},
+                  {"id":2,"fullName":"Moved","patientStatus":"MOV"},
+                  {"id":3,"fullName":"Done","patientStatus":"CMP"},
+                  {"id":4,"fullName":"Cancelled","patientStatus":"CNC"},
+                  {"id":5,"fullName":"Rejected","patientStatus":"REJ"},
+                  {"id":6,"fullName":"Future","patientStatus":"XYZ"}
+                ]}
+                """);
+        List<PatientDTO> treatment = service.getPatientsUnderTreatment();
+        assertThat(treatment).extracting(PatientDTO::getId).containsExactly(1L, 6L);
+        assertThat(service.getAllPatients()).hasSize(6);
+    }
+
+    @Test
+    void getAllPatients_returnsEmpty_whenNoKnownWrapperKey() {
+        when(client.callMethod(MisServiceImpl.SPI_PATIENT_PROCEDURE))
+                .thenReturn(json("{\"unrelated\":[]}"));
+        assertThat(service.getAllPatients()).isEmpty();
+    }
+
+    @Test
+    void getAllPatients_propagatesClientFailure() {
         when(client.callMethod(MisServiceImpl.SPI_PATIENT_PROCEDURE))
                 .thenThrow(new MisApiException("MIS API call failed: spiPatientProsthesCheck"));
         try {
-            service.getAllPatientsUnderTreatment();
+            service.getAllPatients();
             throw new AssertionError("expected MisApiException");
         } catch (MisApiException expected) {
             assertThat(expected.getMessage()).contains("MIS API call failed");
         }
+    }
+
+    // ---------------------- patient pool paging ----------------------
+
+    private void stubPoolOfFive() {
+        stubPatientList("""
+                {"spiPatientProsthesCheck":[
+                  {"id":1,"fullName":"Alpha","patientStatus":null},
+                  {"id":2,"fullName":"Beta","patientStatus":"MOV"},
+                  {"id":3,"fullName":"Gamma","patientStatus":"CMP"},
+                  {"id":4,"fullName":"Delta"},
+                  {"id":5,"fullName":"Epsilon","patientStatus":"XYZ"}
+                ]}
+                """);
+    }
+
+    @Test
+    void getPatientPool_slicesPages() {
+        stubPoolOfFive();
+        var first = service.getPatientPool(null, null,
+                org.springframework.data.domain.PageRequest.of(0, 2));
+        assertThat(first.getContent()).extracting(PatientDTO::getId)
+                .containsExactly(1L, 2L);
+        assertThat(first.getTotalElements()).isEqualTo(5L);
+        assertThat(first.getTotalPages()).isEqualTo(3);
+        var last = service.getPatientPool(null, null,
+                org.springframework.data.domain.PageRequest.of(2, 2));
+        assertThat(last.getContent()).extracting(PatientDTO::getId)
+                .containsExactly(5L);
+        var beyond = service.getPatientPool(null, null,
+                org.springframework.data.domain.PageRequest.of(9, 2));
+        assertThat(beyond.getContent()).isEmpty();
+        assertThat(beyond.getTotalElements()).isEqualTo(5L);
+    }
+
+    @Test
+    void getPatientPool_filtersByQueryAndStatus() {
+        stubPoolOfFive();
+        var query = service.getPatientPool("alpha", null,
+                org.springframework.data.domain.PageRequest.of(0, 20));
+        assertThat(query.getContent()).extracting(PatientDTO::getId)
+                .containsExactly(1L);
+        var status = service.getPatientPool(null, "CMP",
+                org.springframework.data.domain.PageRequest.of(0, 20));
+        assertThat(status.getContent()).extracting(PatientDTO::getId)
+                .containsExactly(3L);
+        var unknown = service.getPatientPool(null, "XYZ",
+                org.springframework.data.domain.PageRequest.of(0, 20));
+        assertThat(unknown.getContent()).extracting(PatientDTO::getId)
+                .containsExactly(5L);
+    }
+
+    @Test
+    void getPatientPool_clampsSize() {
+        stubPoolOfFive();
+        var clamped = service.getPatientPool(null, null,
+                org.springframework.data.domain.PageRequest.of(0, 5000));
+        assertThat(clamped.getSize()).isEqualTo(100);
+        assertThat(clamped.getContent()).hasSize(5);
     }
 
     // ---------------------- medicine parsing + tri-state ----------------------

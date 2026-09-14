@@ -121,7 +121,7 @@ class MisRealHttpChainTest {
     void patientChain_endToEndOverRealHttp() throws Exception {
         MisServiceImpl service = newService();
 
-        List<PatientDTO> patients = service.getAllPatientsUnderTreatment();
+        List<PatientDTO> patients = service.getAllPatients();
 
         assertThat(patients).hasSize(1);
         assertThat(patients.get(0).getFullName()).isEqualTo("Snihko Ivan Petrovych");
@@ -177,8 +177,8 @@ class MisRealHttpChainTest {
     void tokenCachedAcrossCalls_singleTokenFetch() {
         MisServiceImpl service = newService();
 
-        service.getAllPatientsUnderTreatment();
-        service.getAllPatientsUnderTreatment();
+        service.getAllPatients();
+        service.getAllPatients();
 
         assertThat(tokenHits).hasSize(1);
         assertThat(runHits).hasSize(2);
@@ -189,7 +189,7 @@ class MisRealHttpChainTest {
         failFirstRunWith401 = true;
         MisServiceImpl service = newService();
 
-        List<PatientDTO> patients = service.getAllPatientsUnderTreatment();
+        List<PatientDTO> patients = service.getAllPatients();
 
         assertThat(patients).hasSize(1);
         assertThat(runCalls.get()).isEqualTo(2);
@@ -201,7 +201,7 @@ class MisRealHttpChainTest {
         runDelayMs = 1500;
         MisServiceImpl service = newService(baseUrl, 1000, 300);
 
-        Throwable thrown = catchThrowable(service::getAllPatientsUnderTreatment);
+        Throwable thrown = catchThrowable(service::getAllPatients);
 
         assertThat(thrown).isInstanceOf(MisTimeoutException.class);
     }
@@ -214,7 +214,7 @@ class MisRealHttpChainTest {
         }
         MisServiceImpl service = newService("http://127.0.0.1:" + closedPort, 1000, 1000);
 
-        Throwable thrown = catchThrowable(service::getAllPatientsUnderTreatment);
+        Throwable thrown = catchThrowable(service::getAllPatients);
 
         assertThat(thrown).isInstanceOf(MisAuthException.class);
         assertThat(thrown.getMessage()).doesNotContain(PASSWORD);
@@ -225,7 +225,7 @@ class MisRealHttpChainTest {
         runBody = "not-json{{{";
         MisServiceImpl service = newService();
 
-        Throwable thrown = catchThrowable(service::getAllPatientsUnderTreatment);
+        Throwable thrown = catchThrowable(service::getAllPatients);
 
         assertThat(thrown).isExactlyInstanceOf(MisApiException.class);
         assertThat(thrown.getMessage()).startsWith("MIS API call failed: spiPatientProsthesCheck");
@@ -248,7 +248,7 @@ class MisRealHttpChainTest {
         tokenBody = "{}";
         MisServiceImpl service = newService();
 
-        Throwable thrown = catchThrowable(service::getAllPatientsUnderTreatment);
+        Throwable thrown = catchThrowable(service::getAllPatients);
 
         assertThat(thrown).isInstanceOf(MisAuthException.class);
         assertThat(thrown.getMessage()).doesNotContain(PASSWORD);

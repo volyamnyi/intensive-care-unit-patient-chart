@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: med/002-drop-allergy-and-medicine-cache.sql
+  - include:
+      relativeToChangelogFile: true
+      file: med/003-import-staging.sql

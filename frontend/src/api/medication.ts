@@ -9,8 +9,8 @@ import type {
 } from '../types/medication';
 
 export const prescriptionApi = {
-  getByPatient: (patientId: number) =>
-    client.get<PrescriptionList[]>('/prescriptions', { params: { patientId } }),
+  getByPatient: (patientId: number, signal?: AbortSignal) =>
+    client.get<PrescriptionList[]>('/prescriptions', { params: { patientId }, signal }),
   getById: (id: string) =>
     client.get<PrescriptionList>(`/prescriptions/${id}`),
   create: (data: PrescriptionListCreateRequest) =>

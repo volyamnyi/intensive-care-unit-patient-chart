@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Rule: {@code departmentId ∈ {19,27,37} AND EXISTS document.templateId ∈ {120,121}}.
  * The service composes the Phase 3 base source
- * ({@code getAllPatientsUnderTreatment}) with the Phase 4 document source
+ * ({@code getPatientsUnderTreatment}) with the Phase 4 document source
  * ({@code getPatientDocuments}) and the local order registry, and returns
  * ready-to-render candidates — orchestration lives here, never in the
  * controller or the frontend.
@@ -120,7 +120,7 @@ public class ProstheticsEligibilityService {
     @Transactional(readOnly = true)
     public List<ProstheticsCandidateResponse> getCandidates(String query) {
         String needle = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
-        return misService.getAllPatientsUnderTreatment().parallelStream()
+        return misService.getPatientsUnderTreatment().parallelStream()
                 .filter(p -> p.getId() != null && p.getDepartmentId() != null
                         && ELIGIBLE_DEPARTMENT_IDS.contains(p.getDepartmentId()))
                 .map(this::assess)

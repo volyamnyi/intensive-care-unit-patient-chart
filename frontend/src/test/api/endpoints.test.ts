@@ -37,7 +37,13 @@ describe('patientApi', () => {
 
   it('getById calls /patients/:id', () => {
     patientApi.getById('1001');
-    expect(mockClient.get).toHaveBeenCalledWith('/patients/1001');
+    expect(mockClient.get).toHaveBeenCalledWith('/patients/1001', { signal: undefined });
+  });
+
+  it('getById forwards an abort signal', () => {
+    const signal = new AbortController().signal;
+    patientApi.getById('1001', signal);
+    expect(mockClient.get).toHaveBeenCalledWith('/patients/1001', { signal });
   });
 
   it('searchByModule calls /patients with module param', () => {
@@ -192,6 +198,15 @@ describe('prescriptionApi', () => {
   it('getByPatient calls /prescriptions with patientId', () => {
     prescriptionApi.getByPatient(1001);
     expect(mockClient.get).toHaveBeenCalledWith('/prescriptions', { params: { patientId: 1001 } });
+  });
+
+  it('getByPatient forwards an abort signal', () => {
+    const signal = new AbortController().signal;
+    prescriptionApi.getByPatient(1001, signal);
+    expect(mockClient.get).toHaveBeenCalledWith(
+      '/prescriptions',
+      { params: { patientId: 1001 }, signal },
+    );
   });
 
   it('create posts to /prescriptions', () => {
