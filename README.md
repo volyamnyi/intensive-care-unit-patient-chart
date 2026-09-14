@@ -538,8 +538,8 @@ icu-patient-chart/
 │       ├── services/           # AuthContext
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
-│       └── test/               # Vitest tests (93 files)
-├── tests/                      # Playwright E2E (94 spec files, 10 projects)
+│       └── test/               # Vitest tests (100 files)
+├── tests/                      # Playwright E2E (96 spec files, 10 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -570,12 +570,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (841 across 93 files) |
+| `npm t` | Run Vitest tests (926 across 100 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (94 spec files, 438 tests) |
+| `npx playwright test` | Run all E2E tests (96 spec files, 438 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -591,7 +591,7 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (88 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (96 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 CI jobs run in parallel when triggered; if any fails, fix and repeat until every check passes.
