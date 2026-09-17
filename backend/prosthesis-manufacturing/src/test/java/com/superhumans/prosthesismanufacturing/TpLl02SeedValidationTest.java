@@ -124,7 +124,12 @@ class TpLl02SeedValidationTest {
     }
 
     private static String sqlText() throws Exception {
-        return new String(new ClassPathResource("data-prosth.sql").getInputStream().readAllBytes(),
+        String raw = new String(new ClassPathResource("data-prosth.sql").getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8);
+        // The seed file is LF in git, but Windows checkouts materialize CRLF
+        // (core.autocrlf) — normalize so multi-line assertions hold on every OS.
+        // Never reformat the seed file itself: it is generated, and changing its
+        // bytes would shift Liquibase checksums on existing databases.
+        return raw.replace("\r\n", "\n").replace('\r', '\n');
     }
 }
