@@ -160,17 +160,23 @@ async function centerRowInViewport(page: Page, row: Locator): Promise<void> {
 /**
  * Clicks the row at a fraction of its width/height and asserts the checkbox
  * toggled exactly once (aria-checked flips from its previous value).
+ * The geometry is re-read before EVERY click: toggling a point focuses the
+ * hidden checkbox input, and the browser may scroll it into view — a box
+ * measured before the toggle would then miss the row (seen live as a missed
+ * (0.95, 0.05) click on the handover row, issue #303).
  */
 async function clickSurfacePointAndExpectToggle(
   page: Page,
-  box: { x: number; y: number; width: number; height: number },
+  row: Locator,
   fx: number,
   fy: number,
   checkbox: Locator,
 ): Promise<void> {
+  const box = await row.boundingBox();
+  expect(box, `checkbox row must stay measurable at (${fx}, ${fy})`).toBeTruthy();
   const before = await checkbox.getAttribute('aria-checked');
   expect(before, 'checkbox must have an aria-checked state').not.toBeNull();
-  await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+  await page.mouse.click(box!.x + box!.width * fx, box!.y + box!.height * fy);
   await expect
     .poll(async () => checkbox.getAttribute('aria-checked'), {
       timeout: 5000,
@@ -216,8 +222,6 @@ test.describe('wizard checkbox whole-surface clickability', () => {
         const row = rows.nth(i);
         const checkbox = row.locator('[data-slot="checkbox"]');
         await centerRowInViewport(page, row);
-        const box = await row.boundingBox();
-        expect(box, `checkbox row ${i} (iteration ${iteration}) must be measurable`).toBeTruthy();
         rowsTested++;
         for (const [fx, fy] of [
           [0.05, 0.05],
@@ -226,7 +230,7 @@ test.describe('wizard checkbox whole-surface clickability', () => {
           [0.95, 0.95],
           [0.5, 0.5],
         ] as const) {
-          await clickSurfacePointAndExpectToggle(page, box!, fx, fy, checkbox);
+          await clickSurfacePointAndExpectToggle(page, row, fx, fy, checkbox);
         }
       }
 
