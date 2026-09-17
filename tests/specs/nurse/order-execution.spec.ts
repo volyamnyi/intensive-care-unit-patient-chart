@@ -23,8 +23,8 @@ function planHour(): number {
 }
 
 test('nurse opens the patient day from the dashboard and sees the therapy grid', async ({ page }) => {
-  // The patient name comes from real MIS (unknown ahead of time), so filter by the
-  // seeded episode's patient id — the client-side search matches String(patientId),
+  // The patient name comes from the MIS stub (fixed fixture, deterministic),
+  // so filter by the seeded episode's patient id — the client-side search matches String(patientId),
   // leaving exactly one row (episode a3333333 / patient 1003) regardless of the MIS name.
   await page.goto('/icu/nurse');
   await page.getByPlaceholder(/Пошук пацієнта/).fill('1003');

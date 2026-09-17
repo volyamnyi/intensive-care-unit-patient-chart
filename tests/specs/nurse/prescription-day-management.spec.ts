@@ -4,8 +4,8 @@ import { navigateToDetail } from '../../helpers/medication';
 // Negative: nurses (read-only role) must NOT see the per-row «Додати день»
 // action and must NOT trigger the per-day context menu on right-click.
 //
-// Dynamic-data contract (real MIS, no seed IDs): beforeEach picks the first
-// dept-19/37 patient, guarantees an open list + one real-catalog item (API
+// Dynamic-data contract (MIS stub, fixed IDs): beforeEach picks the fixed
+// stub dept-19 patient, guarantees an open list + the stub-catalog item (API
 // setup authenticates as the doctor test account; the page itself stays the
 // nurse storageState), and navigates to the list detail.
 

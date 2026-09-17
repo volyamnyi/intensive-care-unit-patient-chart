@@ -10,17 +10,20 @@ async function getToken(request: any) {
   return (await res.json()).token as string;
 }
 
-// create-card's PatientSearch searches the dept-19 ICU roster from real MIS, so the
-// page must be driven by a real patient (no hardcoded mock id/name).
+// create-card's PatientSearch searches the dept-19 ICU roster served by the
+// MIS stub, so the page is driven by the fixed stub patient (deterministic,
+// no live data).
+const STUB_ICU_PATIENT_ID = 10102;
+
 async function firstIcuPatient(request: any, token: string): Promise<{ id: number; fullName: string; query: string }> {
   const res = await request.get(`${API}/patients?module=icu`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   expect(res.ok()).toBeTruthy();
   const patients = await res.json();
-  const p = patients.find((x: any) => typeof x?.fullName === 'string' && x.fullName.trim().length >= 2);
-  if (!p) {
-    throw new Error('No ICU (dept 19) patient with a ≥2-char full name available from real MIS');
+  const p = patients.find((x: any) => x?.id === STUB_ICU_PATIENT_ID);
+  if (!p || typeof p?.fullName !== 'string' || p.fullName.trim().length < 2) {
+    throw new Error(`Stub ICU patient ${STUB_ICU_PATIENT_ID} missing from the MIS-stub roster`);
   }
   return { id: p.id, fullName: p.fullName.trim(), query: p.fullName.trim().slice(0, 4) };
 }

@@ -110,8 +110,9 @@ test.describe('Tablet forms & dialogs at 768', () => {
     const token = (await res.json()).token as string;
     const auth = { Authorization: `Bearer ${token}` };
 
-    // The roster (module=medication) is real MIS dept 19/37. Find any patient that
-    // actually has a prescription list so the drawer offers a «Видалити» button.
+    // The roster (module=medication) is the MIS-stub dept 19/37 roster. Find any
+    // patient that actually has a prescription list so the drawer offers a
+    // «Видалити» button.
     const roster = await (await request.get(`${API}/patients?module=medication`, { headers: auth })).json();
     let target: any = null;
     for (const p of roster) {
@@ -127,7 +128,7 @@ test.describe('Tablet forms & dialogs at 768', () => {
       // No patient has a list yet — create one for the first named patient.
       const named = roster.find((x: any) => typeof x?.fullName === 'string' && x.fullName.trim().length >= 2);
       if (!named) {
-        test.skip(true, 'no medication roster patient available from real MIS');
+        test.skip(true, 'no medication roster patient available from the MIS stub');
         return;
       }
       await request.post(`${API}/prescriptions`, { headers: auth, data: { patientId: String(named.id) } });

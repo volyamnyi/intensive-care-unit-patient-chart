@@ -2,14 +2,24 @@ import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { testUser } from './test-users';
 
-// Shared helpers for medication-sheet specs that work against the real MIS
-// roster (dept-19/37 patients) rather than fixed seed IDs. Credentials read
-// dynamically from APP_TEST_USERNAME1..9 / APP_TEST_PASSWORD1..9 via
-// `test-users`; no hardcoded user names.
+// Shared helpers for medication-sheet specs that work against the MIS-stub
+// roster (tests/mis-stub/fixtures.json: dept-19/37 patients) rather than fixed
+// seed IDs. Credentials read dynamically from APP_TEST_USERNAME1..9 /
+// APP_TEST_PASSWORD1..9 via `test-users`; no hardcoded user names.
+//
+// Stub-data contract (deterministic, no live MIS): specs resolve the patient
+// and the drug by FIXED stub IDs/names below; the roster/catalog endpoints are
+// still exercised on every call, but selection never depends on live data.
 //
 // Reference pattern: specs/doctor/prescription-workflow.spec.ts.
 
 const API = 'http://localhost:8085/api';
+
+/** Fixed stub patient for medication flows (dept 19, surgery tab). */
+export const STUB_MEDICATION_PATIENT_ID = 10102;
+
+/** Fixed stub catalog drug (enabled entry, always selectable). */
+export const STUB_CATALOG_MEDICINE = 'Paracetamol 500 mg';
 
 const SEARCH_PHRASE = 'Пошук пацієнта';
 const LIST_HEADER = 'Листки призначень (';
@@ -21,7 +31,8 @@ export async function getToken(request: APIRequestContext, slot = 1): Promise<st
   return (await res.json()).token as string;
 }
 
-// GET /api/patients?module=medication returns only dept-19/37 patients from real MIS.
+// GET /api/patients?module=medication returns only dept-19/37 patients from
+// the MIS stub. The fixed stub patient is selected by ID (deterministic).
 export async function firstMedicationPatient(request: APIRequestContext, token: string): Promise<any> {
   const res = await request.get(`${API}/patients?module=medication`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -29,9 +40,13 @@ export async function firstMedicationPatient(request: APIRequestContext, token: 
   expect(res.ok()).toBeTruthy();
   const patients = await res.json();
   const p = Array.isArray(patients)
-    ? patients.find((x: any) => typeof x?.fullName === 'string' && x.fullName.trim().length >= 2)
+    ? patients.find((x: any) => x?.id === STUB_MEDICATION_PATIENT_ID)
     : undefined;
-  if (!p) throw new Error('No medication (dept 19/37) patient with a full name available from real MIS');
+  if (!p || typeof p?.fullName !== 'string' || p.fullName.trim().length < 2) {
+    throw new Error(
+      `Stub medication patient ${STUB_MEDICATION_PATIENT_ID} missing from the MIS-stub roster`,
+    );
+  }
   return p;
 }
 
@@ -100,10 +115,10 @@ export async function ensureMedicationItem(
   return (await addRes.json()).id;
 }
 
-// Fetch a single orderable real-catalog medicine name (resilient to arbitrary
-// MIS data). Prefers the first named item that is NOT disabled
-// (`itemKindIsDisabled !== true`) so the add-drug flow never targets a
-// non-selectable row; falls back to the first named item if none are enabled.
+// Fetch the fixed stub-catalog medicine name. The endpoint is still exercised
+// on every call, but selection is deterministic (no live catalog variance).
+// The stub entry is enabled (`itemKindIsDisabled !== true`) so the add-drug
+// flow never targets a non-selectable row.
 export async function firstCatalogMedicine(request: APIRequestContext, token: string): Promise<string> {
   const res = await request.get(`${API}/prescriptions/medicine-catalog`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -111,10 +126,9 @@ export async function firstCatalogMedicine(request: APIRequestContext, token: st
   expect(res.ok()).toBeTruthy();
   const catalog = await res.json();
   const items = Array.isArray(catalog) ? catalog : [];
-  const enabled = items.find((m: any) => typeof m?.name === 'string' && m.name.trim().length >= 2
+  const med = items.find((m: any) => m?.name === STUB_CATALOG_MEDICINE
     && m.itemKindIsDisabled !== true);
-  const med = enabled ?? items.find((m: any) => typeof m?.name === 'string' && m.name.trim().length >= 2);
-  if (!med) throw new Error('No medicine with a name available in the MIS catalog');
+  if (!med) throw new Error(`Stub catalog medicine ${STUB_CATALOG_MEDICINE} missing from the MIS stub`);
   return med.name as string;
 }
 
@@ -126,14 +140,14 @@ export interface NavOpts {
 export interface NavResult {
   listId: string;
   drugName: string;
-  // A near-full prefix of the real-catalog name whose search returns the
+  // A near-full prefix of the stub-catalog name whose search returns the
   // exact entry in the dropdown (for the "select a suggestion" test).
   partial: string;
   patient: any;
 }
 
-// API-only setup: authenticate as the doctor test account, pick the first
-// dept-19/37 patient, guarantee an open list + a real-catalog item. Returns
+// API-only setup: authenticate as the doctor test account, pick the fixed
+// stub dept-19 patient, guarantee an open list + the stub-catalog item. Returns
 // { listId, drugName, partial, patient } WITHOUT any page navigation — the
 // caller navigates directly to `/prescriptions/{doctor|nurse}/{listId}`.
 // Use when the roster/drawer path itself is not under test.

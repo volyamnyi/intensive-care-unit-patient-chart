@@ -1,5 +1,6 @@
 import { test, expect } from '../../fixtures/index';
 import { testUser } from '../../helpers/test-users';
+import { firstMedicationPatient } from '../../helpers/medication';
 
 const API = 'http://localhost:8085/api';
 
@@ -8,21 +9,6 @@ async function getToken(request: any) {
     data: { login: testUser(1).login, password: testUser(1).password },
   });
   return (await res.json()).token as string;
-}
-
-// GET /api/patients?module=medication returns only dept-19/37 patients from real MIS.
-// Pick the first and reuse its numeric id to locate its exact roster row.
-async function firstMedicationPatient(request: any, token: string): Promise<any> {
-  const res = await request.get(`${API}/patients?module=medication`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  expect(res.ok()).toBeTruthy();
-  const patients = await res.json();
-  const p = patients.find((x: any) => typeof x?.fullName === 'string' && x.fullName.trim().length >= 2);
-  if (!p) {
-    throw new Error('No medication (dept 19/37) patient with a full name available from real MIS');
-  }
-  return p;
 }
 
 // The surgery|rehab toggle splits the roster client-side by departmentId (19 / 37).

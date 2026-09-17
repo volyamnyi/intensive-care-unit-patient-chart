@@ -5,13 +5,14 @@ const API = 'http://localhost:8085/api';
 const PROSTH = `${API}/prosthesis-manufacturing`;
 
 /**
- * MIS-load note: every GET /orders/documents and every POST /provision costs
- * a live `spiDocumentProsthesCheck` round-trip (plus per-document URL
- * availability checks), and GET /patients costs a full roster fetch. This
- * file therefore fetches the shared fixtures ONCE in beforeAll — one login,
- * one documents snapshot for patient 13373, one patients snapshot — and all
- * three tests reuse them. Only the calls under test (the page's own fetches,
- * the two provision POSTs) still reach MIS.
+ * MIS-stub note: every GET /orders/documents and every POST /provision costs
+ * one stub round-trip for `spiDocumentProsthesCheck`, and GET /patients one
+ * stub-roster fetch. This file therefore fetches the shared fixtures ONCE in
+ * beforeAll — one login, one documents snapshot for patient 13373, one
+ * patients snapshot — and all three tests reuse them. Only the calls under
+ * test (the page's own fetches, the two provision POSTs) still reach the stub.
+ * The stub roster always carries 120/121 documents for 13373, so no skip
+ * branches are needed.
  */
 const PATIENT_ID = '13373';
 
@@ -53,11 +54,9 @@ test.beforeAll(async ({ request }) => {
 
 test.describe('Prosthetics setup — step 2 MIS order documents', () => {
   test('GET /orders/documents narrows to templates 120/121 with live URLs', async () => {
-    // Asserted against the shared beforeAll snapshot — no new MIS call.
-    if (docs.length === 0) {
-      test.skip(true, `No limb-order MIS documents for patient ${PATIENT_ID} right now`);
-      return;
-    }
+    // Asserted against the shared beforeAll snapshot — no new stub call.
+    // The stub always serves both 120 and 121 documents for patient 13373.
+    expect(docs.length).toBeGreaterThan(0);
     for (const d of docs) {
       expect([120, 121]).toContain(d.documentTemplateId);
       expect(d.documentUrl).toBeTruthy();
@@ -80,8 +79,8 @@ test.describe('Prosthetics setup — step 2 MIS order documents', () => {
     const row = page.locator('table tbody tr').filter({ hasText: patient.pib }).first();
     await expect(row).toBeVisible({ timeout: 15000 });
 
-    // MIS rotates documentUrl tokens per call, so the expected URLs must
-    // come from the page's own fetch — not from an earlier API snapshot.
+    // The expected URLs come from the page's own fetch — not from an earlier
+    // API snapshot (the stub serves stable URLs, so both agree).
     const [docsResponse] = await Promise.all([
       page.waitForResponse(
         (resp) => resp.url().includes('/orders/documents') && resp.request().method() === 'GET',
@@ -122,13 +121,10 @@ test.describe('Prosthetics setup — step 2 MIS order documents', () => {
   });
 
   test('POST /provision is idempotent for the same MIS document', async ({ request }) => {
-    // Document id comes from the shared beforeAll snapshot — no new MIS
-    // documents call. The two provision POSTs each re-read MIS server-side;
-    // those two reads ARE the test.
-    if (docs.length === 0) {
-      test.skip(true, `No limb-order MIS documents for patient ${PATIENT_ID} right now`);
-      return;
-    }
+    // Document id comes from the shared beforeAll snapshot — no new stub
+    // documents call. The two provision POSTs each re-read the stub
+    // server-side; those two reads ARE the test.
+    expect(docs.length).toBeGreaterThan(0);
 
     const body = { patientId: PATIENT_ID, documentId: docs[0].documentId };
     const first = await request.post(`${PROSTH}/orders/provision`, { headers, data: body });

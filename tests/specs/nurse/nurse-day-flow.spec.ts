@@ -22,8 +22,8 @@ function planHour(): number {
 test.describe('Nurse day flow', () => {
   test('opens the patient day from the dashboard', async ({ page }) => {
     // Медсестра відкриває день пацієнта зі свого дашборда. The patient name comes
-    // from real MIS (unknown ahead of time), so filter by the seeded episode's
-    // patient id — the client-side search matches String(patientId), leaving exactly
+    // from the MIS stub (fixed fixture, deterministic), so filter by the seeded
+    // episode's patient id — the client-side search matches String(patientId), leaving exactly
     // one row (episode a3333333 / patient 1003) regardless of the MIS name.
     await page.goto('/icu/nurse');
     await page.getByPlaceholder(/Пошук пацієнта/).fill('1003');

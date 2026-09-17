@@ -124,11 +124,10 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     log('Test suite started');
   });
 
-  // This legacy suite drives the full seed-bound journey (mock patients
-  // 900001/900002, seed orders). Under real MIS it is only runnable when at
-  // least one eligible candidate exists (dept 19/27/37 + docs 120/121 + a
-  // local order); otherwise every patient-table gate fails on the empty
-  // state. Skip honestly instead of failing on absent data (see #267).
+  // This suite drives the seed-bound journey (stub patients 900001/900002,
+  // seed orders). Against the MIS stub it is always runnable: the roster
+  // carries eligible candidates (dept 19/27/37 + docs 120/121 + seed local
+  // orders), so an empty candidate list is a real failure, not absent data.
   test.beforeAll(async ({ request }) => {
     const loginRes = await request.post('http://localhost:8085/api/auth/login', {
       data: { login: testUser(7).login, password: testUser(7).password },
@@ -141,9 +140,10 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
     );
     expect(res.ok()).toBeTruthy();
     const candidates = (await res.json()) as Array<unknown>;
-    if (!Array.isArray(candidates) || candidates.length === 0) {
-      test.skip(true, 'No eligible prosthetics candidates in real MIS — seed-bound journey needs primed data');
-    }
+    expect(
+      Array.isArray(candidates) && candidates.length > 0,
+      'MIS stub must yield eligible prosthetics candidates (seed orders + stub docs)',
+    ).toBeTruthy();
   });
 
   test.afterAll(async () => {

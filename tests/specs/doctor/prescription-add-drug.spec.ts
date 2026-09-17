@@ -12,11 +12,10 @@ import {
 // Before the fix, `MedicineSearchInput` enabled it only after an explicit
 // dropdown click, so users who typed a correct name saw a dead button.
 //
-// Dynamic-data contract (real MIS, no seed IDs): beforeEach picks the first
-// dept-19/37 patient, guarantees an open list + one real-catalog item, and
-// navigates to the list detail. `drugName` is a live catalog name (no
-// hardcoded `Ondansetron`/`Ceftriaxone`); `partial` is its near-full prefix
-// for the suggestion test.
+// Stub-data contract (MIS stub, fixed IDs): beforeEach picks the fixed stub
+// dept-19 patient, guarantees an open list + the stub-catalog item, and
+// navigates to the list detail. `drugName` is the fixed stub catalog name;
+// `partial` is its near-full prefix for the suggestion test.
 
 const API = 'http://localhost:8085/api';
 

@@ -17,7 +17,8 @@ test.describe('Sidebar resize', () => {
 
   test('resize handle is present on the sidebar', async ({ doctorPage }) => {
     await doctorPage.goto(`/icu/doctor/episode/${EPISODE_ID}`);
-    // Patient name comes from real MIS and may be empty -> the section still renders.
+    // Patient name comes from the MIS stub and may fall back to the numeric
+    // ID -> the section still renders.
     await expect(doctorPage.getByText('Пацієнт').first()).toBeVisible();
     await expect(doctorPage.getByText('Стан пацієнта')).toBeVisible();
   });

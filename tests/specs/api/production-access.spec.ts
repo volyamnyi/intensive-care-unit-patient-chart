@@ -84,10 +84,10 @@ test.beforeAll(async ({ request }) => {
   expect(typeof me7).toBe('number');
   me9 = ((await (await request.get(`${API}/users/me`, { headers: h9 })).json()) as { id: number }).id;
 
-  // One live MIS document is enough: the order is handed from inst7 to inst9.
-  // Live-MIS data is outside our control (dept 19/27/37 + docs 120/121): when
-  // no candidate carries documents, skip honestly instead of failing on
-  // absent data (same contract as prosthetics-e2e.spec.ts, see #267).
+  // One stub MIS document is enough: the order is handed from inst7 to inst9.
+  // Stub data is deterministic (seed orders for 900001/900002 + 120/121 stub
+  // documents): when no candidate carries documents, that is a real failure,
+  // not absent live data.
   const cands = (await (await request.get(`${PROSTH}/patients/candidates`, { headers: h9 })).json()) as Array<{
     patient: { id: string };
     documents: Array<{ documentId: number }>;
@@ -99,8 +99,7 @@ test.beforeAll(async ({ request }) => {
   const pair = (cands ?? []).flatMap((c) =>
     (c.documents ?? []).map((d) => ({ patientId: c.patient.id, documentId: d.documentId })),
   )[0];
-  test.skip(!pair, 'need 1 MIS order document for the production spec (live MIS has none right now)');
-  expect(pair, 'need 1 MIS order document for the production spec').toBeTruthy();
+  expect(pair, 'need 1 stub order document for the production spec').toBeTruthy();
 
   templateId = await findTemplateByIdName(request, h9, 'TP-UL-01');
   const prov = await request.post(`${PROSTH}/orders/provision`, {

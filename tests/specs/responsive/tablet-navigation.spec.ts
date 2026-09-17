@@ -24,7 +24,7 @@ function collectConsoleErrors(page: Page): string[] {
 }
 
 // Seed episodes (a1111111/a2222222/a3333333) reference mock patient IDs that
-// need not exist in real MIS; the episode page then logs one honest 404 for
+// need not exist in the MIS stub; the episode page then logs one honest 404 for
 // GET /api/patients/{id} and falls back to the numeric ID. That single noise
 // source is expected — everything else must stay silent.
 function assertNoUnexpectedConsoleErrors(errors: string[]) {

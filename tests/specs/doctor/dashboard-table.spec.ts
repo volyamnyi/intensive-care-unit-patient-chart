@@ -376,9 +376,9 @@ test.describe('Doctor Dashboard Table — Exploratory E2E', () => {
     });
 
     test('patient labels are non-empty and well-formed (no garbled text)', async ({ page }) => {
-      // With real MIS the patient name is unknown and may even repeat across
-      // active episodes (or be absent, in which case the cell shows the numeric
-      // patientId). So the only safe invariant is: every rendered label is a
+      // With the MIS stub the patient name is fixed per fixture (seed episodes
+      // fall back to the numeric patientId when absent from the roster), so
+      // the only safe invariant is: every rendered label is a
       // non-empty, well-formed string. Row identity stays unique by the episode
       // UUID (the React key), not by the name.
       const rows = page.locator('tbody[data-slot="table-body"] tr[data-slot="table-row"]');

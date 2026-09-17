@@ -62,10 +62,9 @@ test.describe('TP-LL-02 — Step 1 prefill from MIS (#283)', () => {
       });
       const docs = (docsRes.ok() ? await docsRes.json() : []) as Array<any>;
       console.log(`[step1-prefill] patientId=${patientId} documents=${docs.length}`);
-      test.skip(
-        docs.length === 0,
-        `need 1 MIS order document for patient ${patientId} (live MIS has none right now)`,
-      );
+      // The MIS stub always serves 120/121 documents for seed patients, so an
+      // empty list is a real failure, not absent live data.
+      expect(docs.length, `need 1 stub order document for patient ${patientId}`).toBeGreaterThan(0);
       const doc = docs[0];
 
       await page.goto(`/prosthetics/process/${instanceId}/wizard`);

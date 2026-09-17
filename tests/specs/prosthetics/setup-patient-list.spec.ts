@@ -5,10 +5,10 @@ const API = 'http://localhost:8085/api';
 const PROSTH = `${API}/prosthesis-manufacturing`;
 
 /**
- * MIS-load note: GET /patients costs a full live-roster fetch, so the
- * registry snapshot is taken ONCE in beforeAll (one login, one fetch) and
- * both tests reuse it. The page loads perform their own fetches — those
- * calls ARE the tests.
+ * MIS-stub note: GET /patients costs one stub-roster fetch, so the registry
+ * snapshot is taken ONCE in beforeAll (one login, one fetch) and both tests
+ * reuse it. The page loads perform their own fetches — those calls ARE the
+ * tests. With the deterministic stub roster the snapshot is stable across runs.
  */
 interface RegistryPatient {
   id: string;

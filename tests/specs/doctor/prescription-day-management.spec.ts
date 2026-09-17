@@ -7,8 +7,8 @@ import { getToken, setupDetail } from '../../helpers/medication';
 // so this spec adds a day via «+», asserts the menu offers no whole-day
 // delete, and removes the day via API — net-zero, no seed pollution).
 //
-// Dynamic-data contract (real MIS, no seed IDs): beforeEach picks the first
-// dept-19/37 patient, guarantees an open list + one real-catalog item, and
+// Stub-data contract (MIS stub, fixed IDs): beforeEach picks the fixed stub
+// dept-19 patient, guarantees an open list + the stub-catalog item, and
 // navigates to the list detail.
 
 const API = 'http://localhost:8085/api';
