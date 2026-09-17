@@ -108,6 +108,9 @@ jobs:
           APP_DATASOURCE_PROSTH_USERNAME: icu_user
           APP_DATASOURCE_PROSTH_PASSWORD: icu_pass
           APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
+          # Test isolation (issue #299): LDAP is disabled in CI — directory
+          # authentication beans are not created, logins take the BCrypt path.
+          APP_LDAP_ENABLED: "false"
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -195,6 +198,9 @@ jobs:
           APP_DATASOURCE_PROSTH_USERNAME: icu_user
           APP_DATASOURCE_PROSTH_PASSWORD: icu_pass
           APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
+          # Test isolation (issue #299): LDAP is disabled in CI — directory
+          # authentication beans are not created, logins take the BCrypt path.
+          APP_LDAP_ENABLED: "false"
 
       - name: Upload integration test results
         uses: actions/upload-artifact@v4
@@ -249,7 +255,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test]
     # Secrets live in the APP environment (environment-scoped secrets only
-    # resolve when the job declares it).
+    # resolve when the job declares it). Only APP_TEST_USERNAME* /
+    # APP_TEST_PASSWORD* are mapped below — no MIS/LDAP secrets (issue #299):
+    # E2E runs against the MIS sidecar-stub with LDAP disabled.
     environment: APP
     # Test-user credentials are dynamic: every spec/helper reads them via
     # testUser(slot) from APP_TEST_USERNAME* / APP_TEST_PASSWORD*. Values come
@@ -318,6 +326,13 @@ jobs:
             fi
           done
       
+      - name: Start MIS stub
+        run: |
+          node tests/mis-stub/server.cjs &
+          echo "Waiting for MIS stub..."
+          timeout 15 bash -c 'until curl -s http://127.0.0.1:9099/health > /dev/null 2>&1; do sleep 1; done'
+          echo "MIS stub is ready"
+      
       - name: Build backend
         run: mvn clean package -DskipTests
         working-directory: backend
@@ -343,14 +358,16 @@ jobs:
           APP_DATASOURCE_PROSTH_URL: jdbc:postgresql://localhost:5432/my_fullstack_prosth
           APP_DATASOURCE_PROSTH_USERNAME: postgres
           APP_DATASOURCE_PROSTH_PASSWORD: admin
-          # Real MIS API is the sole patient/user/department source — no mock, no fallback.
-          # Values come from repository secrets; masked in CI logs, never read by agents.
-          APP_MIS_API_BASE_URL: ${{ secrets.APP_MIS_API_BASE_URL }}
-          APP_MIS_API_TOKEN_PATH: ${{ secrets.APP_MIS_API_TOKEN_PATH }}
-          APP_MIS_API_RUN_PATH: ${{ secrets.APP_MIS_API_RUN_PATH }}
-          APP_MIS_API_LOGIN: ${{ secrets.APP_MIS_API_LOGIN }}
-          APP_MIS_API_PASSWORD: ${{ secrets.APP_MIS_API_PASSWORD }}
-          APP_MIS_API_INSTALLATION_GUID: ${{ secrets.APP_MIS_API_INSTALLATION_GUID }}
+          # Test isolation (issue #299): E2E runs against the MIS sidecar-stub
+          # (see the "Start MIS stub" step) with LDAP disabled — no MIS/LDAP
+          # secrets are mapped here, so CI cannot reach real MIS or LDAP.
+          APP_LDAP_ENABLED: "false"
+          APP_MIS_API_BASE_URL: http://127.0.0.1:9099
+          APP_MIS_API_TOKEN_PATH: /token
+          APP_MIS_API_RUN_PATH: /api/run
+          APP_MIS_API_LOGIN: e2e-stub
+          APP_MIS_API_PASSWORD: e2e-stub
+          APP_MIS_API_INSTALLATION_GUID: e2e-stub-guid
           APP_JWT_SECRET: zy2uR55T1CQamXMhsn63oZ6XcsSP6UpuN0Ob4T8s_nnITHNxtvCyvFK_VzFm4wyU
           # Seed-user profile metadata (UserSeedService; logins/passwords come
           # from the job-level env above — never hardcoded).
