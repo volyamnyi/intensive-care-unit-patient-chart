@@ -183,6 +183,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ictc_app;
 
 Заповніть `APP_MIS_API_BASE_URL / APP_MIS_API_LOGIN / APP_MIS_API_PASSWORD / APP_MIS_API_INSTALLATION_GUID` (шляхи — за потреби `APP_MIS_API_TOKEN_PATH / APP_MIS_API_RUN_PATH`). Клієнт сам отримує й кешує Bearer-токен (`MisAuthService`: reuse до `expires_in − skew`, один re-auth на 401); пароль/токен ніколи не потрапляють у логи чи винятки. Неповний конфіг валить старт (fail-fast, у повідомленні — лише імена ключів). MIS Data Policy абсолютна: тільки читання, передача PDF заборонена (Phase 16, #269) — PDF лишаються локально (завантаження/друк у модулях).
 
+> **Тестовий виняток (не прод):** для E2E існує sidecar-стаб `tests/mis-stub/` (issues #297–#302) — він говорить той самий envelope-контракт, але живе **тільки** в `tests/`, у production-коді фейків немає, і в проді стаб ніколи не стартує. CI вказує той самий `MisServiceImpl` на стаб і не мапить жодного `APP_MIS_API_*`-секрету.
+
 ### 1.6 Перший запуск
 
 ```bash
@@ -745,7 +747,7 @@ A: 1. Backup. 2. `pg_basebackup` на новий сервер. 3. `pg_upgrade` (
 A: `SPRING_PROFILES_ACTIVE=prod` вже вимикає (див. `application.yml` prod-профіль, `springdoc.api-docs.enabled: false` → `swagger-ui.enabled: false`).
 
 **Q: А моки MIS у проді — це «так»?**
-A: Ні, і їх більше не існує: `MockMisServiceImpl`/`WireMockMisServiceImpl` видалено (Phase 11, #264). Єдиний `MisServiceImpl` ходить у реальний MIS; без `APP_MIS_API_*` застосунок валить старт (fail-fast).
+A: Ні, і їх більше не існує: `MockMisServiceImpl`/`WireMockMisServiceImpl` видалено (Phase 11, #264). Єдиний `MisServiceImpl` ходить у реальний MIS; без `APP_MIS_API_*` застосунок валить старт (fail-fast). Єдиний виняток — E2E sidecar-стаб `tests/mis-stub/` (issues #297–#302): він існує тільки в `tests/`, у проді ніколи не стартує, і прод-відповіді завжди йдуть з реального MIS.
 
 ---
 
@@ -809,6 +811,12 @@ APP_LDAP_URLS=ldaps://ad.corp:636
 APP_LDAP_BASE=dc=corp,dc=local
 APP_LDAP_USERNAME=<bind-DN з vault>
 APP_LDAP_PASSWORD=<з vault>
+
+# --- CI ЗАБОРОНА (цей блок — тільки local/prod, ніколи не копіювати в CI) ---
+# APP_MIS_API_* і APP_LDAP_* живуть тільки в local/prod-оточеннях. CI не
+# мапить жодного MIS/LDAP-секрету: E2E працює проти tests/mis-stub
+# (127.0.0.1:9099, e2e-stub credentials) з APP_LDAP_ENABLED=false
+# (issues #297–#302, матриця середовищ — у AGENTS.md «Test isolation»).
 
 # --- Mail ---
 SPRING_MAIL_HOST=smtp.internal
