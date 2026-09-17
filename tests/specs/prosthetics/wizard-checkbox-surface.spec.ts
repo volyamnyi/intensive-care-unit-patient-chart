@@ -158,12 +158,31 @@ async function centerRowInViewport(page: Page, row: Locator): Promise<void> {
 }
 
 /**
+ * Dismisses any open modal dialog. The walk never opens dialogs legitimately
+ * (checkbox toggles + API completions only): a visible dialog means an
+ * earlier surface click strayed onto a sticky-bar CTA (seen live: the
+ * «Провалити» ghost button opened the fail dialog, after which every click
+ * landed on the modal overlay — issue #303). Escape dismisses such dialogs
+ * without side effects.
+ */
+async function dismissBlockingDialog(page: Page): Promise<void> {
+  const dialog = page.getByRole('dialog');
+  if ((await dialog.count()) === 0) return;
+  if (!(await dialog.first().isVisible().catch(() => false))) return;
+  console.log('[surface-walk] dismissing stray dialog before clicking');
+  await page.keyboard.press('Escape');
+  await expect(dialog.first()).toBeHidden({ timeout: 5000 });
+}
+
+/**
  * Clicks the row at a fraction of its width/height and asserts the checkbox
  * toggled exactly once (aria-checked flips from its previous value).
  * The geometry is re-read before EVERY click: toggling a point focuses the
  * hidden checkbox input, and the browser may scroll it into view — a box
- * measured before the toggle would then miss the row (seen live as a missed
- * (0.95, 0.05) click on the handover row, issue #303).
+ * measured before the toggle would then miss the row. Before clicking, the
+ * point is verified to actually land inside the row via elementFromPoint
+ * (one re-center retry); a covered point fails fast naming the covering
+ * element instead of burning 5s on a hopeless toggle poll.
  */
 async function clickSurfacePointAndExpectToggle(
   page: Page,
@@ -172,17 +191,60 @@ async function clickSurfacePointAndExpectToggle(
   fy: number,
   checkbox: Locator,
 ): Promise<void> {
-  const box = await row.boundingBox();
+  await dismissBlockingDialog(page);
+  let box = await row.boundingBox();
   expect(box, `checkbox row must stay measurable at (${fx}, ${fy})`).toBeTruthy();
+  let point = { x: box!.x + box!.width * fx, y: box!.y + box!.height * fy };
+  let cover = await coveringElement(page, row, point.x, point.y);
+  if (cover !== null) {
+    await centerRowInViewport(page, row);
+    box = await row.boundingBox();
+    expect(box, `checkbox row must stay measurable at (${fx}, ${fy})`).toBeTruthy();
+    point = { x: box!.x + box!.width * fx, y: box!.y + box!.height * fy };
+    cover = await coveringElement(page, row, point.x, point.y);
+  }
+  expect(
+    cover,
+    `click point (${fx}, ${fy}) is covered by ${cover} instead of the checkbox row`,
+  ).toBeNull();
   const before = await checkbox.getAttribute('aria-checked');
   expect(before, 'checkbox must have an aria-checked state').not.toBeNull();
-  await page.mouse.click(box!.x + box!.width * fx, box!.y + box!.height * fy);
+  await page.mouse.click(point.x, point.y);
   await expect
     .poll(async () => checkbox.getAttribute('aria-checked'), {
       timeout: 5000,
       message: `checkbox did not toggle after a click at (${fx}, ${fy})`,
     })
     .not.toBe(before);
+}
+
+/**
+ * Returns a short description of the topmost element at the point, or null
+ * when the point lands inside the row label itself.
+ */
+async function coveringElement(
+  page: Page,
+  row: Locator,
+  x: number,
+  y: number,
+): Promise<string | null> {
+  const handle = await row.elementHandle().catch(() => null);
+  if (!handle) return '<detached-row>';
+  return page.evaluate(
+    ([px, py, host]) => {
+      const el = document.elementFromPoint(px, py);
+      if (!el) return '<no-element-at-point>';
+      if (host.contains(el)) return null;
+      const cls = typeof el.className === 'string' ? el.className : '';
+      const shortCls = cls
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 4)
+        .join('.');
+      return `<${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${shortCls ? `.${shortCls}` : ''}>`;
+    },
+    [x, y, handle] as const,
+  );
 }
 
 test.describe('wizard checkbox whole-surface clickability', () => {
