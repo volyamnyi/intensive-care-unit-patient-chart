@@ -8,3 +8,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: med/003-import-staging.sql
+  - include:
+      relativeToChangelogFile: true
+      file: med/005-drug-interactions.sql

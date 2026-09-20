@@ -12,6 +12,7 @@ public class PrescriptionItemResponse {
     UUID id;
     UUID listId;
     String medicineName;
+    String medicineAtcCode;
     String medicineMethod;
     String regime;
     String status;

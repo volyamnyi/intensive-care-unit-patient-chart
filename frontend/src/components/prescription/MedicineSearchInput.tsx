@@ -9,7 +9,7 @@ import type { MedicineCatalogItem } from '../../types/medication';
 export interface MedicineSearchInputProps {
   canEdit: boolean;
   isDoctor: boolean;
-  onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
+  onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string; medicineAtcCode?: string | null }) => Promise<void>;
   onSearchMedicine?: (keyword: string, signal?: AbortSignal) => Promise<MedicineCatalogItem[]>;
 }
 
@@ -44,6 +44,7 @@ export default function MedicineSearchInput({
         medicineName: medName,
         medicineMethod: newMethod || undefined,
         regime: newRegime || undefined,
+        medicineAtcCode: selectedMed?.itemKindAtc ?? undefined,
       });
       setSelectedMed(undefined);
       setMedSearch('');

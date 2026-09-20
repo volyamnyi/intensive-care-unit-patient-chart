@@ -12,6 +12,7 @@ const mockRemoveItemDay = vi.fn();
 const mockCancelMedication = vi.fn();
 const mockRestoreToPlanned = vi.fn();
 const mockCancelAssignment = vi.fn();
+const mockGetInteractions = vi.fn().mockResolvedValue({ data: { warnings: [], missingAtc: null } });
 const mockGetPdfZip = vi.fn();
 const mockGetPdfInfo = vi.fn();
 const mockGetPdfPage = vi.fn();
@@ -38,6 +39,7 @@ vi.mock('../../api/medication', () => ({
     executeDose: vi.fn(),
     addItem: vi.fn(), removeItem: vi.fn(), create: vi.fn(), delete: vi.fn(), close: vi.fn(),
     getByPatient: vi.fn(),
+    getInteractions: (...a: unknown[]) => mockGetInteractions(...a),
     getMedicineCatalog: () => Promise.resolve({ data: [] }),
     getPdfZip: (...a: unknown[]) => mockGetPdfZip(...a),
     getPdfInfo: (...a: unknown[]) => mockGetPdfInfo(...a),
@@ -332,5 +334,90 @@ describe('PrescriptionDetailPage — Form 003-4/о PDF actions', () => {
     expect(screen.getByRole('button', { name: /Завантажити PDF/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Друкувати PDF/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Закрити листок/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('PrescriptionDetailPage — drug interaction warnings (#304)', () => {
+  beforeEach(() => {
+    mockGetInteractions.mockReset();
+    mockGetInteractions.mockResolvedValue({ data: { warnings: [], missingAtc: null } });
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  function makePlannedItem(id = 'item-1') {
+    return {
+      ...makeItem(id),
+      dayParts: [
+        {
+          id: 'dp-1', dayId: 'day-1', dayDate: today, period: 'morning', dose: '5mg',
+          isPlanned: true, isPlannedFinished: false, isCompleted: false, isCompletedFinished: false,
+          doctorName: null, nurseName: null,
+        },
+      ],
+    };
+  }
+
+  it('fetches interaction warnings on mount and refreshes them after a mutation', async () => {
+    renderPage(() => doctorAuth, [makePlannedItem()]);
+    await screen.findByText('Dopamine');
+    await waitFor(() => expect(mockGetInteractions).toHaveBeenCalled());
+    const callsAfterMount = mockGetInteractions.mock.calls.length;
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Додати день' }));
+    await waitFor(() => expect(mockAddItemDay).toHaveBeenCalledTimes(1));
+    // A planned-set mutation must trigger a refresh beyond the mount-time fetches.
+    await waitFor(() => {
+      expect(mockGetInteractions.mock.calls.length).toBeGreaterThan(callsAfterMount);
+    });
+  });
+
+  it('shows a non-blocking warning when ATC is missing for some items', async () => {
+    mockGetInteractions.mockResolvedValue({
+      data: {
+        warnings: [],
+        missingAtc: { present: true, names: ['Dopamine'] },
+      },
+    });
+    renderPage(() => doctorAuth, [makePlannedItem()]);
+    await waitFor(() => {
+      expect(screen.getByText(/Не вдалося перевірити взаємодії/)).toBeInTheDocument();
+      expect(screen.getByText(/Немає ATC-коду: Dopamine/)).toBeInTheDocument();
+    });
+    // Grid stays visible — the warning never blocks the page.
+    expect(screen.getByText('Dopamine')).toBeInTheDocument();
+  });
+
+  it('marks the item name + planned overlap cells with interaction warnings', async () => {
+    mockGetInteractions.mockResolvedValue({
+      data: {
+        warnings: [
+          {
+            itemId: 'item-1', nameUk: 'Dopamine',
+            interactions: [
+              {
+                otherItemId: 'item-2', otherNameUk: 'Warfarin', severity: 'high',
+                interactionText: 'Повернення підвищує ризик кровотечі',
+                overlapStart: today, overlapEnd: today, interactionIds: ['i-1'],
+              },
+            ],
+          },
+        ],
+        missingAtc: null,
+      },
+    });
+    renderPage(() => doctorAuth, [makePlannedItem()]);
+    await screen.findByText('Dopamine');
+    await waitFor(() => {
+      expect(document.querySelector('.interaction-warn')).not.toBeNull();
+      expect(document.querySelector('td[data-interaction-warn="true"]')).not.toBeNull();
+    });
+  });
+
+  it('shows no interaction marks when the list has no warnings', async () => {
+    renderPage(() => doctorAuth, [makePlannedItem()]);
+    await screen.findByText('Dopamine');
+    expect(document.querySelector('.interaction-warn')).toBeNull();
+    expect(document.querySelector('td[data-interaction-warn="true"]')).toBeNull();
   });
 });

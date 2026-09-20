@@ -31,6 +31,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -198,7 +199,7 @@ class PrescriptionControllerTest {
         PrescriptionItem item = PrescriptionItem.builder()
                 .list(testList).medicineName("Paracetamol").status("Active").build();
         item.setId(itemId);
-        when(itemService.addItem(eq(listId), eq("Paracetamol"), eq("PO"), eq("BID")))
+        when(itemService.addItem(eq(listId), eq("Paracetamol"), isNull(), eq("PO"), eq("BID")))
                 .thenReturn(item);
 
         mockMvc.perform(post("/api/prescriptions/{listId}/items", listId)

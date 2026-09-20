@@ -130,7 +130,8 @@ public class PrescriptionController {
     public PrescriptionItemResponse addItem(
             @PathVariable UUID listId,
             @Valid @RequestBody PrescriptionItemAddRequest req) {
-        return prescriptionItemMapper.toResponse(itemService.addItem(listId, req.getMedicineName(), req.getMedicineMethod(), req.getRegime()));
+        return prescriptionItemMapper.toResponse(itemService.addItem(
+                listId, req.getMedicineName(), req.getMedicineAtcCode(), req.getMedicineMethod(), req.getRegime()));
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")

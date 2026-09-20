@@ -40,7 +40,7 @@ public class PrescriptionItemService {
     }
 
     @Transactional
-    public PrescriptionItem addItem(UUID listId, String medicineName, String method, String regime) {
+    public PrescriptionItem addItem(UUID listId, String medicineName, String atcCode, String method, String regime) {
         PrescriptionList list = listRepository.findById(listId)
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
 
@@ -49,6 +49,7 @@ public class PrescriptionItemService {
         PrescriptionItem item = PrescriptionItem.builder()
                 .list(list)
                 .medicineName(medicineName)
+                .medicineAtcCode(normalizeAtc(atcCode))
                 .medicineMethod(method)
                 .regime(regime)
                 .status("Active")
@@ -82,8 +83,18 @@ public class PrescriptionItemService {
                 partRepository.save(part);
             }
         }
-        log.info("Prescription item added: id={}, medicine={}, 21 days created", item.getId(), medicineName);
+        log.info("Prescription item added: id={}, medicine={}, atc={}, 21 days created",
+                item.getId(), medicineName, item.getMedicineAtcCode());
         return item;
+    }
+
+    /** Whitespace-trimmed, uppercase ATC; blank input stays null (free-text pick → IT notice path). */
+    static String normalizeAtc(String atc) {
+        if (atc == null) {
+            return null;
+        }
+        String value = atc.trim().toUpperCase();
+        return value.isEmpty() ? null : value;
     }
 
     @Transactional

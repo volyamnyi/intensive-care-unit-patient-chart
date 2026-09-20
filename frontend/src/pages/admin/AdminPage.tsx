@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
-import { History, RefreshCw, ShieldCheck, Save, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
+import { History, RefreshCw, ShieldCheck, Save, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +35,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { auditApi, adminApi } from '../../api/platform';
+import { auditApi, adminApi, settingsApi } from '../../api/platform';
+import { drugInteractionAdminApi } from '../../api/medication';
+import type { DrugInteractionImportReport } from '../../types/medication';
 import AuditLogTable from '../../components/common/AuditLogTable';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { useAuth } from '../../services/AuthContext';
@@ -66,6 +68,42 @@ export default function AdminPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [diReport, setDiReport] = useState<DrugInteractionImportReport | null>(null);
+  const [diBusy, setDiBusy] = useState(false);
+  const [diError, setDiError] = useState<string | null>(null);
+  const [diNotice, setDiNotice] = useState<string | null>(null);
+  const [diFile, setDiFile] = useState<File | null>(null);
+  const [diLastImport, setDiLastImport] = useState<string | null>(null);
+  const diFileRef = useRef<HTMLInputElement | null>(null);
+
+  const loadDiLastImport = useCallback(async () => {
+    try {
+      const res = await settingsApi.getByKey('drug_interactions.last_import_at');
+      setDiLastImport(res.data?.value ?? null);
+    } catch { /* never imported yet */ }
+  }, []);
+
+  useEffect(() => { loadDiLastImport(); }, [loadDiLastImport]);
+
+  const handleDiImport = async () => {
+    if (!diFile) return;
+    setDiBusy(true);
+    setDiError(null);
+    setDiNotice(null);
+    try {
+      const res = await drugInteractionAdminApi.importDataset(diFile);
+      setDiReport(res.data);
+      setDiNotice('Імпорт завершено');
+      setDiFile(null);
+      if (diFileRef.current) diFileRef.current.value = '';
+      await loadDiLastImport();
+    } catch (err) {
+      setDiError(getErrorMessage(err, 'Імпорт відхилено'));
+    } finally {
+      setDiBusy(false);
+    }
+  };
 
   const [matrix, setMatrix] = useState<PermissionMatrix | null>(null);
   const [matrixDraft, setMatrixDraft] = useState<Record<string, Record<string, boolean>>>({});
@@ -198,6 +236,7 @@ export default function AdminPage() {
           <TabsTrigger value="users">Користувачі</TabsTrigger>
           <TabsTrigger value="permissions">Доступи та ролі</TabsTrigger>
           <TabsTrigger value="audit">Журнал аудиту</TabsTrigger>
+          <TabsTrigger value="drug-interactions">База взаємодій</TabsTrigger>
           <TabsTrigger value="stats">Статистика</TabsTrigger>
         </TabsList>
 
@@ -379,6 +418,46 @@ export default function AdminPage() {
                     </div>
                     <AuditLogTable logs={auditLogs} loading={auditLoading} />
                   </>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="drug-interactions">
+              <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-2.5">
+                <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-rubik text-base font-medium">База взаємодій ліків (Form 003-4/о)</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {diLastImport ? `Останній імпорт: ${diLastImport}` : 'Імпорт ще не виконували'}
+                  </span>
+                </div>
+                <p className="mb-2 text-sm text-muted-foreground">
+                  Повна заміна бази взаємодій завантаженим JSON-файлом (до 20 МБ).
+                  Файл містить список препаратів (ATC) та пари взаємодій із severity
+                  (low/medium/high/critical).
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    ref={diFileRef}
+                    type="file"
+                    accept="application/json,.json"
+                    className="text-sm"
+                    onChange={(e) => setDiFile(e.target.files?.[0] ?? null)}
+                  />
+                  <Button size="sm" onClick={handleDiImport} disabled={diBusy || !diFile}>
+                    <Upload className="mr-1 size-4" />
+                    {diBusy ? 'Імпортуємо…' : 'Імпортувати'}
+                  </Button>
+                </div>
+                {diError && <Alert variant="destructive" className="mt-2">{diError}</Alert>}
+                {diNotice && !diError && <Alert variant="warning" className="mt-2">{diNotice}</Alert>}
+                {diReport && (
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-5">
+                    <div className="rounded-lg border p-2">Препаратів: <b>{diReport.drugs}</b></div>
+                    <div className="rounded-lg border p-2">Взаємодій: <b>{diReport.interactions}</b></div>
+                    <div className="rounded-lg border p-2">Пропущено: <b>{diReport.skipped}</b></div>
+                    <div className="rounded-lg border p-2">Час: <b>{diReport.durationMs} мс</b></div>
+                    <div className="rounded-lg border p-2 break-all">Hash: <b>{diReport.sourceHash.slice(0, 12)}…</b></div>
+                  </div>
                 )}
               </div>
             </TabsContent>

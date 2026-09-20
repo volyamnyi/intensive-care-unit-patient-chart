@@ -197,6 +197,23 @@
   }
 }
 
+/* Drug-interaction warning blink (#304) */
+@keyframes interactionBlink {
+  0%, 100% { color: #B91C1C; }
+  50% { color: #DC2626; }
+}
+
+.interaction-warn {
+  animation: interactionBlink 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interaction-warn {
+    animation: none;
+    color: #B91C1C;
+  }
+}
+
 /* Fullscreen hourly grid dialog morph (#136, Phase 3) */
 @keyframes modalMorphIn {
   from { opacity: 0; transform: scale(0.94); }

@@ -115,6 +115,60 @@
     }
   ],
   "documentsByPatientId": {
+    "13373": [
+      {
+        "documentId": 6001,
+        "documentName": "Замовлення на протез верхньої кінцівки",
+        "documentCreationDate": "2026-08-01T09:00:00",
+        "documentUserLogin": "stub-doctor",
+        "documentTemplateId": 120,
+        "documentTemplateName": "Замовлення на протез верхньої кінцівки",
+        "documentKindCode": "ORDER",
+        "documentKindName": "Замовлення",
+        "documentApproveStatusCode": "APPROVED",
+        "documentApproveStatusName": "Погоджено",
+        "documentExternalId": "STUB-6001",
+        "documentUrl": "{STUB_BASE}/doc/6001",
+        "patientId": 13373,
+        "orderDate": "2026-08-01T09:00:00",
+        "orderNumber": "З-2026-0101",
+        "patientFullName": "Стабенко Іван Вигаданович",
+        "patientAddress": "м. Стендове, вул. Тестова, 7, кв. 11",
+        "productCode": "06 18 09.В-ТР.-32-069.03-04910-02-152",
+        "productName": "Протез передпліччя",
+        "patientGender": "MAL",
+        "age": 51,
+        "height": 178,
+        "weight": 80,
+        "note": "Стаб-документ 120 для setup-order-documents (provision + idempotency)"
+      },
+      {
+        "documentId": 6002,
+        "documentName": "Замовлення на протез нижньої кінцівки",
+        "documentCreationDate": "2026-08-02T09:30:00",
+        "documentUserLogin": "stub-doctor",
+        "documentTemplateId": 121,
+        "documentTemplateName": "Замовлення на протез нижньої кінцівки",
+        "documentKindCode": "ORDER",
+        "documentKindName": "Замовлення",
+        "documentApproveStatusCode": "APPROVED",
+        "documentApproveStatusName": "Погоджено",
+        "documentExternalId": "STUB-6002",
+        "documentUrl": "{STUB_BASE}/doc/6002",
+        "patientId": 13373,
+        "orderDate": "2026-08-02T09:30:00",
+        "orderNumber": "З-2026-0102",
+        "patientFullName": "Стабенко Іван Вигаданович",
+        "patientAddress": "м. Стендове, вул. Тестова, 7, кв. 11",
+        "productCode": "06 24 09.Н-ТР.-32-069.03-04910-02-153",
+        "productName": "Протез гомілки",
+        "patientGender": "MAL",
+        "age": 51,
+        "height": 178,
+        "weight": 80,
+        "note": "Стаб-документ 121 для setup-order-documents (перевірка звуження до 120/121)"
+      }
+    ],
     "900001": [
       {
         "documentId": 5001,
@@ -170,60 +224,6 @@
         "weight": 71,
         "note": "Стаб-документ 121 для сід-пацієнта 900002 (префіл бланку TP-LL-02)"
       }
-    ],
-    "13373": [
-      {
-        "documentId": 6001,
-        "documentName": "Замовлення на протез верхньої кінцівки",
-        "documentCreationDate": "2026-08-01T09:00:00",
-        "documentUserLogin": "stub-doctor",
-        "documentTemplateId": 120,
-        "documentTemplateName": "Замовлення на протез верхньої кінцівки",
-        "documentKindCode": "ORDER",
-        "documentKindName": "Замовлення",
-        "documentApproveStatusCode": "APPROVED",
-        "documentApproveStatusName": "Погоджено",
-        "documentExternalId": "STUB-6001",
-        "documentUrl": "{STUB_BASE}/doc/6001",
-        "patientId": 13373,
-        "orderDate": "2026-08-01T09:00:00",
-        "orderNumber": "З-2026-0101",
-        "patientFullName": "Стабенко Іван Вигаданович",
-        "patientAddress": "м. Стендове, вул. Тестова, 7, кв. 11",
-        "productCode": "06 18 09.В-ТР.-32-069.03-04910-02-152",
-        "productName": "Протез передпліччя",
-        "patientGender": "MAL",
-        "age": 51,
-        "height": 178,
-        "weight": 80,
-        "note": "Стаб-документ 120 для setup-order-documents (provision + idempotency)"
-      },
-      {
-        "documentId": 6002,
-        "documentName": "Замовлення на протез нижньої кінцівки",
-        "documentCreationDate": "2026-08-02T09:30:00",
-        "documentUserLogin": "stub-doctor",
-        "documentTemplateId": 121,
-        "documentTemplateName": "Замовлення на протез нижньої кінцівки",
-        "documentKindCode": "ORDER",
-        "documentKindName": "Замовлення",
-        "documentApproveStatusCode": "APPROVED",
-        "documentApproveStatusName": "Погоджено",
-        "documentExternalId": "STUB-6002",
-        "documentUrl": "{STUB_BASE}/doc/6002",
-        "patientId": 13373,
-        "orderDate": "2026-08-02T09:30:00",
-        "orderNumber": "З-2026-0102",
-        "patientFullName": "Стабенко Іван Вигаданович",
-        "patientAddress": "м. Стендове, вул. Тестова, 7, кв. 11",
-        "productCode": "06 24 09.Н-ТР.-32-069.03-04910-02-153",
-        "productName": "Протез гомілки",
-        "patientGender": "MAL",
-        "age": 51,
-        "height": 178,
-        "weight": 80,
-        "note": "Стаб-документ 121 для setup-order-documents (перевірка звуження до 120/121)"
-      }
     ]
   },
   "medicines": [
@@ -234,7 +234,8 @@
       "itemKindCode": "PARA-500",
       "itemKindUnit": "табл.",
       "itemKindManufacturer": "Стаб-Фарма",
-      "itemKindIsDisabled": false
+      "itemKindIsDisabled": false,
+      "itemKindATC": "N02BE01"
     },
     {
       "itemKindID": 102,
@@ -243,7 +244,8 @@
       "itemKindCode": "IBU-200",
       "itemKindUnit": "табл.",
       "itemKindManufacturer": "Стаб-Фарма",
-      "itemKindIsDisabled": false
+      "itemKindIsDisabled": false,
+      "itemKindATC": "M01AE01"
     },
     {
       "itemKindID": 103,
@@ -252,7 +254,8 @@
       "itemKindCode": "ASP-100",
       "itemKindUnit": "табл.",
       "itemKindManufacturer": "Стаб-Фарма",
-      "itemKindIsDisabled": true
+      "itemKindIsDisabled": true,
+      "itemKindATC": "B01AC06"
     },
     {
       "itemKindID": 104,
@@ -261,7 +264,8 @@
       "itemKindCode": "DOB-250",
       "itemKindUnit": "амп.",
       "itemKindManufacturer": "Стаб-Фарма",
-      "itemKindIsDisabled": false
+      "itemKindIsDisabled": false,
+      "itemKindATC": "C01CA02"
     },
     {
       "itemKindID": 105,
@@ -270,7 +274,8 @@
       "itemKindCode": "GLU-5",
       "itemKindUnit": "фл.",
       "itemKindManufacturer": "Стаб-Фарма",
-      "itemKindIsDisabled": false
+      "itemKindIsDisabled": false,
+      "itemKindATC": "B05BA01"
     }
   ]
 }

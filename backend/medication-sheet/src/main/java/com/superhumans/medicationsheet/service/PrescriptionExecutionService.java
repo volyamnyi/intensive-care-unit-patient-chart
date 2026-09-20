@@ -26,7 +26,6 @@ public class PrescriptionExecutionService {
 
     PrescriptionExecutionRepository executionRepository;
     PrescriptionDayPartRepository partRepository;
-    DrugInteractionService drugInteractionService;
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
 

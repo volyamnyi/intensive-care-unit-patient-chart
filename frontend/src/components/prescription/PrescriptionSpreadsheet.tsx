@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Plus, Minus, Trash2, X, Undo2, Eraser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { PrescriptionDayPart } from '../../types/medication';
+import type { PrescriptionDayPart, PrescriptionInteractionsResponse, PairInteractionWarning as PairInteraction } from '../../types/medication';
 import type { GridItem } from './PrescriptionGrid';
 import { gridDateMeta, shouldMarkAddedCell } from './prescriptionDateMeta';
+
+const SEVERITY_ORDER: Record<string, number> = { critical: 3, high: 2, medium: 1 };
+const SEVERITY_LABELS: Record<string, string> = { critical: 'критично', high: 'високо', medium: 'помірно' };
 
 const PERIODS = ['morning', 'day', 'evening', 'night'] as const;
 const PERIOD_LABELS: Record<string, string> = {
@@ -17,6 +20,18 @@ const PERIOD_FULL: Record<string, string> = {
 function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
+}
+
+// Inclusive day list of an overlap period (capped for safety, ISO dates).
+function rangeDays(start: string, end: string): string[] {
+  const out: string[] = [];
+  const d = new Date(start);
+  const endD = new Date(end);
+  for (let i = 0; i < 62 && d <= endD; i++) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
 }
 
 function cellBg(part: PrescriptionDayPart | undefined) {
@@ -89,11 +104,14 @@ export interface PrescriptionSpreadsheetProps {
   onCancelAssignment: (dayPartId: string) => Promise<void>;
   onOpenExecute: (dp: PrescriptionDayPart, el: HTMLElement) => void;
   onOpenDeleteConfirm: (itemId: string, el: HTMLElement) => void;
+  /** Server-computed interaction warnings (#304); null = not fetched. */
+  interactions?: PrescriptionInteractionsResponse | null;
 }
 
 export default function PrescriptionSpreadsheet({
   canEdit, isDoctor, isNurse, gridItems, visibleDates, allDates, viewStart, daysToShow,
   loading, onShiftLeft, onShiftRight, onAddDay, onRemoveDay, onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onOpenExecute, onOpenDeleteConfirm,
+  interactions,
 }: PrescriptionSpreadsheetProps) {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editingDose, setEditingDose] = useState('');
@@ -114,6 +132,41 @@ export default function PrescriptionSpreadsheet({
   };
 
   const canMenu = canEdit && isDoctor;
+
+  // Interaction warnings (#304): per-item pairs (from both sides), the ids of
+  // warned items, and the set of warned (item, date) cells with a red border.
+  const itemPairs = useMemo(() => {
+    const map = new Map<string, PairInteraction[]>();
+    if (interactions) {
+      for (const w of interactions.warnings) {
+        for (const p of w.interactions) {
+          if (!map.has(w.itemId)) map.set(w.itemId, []);
+          if (!map.has(p.otherItemId)) map.set(p.otherItemId, []);
+          map.get(w.itemId)!.push(p);
+          map.get(p.otherItemId)!.push({ ...p, otherItemId: w.itemId, otherNameUk: w.nameUk });
+        }
+      }
+    }
+    return map;
+  }, [interactions]);
+  const warnedItemIds = useMemo(() => new Set(itemPairs.keys()), [itemPairs]);
+  const warnedDates = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    if (interactions) {
+      for (const w of interactions.warnings) {
+        for (const p of w.interactions) {
+          const days = rangeDays(p.overlapStart, p.overlapEnd);
+          if (!map.has(w.itemId)) map.set(w.itemId, new Set());
+          if (!map.has(p.otherItemId)) map.set(p.otherItemId, new Set());
+          for (const d of days) {
+            map.get(w.itemId)!.add(d);
+            map.get(p.otherItemId)!.add(d);
+          }
+        }
+      }
+    }
+    return map;
+  }, [interactions]);
 
   // Derived added/removed-day metadata (no persistence): per-item added dates
   // beyond the 21-day base window, union header flags, and gap edge markers.
@@ -324,7 +377,7 @@ export default function PrescriptionSpreadsheet({
                         </Button>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">
+                        <p className={warnedItemIds.has(item.id) ? 'text-sm font-semibold interaction-warn' : 'text-sm font-semibold'}>
                           {item.medicineName}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
@@ -343,6 +396,10 @@ export default function PrescriptionSpreadsheet({
                       // Inactive (white) cells of added days get the muted marker;
                       // status colors always win.
                       const markedAdded = shouldMarkAddedCell(dateMeta.perItem.get(item.id), date, dp);
+                      const isWarnedCell = !!(
+                        dp && dp.isPlanned && !dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished
+                          && warnedDates.get(item.id)?.has(date)
+                      );
 
                       const onClick = (e: React.MouseEvent) => {
                         if (!dp || !canEdit) return;
@@ -356,11 +413,13 @@ export default function PrescriptionSpreadsheet({
                           key={`${date}-${period}`}
                           className={markedAdded ? 'bg-muted' : undefined}
                           data-added-day={markedAdded ? 'true' : undefined}
+                          data-interaction-warn={isWarnedCell ? 'true' : undefined}
                           style={{
                             width: 68, height: 32, cursor: bg === '#fff' || !dp ? 'default' : 'pointer',
                             backgroundColor: markedAdded ? undefined : bg, textAlign: 'center', verticalAlign: 'middle',
                             position: 'relative',
-                            border: '1px solid var(--color-border)',
+                            border: isWarnedCell ? '2px solid #EF4444' : '1px solid var(--color-border)',
+                            ...(isWarnedCell ? { borderRightColor: '#EF4444', borderBottomColor: '#EF4444', borderLeftColor: '#EF4444', borderTopColor: '#EF4444' } : null),
                             ...(period === 'night' && dateIdx < visibleDates.length - 1
                               ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
                               : null),
@@ -393,7 +452,23 @@ export default function PrescriptionSpreadsheet({
                                 </TooltipTrigger>
                                 {dp && (
                                   <TooltipContent>
-                                    {`${PERIOD_FULL[dp.period]}: ${dp.dose ?? '—'}`}
+                                    <p>{`${PERIOD_FULL[dp.period]}: ${dp.dose ?? '—'}`}</p>
+                                    {(() => {
+                                      const pairs = (itemPairs.get(item.id) ?? [])
+                                        .filter(p => rangeDays(p.overlapStart, p.overlapEnd).includes(date))
+                                        .sort((x, y) => (SEVERITY_ORDER[y.severity] ?? 0) - (SEVERITY_ORDER[x.severity] ?? 0));
+                                      if (pairs.length === 0) return null;
+                                      return (
+                                        <div className="mt-1 border-t border-current/20 pt-1">
+                                          <p className="text-[10px] font-bold">Взаємодії: {item.medicineName}</p>
+                                          {pairs.map((p, i) => (
+                                            <p key={i} className="text-[10px]">
+                                              ⚠ {p.otherNameUk} ({SEVERITY_LABELS[p.severity] ?? p.severity}) — {p.interactionText}
+                                            </p>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
                                   </TooltipContent>
                                 )}
                               </Tooltip>

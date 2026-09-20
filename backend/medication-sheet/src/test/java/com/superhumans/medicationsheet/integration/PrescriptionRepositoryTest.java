@@ -117,20 +117,6 @@ class PrescriptionRepositoryTest {
     }
 
     @Test
-    void shouldCreateDrugInteractionRule() {
-        DrugInteractionRule rule = DrugInteractionRule.builder()
-                .ptgCodeA("1")
-                .ptgCodeB("2")
-                .severity("WARNING")
-                .description("Potential interaction between PTG-1 and PTG-2")
-                .build();
-        rule = em.persistFlushFind(rule);
-
-        assertThat(rule.getId()).isNotNull();
-        assertThat(rule.getSeverity()).isEqualTo("WARNING");
-    }
-
-    @Test
     void shouldCreateExecution() {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .day(em.find(PrescriptionItemDay.class, dayId))

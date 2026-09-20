@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Loader2, X, RefreshCw, Download, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertAction } from '@/components/ui/alert'
+import { Alert, AlertAction, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 
 import { prescriptionApi, vitalSignApi } from '../../api/medication';
@@ -23,6 +23,7 @@ export default function PrescriptionDetailPage() {
 
   const [prescription, setPrescription] = useState<PrescriptionList | null>(null)
   const [items, setItems] = useState<PrescriptionItem[]>([])
+  const [interactions, setInteractions] = useState<import('../../types/medication').PrescriptionInteractionsResponse | null>(null)
   const [vitalDays, setVitalDays] = useState<{ id: string; dayDate: string; entries: import('../../types/medication').VitalSignEntry[] }[]>([])
   const [loading, setLoading] = useState(false)
   const [vitalLoading, setVitalLoading] = useState(false)
@@ -40,6 +41,14 @@ export default function PrescriptionDetailPage() {
     } catch (err) {
       setError(getErrorMessage(err, 'Не вдалося завантажити препарати'))
     }
+  }, [])
+
+  // Interaction warnings are non-blocking: a fetch failure never hides the grid.
+  const loadInteractions = useCallback(async (listId: string) => {
+    try {
+      const res = await prescriptionApi.getInteractions(listId)
+      setInteractions(res.data)
+    } catch { /* non-blocking */ }
   }, [])
 
   const loadVitalGrid = useCallback(async (listId: string) => {
@@ -61,17 +70,24 @@ export default function PrescriptionDetailPage() {
       .then((res) => {
         setPrescription(res.data)
         void loadItems(res.data.id)
+        void loadInteractions(res.data.id)
         void loadVitalGrid(res.data.id)
       })
       .catch((err) => setError(getErrorMessage(err, 'Не вдалося завантажити листок призначень')))
       .finally(() => setLoading(false))
-  }, [id, loadItems, loadVitalGrid])
+  }, [id, loadItems, loadInteractions, loadVitalGrid])
+
+  // Any mutation of the planned set changes the interaction warnings — refetch both.
+  const reloadAfterMutation = useCallback(async (listId: string) => {
+    await loadItems(listId)
+    await loadInteractions(listId)
+  }, [loadItems, loadInteractions])
 
   const handlePlan = async (dayPartId: string, dose: string) => {
     setError(null)
     try {
       await prescriptionApi.planDose(dayPartId, dose)
-      if (id) await loadItems(id)
+      if (id) await reloadAfterMutation(id)
     } catch (err) {
       setError(getErrorMessage(err, 'Не вдалося запланувати дозу'))
     }
@@ -80,7 +96,7 @@ export default function PrescriptionDetailPage() {
   const handleCancelMedication = async (dayPartId: string) => {
     try {
       await prescriptionApi.cancelMedication(dayPartId)
-      if (id) await loadItems(id)
+      if (id) await reloadAfterMutation(id)
       toast.success('Препарат відмінено')
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося відмінити препарат'))
@@ -90,19 +106,19 @@ export default function PrescriptionDetailPage() {
   const handleRestoreToPlanned = async (dayPartId: string) => {
     try {
       await prescriptionApi.restoreToPlanned(dayPartId)
-      if (id) await loadItems(id)
+      if (id) await reloadAfterMutation(id)
       toast.success('Повернуто у Заплановано')
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося повернути у заплановані'))
     }
   }
 
-  const handleAddItem = async (data: { medicineName: string; medicineMethod?: string; regime?: string }) => {
+  const handleAddItem = async (data: { medicineName: string; medicineMethod?: string; regime?: string; medicineAtcCode?: string | null }) => {
     if (!id) return
     setError(null)
     try {
       await prescriptionApi.addItem(id, data)
-      await loadItems(id)
+      await reloadAfterMutation(id)
     } catch (err) {
       setError(getErrorMessage(err, 'Не вдалося додати препарат'))
     }
@@ -113,7 +129,7 @@ export default function PrescriptionDetailPage() {
     try {
       await prescriptionApi.removeItem(itemId)
       const item = items.find(i => i.id === itemId)
-      if (item && id) await loadItems(id)
+      if (item && id) await reloadAfterMutation(id)
     } catch (err) {
       setError(getErrorMessage(err, 'Не вдалося видалити препарат'))
     }
@@ -123,7 +139,7 @@ export default function PrescriptionDetailPage() {
     if (!id) return
     try {
       await prescriptionApi.addItemDay(itemId)
-      await loadItems(id)
+      await reloadAfterMutation(id)
       toast.success('День додано')
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося додати день'))
@@ -133,7 +149,7 @@ export default function PrescriptionDetailPage() {
   const handleCancelAssignment = async (dayPartId: string) => {
     try {
       await prescriptionApi.cancelAssignment(dayPartId)
-      if (id) await loadItems(id)
+      if (id) await reloadAfterMutation(id)
       toast.success('Призначення відмінено')
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося відмінити призначення'))
@@ -144,7 +160,7 @@ export default function PrescriptionDetailPage() {
     if (!id) return
     try {
       await prescriptionApi.removeItemDay(itemId, dayId)
-      await loadItems(id)
+      await reloadAfterMutation(id)
       toast.success('День видалено')
     } catch (err) {
       toast.error(getErrorMessage(err, 'Не вдалося видалити день'))
@@ -170,7 +186,7 @@ export default function PrescriptionDetailPage() {
     setError(null)
     try {
       await prescriptionApi.executeDose(dayPartId, { actualDose, secondPersonLogin, secondPersonPassword })
-      if (id) await loadItems(id)
+      if (id) await reloadAfterMutation(id)
     } catch (err) {
       throw err
     }
@@ -278,6 +294,16 @@ export default function PrescriptionDetailPage() {
         </Alert>
       )}
 
+      {interactions?.missingAtc?.present && (
+        <Alert variant="warning" className="mb-2">
+          <AlertTitle>Не вдалося перевірити взаємодії частини препаратів</AlertTitle>
+          <AlertDescription>
+            Немає ATC-коду: {interactions.missingAtc.names.join(', ')}.
+            Попередження про взаємодії може бути неповним.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <PrescriptionGrid
         items={items}
         canEdit={!isFinished}
@@ -294,6 +320,7 @@ export default function PrescriptionDetailPage() {
         onRemoveItem={isNurseUser ? async () => {} : handleRemoveItem}
         onSearchMedicine={(keyword, signal) => prescriptionApi.getMedicineCatalog(keyword, signal).then(r => r.data)}
         loading={loading}
+        interactions={interactions}
       />
 
       {!isNurseUser && (

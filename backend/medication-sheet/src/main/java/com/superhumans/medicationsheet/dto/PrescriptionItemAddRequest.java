@@ -10,6 +10,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PrescriptionItemAddRequest {
     @NotBlank @Size(max = 500) String medicineName;
+    @Size(max = 20) String medicineAtcCode;
     @Size(max = 255) String medicineMethod;
     @Size(max = 255) String regime;
 }

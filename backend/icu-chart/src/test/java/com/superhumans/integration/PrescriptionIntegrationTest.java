@@ -279,7 +279,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
     private UUID newItemId() {
         PrescriptionList list = listService.create(1003L);
-        return itemService.addItem(list.getId(), "IT-Drug", "IV", "test").getId();
+        return itemService.addItem(list.getId(), "IT-Drug", null, "IV", "test").getId();
     }
 
     private PrescriptionDayPart morningPartOf(UUID itemId, LocalDate dayDate) {
@@ -437,7 +437,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
     @Test
     void removeDay_lastDay_returnsUnprocessableEntity() {
         PrescriptionList list = listService.create(1003L);
-        UUID itemId = itemService.addItem(list.getId(), "IT-Single", "IV", "test").getId();
+        UUID itemId = itemService.addItem(list.getId(), "IT-Single", null, "IV", "test").getId();
         List<PrescriptionItemDay> days = itemService.getDays(itemId);
         for (PrescriptionItemDay d : days.subList(1, days.size())) {
             itemService.removeDay(itemId, d.getId(), 1L);

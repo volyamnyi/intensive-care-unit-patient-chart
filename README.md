@@ -385,6 +385,8 @@ java -jar app/target/app-*.jar
 | `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (with optional 2P auth) |
 | `GET` | `/api/prescriptions/allergies?patientId=` | Yes | Patient allergies (from MIS) |
 | `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
+| `GET` | `/api/prescriptions/{listId}/interactions` | Yes | Drug-interaction warnings for planned items (non-blocking, #304) |
+| `POST` | `/api/admin/drug-interactions/import` | Administrator | Import the drug-interactions dataset (multipart JSON, ≤20 MB, full sync) |
 
 ### Prosthetics Manufacturing (Виробництво протезів)
 | Method | URL | Auth | Description |
@@ -539,7 +541,7 @@ icu-patient-chart/
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
 │       └── test/               # Vitest tests (100 files)
-├── tests/                      # Playwright E2E (96 spec files, 10 projects)
+├── tests/                      # Playwright E2E (98 spec files, 10 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -575,7 +577,7 @@ icu-patient-chart/
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (96 spec files, 438 tests) |
+| `npx playwright test` | Run all E2E tests (98 spec files, 451 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -591,16 +593,16 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (96 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (98 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 CI jobs run in parallel when triggered; if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend tests**: 154 test files across the multi-module reactor — common (25) + icu-chart (75) + medication-sheet (16) + prosthesis-manufacturing (37) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
+- **Backend tests**: 185 test files across the multi-module reactor — common (29) + icu-chart (76) + medication-sheet (30) + prosthesis-manufacturing (49) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 94 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 796 tests (87 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 88 spec files (410 tests), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Frontend Vitest tests**: 930 tests (100 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 98 spec files (451 tests), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)

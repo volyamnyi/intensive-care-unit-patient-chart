@@ -94,7 +94,7 @@ class PrescriptionItemServiceTest {
         });
         when(partRepository.save(any(PrescriptionDayPart.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        PrescriptionItem result = service.addItem(listId, "Aspirin", "PO", "BID");
+        PrescriptionItem result = service.addItem(listId, "Aspirin", null, "PO", "BID");
 
         // 1 item saved
         verify(itemRepository).save(itemCaptor.capture());
@@ -120,7 +120,7 @@ class PrescriptionItemServiceTest {
         when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
         when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.addItem(listId, "NewDrug", "IV", "stat");
+        service.addItem(listId, "NewDrug", null, "IV", "stat");
 
         verify(itemRepository).save(itemCaptor.capture());
         assertThat(itemCaptor.getValue().getSortOrder()).isEqualTo(1);
@@ -130,7 +130,7 @@ class PrescriptionItemServiceTest {
     void addItem_throws_whenListNotFound() {
         when(listRepository.findById(any())).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.addItem(UUID.randomUUID(), "Drug", "PO", "BID"))
+        assertThatThrownBy(() -> service.addItem(UUID.randomUUID(), "Drug", null, "PO", "BID"))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -142,7 +142,7 @@ class PrescriptionItemServiceTest {
         when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
         when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.addItem(listId, "Drug", "PO", "BID");
+        service.addItem(listId, "Drug", null, "PO", "BID");
 
         verify(partRepository, times(84)).save(partCaptor.capture());
         List<PrescriptionDayPart> allParts = new java.util.ArrayList<>();

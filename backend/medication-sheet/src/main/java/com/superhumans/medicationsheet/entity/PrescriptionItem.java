@@ -22,6 +22,9 @@ public class PrescriptionItem extends BaseEntity {
     @Column(name = "medicine_name", nullable = false, length = 500)
     String medicineName;
 
+    @Column(name = "medicine_atc_code", length = 20)
+    String medicineAtcCode;
+
     @Column(name = "medicine_method", length = 255)
     String medicineMethod;
 

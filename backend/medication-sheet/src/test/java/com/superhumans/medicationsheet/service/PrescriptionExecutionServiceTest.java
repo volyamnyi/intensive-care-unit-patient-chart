@@ -31,7 +31,6 @@ class PrescriptionExecutionServiceTest {
 
     @Mock private PrescriptionExecutionRepository executionRepository;
     @Mock private PrescriptionDayPartRepository partRepository;
-    @Mock private DrugInteractionService drugInteractionService;
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
 

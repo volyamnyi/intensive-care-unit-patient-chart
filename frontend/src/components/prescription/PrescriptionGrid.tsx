@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { PrescriptionItem, PrescriptionDayPart, MedicineCatalogItem } from '../../types/medication';
+import type { PrescriptionItem, PrescriptionDayPart, MedicineCatalogItem, PrescriptionInteractionsResponse } from '../../types/medication';
 import MedicineSearchInput from './MedicineSearchInput';
 import PrescriptionSpreadsheet from './PrescriptionSpreadsheet';
 import ExecuteDosePopover from './ExecuteDosePopover';
@@ -21,17 +21,19 @@ export interface GridProps {
   onAddDay?: (itemId: string) => Promise<void> | void;
   onRemoveDay?: (itemId: string, dayId: string) => Promise<void> | void;
   onExecute?: (dayPartId: string, actualDose: string, secondPersonLogin: string, secondPersonPassword: string) => Promise<void>;
-  onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string }) => Promise<void>;
+  onAddItem: (data: { medicineName: string; medicineMethod?: string; regime?: string; medicineAtcCode?: string | null }) => Promise<void>;
   onRemoveItem: (itemId: string) => Promise<void>;
   onSearchMedicine: (keyword: string, signal?: AbortSignal) => Promise<MedicineCatalogItem[]>;
   loading?: boolean;
+  /** Server-computed interaction warnings (#304); null while loading / not fetched. */
+  interactions?: PrescriptionInteractionsResponse | null;
 }
 
 export default function PrescriptionGrid({
   items, canEdit, isDoctor, isNurse,
   onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onAddDay, onRemoveDay, onExecute,
   onAddItem, onRemoveItem,
-  onSearchMedicine, loading,
+  onSearchMedicine, loading, interactions,
 }: GridProps) {
 
   const allDates = useMemo(() => {
@@ -165,6 +167,7 @@ export default function PrescriptionGrid({
         onCancelAssignment={onCancelAssignment}
         onOpenExecute={openExecute}
         onOpenDeleteConfirm={openDeleteConfirm}
+        interactions={interactions}
       />
 
       <ExecuteDosePopover
