@@ -33,6 +33,7 @@ function makeItem(dayParts: PrescriptionDayPart[] = []): PrescriptionItem {
     regime: 'stat',
     status: 'Active',
     sortOrder: 0,
+    medicineAtcCode: null,
     dayParts,
   };
 }

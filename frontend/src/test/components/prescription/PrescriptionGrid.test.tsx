@@ -13,6 +13,7 @@ const mockItems: PrescriptionItem[] = [
     regime: 'stat',
     status: 'Active',
     sortOrder: 0,
+    medicineAtcCode: null,
     dayParts: [
       {
         id: 'dp-1',
