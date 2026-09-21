@@ -441,17 +441,16 @@ export default function PrescriptionSpreadsheet({
                           ) : (
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger
-                                  onContextMenu={(e) => {
-                                    if (dp) {
-                                      openDayMenu(e, date, dp);
-                                    }
-                                  }}
-                                >
+                                <TooltipTrigger>
                                   <span className="text-[10px] leading-[32px] select-none"
                                     style={{
                                       color: dp?.isPlanned ? '#1565c0' : dp?.isCompleted ? '#2e7d32' : undefined,
                                       fontWeight: dp?.isPlanned || dp?.isCompleted ? 600 : 400,
+                                    }}
+                                    onContextMenu={(e) => {
+                                      if (dp) {
+                                        openDayMenu(e, date, dp);
+                                      }
                                     }}>
                                     {label}
                                   </span>
