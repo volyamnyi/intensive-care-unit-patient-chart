@@ -291,7 +291,7 @@ export default function PrescriptionSpreadsheet({
     })),
   ), [gridItems]);
 
-  const openDayMenu = (e: React.MouseEvent, date: string, dp: PrescriptionDayPart) => {
+  const openDayMenu = (e: MouseEvent, date: string, dp: PrescriptionDayPart) => {
     e.preventDefault();
     if (!canMenu) return;
     const cancelEnabled = Boolean(dp.isPlanned && !dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished);
