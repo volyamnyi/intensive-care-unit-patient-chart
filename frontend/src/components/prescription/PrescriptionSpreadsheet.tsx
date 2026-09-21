@@ -74,6 +74,119 @@ function dayCountOf(item: GridItem): number {
   return dates.size;
 }
 
+interface PrescriptionCellProps {
+  dp: PrescriptionDayPart | undefined;
+  date: string;
+  period: string;
+  dateIdx: number;
+  visibleDatesLen: number;
+  markedAdded: boolean;
+  isWarnedCell: boolean;
+  isEditing: boolean;
+  editingDose: string;
+  onEditDoseChange: (v: string) => void;
+  onCommitEdit: (dp: PrescriptionDayPart) => void;
+  onClick: (e: React.MouseEvent) => void;
+  onOpenDayMenu: (e: MouseEvent, date: string, dp: PrescriptionDayPart) => void;
+  label: string;
+  itemPairs: PairInteraction[];
+  itemName: string;
+  PERIOD_FULL: Record<string, string>;
+  SEVERITY_ORDER: Record<string, number>;
+  SEVERITY_LABELS: Record<string, string>;
+}
+
+function PrescriptionCell({
+  dp, date, period, dateIdx, visibleDatesLen, markedAdded, isWarnedCell,
+  isEditing, editingDose, onEditDoseChange, onCommitEdit,
+  onClick, onOpenDayMenu, label, itemPairs, itemName, PERIOD_FULL,
+  SEVERITY_ORDER, SEVERITY_LABELS,
+}: PrescriptionCellProps) {
+  const tdRef = useRef<HTMLTableCellElement>(null);
+  useEffect(() => {
+    if (!dp || !tdRef.current) return;
+    const handler = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpenDayMenu(e, date, dp);
+    };
+    const el = tdRef.current;
+    el.addEventListener('contextmenu', handler);
+    return () => el.removeEventListener('contextmenu', handler);
+  }, [dp, date, onOpenDayMenu]);
+
+  const bg = cellBg(dp);
+
+  return (
+    <td
+      key={`${date}-${period}`}
+      ref={tdRef}
+      className={markedAdded ? 'bg-muted' : undefined}
+      data-added-day={markedAdded ? 'true' : undefined}
+      data-interaction-warn={isWarnedCell ? 'true' : undefined}
+      style={{
+        width: 68, height: 32, cursor: bg === '#fff' || !dp ? 'default' : 'pointer',
+        backgroundColor: markedAdded ? undefined : bg, textAlign: 'center', verticalAlign: 'middle',
+        position: 'relative',
+        border: isWarnedCell ? '2px solid #EF4444' : '1px solid var(--color-border)',
+        ...(isWarnedCell ? { borderRightColor: '#EF4444', borderBottomColor: '#EF4444', borderLeftColor: '#EF4444', borderTopColor: '#EF4444' } : null),
+        ...(period === 'night' && dateIdx < visibleDatesLen - 1
+          ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
+          : null),
+      }}
+      onClick={onClick}
+    >
+      {isEditing ? (
+        <form onSubmit={e => { e.preventDefault(); if (dp) onCommitEdit(dp); }}
+          className="absolute inset-0 z-30 flex">
+          <input autoFocus value={editingDose}
+            onChange={e => onEditDoseChange(e.target.value)}
+            onBlur={() => dp && onCommitEdit(dp)}
+            style={{
+              width: '100%', border: '2px solid #1976d2',
+              textAlign: 'center', fontSize: 11, padding: 0, outline: 'none',
+            }} />
+        </form>
+      ) : (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="text-[10px] leading-[32px] select-none"
+                style={{
+                  color: dp?.isPlanned ? '#1565c0' : dp?.isCompleted ? '#2e7d32' : undefined,
+                  fontWeight: dp?.isPlanned || dp?.isCompleted ? 600 : 400,
+                }}>
+                {label}
+              </span>
+            </TooltipTrigger>
+            {dp && (
+              <TooltipContent>
+                <p>{`${PERIOD_FULL[dp.period]}: ${dp.dose ?? '—'}`}</p>
+                {(() => {
+                  const pairs = itemPairs
+                    .filter(p => rangeDays(p.overlapStart, p.overlapEnd).includes(date))
+                    .sort((x, y) => (SEVERITY_ORDER[y.severity] ?? 0) - (SEVERITY_ORDER[x.severity] ?? 0));
+                  if (pairs.length === 0) return null;
+                  return (
+                    <div className="mt-1 border-t border-current/20 pt-1">
+                      <p className="text-[10px] font-bold">Взаємодії: {itemName}</p>
+                      {pairs.map((p, i) => (
+                        <p key={i} className="text-[10px]">
+                          ⚠ {p.otherNameUk} ({SEVERITY_LABELS[p.severity] ?? p.severity}) — {p.interactionText}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </td>
+  );
+}
+
 export interface DayContextMenuState {
   clientX: number;
   clientY: number;
@@ -387,10 +500,9 @@ export default function PrescriptionSpreadsheet({
                     </div>
                   </td>
 
-                  {visibleDates.map((date, dateIdx) =>
+{visibleDates.map((date, dateIdx) =>
                     PERIODS.map(period => {
                       const dp = item.cells.get(dayPartKey(date, period));
-                      const bg = cellBg(dp);
                       const label = cellLabel(dp);
                       const isEditing = editingCell === (dp?.id);
                       // Inactive (white) cells of added days get the muted marker;
@@ -409,73 +521,28 @@ export default function PrescriptionSpreadsheet({
                       };
 
                       return (
-                        <td
+                        <PrescriptionCell
                           key={`${date}-${period}`}
-                          className={markedAdded ? 'bg-muted' : undefined}
-                          data-added-day={markedAdded ? 'true' : undefined}
-                          data-interaction-warn={isWarnedCell ? 'true' : undefined}
-                          style={{
-                            width: 68, height: 32, cursor: bg === '#fff' || !dp ? 'default' : 'pointer',
-                            backgroundColor: markedAdded ? undefined : bg, textAlign: 'center', verticalAlign: 'middle',
-                            position: 'relative',
-                            border: isWarnedCell ? '2px solid #EF4444' : '1px solid var(--color-border)',
-                            ...(isWarnedCell ? { borderRightColor: '#EF4444', borderBottomColor: '#EF4444', borderLeftColor: '#EF4444', borderTopColor: '#EF4444' } : null),
-                            ...(period === 'night' && dateIdx < visibleDates.length - 1
-                              ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
-                              : null),
-                          }}
+                          dp={dp}
+                          date={date}
+                          period={period}
+                          dateIdx={dateIdx}
+                          visibleDatesLen={visibleDates.length}
+                          markedAdded={markedAdded}
+                          isWarnedCell={isWarnedCell}
+                          isEditing={isEditing}
+                          editingDose={editingDose}
+                          onEditDoseChange={setEditingDose}
+                          onCommitEdit={commitEdit}
                           onClick={onClick}
-                          onContextMenu={dp ? (e) => openDayMenu(e, date, dp) : undefined}
-                          onMouseDown={dp ? (e) => { if (e.button === 2) openDayMenu(e, date, dp); } : undefined}
-                        >
-                          {isEditing ? (
-                            <form onSubmit={e => { e.preventDefault(); if (dp) commitEdit(dp); }}
-                              className="absolute inset-0 z-30 flex">
-                              <input autoFocus value={editingDose}
-                                onChange={e => setEditingDose(e.target.value)}
-                                onBlur={() => dp && commitEdit(dp)}
-                                style={{
-                                  width: '100%', border: '2px solid #1976d2',
-                                  textAlign: 'center', fontSize: 11, padding: 0, outline: 'none',
-                                }} />
-                            </form>
-                          ) : (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <span className="text-[10px] leading-[32px] select-none"
-                                    style={{
-                                      color: dp?.isPlanned ? '#1565c0' : dp?.isCompleted ? '#2e7d32' : undefined,
-                                      fontWeight: dp?.isPlanned || dp?.isCompleted ? 600 : 400,
-                                    }}>
-                                    {label}
-                                  </span>
-                                </TooltipTrigger>
-                                {dp && (
-                                  <TooltipContent>
-                                    <p>{`${PERIOD_FULL[dp.period]}: ${dp.dose ?? '—'}`}</p>
-                                    {(() => {
-                                      const pairs = (itemPairs.get(item.id) ?? [])
-                                        .filter(p => rangeDays(p.overlapStart, p.overlapEnd).includes(date))
-                                        .sort((x, y) => (SEVERITY_ORDER[y.severity] ?? 0) - (SEVERITY_ORDER[x.severity] ?? 0));
-                                      if (pairs.length === 0) return null;
-                                      return (
-                                        <div className="mt-1 border-t border-current/20 pt-1">
-                                          <p className="text-[10px] font-bold">Взаємодії: {item.medicineName}</p>
-                                          {pairs.map((p, i) => (
-                                            <p key={i} className="text-[10px]">
-                                              ⚠ {p.otherNameUk} ({SEVERITY_LABELS[p.severity] ?? p.severity}) — {p.interactionText}
-                                            </p>
-                                          ))}
-                                        </div>
-                                      );
-                                    })()}
-                                  </TooltipContent>
-                                )}
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </td>
+                          onOpenDayMenu={openDayMenu}
+                          label={label}
+                          itemPairs={itemPairs.get(item.id) ?? []}
+                          itemName={item.medicineName}
+                          PERIOD_FULL={PERIOD_FULL}
+                          SEVERITY_ORDER={SEVERITY_ORDER}
+                          SEVERITY_LABELS={SEVERITY_LABELS}
+                        />
                       );
                     })
                   )}
