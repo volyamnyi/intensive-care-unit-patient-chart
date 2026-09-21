@@ -444,7 +444,6 @@ export default function PrescriptionSpreadsheet({
                                 <TooltipTrigger
                                   onContextMenu={(e) => {
                                     if (dp) {
-                                      e.stopPropagation();
                                       openDayMenu(e, date, dp);
                                     }
                                   }}
