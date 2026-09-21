@@ -425,7 +425,7 @@ export default function PrescriptionSpreadsheet({
                               : null),
                           }}
                           onClick={onClick}
-                          onContextMenu={dp ? (e) => openDayMenu(e, date, dp) : undefined}
+                          onContextMenuCapture={dp ? (e) => openDayMenu(e, date, dp) : undefined}
                         >
                           {isEditing ? (
                             <form onSubmit={e => { e.preventDefault(); if (dp) commitEdit(dp); }}
@@ -446,11 +446,6 @@ export default function PrescriptionSpreadsheet({
                                     style={{
                                       color: dp?.isPlanned ? '#1565c0' : dp?.isCompleted ? '#2e7d32' : undefined,
                                       fontWeight: dp?.isPlanned || dp?.isCompleted ? 600 : 400,
-                                    }}
-                                    onContextMenu={(e) => {
-                                      if (dp) {
-                                        openDayMenu(e, date, dp);
-                                      }
                                     }}>
                                     {label}
                                   </span>
