@@ -291,12 +291,15 @@ export default function PrescriptionSpreadsheet({
     })),
   ), [gridItems]);
 
+  const dayMenuOpenedAt = useRef(0);
+
   const openDayMenu = (e: MouseEvent, date: string, dp: PrescriptionDayPart) => {
     e.preventDefault();
     if (!canMenu) return;
     const cancelEnabled = Boolean(dp.isPlanned && !dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished);
     const restoreEnabled = Boolean(dp.isPlannedFinished && !dp.isCompleted && !dp.isCompletedFinished);
     const cancelAssignmentEnabled = Boolean((dp.isPlanned || dp.isPlannedFinished) && !dp.isCompleted && !dp.isCompletedFinished);
+    dayMenuOpenedAt.current = Date.now();
     setDayMenu({
       clientX: e.clientX,
       clientY: e.clientY,
@@ -318,7 +321,11 @@ export default function PrescriptionSpreadsheet({
       if (dayMenuRef.current && !dayMenuRef.current.contains(e.target as Node)) closeDayMenu();
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeDayMenu(); };
-    const onScroll = () => closeDayMenu();
+    // The menu is fixed at the click coords, so user scrolling must close it.
+    // Ignore the short window after opening: Playwright centers the cell with
+    // scrollIntoViewIfNeeded before the right-click and that scroll commits
+    // (fires 'scroll') asynchronously, sometimes after the menu is open.
+    const onScroll = () => { if (Date.now() - dayMenuOpenedAt.current < 1000) return; closeDayMenu(); };
     document.addEventListener('pointerdown', onDocPointerDown);
     document.addEventListener('keydown', onKey);
     window.addEventListener('scroll', onScroll, true);
