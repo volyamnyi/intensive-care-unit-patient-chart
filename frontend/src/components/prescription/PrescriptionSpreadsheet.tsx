@@ -426,6 +426,7 @@ export default function PrescriptionSpreadsheet({
                           }}
                           onClick={onClick}
                           onContextMenu={dp ? (e) => openDayMenu(e, date, dp) : undefined}
+                          onMouseDown={dp ? (e) => { if (e.button === 2) openDayMenu(e, date, dp); } : undefined}
                         >
                           {isEditing ? (
                             <form onSubmit={e => { e.preventDefault(); if (dp) commitEdit(dp); }}
@@ -441,11 +442,7 @@ export default function PrescriptionSpreadsheet({
                           ) : (
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger
-                                  onContextMenu={() => {
-                                    // Prevent TooltipPrimitive.Trigger from intercepting right-click
-                                    // Empty handler allows event to bubble to td's onContextMenu
-                                  }}>
+                                <TooltipTrigger>
                                   <span className="text-[10px] leading-[32px] select-none"
                                     style={{
                                       color: dp?.isPlanned ? '#1565c0' : dp?.isCompleted ? '#2e7d32' : undefined,
