@@ -2,8 +2,10 @@ package com.superhumans.medicationsheet.controller;
 
 import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.ErrorCode;
+import com.superhumans.medicationsheet.dto.DrugInteractionCatalogResponse;
 import com.superhumans.medicationsheet.dto.DrugInteractionImportReport;
 import com.superhumans.medicationsheet.dto.PrescriptionInteractionsResponse;
+import com.superhumans.medicationsheet.service.DrugInteractionCatalogService;
 import com.superhumans.medicationsheet.service.DrugInteractionImportService;
 import com.superhumans.medicationsheet.service.DrugInteractionImportService.ImportError;
 import com.superhumans.medicationsheet.service.DrugInteractionWarningService;
@@ -18,6 +20,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,7 +37,9 @@ import java.util.UUID;
  *       warnings for the "Заплановано" set of a prescription list (read-only,
  *       never blocking);</li>
  *   <li>{@code POST /api/admin/drug-interactions/import} — full-sync import of
- *       the dataset, ADMINISTRATOR only, audited.</li>
+ *       the dataset, ADMINISTRATOR only, audited;</li>
+ *   <li>{@code GET /api/admin/drug-interactions} — browse the stored dataset
+ *       (summary + drugs + paginated pairs), ADMINISTRATOR only, read-only.</li>
  * </ul>
  */
 @Slf4j
@@ -47,6 +53,7 @@ public class DrugInteractionController {
 
     DrugInteractionWarningService warningService;
     DrugInteractionImportService importService;
+    DrugInteractionCatalogService catalogService;
 
     @GetMapping("/api/prescriptions/{listId}/interactions")
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
@@ -60,6 +67,23 @@ public class DrugInteractionController {
     public PrescriptionInteractionsResponse getInteractions(
             @Parameter(description = "Prescription list UUID") @PathVariable UUID listId) {
         return warningService.computeWarnings(listId);
+    }
+
+    @GetMapping(value = "/api/admin/drug-interactions")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @Operation(summary = "Browse the interactions dataset", description =
+            "Stored-base summary plus a severity-/query-filtered paginated pair "
+                    + "window. ADMINISTRATOR only, read-only.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Catalog page"),
+            @ApiResponse(responseCode = "400", description = "Unknown severity filter"),
+            @ApiResponse(responseCode = "403", description = "Not an administrator")
+    })
+    public DrugInteractionCatalogResponse getCatalog(
+            @Parameter(description = "Severity exact-match filter") @RequestParam(required = false) String severity,
+            @Parameter(description = "Substring filter over ATC codes and drug names") @RequestParam(name = "query", required = false) String query,
+            @PageableDefault(size = 50) Pageable pageable) {
+        return catalogService.getCatalog(severity, query, pageable);
     }
 
     @PostMapping(value = "/api/admin/drug-interactions/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
