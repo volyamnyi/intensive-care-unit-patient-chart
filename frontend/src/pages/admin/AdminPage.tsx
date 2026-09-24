@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/table';
 import { auditApi, adminApi, settingsApi } from '../../api/platform';
 import { drugInteractionAdminApi } from '../../api/medication';
-import type { DrugInteractionImportReport } from '../../types/medication';
+import type { DrugInteractionCatalog, DrugInteractionImportReport } from '../../types/medication';
 import AuditLogTable from '../../components/common/AuditLogTable';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { useAuth } from '../../services/AuthContext';
@@ -54,9 +54,14 @@ const ROLE_LABELS: Record<string, string> = {
   ADJACENT_SPECIALIST: 'Суміжний спеціаліст',
 };
 
+/** Interaction severity labels/colors for the «Зміст бази» section (#305). Extends SEVERITY_LABELS with `low`. */
+const DI_SEV_LABEL: Record<string, string> = { critical: 'критично', high: 'високо', medium: 'помірно', low: 'низько' };
+const DI_SEV_CLASS: Record<string, string> = { critical: 'bg-red-500', high: 'bg-orange-500', medium: 'bg-amber-500', low: 'bg-gray-400' };
+
 export default function AdminPage() {
   useEffect(() => { document.title = 'Адмін — Superhumans Lviv'; }, []);
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const isDiAdmin = user?.role === 'ADMINISTRATOR';
   const [tabValue, setTabValue] = useState('users');
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Record<string, number>>({});
@@ -86,6 +91,46 @@ export default function AdminPage() {
 
   useEffect(() => { loadDiLastImport(); }, [loadDiLastImport]);
 
+  const [diCatalog, setDiCatalog] = useState<DrugInteractionCatalog | null>(null);
+  const [diPage, setDiPage] = useState(0);
+  const [diSeverity, setDiSeverity] = useState('');
+  const [diQuery, setDiQuery] = useState('');
+  const [diReadBusy, setDiReadBusy] = useState(false);
+  const [diReadError, setDiReadError] = useState<string | null>(null);
+  const [diCatalogTouched, setDiCatalogTouched] = useState(false);
+
+  const loadDiCatalog = useCallback(async (page = 0, severity = diSeverity, query = diQuery) => {
+    setDiReadBusy(true);
+    setDiReadError(null);
+    try {
+      const res = await drugInteractionAdminApi.getCatalog({
+        severity: severity || undefined,
+        query: query || undefined,
+        page,
+        size: 50,
+      });
+      setDiCatalog(res.data);
+      setDiPage(page);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      setDiReadError(status === 403 ? 'Доступно лише Адміністратору' : getErrorMessage(err, 'Не вдалося завантажити базу взаємодій'));
+    } finally {
+      setDiReadBusy(false);
+    }
+  }, [diSeverity, diQuery]);
+
+  const diName = useMemo(
+    () => new Map((diCatalog?.drugs ?? []).map((d) => [d.atcCode, d.ukrainianRaw] as const)),
+    [diCatalog],
+  );
+
+  useEffect(() => {
+    if (tabValue === 'drug-interactions' && isDiAdmin && !diCatalogTouched) {
+      setDiCatalogTouched(true);
+      loadDiCatalog(0, '', '');
+    }
+  }, [tabValue, isDiAdmin, diCatalogTouched, loadDiCatalog]);
+
   const handleDiImport = async () => {
     if (!diFile) return;
     setDiBusy(true);
@@ -98,6 +143,7 @@ export default function AdminPage() {
       setDiFile(null);
       if (diFileRef.current) diFileRef.current.value = '';
       await loadDiLastImport();
+      if (isDiAdmin) await loadDiCatalog(0);
     } catch (err) {
       setDiError(getErrorMessage(err, 'Імпорт відхилено'));
     } finally {
@@ -431,7 +477,7 @@ export default function AdminPage() {
                   </span>
                 </div>
                 <p className="mb-2 text-sm text-muted-foreground">
-                  Повна заміна бази взаємодій завантаженим JSON-файлом (до 20 МБ).
+                  Повна заміна бази взаємодій завантаженим JSON-файлом (до 40 МБ).
                   Файл містить список препаратів (ATC) та пари взаємодій із severity
                   (low/medium/high/critical).
                 </p>
@@ -457,6 +503,114 @@ export default function AdminPage() {
                     <div className="rounded-lg border p-2">Пропущено: <b>{diReport.skipped}</b></div>
                     <div className="rounded-lg border p-2">Час: <b>{diReport.durationMs} мс</b></div>
                     <div className="rounded-lg border p-2 break-all">Hash: <b>{diReport.sourceHash.slice(0, 12)}…</b></div>
+                  </div>
+                )}
+                {!user ? null : !isDiAdmin ? (
+                  <Alert variant="warning" className="mt-2">
+                    <AlertDescription>Перегляд бази взаємодій доступний лише Адміністратору.</AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="mt-3 border-t pt-2">
+                    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-rubik text-sm font-medium">Зміст бази</h3>
+                      <Button size="sm" variant="outline" onClick={() => loadDiCatalog(0)} disabled={diReadBusy}>
+                        <RefreshCw className="mr-1 size-4" />
+                        Оновити
+                      </Button>
+                    </div>
+                    {diReadError && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertDescription>{diReadError}</AlertDescription>
+                      </Alert>
+                    )}
+                    {diCatalog && (
+                      <>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
+                          <div className="rounded-lg border p-2">Препаратів: <b>{diCatalog.summary.drugs}</b></div>
+                          <div className="rounded-lg border p-2">Взаємодій: <b>{diCatalog.summary.interactions}</b></div>
+                          <div className="rounded-lg border p-2">Критично: <b>{diCatalog.summary.bySeverity.critical}</b></div>
+                          <div className="rounded-lg border p-2">Високо: <b>{diCatalog.summary.bySeverity.high}</b></div>
+                          <div className="rounded-lg border p-2">Помірно: <b>{diCatalog.summary.bySeverity.medium}</b></div>
+                          <div className="rounded-lg border p-2">Низько: <b>{diCatalog.summary.bySeverity.low}</b></div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Select
+                            value={diSeverity || 'all'}
+                            onValueChange={(val: string | null) => { const v = val === 'all' ? '' : (val ?? ''); setDiSeverity(v); loadDiCatalog(0, v, diQuery); }}
+                          >
+                            <SelectTrigger className="min-w-[140px]" aria-label="Рівень взаємодії">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Усі рівні</SelectItem>
+                              <SelectItem value="critical">критично</SelectItem>
+                              <SelectItem value="high">високо</SelectItem>
+                              <SelectItem value="medium">помірно</SelectItem>
+                              <SelectItem value="low">низько</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            className="max-w-[220px]"
+                            placeholder="Пошук: назва або ATC"
+                            value={diQuery}
+                            onChange={(e) => setDiQuery(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') loadDiCatalog(0); }}
+                          />
+                          <Button size="sm" onClick={() => loadDiCatalog(0)} disabled={diReadBusy}>
+                            Пошук
+                          </Button>
+                        </div>
+                        <div className="mt-2 overflow-x-auto touch-pan-x">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Препарат A</TableHead>
+                                <TableHead>Препарат B</TableHead>
+                                <TableHead>Рівень</TableHead>
+                                <TableHead>Опис</TableHead>
+                                <TableHead>ID</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {diCatalog.page.content.map((p, i) => (
+                                <TableRow key={`${p.drugAAtc}-${p.drugBAtc}-${p.severity}-${i}`}>
+                                  <TableCell>
+                                    <div className="font-medium">{diName.get(p.drugAAtc) ?? p.drugAAtc}</div>
+                                    <div className="text-xs text-muted-foreground">{p.drugAAtc}</div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="font-medium">{diName.get(p.drugBAtc) ?? p.drugBAtc}</div>
+                                    <div className="text-xs text-muted-foreground">{p.drugBAtc}</div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={DI_SEV_CLASS[p.severity] ?? ''}>{DI_SEV_LABEL[p.severity] ?? p.severity}</Badge>
+                                  </TableCell>
+                                  <TableCell title={p.interaction}>
+                                    {p.interaction.length > 80 ? `${p.interaction.slice(0, 80)}…` : p.interaction}
+                                  </TableCell>
+                                  <TableCell className="text-xs">{p.interactionId}</TableCell>
+                                </TableRow>
+                              ))}
+                              {diCatalog.page.content.length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={5}>Нічого не знайдено</TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <Button size="sm" variant="outline" disabled={diPage === 0 || diReadBusy} onClick={() => loadDiCatalog(diPage - 1)}>
+                            ‹ Назад
+                          </Button>
+                          <span>Ст. {diPage + 1} із {Math.max(diCatalog.page.totalPages, 1)} · показано {diCatalog.page.content.length} із {diCatalog.page.totalElements}</span>
+                          <Button size="sm" variant="outline" disabled={diPage + 1 >= diCatalog.page.totalPages || diReadBusy} onClick={() => loadDiCatalog(diPage + 1)}>
+                            Далі ›
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                    {diReadBusy && !diCatalog && <Loader2 className="mx-auto mt-4 block size-6 animate-spin text-primary" />}
                   </div>
                 )}
               </div>

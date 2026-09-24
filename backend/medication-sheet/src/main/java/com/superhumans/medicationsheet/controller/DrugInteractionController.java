@@ -49,7 +49,7 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class DrugInteractionController {
 
-    static final long MAX_IMPORT_BYTES = 20L * 1024 * 1024;
+    static final long MAX_IMPORT_BYTES = 40L * 1024 * 1024;
 
     DrugInteractionWarningService warningService;
     DrugInteractionImportService importService;
@@ -104,7 +104,7 @@ public class DrugInteractionController {
             throw new com.superhumans.exception.BadRequestException("Файл обов'язковий");
         }
         if (file.getSize() > MAX_IMPORT_BYTES) {
-            throw new com.superhumans.exception.BadRequestException("Файл більший за 20 МБ");
+            throw new com.superhumans.exception.BadRequestException("Файл більший за 40 МБ");
         }
         byte[] content = file.getBytes();
         Long adminId = (auth != null && auth.getCredentials() instanceof Long uid) ? uid : 0L;

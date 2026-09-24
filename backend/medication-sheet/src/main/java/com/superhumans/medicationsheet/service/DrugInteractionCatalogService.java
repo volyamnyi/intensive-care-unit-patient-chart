@@ -42,7 +42,9 @@ public class DrugInteractionCatalogService {
         if (sev != null && !DrugInteractionImportService.SEVERITIES.contains(sev)) {
             throw new BadRequestException("Невідомий severity фільтра: " + severity);
         }
-        String q = (query == null || query.isBlank()) ? null : query.trim();
+        // Empty-string sentinel, never NULL: a NULL :q is bound as bytea and
+        // PostgreSQL rejects LOWER(bytea) even in the never-taken LIKE branch.
+        String q = (query == null || query.isBlank()) ? "" : query.trim();
 
         List<DrugRow> drugs = drugRepository.findAllOrderByAtcCodeAsc().stream()
                 .map(this::toDrugRow)

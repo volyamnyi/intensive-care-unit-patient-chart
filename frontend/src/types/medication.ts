@@ -110,6 +110,28 @@ export interface DrugInteractionImportReport {
   sourceHash: string;
 }
 
+/** Stored drug-interactions dataset browse view for the admin tab (#305). */
+export interface DrugInteractionCatalog {
+  summary: {
+    drugs: number;
+    interactions: number;
+    bySeverity: Record<'low' | 'medium' | 'high' | 'critical', number>;
+    lastImportAt: string | null;
+  };
+  drugs: { atcCode: string; ukrainianRaw: string; genericEn: string | null }[];
+  page: {
+    content: {
+      drugAAtc: string;
+      drugBAtc: string;
+      severity: 'medium' | 'high' | 'critical' | 'low';
+      interaction: string;
+      interactionId: string | null;
+    }[];
+    totalElements: number;
+    totalPages: number;
+  };
+}
+
 export interface VitalSignEntry {
   id: string;
   dayId: string;

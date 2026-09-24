@@ -9,6 +9,14 @@ const mockLogout = vi.fn();
 const mockGetUsers = vi.fn();
 const mockGetStats = vi.fn();
 const mockGetPermissions = vi.fn();
+const mockGetCatalog = vi.fn();
+const mockImportDataset = vi.fn();
+
+const emptyCatalog = {
+  summary: { drugs: 0, interactions: 0, bySeverity: { low: 0, medium: 0, high: 0, critical: 0 }, lastImportAt: null },
+  drugs: [],
+  page: { content: [], totalElements: 0, totalPages: 0 },
+};
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -24,6 +32,13 @@ vi.mock('../../api/platform', () => ({
   },
   auditApi: {
     list: vi.fn().mockResolvedValue({ data: { content: [] } }),
+  },
+}));
+
+vi.mock('../../api/medication', () => ({
+  drugInteractionAdminApi: {
+    getCatalog: (...args: unknown[]) => mockGetCatalog(...args),
+    importDataset: (...args: unknown[]) => mockImportDataset(...args),
   },
 }));
 
@@ -74,6 +89,7 @@ describe('AdminPage', () => {
     mockGetUsers.mockResolvedValue({ data: mockUsers });
     mockGetStats.mockResolvedValue({ data: { totalUsers: 2, doctors: 1, nurses: 1, headsOfDepartment: 0, administrators: 1 } });
     mockGetPermissions.mockResolvedValue({ data: mockMatrix });
+    mockGetCatalog.mockResolvedValue({ data: emptyCatalog });
   });
 
   it('sets document title on mount', () => {
@@ -100,6 +116,36 @@ describe('AdminPage', () => {
     expect(screen.getByText('Доступи та ролі')).toBeInTheDocument();
     expect(screen.getByText('Журнал аудиту')).toBeInTheDocument();
     expect(screen.getByText('Статистика')).toBeInTheDocument();
+  });
+
+  it('renders the interaction catalog summary and pair rows for admin (#305)', async () => {
+    mockGetCatalog.mockResolvedValue({ data: {
+      summary: { drugs: 2, interactions: 1, bySeverity: { low: 0, medium: 0, high: 1, critical: 0 }, lastImportAt: '2026-09-23T10:00:00' },
+      drugs: [
+        { atcCode: 'M01AE01', ukrainianRaw: 'Ібупрофен 200 мг', genericEn: 'Ibuprofen' },
+        { atcCode: 'N02BE01', ukrainianRaw: 'Парацетамол 500 мг', genericEn: 'Paracetamol' },
+      ],
+      page: { content: [{ drugAAtc: 'M01AE01', drugBAtc: 'N02BE01', severity: 'high', interaction: 'текст взаємодії', interactionId: 'DI-0001' }], totalElements: 1, totalPages: 1 },
+    }});
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'База взаємодій' }));
+    await waitFor(() => {
+      expect(screen.getByText('Парацетамол 500 мг')).toBeInTheDocument();
+    });
+    expect(screen.getByText('високо')).toBeInTheDocument();
+    expect(screen.getByText(/Ст\. 1 із 1/)).toBeInTheDocument();
+    expect(mockGetCatalog).toHaveBeenCalledWith({ severity: undefined, query: undefined, page: 0, size: 50 });
+  });
+
+  it('passes the severity filter into the catalog request (#305)', async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'База взаємодій' }));
+    await waitFor(() => expect(mockGetCatalog).toHaveBeenCalled());
+    await userEvent.click(screen.getByRole('combobox', { name: 'Рівень взаємодії' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'високо' }));
+    await waitFor(() => {
+      expect(mockGetCatalog).toHaveBeenLastCalledWith({ severity: 'high', query: undefined, page: 0, size: 50 });
+    });
   });
 
   it('renders the permission matrix with role columns and grants', async () => {

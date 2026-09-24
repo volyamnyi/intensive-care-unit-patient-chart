@@ -4,6 +4,7 @@ import type {
   PrescriptionItem, PrescriptionItemAddRequest,
   PrescriptionDayPart, PrescriptionExecutionCreateRequest,
   PrescriptionPdfInfo, PrescriptionInteractionsResponse, DrugInteractionImportReport,
+  DrugInteractionCatalog,
   MedicineCatalogItem,
   VitalSignEntry, VitalSignDay, VitalSignEntryCreateRequest, VitalGridDay,
 } from '../types/medication';
@@ -62,6 +63,9 @@ export const drugInteractionAdminApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  /** Stored dataset browse view for the admin tab: summary + drugs + paged pairs (#305). */
+  getCatalog: (params?: { severity?: string; query?: string; page?: number; size?: number }) =>
+    client.get<DrugInteractionCatalog>('/admin/drug-interactions', { params }),
 };
 
 export const vitalSignApi = {

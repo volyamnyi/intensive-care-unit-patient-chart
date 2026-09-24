@@ -15,6 +15,13 @@ spring:
   liquibase:
     enabled: false
 
+  servlet:
+    multipart:
+      # Full drug-interactions dataset is ~32 MB; Tomcat default (1 MB file / 10 MB request)
+      # rejects it before it reaches the controller's own cap (see MAX_IMPORT_BYTES).
+      max-file-size: 40MB
+      max-request-size: 40MB
+
   mail:
     host: localhost
     port: 1025

@@ -22,12 +22,16 @@ public interface DrugInteractionPairRepository extends JpaRepository<DrugInterac
      * Admin catalog browse (issue #305): paginated pairs with optional
      * severity exact-match and a case-insensitive substring filter over both
      * ATC codes and both drugs' display names.
+     *
+     * <p>Both filters use empty-string sentinels, never NULL: Hibernate binds
+     * a NULL {@code :q} as {@code bytea}, and PostgreSQL rejects
+     * {@code LOWER(bytea)} even inside the {@code IS NULL} branch.
      */
     @Query("SELECT p FROM DrugInteractionPair p "
             + "LEFT JOIN DrugInteractionDrug da ON da.atcCode = p.drugAAtc "
             + "LEFT JOIN DrugInteractionDrug db ON db.atcCode = p.drugBAtc "
             + "WHERE (:severity IS NULL OR p.severity = :severity) "
-            + "AND (:q IS NULL OR LOWER(p.drugAAtc) LIKE LOWER(CONCAT('%', :q, '%')) "
+            + "AND (:q = '' OR LOWER(p.drugAAtc) LIKE LOWER(CONCAT('%', :q, '%')) "
             + "  OR LOWER(p.drugBAtc) LIKE LOWER(CONCAT('%', :q, '%')) "
             + "  OR LOWER(COALESCE(da.ukrainianRaw, '')) LIKE LOWER(CONCAT('%', :q, '%')) "
             + "  OR LOWER(COALESCE(db.ukrainianRaw, '')) LIKE LOWER(CONCAT('%', :q, '%'))) "
