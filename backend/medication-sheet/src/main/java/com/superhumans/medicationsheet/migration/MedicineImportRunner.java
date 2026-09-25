@@ -19,8 +19,8 @@ import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -118,6 +118,7 @@ public class MedicineImportRunner implements CommandLineRunner {
             }
             listsPerPatient.merge(row[1].strip(), 1, Integer::sum);
         });
+        Map<Long, PatientDTO> roster = rosterById("census");
         Map<Long, Integer> byDepartment = new TreeMap<>();
         int missing = 0;
         try (BufferedWriter out = Files.newBufferedWriter(
@@ -134,23 +135,17 @@ public class MedicineImportRunner implements CommandLineRunner {
                     missing++;
                     continue;
                 }
-                Optional<PatientDTO> patient;
-                try {
-                    patient = misService.getPatient(patientId);
-                } catch (RuntimeException e) {
-                    throw new IllegalStateException(
-                            "MIS census failed at ref " + entry.getKey() + ": " + message(e), e);
-                }
-                if (patient.isEmpty()) {
+                PatientDTO patient = roster.get(patientId);
+                if (patient == null) {
                     out.write(entry.getKey() + ";false;;;" + entry.getValue() + "\n");
                     missing++;
                 } else {
-                    Long department = patient.get().getDepartmentId();
+                    Long department = patient.getDepartmentId();
                     if (department != null) {
                         byDepartment.merge(department, 1, Integer::sum);
                     }
-                    String name = patient.get().getFullName() == null ? ""
-                            : patient.get().getFullName().replace(";", ",");
+                    String name = patient.getFullName() == null ? ""
+                            : patient.getFullName().replace(";", ",");
                     out.write(entry.getKey() + ";true;"
                             + (department == null ? "" : department) + ";" + name + ";"
                             + entry.getValue() + "\n");
@@ -355,7 +350,31 @@ public class MedicineImportRunner implements CommandLineRunner {
         return lists;
     }
 
+    /**
+     * Single bulk MIS roster fetch indexed by patient id. The pre-check and
+     * recon used to call {@code getPatient} per ref (732 full roster pulls
+     * over the live MIS — guaranteed read-timeouts); one pull is equivalent
+     * because {@code getPatient} is itself a roster scan.
+     */
+    private Map<Long, PatientDTO> rosterById(String purpose) {
+        final List<PatientDTO> roster;
+        try {
+            roster = misService.getAllPatients();
+        } catch (RuntimeException e) {
+            throw new IllegalStateException(
+                    "MIS " + purpose + " roster fetch failed: " + message(e), e);
+        }
+        Map<Long, PatientDTO> byId = new LinkedHashMap<>();
+        for (PatientDTO patient : roster) {
+            if (patient != null && patient.getId() != null) {
+                byId.putIfAbsent(patient.getId(), patient);
+            }
+        }
+        return byId;
+    }
+
     private Set<String> checkPatients(Set<String> refs) {
+        Map<Long, PatientDTO> roster = rosterById("pre-check");
         Set<String> missing = new HashSet<>();
         for (String ref : refs) {
             long patientId;
@@ -365,13 +384,8 @@ public class MedicineImportRunner implements CommandLineRunner {
                 missing.add(ref);
                 continue;
             }
-            try {
-                if (misService.getPatient(patientId).isEmpty()) {
-                    missing.add(ref);
-                }
-            } catch (RuntimeException e) {
-                throw new IllegalStateException(
-                        "MIS pre-check failed for patient " + ref + ": " + message(e), e);
+            if (!roster.containsKey(patientId)) {
+                missing.add(ref);
             }
         }
         log.info("MIS pre-check: {} patients, {} missing", refs.size(), missing.size());

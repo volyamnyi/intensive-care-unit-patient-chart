@@ -282,12 +282,15 @@ class MedicineImportRunnerTest {
         Path out = temp.resolve("recon.csv");
         properties.setReconOut(out.toString());
         useProps(properties);
-        var present = org.mockito.Mockito.mock(com.superhumans.mis.dto.PatientDTO.class);
-        when(present.getDepartmentId()).thenReturn(19L);
-        when(present.getFullName()).thenReturn("Test Patient");
-        when(misService.getPatient(3330L)).thenReturn(Optional.of(present));
-        when(misService.getPatient(4269L)).thenReturn(Optional.of(present));
-        when(misService.getPatient(4242L)).thenReturn(Optional.empty());
+        var patient3330 = org.mockito.Mockito.mock(com.superhumans.mis.dto.PatientDTO.class);
+        when(patient3330.getId()).thenReturn(3330L);
+        when(patient3330.getDepartmentId()).thenReturn(19L);
+        when(patient3330.getFullName()).thenReturn("Test Patient");
+        var patient4269 = org.mockito.Mockito.mock(com.superhumans.mis.dto.PatientDTO.class);
+        when(patient4269.getId()).thenReturn(4269L);
+        when(patient4269.getDepartmentId()).thenReturn(19L);
+        when(patient4269.getFullName()).thenReturn("Test Patient");
+        when(misService.getAllPatients()).thenReturn(List.of(patient3330, patient4269));
 
         runner.run();
 
@@ -306,7 +309,7 @@ class MedicineImportRunnerTest {
         properties.setMode("recon");
         properties.setReconOut(temp.resolve("recon.csv").toString());
         useProps(properties);
-        when(misService.getPatient(3330L)).thenThrow(new RuntimeException("MIS down"));
+        when(misService.getAllPatients()).thenThrow(new RuntimeException("MIS down"));
 
         assertThatThrownBy(() -> runner.run()).isInstanceOf(IllegalStateException.class);
     }
@@ -340,7 +343,7 @@ class MedicineImportRunnerTest {
         properties.setAllowMissingPatients(false);
         useProps(properties);
         when(runRepository.findByStatus("RUNNING")).thenReturn(List.of());
-        when(misService.getPatient(3330L)).thenReturn(Optional.empty());
+        when(misService.getAllPatients()).thenReturn(List.of());
 
         assertThatThrownBy(() -> runner.run()).isInstanceOf(IllegalStateException.class);
         verify(listService, never()).importList(any(), any(), any(), any());
@@ -357,7 +360,7 @@ class MedicineImportRunnerTest {
         when(runRepository.findByStatus("RUNNING")).thenReturn(List.of());
         AtomicReference<ImportRun> stored = new AtomicReference<>();
         echoRunRepo(stored);
-        when(misService.getPatient(3330L)).thenReturn(Optional.empty());
+        when(misService.getAllPatients()).thenReturn(List.of());
         when(quarantineRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         runner.run();
