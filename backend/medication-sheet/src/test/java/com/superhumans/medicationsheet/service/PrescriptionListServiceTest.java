@@ -4,6 +4,7 @@ import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionListRepository;
+import com.superhumans.service.PermissionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +28,9 @@ class PrescriptionListServiceTest {
 
     @Mock
     private PrescriptionListRepository listRepository;
+
+    @Mock
+    private PermissionService permissionService;
 
     @InjectMocks
     private PrescriptionListService service;
@@ -59,13 +63,38 @@ class PrescriptionListServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getPatientId()).isEqualTo(1001L);
+        verifyNoInteractions(permissionService);
+        verify(listRepository, never()).save(any());
     }
 
     @Test
-    void getByPatient_returnsEmpty_whenNoLists() {
+    void getByPatient_emptyAndPermitted_provisionsOpenList() {
         when(listRepository.findByPatientIdAndDeletedFalse(999L)).thenReturn(List.of());
+        when(permissionService.has("PRESCRIPTION_LIST_CREATE")).thenReturn(true);
+        PrescriptionList created = PrescriptionList.builder()
+                .patientId(999L)
+                .documentName("Листок лікарських призначень")
+                .status("Saved")
+                .build();
+        created.setId(UUID.randomUUID());
+        when(listRepository.save(any(PrescriptionList.class))).thenReturn(created);
+
+        var result = service.getByPatient(999L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getPatientId()).isEqualTo(999L);
+        assertThat(result.get(0).getStatus()).isEqualTo("Saved");
+        verify(listRepository).save(listCaptor.capture());
+        assertThat(listCaptor.getValue().getPatientId()).isEqualTo(999L);
+    }
+
+    @Test
+    void getByPatient_emptyAndNotPermitted_returnsEmpty() {
+        when(listRepository.findByPatientIdAndDeletedFalse(999L)).thenReturn(List.of());
+        when(permissionService.has("PRESCRIPTION_LIST_CREATE")).thenReturn(false);
 
         assertThat(service.getByPatient(999L)).isEmpty();
+        verify(listRepository, never()).save(any());
     }
 
     // --- getById ---

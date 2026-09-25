@@ -6,6 +6,7 @@ import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionListRepository;
+import com.superhumans.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,26 @@ import java.util.UUID;
 public class PrescriptionListService {
 
     PrescriptionListRepository listRepository;
+    PermissionService permissionService;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PrescriptionList> getByPatient(Long patientId) {
-        return listRepository.findByPatientIdAndDeletedFalse(patientId);
+        List<PrescriptionList> lists = listRepository.findByPatientIdAndDeletedFalse(patientId);
+        if (!lists.isEmpty()) {
+            return lists;
+        }
+        // Presence guarantee: a roster patient viewed by a holder of
+        // PRESCRIPTION_LIST_CREATE never shows "no lists" — an open list is
+        // provisioned on first read (vital-signs self-provision lazily via
+        // VitalSignService.getOrCreate). Viewers without the create permission
+        // (e.g. nurses) keep strictly read-only behaviour: no writes through GET.
+        // Duplicate open lists are benign (the UI and E2E reuse the first open
+        // one); the domain allows several lists per patient over time.
+        if (permissionService.has("PRESCRIPTION_LIST_CREATE")) {
+            log.info("Auto-provisioned prescription list for patient {}", patientId);
+            return List.of(create(patientId));
+        }
+        return lists;
     }
 
     @Transactional(readOnly = true)
