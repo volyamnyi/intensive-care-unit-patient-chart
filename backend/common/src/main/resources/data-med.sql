@@ -25565,3 +25565,39 @@ INSERT INTO prescription_lists (id, patient_id, department_id, document_name, st
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('bbbb2039-2039-2039-2039-203905000000', 2039, 1, 'Листок лікарських призначень №6', 'Finished', NULL, NULL, NOW() - INTERVAL '1 days', 11, NOW() - INTERVAL '1 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('dddd2040-2040-2040-2040-204001000000', 2040, 1, 'Листок лікарських призначень №2', 'Finished', NULL, NULL, NOW() - INTERVAL '1 days', 11, NOW() - INTERVAL '1 days', 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+-- MIS-stub roster patients (departments 19/37, tests/mis-stub/fixtures.json, #297):
+-- one open prescription list each so the medication roster/drawer shows lists
+-- without API-created data. Status Saved mirrors PrescriptionListService.create;
+-- ON CONFLICT auto-heals document_name like the head rows of this file.
+INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('d9000100-0000-4000-8000-900001000001', 900001, 19, 'Листок лікарських призначень', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name;
+
+INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('d9000200-0000-4000-8000-900002000001', 900002, 19, 'Листок лікарських призначень', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name;
+
+INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('d1337300-0000-4000-8000-013373000001', 13373, 19, 'Листок лікарських призначень', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name;
+
+INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('d1010100-0000-4000-8000-010101000001', 10101, 37, 'Листок лікарських призначень', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name;
+
+INSERT INTO prescription_lists (id, patient_id, department_id, document_name, status, editing_user_id, editing_started_at, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('d1010200-0000-4000-8000-010102000001', 10102, 19, 'Листок лікарських призначень', 'Saved', NULL, NULL, NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name;
+
+-- Vital-signs lists for the stub-roster prescription lists above (one each).
+INSERT INTO vital_sign_lists (id, prescription_list_id, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('e9000100-0000-4000-8000-900001000001', 'd9000100-0000-4000-8000-900001000001', NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO vital_sign_lists (id, prescription_list_id, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('e9000200-0000-4000-8000-900002000001', 'd9000200-0000-4000-8000-900002000001', NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO vital_sign_lists (id, prescription_list_id, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('e1337300-0000-4000-8000-013373000001', 'd1337300-0000-4000-8000-013373000001', NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO vital_sign_lists (id, prescription_list_id, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('e1010100-0000-4000-8000-010101000001', 'd1010100-0000-4000-8000-010101000001', NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO vital_sign_lists (id, prescription_list_id, created_at, created_by, updated_at, updated_by, version, is_deleted) VALUES ('e1010200-0000-4000-8000-010102000001', 'd1010200-0000-4000-8000-010102000001', NOW(), 11, NOW(), 11, 0, FALSE) ON CONFLICT (id) DO NOTHING;
+
+-- One vital-signs day (CURRENT_DATE, never stale) per stub-roster vital list.
+INSERT INTO vital_sign_days (id, vital_list_id, day_date, created_at, created_by, updated_at, updated_by, version) VALUES ('f9000100-0000-4000-8000-900001000001', 'e9000100-0000-4000-8000-900001000001', CURRENT_DATE, NOW(), 11, NOW(), 11, 0) ON CONFLICT DO NOTHING;
+
+INSERT INTO vital_sign_days (id, vital_list_id, day_date, created_at, created_by, updated_at, updated_by, version) VALUES ('f9000200-0000-4000-8000-900002000001', 'e9000200-0000-4000-8000-900002000001', CURRENT_DATE, NOW(), 11, NOW(), 11, 0) ON CONFLICT DO NOTHING;
+
+INSERT INTO vital_sign_days (id, vital_list_id, day_date, created_at, created_by, updated_at, updated_by, version) VALUES ('f1337300-0000-4000-8000-013373000001', 'e1337300-0000-4000-8000-013373000001', CURRENT_DATE, NOW(), 11, NOW(), 11, 0) ON CONFLICT DO NOTHING;
+
+INSERT INTO vital_sign_days (id, vital_list_id, day_date, created_at, created_by, updated_at, updated_by, version) VALUES ('f1010100-0000-4000-8000-010101000001', 'e1010100-0000-4000-8000-010101000001', CURRENT_DATE, NOW(), 11, NOW(), 11, 0) ON CONFLICT DO NOTHING;
+
+INSERT INTO vital_sign_days (id, vital_list_id, day_date, created_at, created_by, updated_at, updated_by, version) VALUES ('f1010200-0000-4000-8000-010102000001', 'e1010200-0000-4000-8000-010102000001', CURRENT_DATE, NOW(), 11, NOW(), 11, 0) ON CONFLICT DO NOTHING;
