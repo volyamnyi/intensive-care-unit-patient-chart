@@ -108,6 +108,15 @@ app:
     signing-window-end: 23
     auto-create-prescriptions-enabled: false
 
+  prosthetics:
+    brak-notification:
+      # Confirmed-brak email to PROSTHETICS_ADMINISTRATOR (stage 6, TP-LL-02).
+      # All keys have code defaults via @Value, so this block is documentation
+      # plus a single place to flip the switch; SMTP itself stays SPRING_MAIL_*.
+      enabled: true
+      from: noreply@hospital.local
+      frontend-base-url: ""
+
 springdoc:
   api-docs:
     path: /api-docs
