@@ -31,12 +31,14 @@ import java.util.UUID;
  * Guaranteed delivery of queued brak emails (issue #320, v2).
  *
  * <p>Each confirmed stage-6 brak owns exactly one outbox row (written in the
- * brak transaction itself). This service delivers it eagerly after commit and
- * re-drives {@code PENDING}/{@code FAILED} rows on a schedule until they reach
- * a terminal state ({@code SENT}, {@code SKIPPED}) or exhaust
+ * brak transaction itself). This service delivers it on a schedule until it
+ * reaches a terminal state ({@code SENT}, {@code SKIPPED}) or exhausts
  * {@code outbox-max-attempts} ({@code DEAD}, operator attention required).
- * Single-instance scheduler, consistent with the other {@code @Scheduled}
- * jobs in the codebase.
+ * Delivery runs only here (single-instance scheduler, consistent with the other
+ * {@code @Scheduled} jobs in the codebase) — deliberately no eager
+ * after-commit listener: under the ChainedTransactionManager such a listener
+ * fires per-leg mid-chain without a usable transaction context
+ * (issue #321: HeuristicCompletion with mixed outcome).
  */
 @Slf4j
 @Service
@@ -200,7 +202,7 @@ public class BrakNotificationDeliveryService {
      * Retry sweep over deliverable rows, oldest first. Fixed-delay (never
      * overlapping itself); one bad row never aborts the sweep.
      */
-    @Scheduled(fixedDelayString = "${app.prosthetics.brak-notification.outbox-poll-ms:300000}")
+    @Scheduled(fixedDelayString = "${app.prosthetics.brak-notification.outbox-poll-ms:60000}")
     @Transactional
     public void sweep() {
         if (!enabled) {

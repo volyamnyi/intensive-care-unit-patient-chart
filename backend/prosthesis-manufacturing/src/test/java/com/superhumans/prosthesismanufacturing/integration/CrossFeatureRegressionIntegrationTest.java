@@ -98,8 +98,8 @@ class CrossFeatureRegressionIntegrationTest {
     @Autowired private AuditService auditService;
 
     /**
-     * Neutralizes the post-commit brak email listener (epic #309): without this
-     * mock the brak in this chain would attempt real SMTP to localhost:1025.
+     * Neutralizes the scheduled brak email sweep (epic #309, issue #321): without this
+     * mock a sweep firing mid-suite would attempt real SMTP to localhost:1025.
      */
     @MockitoBean
     private org.springframework.mail.javamail.JavaMailSender mailSender;

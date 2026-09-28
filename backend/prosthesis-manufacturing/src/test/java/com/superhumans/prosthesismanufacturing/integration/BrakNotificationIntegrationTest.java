@@ -163,6 +163,9 @@ class BrakNotificationIntegrationTest {
         createdInstances.add(branch.getNewInstanceId());
         createdEvents.add(branch.getBrakEventId());
 
+        // No eager delivery anymore (issue #321): the sweep is the only sender.
+        deliveryService.sweep();
+
         List<SimpleMailMessage> sent = allSent();
         assertThat(sent).anySatisfy(message -> {
             assertThat(message.getTo()).contains(admin.getEmail());
@@ -190,6 +193,13 @@ class BrakNotificationIntegrationTest {
                 instanceId, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST);
         createdInstances.add(branch.getNewInstanceId());
         createdEvents.add(branch.getBrakEventId());
+
+        // Sweep-only delivery (issue #321): nothing runs until the sweep does.
+        BrakNotificationOutbox pending = outboxRepository
+                .findByBrakEventId(branch.getBrakEventId()).orElseThrow();
+        assertThat(pending.getStatus()).isEqualTo(BrakNotificationStatus.PENDING);
+
+        deliveryService.sweep();
 
         BrakNotificationOutbox failed = outboxRepository
                 .findByBrakEventId(branch.getBrakEventId()).orElseThrow();
@@ -220,8 +230,9 @@ class BrakNotificationIntegrationTest {
         createdInstances.add(branch.getNewInstanceId());
         createdEvents.add(branch.getBrakEventId());
 
+        // Stage 9 queues nothing by design (no row, no mail, no audit);
+        // a stage-9 brak is distinguishable in SQL by the missing outbox row.
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
-        assertThat(auditActions(branch.getBrakEventId())).contains("SKIPPED_WRONG_STAGE");
         assertThat(outboxRepository.findByBrakEventId(branch.getBrakEventId())).isEmpty();
     }
 
@@ -238,6 +249,8 @@ class BrakNotificationIntegrationTest {
                 instanceId, new BrakCreateRequest(STAGE_D12, false, true, null), PROSTHETIST);
         createdInstances.add(unaddressedBranch.getNewInstanceId());
         createdEvents.add(unaddressedBranch.getBrakEventId());
+
+        deliveryService.sweep();
 
         List<SimpleMailMessage> sent = allSent();
         assertThat(sent).anySatisfy(message -> {
@@ -261,6 +274,10 @@ class BrakNotificationIntegrationTest {
                     PROSTHETIST);
             createdInstances.add(branch.getNewInstanceId());
             createdEvents.add(branch.getBrakEventId());
+
+            // Direct deliver() call: the sweep itself returns early when disabled
+            // without auditing, so the disabled-audit path is covered here.
+            deliveryService.deliver(branch.getBrakEventId(), PROSTHETIST);
 
             verify(mailSender, never()).send(any(SimpleMailMessage.class));
             assertThat(auditActions(branch.getBrakEventId())).contains("SKIPPED_DISABLED");

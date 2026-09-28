@@ -15,7 +15,6 @@ import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.StepExecution;
 import com.superhumans.prosthesismanufacturing.entity.StepExecutionStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper;
-import com.superhumans.prosthesismanufacturing.notification.BrakConfirmedEvent;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
 import com.superhumans.prosthesismanufacturing.repository.BrakNotificationOutboxRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
@@ -27,7 +26,6 @@ import com.superhumans.service.AuditService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,7 +65,6 @@ public class BrakService {
     TemplateSnapshotParser snapshotParser;
     AuditService auditService;
     ObjectMapper objectMapper;
-    ApplicationEventPublisher events;
     BrakNotificationOutboxRepository outboxRepository;
 
     @Transactional
@@ -194,12 +191,11 @@ public class BrakService {
             outboxRepository.save(outbox);
         }
 
-        // Domain event for post-commit observers (e.g. admin email notification).
-        // Delivery is deferred until after commit by the listener, so publishing
-        // here never affects the brak transaction itself.
-        events.publishEvent(new BrakConfirmedEvent(event.getId(), instance.getId(),
-                instance.getCurrentStageId(), userId));
-
+        // Delivery is handled exclusively by the scheduled outbox sweep
+        // (BrakNotificationDeliveryService.sweep): no eager delivery here, because
+        // @TransactionalEventListener(AFTER_COMMIT) fires per-leg mid-chain under
+        // the ChainedTransactionManager, without a usable transaction context
+        // (issue #321: HeuristicCompletion with mixed outcome).
         return BranchResponse.builder()
                 .brakEventId(event.getId())
                 .originalInstanceId(instance.getId())

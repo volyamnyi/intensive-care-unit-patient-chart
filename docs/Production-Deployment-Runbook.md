@@ -835,10 +835,12 @@ SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
 # Every returned row MUST have a non-empty email. SMTP credentials stay in
 # vault (SPRING_MAIL_* above); sender address and on/off switch live in
 # app.prosthetics.brak-notification (defaults: noreply@hospital.local / true).
-# v2 guaranteed delivery (issue #320): every stage-6 brak also inserts a PENDING
-# row into prosthetics_brak_notifications (same transaction as the brak). A
-# scheduled sweep (app.prosthetics.brak-notification.outbox-poll-ms, default
-# 5 min) retries PENDING/FAILED rows up to outbox-max-attempts (default 5);
+# v2 guaranteed delivery (issue #320; sweep-only since #321 — there is no eager
+# after-commit sender because it breaks under ChainedTransactionManager): every
+# stage-6 brak inserts a PENDING row into prosthetics_brak_notifications (same
+# transaction as the brak). A scheduled sweep
+# (app.prosthetics.brak-notification.outbox-poll-ms, default 60 s) retries
+# PENDING/FAILED rows up to outbox-max-attempts (default 5);
 # exhausted rows go DEAD and need an operator. Inspect the queue:
 #   SELECT brak_event_id, status, attempts, last_error
 #   FROM prosthetics_brak_notifications WHERE status <> 'SENT';

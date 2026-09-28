@@ -10,7 +10,6 @@ import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
 import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper;
-import com.superhumans.prosthesismanufacturing.notification.BrakConfirmedEvent;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
 import com.superhumans.prosthesismanufacturing.repository.BrakNotificationOutboxRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
@@ -25,7 +24,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,7 +43,6 @@ class BrakServiceTest {
     @Mock StepExecutionRepository executionRepository;
     @Mock FlowInstanceMapper instanceMapper;
     @Mock AuditService auditService;
-    @Mock ApplicationEventPublisher events;
     @Mock BrakNotificationOutboxRepository outboxRepository;
 
     TemplateSnapshotParser parser;
@@ -68,8 +65,7 @@ class BrakServiceTest {
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         service = new BrakService(instanceRepository, brakEventRepository, executionRepository,
-                instanceMapper, parser, auditService, new ObjectMapper(), events,
-                outboxRepository);
+                instanceMapper, parser, auditService, new ObjectMapper(), outboxRepository);
     }
 
     private String tpLl02Snapshot() {
@@ -158,23 +154,6 @@ class BrakServiceTest {
         assertThat(branch.getParentInstanceId()).isEqualTo(INSTANCE_ID);
         assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D12);
         assertThat(branch.getCurrentStepId()).isEqualTo(STEP_E0020);
-    }
-
-    @Test
-    void createBrakAndBranch_publishesBrakConfirmedEvent() {
-        FlowInstance instance = inProgressInstance();
-        mockCommon(instance);
-        BranchResponse res = service.createBrakAndBranch(
-                INSTANCE_ID, request(STAGE_D12, true, false, "примітка"), 5L);
-
-        ArgumentCaptor<BrakConfirmedEvent> captor =
-                ArgumentCaptor.forClass(BrakConfirmedEvent.class);
-        verify(events, times(1)).publishEvent(captor.capture());
-        BrakConfirmedEvent published = captor.getValue();
-        assertThat(published.brakEventId()).isEqualTo(res.getBrakEventId());
-        assertThat(published.instanceId()).isEqualTo(INSTANCE_ID);
-        assertThat(published.stageId()).isEqualTo(STAGE_D17);
-        assertThat(published.confirmedByUserId()).isEqualTo(5L);
     }
 
     @Test

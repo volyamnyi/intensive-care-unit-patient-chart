@@ -229,7 +229,7 @@ backend/   (Spring Boot 4.1.0 + Java 25 + Maven, multi-module; dependency direct
   common/                   ← shared platform leaf (no internal deps; 125 main sources): `@SpringBootApplication` main class `com.superhumans.IcuPatientChartApplication` (mainClass of the runnable JAR), platform controllers (auth/user/patient/admin/audit/settings), `entity/base` (BaseEntity) + `entity/core` (User, UserRole, Permission, RolePermission, AuditLog, SystemSettings, ReferenceValue), `repository/core`, auth (JWT), config (security, CORS, multi-DB wiring, SpringContext), exception, mapper, mis, service (AuthService, AuditService, PermissionService, PermissionCatalog), util
   icu-chart/                ← ICU chart feature (83 main sources): `com.superhumans.icu.*` (entities + repositories) + ICU domain root packages (controller ×13, service ×20, dto, mapper); depends on common
   medication-sheet/         ← medication sheet feature (95 main sources): `com.superhumans.medicationsheet.*` (entity/dto/repository/service/controller/mapper/config); depends on common
-  prosthesis-manufacturing/ ← prosthetics manufacturing feature (98 main sources): `com.superhumans.prosthesismanufacturing.*` (entity/dto/repository/service/controller/mapper/config); depends on common
+  prosthesis-manufacturing/ ← prosthetics manufacturing feature (96 main sources): `com.superhumans.prosthesismanufacturing.*` (entity/dto/repository/service/controller/mapper/config); depends on common
   app/                      ← deployable shell (no production code): depends on common + 3 features; the spring-boot plugin repackages the runnable JAR (mainClass in common); hosts the ArchUnit boundary test (`app/src/test/java/com/superhumans/architecture/ModuleBoundaryTest.java`)
 tests/     (Playwright 1.61)
 ```
@@ -353,7 +353,7 @@ Local suites green = done; start the next issue at Phase 1. When CI was explicit
 
 ## Testing
 
-- **Backend**: 401 main sources / 192 test files across the multi-module reactor (common 125/29, icu-chart 83/76, medication-sheet 95/32, prosthesis-manufacturing 98/54, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Backend**: 399 main sources / 191 test files across the multi-module reactor (common 125/29, icu-chart 83/76, medication-sheet 95/32, prosthesis-manufacturing 96/53, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
 - **Frontend**: 930 Vitest tests across 100 test files (146 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
 - **E2E**: 451 Playwright tests across 98 spec files in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
@@ -804,9 +804,9 @@ UseManual.md           ← User manual (Ukrainian)
 .gitignore             ← Global ignore rules
 backend/
   pom.xml              ← Maven build with JaCoCo, Checkstyle, surefire (5 modules: common, icu-chart, medication-sheet, prosthesis-manufacturing, app)
-  src/main/java/       ← 401 Java source files
+  src/main/java/       ← 399 Java source files
   src/main/resources/  ← application.yml, data-{core,icu,med,prosth}.sql, PDF template, db/changelog/ (Liquibase)
-  src/test/java/       ← 192 test files
+  src/test/java/       ← 191 test files
 frontend/
   package.json         ← Dependencies
   vite.config.ts       ← Vite build config
