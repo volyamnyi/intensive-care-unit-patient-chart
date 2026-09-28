@@ -42,6 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.orm.jpa.EntityManagerFactoryUtils;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -78,6 +79,13 @@ class BrakIntegrationTest {
     @Autowired private TemplateSnapshotParser snapshotParser;
     @Autowired private com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository templateRepository;
     @Autowired @Qualifier("prosthEntityManagerFactory") private EntityManagerFactory emf;
+
+    /**
+     * Neutralizes the post-commit brak email listener (epic #309): without this
+     * mock every successful brak would attempt real SMTP to localhost:1025.
+     */
+    @MockitoBean
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
 
     private TestEm em;
     private UUID orderId;

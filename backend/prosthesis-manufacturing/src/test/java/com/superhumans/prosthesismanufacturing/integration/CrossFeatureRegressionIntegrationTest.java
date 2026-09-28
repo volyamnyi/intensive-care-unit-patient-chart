@@ -51,6 +51,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.orm.jpa.EntityManagerFactoryUtils;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -95,6 +96,13 @@ class CrossFeatureRegressionIntegrationTest {
     @Autowired private BrakService brakService;
     @Autowired private EvidenceFileService evidenceFileService;
     @Autowired private AuditService auditService;
+
+    /**
+     * Neutralizes the post-commit brak email listener (epic #309): without this
+     * mock the brak in this chain would attempt real SMTP to localhost:1025.
+     */
+    @MockitoBean
+    private org.springframework.mail.javamail.JavaMailSender mailSender;
     @Autowired private FlowInstanceRepository instanceRepository;
     @Autowired private StepExecutionRepository executionRepository;
     @Autowired private ProstheticsPatientRepository patientRepository;
