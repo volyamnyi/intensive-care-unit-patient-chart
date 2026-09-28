@@ -23,17 +23,16 @@ spring:
       max-request-size: 40MB
 
   mail:
-    host: localhost
-    port: 1025
-    username: dev
-    password: dev
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    username: ${SPRING_MAIL_USERNAME:dev}
+    password: ${SPRING_MAIL_PASSWORD:dev}
     properties:
       mail:
-        debug: true
         smtp:
-          auth: false
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:false}
           starttls:
-            enable: false
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:false}
 
   jackson:
     serialization:

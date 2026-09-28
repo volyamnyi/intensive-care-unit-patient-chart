@@ -147,7 +147,7 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_MIS_API_LOGIN` | *(з vault)* | Real-режим: логін MIS API, не в yml, не в git |
 | `APP_MIS_API_PASSWORD` | *(з vault)* | Real-режим: пароль MIS API, не в yml, не в git, ніколи в логи |
 | `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Real-режим: installationId, не в yml, не в git |
-| `SPRING_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` | реальний SMTP | `application.yml:21-24` має локальний демо |
+| `SPRING_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` | реальний SMTP | `application.yml:26-35` — env-плейсхолдери `${SPRING_MAIL_*}` з локальними дефолтами (localhost:1025, без auth) |
 | `LOGGING_LEVEL_ROOT` | `INFO` | `application.yml:99` = DEBUG — забагато для прод |
 | `LOGGING_LEVEL_COM_SUPERHUMANS` | `INFO` | `application.yml:102` = TRACE |
 
