@@ -6,10 +6,13 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.BrakCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.BranchResponse;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper;
 import com.superhumans.prosthesismanufacturing.notification.BrakConfirmedEvent;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
+import com.superhumans.prosthesismanufacturing.repository.BrakNotificationOutboxRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
@@ -43,6 +46,7 @@ class BrakServiceTest {
     @Mock FlowInstanceMapper instanceMapper;
     @Mock AuditService auditService;
     @Mock ApplicationEventPublisher events;
+    @Mock BrakNotificationOutboxRepository outboxRepository;
 
     TemplateSnapshotParser parser;
     BrakService service;
@@ -64,7 +68,8 @@ class BrakServiceTest {
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         service = new BrakService(instanceRepository, brakEventRepository, executionRepository,
-                instanceMapper, parser, auditService, new ObjectMapper(), events);
+                instanceMapper, parser, auditService, new ObjectMapper(), events,
+                outboxRepository);
     }
 
     private String tpLl02Snapshot() {
@@ -170,6 +175,33 @@ class BrakServiceTest {
         assertThat(published.instanceId()).isEqualTo(INSTANCE_ID);
         assertThat(published.stageId()).isEqualTo(STAGE_D17);
         assertThat(published.confirmedByUserId()).isEqualTo(5L);
+    }
+
+    @Test
+    void createBrakAndBranch_enqueuesPendingOutboxRow() {
+        FlowInstance instance = inProgressInstance();
+        mockCommon(instance);
+        BranchResponse res = service.createBrakAndBranch(
+                INSTANCE_ID, request(STAGE_D12, true, false, "примітка"), 5L);
+
+        ArgumentCaptor<BrakNotificationOutbox> captor =
+                ArgumentCaptor.forClass(BrakNotificationOutbox.class);
+        verify(outboxRepository, times(1)).save(captor.capture());
+        BrakNotificationOutbox row = captor.getValue();
+        assertThat(row.getBrakEventId()).isEqualTo(res.getBrakEventId());
+        assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.PENDING);
+        assertThat(row.getAttempts()).isEqualTo(0);
+        assertThat(row.getCreatedBy()).isEqualTo(5L);
+    }
+
+    @Test
+    void createBrakAndBranch_stage9EnqueuesNoOutboxRow() {
+        FlowInstance instance = inProgressInstanceAtD20();
+        mockCommonD20(instance);
+        service.createBrakAndBranch(
+                INSTANCE_ID, request(STAGE_D12, false, false, null), 5L);
+
+        verify(outboxRepository, never()).save(any());
     }
 
     @Test

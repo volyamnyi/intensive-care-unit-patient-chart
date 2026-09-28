@@ -8,6 +8,8 @@ import com.superhumans.prosthesismanufacturing.dto.BrakEventResponse;
 import com.superhumans.prosthesismanufacturing.dto.BranchResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.entity.BrakEvent;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.StepExecution;
@@ -15,6 +17,7 @@ import com.superhumans.prosthesismanufacturing.entity.StepExecutionStatus;
 import com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper;
 import com.superhumans.prosthesismanufacturing.notification.BrakConfirmedEvent;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
+import com.superhumans.prosthesismanufacturing.repository.BrakNotificationOutboxRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepository;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
@@ -65,6 +68,7 @@ public class BrakService {
     AuditService auditService;
     ObjectMapper objectMapper;
     ApplicationEventPublisher events;
+    BrakNotificationOutboxRepository outboxRepository;
 
     @Transactional
     public BranchResponse createBrakAndBranch(UUID instanceId, BrakCreateRequest request, Long userId) {
@@ -173,6 +177,22 @@ public class BrakService {
 
         event.setNewInstanceId(branch.getId());
         brakEventRepository.save(event);
+
+        // Outbox row in the SAME transaction as the brak (atomic: no brak
+        // without a queued notification and vice versa). Only stage-6 braks
+        // are queued — stage 9 is handled without email by design.
+        // NOTE: deliberately same-tx, not REQUIRES_NEW (a surviving row for a
+        // rolled-back brak would be a ghost notification).
+        if (STAGE_D17.equals(instance.getCurrentStageId())) {
+            BrakNotificationOutbox outbox = BrakNotificationOutbox.builder()
+                    .brakEventId(event.getId())
+                    .status(BrakNotificationStatus.PENDING)
+                    .attempts(0)
+                    .build();
+            outbox.setCreatedBy(userId);
+            outbox.setUpdatedBy(userId);
+            outboxRepository.save(outbox);
+        }
 
         // Domain event for post-commit observers (e.g. admin email notification).
         // Delivery is deferred until after commit by the listener, so publishing

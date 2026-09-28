@@ -26,3 +26,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/009-drop-order-recipe-pdf.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/010-brak-notification-outbox.sql

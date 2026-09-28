@@ -3,6 +3,7 @@ package com.superhumans.prosthesismanufacturing.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -24,8 +25,11 @@ import com.superhumans.prosthesismanufacturing.entity.StepType;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStage;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStep;
 import com.superhumans.prosthesismanufacturing.entity.TemplateStatus;
-import com.superhumans.prosthesismanufacturing.notification.BrakNotificationService;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
+import com.superhumans.prosthesismanufacturing.notification.BrakNotificationDeliveryService;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
+import com.superhumans.prosthesismanufacturing.repository.BrakNotificationOutboxRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowInstanceRepository;
 import com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
@@ -53,6 +57,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -93,7 +98,6 @@ class BrakNotificationIntegrationTest {
 
     @Autowired private BrakService brakService;
     @Autowired private FlowInstanceService instanceService;
-    @Autowired private BrakNotificationService notificationService;
     @Autowired private TemplateSnapshotParser snapshotParser;
     @Autowired private FlowTemplateRepository templateRepository;
     @Autowired private TemplateStageRepository stageRepository;
@@ -104,18 +108,24 @@ class BrakNotificationIntegrationTest {
     @Autowired private FlowInstanceRepository instanceRepository;
     @Autowired private StepExecutionRepository executionRepository;
     @Autowired private BrakEventRepository brakEventRepository;
+    @Autowired private BrakNotificationOutboxRepository outboxRepository;
+    @Autowired private BrakNotificationDeliveryService deliveryService;
     @Autowired private UserRepository userRepository;
     @Autowired private AuditLogRepository auditLogRepository;
 
     @MockitoBean private JavaMailSender mailSender;
 
     private final List<UUID> createdInstances = new ArrayList<>();
+    private final List<UUID> createdEvents = new ArrayList<>();
     private final List<UUID> createdOrders = new ArrayList<>();
     private final List<String> createdPatients = new ArrayList<>();
     private final List<User> createdUsers = new ArrayList<>();
 
     @AfterEach
     void cleanUp() {
+        for (UUID eventId : createdEvents) {
+            outboxRepository.findByBrakEventId(eventId).ifPresent(outboxRepository::delete);
+        }
         for (UUID instanceId : createdInstances) {
             executionRepository.deleteAll(executionRepository.findByInstanceId(instanceId));
             brakEventRepository.deleteAll(brakEventRepository.findByInstanceId(instanceId));
@@ -133,6 +143,7 @@ class BrakNotificationIntegrationTest {
             userRepository.delete(user);
         }
         createdInstances.clear();
+        createdEvents.clear();
         createdOrders.clear();
         createdPatients.clear();
         createdUsers.clear();
@@ -150,6 +161,7 @@ class BrakNotificationIntegrationTest {
                 instanceId, new BrakCreateRequest(STAGE_D12, true, false, "інтеграційна примітка"),
                 PROSTHETIST);
         createdInstances.add(branch.getNewInstanceId());
+        createdEvents.add(branch.getBrakEventId());
 
         List<SimpleMailMessage> sent = allSent();
         assertThat(sent).anySatisfy(message -> {
@@ -158,6 +170,43 @@ class BrakNotificationIntegrationTest {
             assertThat(message.getSubject()).contains(orderNumber);
         });
         assertThat(auditActions(branch.getBrakEventId())).contains("SENT");
+        BrakNotificationOutbox row = outboxRepository
+                .findByBrakEventId(branch.getBrakEventId()).orElseThrow();
+        assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
+        assertThat(row.getAttempts()).isEqualTo(1);
+    }
+
+    @Test
+    void brakRecoversThroughSweepAfterSmtpOutage() {
+        String tag = uniqueTag();
+        User admin = createAdmin("brak-int-" + tag + "@example.invalid");
+        UUID orderId = createOrder();
+        UUID instanceId = createInstanceAtBrak(orderId);
+        String orderNumber = orderRepository.findById(orderId).orElseThrow().getOrderNumber();
+        doThrow(new MailSendException("smtp down")).doNothing()
+                .when(mailSender).send(any(SimpleMailMessage.class));
+
+        BranchResponse branch = brakService.createBrakAndBranch(
+                instanceId, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST);
+        createdInstances.add(branch.getNewInstanceId());
+        createdEvents.add(branch.getBrakEventId());
+
+        BrakNotificationOutbox failed = outboxRepository
+                .findByBrakEventId(branch.getBrakEventId()).orElseThrow();
+        assertThat(failed.getStatus()).isEqualTo(BrakNotificationStatus.FAILED);
+        assertThat(failed.getAttempts()).isEqualTo(1);
+
+        deliveryService.sweep();
+
+        BrakNotificationOutbox recovered = outboxRepository
+                .findByBrakEventId(branch.getBrakEventId()).orElseThrow();
+        assertThat(recovered.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
+        assertThat(recovered.getAttempts()).isEqualTo(2);
+        List<SimpleMailMessage> sent = allSent();
+        assertThat(sent).anySatisfy(message -> {
+            assertThat(message.getTo()).contains(admin.getEmail());
+            assertThat(message.getText()).contains(orderNumber);
+        });
     }
 
     @Test
@@ -169,9 +218,11 @@ class BrakNotificationIntegrationTest {
         BranchResponse branch = brakService.createBrakAndBranch(
                 instanceId, new BrakCreateRequest(STAGE_D12, false, false, null), PROSTHETIST);
         createdInstances.add(branch.getNewInstanceId());
+        createdEvents.add(branch.getBrakEventId());
 
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
         assertThat(auditActions(branch.getBrakEventId())).contains("SKIPPED_WRONG_STAGE");
+        assertThat(outboxRepository.findByBrakEventId(branch.getBrakEventId())).isEmpty();
     }
 
     @Test
@@ -186,12 +237,16 @@ class BrakNotificationIntegrationTest {
         BranchResponse unaddressedBranch = brakService.createBrakAndBranch(
                 instanceId, new BrakCreateRequest(STAGE_D12, false, true, null), PROSTHETIST);
         createdInstances.add(unaddressedBranch.getNewInstanceId());
+        createdEvents.add(unaddressedBranch.getBrakEventId());
 
         List<SimpleMailMessage> sent = allSent();
         assertThat(sent).anySatisfy(message -> {
             assertThat(message.getTo()).contains(addressed.getEmail());
             assertThat(message.getText()).contains(orderNumber);
         });
+        BrakNotificationOutbox skipped = outboxRepository
+                .findByBrakEventId(unaddressedBranch.getBrakEventId()).orElseThrow();
+        assertThat(skipped.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
     }
 
     @Test
@@ -199,25 +254,30 @@ class BrakNotificationIntegrationTest {
         createAdmin("brak-int-" + uniqueTag() + "@example.invalid");
         UUID orderId = createOrder();
         UUID instanceId = createInstanceAtBrak(orderId);
-        ReflectionTestUtils.setField(notificationService, "enabled", false);
+        ReflectionTestUtils.setField(deliveryService, "enabled", false);
         try {
             BranchResponse branch = brakService.createBrakAndBranch(
                     instanceId, new BrakCreateRequest(STAGE_D12, false, false, null),
                     PROSTHETIST);
             createdInstances.add(branch.getNewInstanceId());
+            createdEvents.add(branch.getBrakEventId());
 
             verify(mailSender, never()).send(any(SimpleMailMessage.class));
             assertThat(auditActions(branch.getBrakEventId())).contains("SKIPPED_DISABLED");
+            BrakNotificationOutbox pending = outboxRepository
+                    .findByBrakEventId(branch.getBrakEventId()).orElseThrow();
+            assertThat(pending.getStatus()).isEqualTo(BrakNotificationStatus.PENDING);
         } finally {
-            ReflectionTestUtils.setField(notificationService, "enabled", true);
+            ReflectionTestUtils.setField(deliveryService, "enabled", true);
         }
     }
 
     private List<SimpleMailMessage> allSent() {
         ArgumentCaptor<SimpleMailMessage> captor =
                 ArgumentCaptor.forClass(SimpleMailMessage.class);
-        // atLeastOnce: the shared dev database may hold other administrators
-        // with real addresses who also receive the mail.
+        // atLeastOnce: the retry test sends twice for one brak (failed eager
+        // attempt plus sweep recovery), and the shared dev database may hold
+        // other administrators with real addresses who also receive the mail.
         verify(mailSender, atLeastOnce()).send(captor.capture());
         return captor.getAllValues();
     }

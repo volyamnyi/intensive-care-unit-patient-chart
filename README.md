@@ -599,7 +599,7 @@ icu-patient-chart/
 CI jobs run in parallel when triggered; if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend tests**: 191 test files across the multi-module reactor — common (29) + icu-chart (76) + medication-sheet (32) + prosthesis-manufacturing (53) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
+- **Backend tests**: 192 test files across the multi-module reactor — common (29) + icu-chart (76) + medication-sheet (32) + prosthesis-manufacturing (54) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 94 tests — `mvn test -Pintegration-test`
 - **Frontend Vitest tests**: 930 tests (100 files) — includes responsive + prosthetics suites
 - **E2E Playwright tests**: 98 spec files (451 tests), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)

@@ -116,6 +116,10 @@ app:
       enabled: true
       from: noreply@hospital.local
       frontend-base-url: ""
+      # v2 outbox (issue #320): sweep interval, attempts per row, rows per sweep.
+      outbox-poll-ms: 300000
+      outbox-max-attempts: 5
+      outbox-batch-size: 20
 
 springdoc:
   api-docs:
