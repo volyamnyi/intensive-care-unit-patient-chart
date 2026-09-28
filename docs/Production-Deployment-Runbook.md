@@ -826,6 +826,16 @@ SPRING_MAIL_PASSWORD=<pass>
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
 
+# --- Brak email notification (stage 6, TP-LL-02; issues #309-#319) ---
+# After a confirmed training-prosthesis brak the backend mails every user with
+# role PROSTHETICS_ADMINISTRATOR. The address comes from users.email — no
+# address, no mail (SKIPPED_NO_RECIPIENTS in the audit log, visible in /admin).
+# Operator pre-flight (before go-live and after every admin change):
+#   SELECT login, email FROM users WHERE role='PROSTHETICS_ADMINISTRATOR';
+# Every returned row MUST have a non-empty email. SMTP credentials stay in
+# vault (SPRING_MAIL_* above); sender address and on/off switch live in
+# app.prosthetics.brak-notification (defaults: noreply@hospital.local / true).
+
 # --- Logging ---
 LOGGING_LEVEL_ROOT=INFO
 LOGGING_LEVEL_COM_SUPERHUMANS=INFO
