@@ -66,6 +66,7 @@ public class BrakService {
     AuditService auditService;
     ObjectMapper objectMapper;
     BrakNotificationOutboxRepository outboxRepository;
+    BrakThresholdService thresholdService;
 
     @Transactional
     public BranchResponse createBrakAndBranch(UUID instanceId, BrakCreateRequest request, Long userId) {
@@ -196,6 +197,10 @@ public class BrakService {
         // @TransactionalEventListener(AFTER_COMMIT) fires per-leg mid-chain under
         // the ChainedTransactionManager, without a usable transaction context
         // (issue #321: HeuristicCompletion with mixed outcome).
+        //
+        // Order-wide escalation (epic #322): a THRESHOLD row is queued in this
+        // same transaction whenever the order chain reached brak count >= 3.
+        thresholdService.maybeEnqueue(instance.getOrderId(), event.getId(), userId);
         return BranchResponse.builder()
                 .brakEventId(event.getId())
                 .originalInstanceId(instance.getId())

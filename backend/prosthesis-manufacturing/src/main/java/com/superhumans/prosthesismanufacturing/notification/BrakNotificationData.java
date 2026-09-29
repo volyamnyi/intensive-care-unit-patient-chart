@@ -14,6 +14,11 @@ import java.util.UUID;
  * <p>Privacy: this record carries the minimum needed for identification —
  * the MIS patient id and order identifiers only. No patient names, contacts,
  * birth dates, diagnoses or clinical payloads belong here.
+ *
+ * <p>Epic #322 appends the order-wide escalation context: {@code brakCount}
+ * is the chain count that triggered the email ({@code 1} for a per-brak
+ * {@code SINGLE} notification), and {@code brakHistory} lists the chain
+ * (empty for {@code SINGLE}).
  */
 public record BrakNotificationData(
         String patientId,
@@ -33,6 +38,8 @@ public record BrakNotificationData(
         boolean painDiscomfort,
         String note,
         String returnStageName,
-        String frontendUrl
+        String frontendUrl,
+        long brakCount,
+        java.util.List<BrakHistoryEntry> brakHistory
 ) {
 }

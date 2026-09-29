@@ -29,3 +29,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/010-brak-notification-outbox.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/011-brak-threshold-kind.sql

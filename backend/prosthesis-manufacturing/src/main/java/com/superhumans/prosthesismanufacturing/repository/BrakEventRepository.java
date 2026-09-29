@@ -16,6 +16,16 @@ public interface BrakEventRepository extends JpaRepository<BrakEvent, UUID> {
     List<BrakEvent> findByNewInstanceId(UUID newInstanceId);
 
     /**
+     * Order-chain brak count for the threshold escalation (epic #322): number
+     * of brak events whose originating instance belongs to the given order.
+     * Every brak spawns a new branch instance, so per-instance counts never
+     * exceed 1 — the chain must be counted via the shared orderId.
+     */
+    @Query("select count(b) from BrakEvent b where b.instanceId in "
+            + "(select f.id from FlowInstance f where f.orderId = :orderId)")
+    long countByOrderId(@Param("orderId") UUID orderId);
+
+    /**
      * Batch brak counts per originating instance for the production read-model.
      * Returns {@code [instanceId, count]} rows; instances without braks are absent.
      */

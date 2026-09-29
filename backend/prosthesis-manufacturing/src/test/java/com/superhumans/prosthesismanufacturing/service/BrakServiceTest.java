@@ -44,6 +44,7 @@ class BrakServiceTest {
     @Mock FlowInstanceMapper instanceMapper;
     @Mock AuditService auditService;
     @Mock BrakNotificationOutboxRepository outboxRepository;
+    @Mock BrakThresholdService thresholdService;
 
     TemplateSnapshotParser parser;
     BrakService service;
@@ -65,7 +66,8 @@ class BrakServiceTest {
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         service = new BrakService(instanceRepository, brakEventRepository, executionRepository,
-                instanceMapper, parser, auditService, new ObjectMapper(), outboxRepository);
+                instanceMapper, parser, auditService, new ObjectMapper(), outboxRepository,
+                thresholdService);
     }
 
     private String tpLl02Snapshot() {
@@ -181,6 +183,17 @@ class BrakServiceTest {
                 INSTANCE_ID, request(STAGE_D12, false, false, null), 5L);
 
         verify(outboxRepository, never()).save(any());
+    }
+
+    @Test
+    void createBrakAndBranch_delegatesThresholdCheck() {
+        FlowInstance instance = inProgressInstance();
+        mockCommon(instance);
+        BranchResponse res = service.createBrakAndBranch(
+                INSTANCE_ID, request(STAGE_D12, true, false, null), 5L);
+
+        verify(thresholdService, times(1)).maybeEnqueue(
+                eq(ORDER_ID), eq(res.getBrakEventId()), eq(5L));
     }
 
     @Test

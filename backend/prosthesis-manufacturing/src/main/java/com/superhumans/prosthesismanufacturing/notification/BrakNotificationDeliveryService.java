@@ -2,6 +2,7 @@ package com.superhumans.prosthesismanufacturing.notification;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.prosthesismanufacturing.entity.BrakEvent;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationKind;
 import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
 import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
@@ -24,6 +25,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -152,31 +155,68 @@ public class BrakNotificationDeliveryService {
                 : userRepository.findById(actorId).orElse(null);
         SnapshotTemplate snapshot = parseSnapshot(instance, brakEventId);
 
-        BrakNotificationData data = new BrakNotificationData(
-                instance.getPatientId(),
-                order == null ? null : order.getOrderNumber(),
-                instance.getOrderId(),
-                instance.getId(),
-                brakEvent.getNewInstanceId(),
-                templateName(snapshot),
-                stageLabel(snapshot, brakEvent),
-                stepLabel(snapshot, brakEvent),
-                brakEvent.getStageId(),
-                brakEvent.getStepId(),
-                brakEvent.getCreatedAt(),
-                confirmer == null ? null : confirmer.getFullName(),
-                confirmer == null ? String.valueOf(actorId) : confirmer.getLogin(),
-                Boolean.TRUE.equals(brakEvent.getSoftTissueMisalignment()),
-                Boolean.TRUE.equals(brakEvent.getPainDiscomfort()),
-                brakEvent.getNote(),
-                returnStageName(snapshot, brakEvent),
-                frontendBaseUrl);
+        String subject;
+        String body;
+        BrakNotificationKind kind = row.getKind() == null
+                ? BrakNotificationKind.SINGLE : row.getKind();
+        if (kind == BrakNotificationKind.THRESHOLD) {
+            long brakCount = brakEventRepository.countByOrderId(instance.getOrderId());
+            List<BrakHistoryEntry> history = collectHistory(instance.getOrderId(), snapshot);
+            BrakNotificationData data = new BrakNotificationData(
+                    instance.getPatientId(),
+                    order == null ? null : order.getOrderNumber(),
+                    instance.getOrderId(),
+                    instance.getId(),
+                    brakEvent.getNewInstanceId(),
+                    templateName(snapshot),
+                    stageLabel(snapshot, brakEvent),
+                    stepLabel(snapshot, brakEvent),
+                    brakEvent.getStageId(),
+                    brakEvent.getStepId(),
+                    brakEvent.getCreatedAt(),
+                    confirmer == null ? null : confirmer.getFullName(),
+                    confirmer == null ? String.valueOf(actorId) : confirmer.getLogin(),
+                    Boolean.TRUE.equals(brakEvent.getSoftTissueMisalignment()),
+                    Boolean.TRUE.equals(brakEvent.getPainDiscomfort()),
+                    brakEvent.getNote(),
+                    returnStageName(snapshot, brakEvent),
+                    frontendBaseUrl,
+                    brakCount,
+                    history);
+            subject = composer.buildThresholdSubject(data);
+            body = composer.buildThresholdBody(data);
+        } else {
+            BrakNotificationData data = new BrakNotificationData(
+                    instance.getPatientId(),
+                    order == null ? null : order.getOrderNumber(),
+                    instance.getOrderId(),
+                    instance.getId(),
+                    brakEvent.getNewInstanceId(),
+                    templateName(snapshot),
+                    stageLabel(snapshot, brakEvent),
+                    stepLabel(snapshot, brakEvent),
+                    brakEvent.getStageId(),
+                    brakEvent.getStepId(),
+                    brakEvent.getCreatedAt(),
+                    confirmer == null ? null : confirmer.getFullName(),
+                    confirmer == null ? String.valueOf(actorId) : confirmer.getLogin(),
+                    Boolean.TRUE.equals(brakEvent.getSoftTissueMisalignment()),
+                    Boolean.TRUE.equals(brakEvent.getPainDiscomfort()),
+                    brakEvent.getNote(),
+                    returnStageName(snapshot, brakEvent),
+                    frontendBaseUrl,
+                    1L,
+                    List.of());
+            subject = composer.buildSubject(data);
+            body = composer.buildBody(data);
+        }
         int[] result = notificationService.sendToRecipients(
-                composer.buildSubject(data), composer.buildBody(data), recipients,
+                subject, body, recipients,
                 brakEventId);
 
         row.setAttempts(row.getAttempts() + 1);
-        String outcome = "sent:" + result[0] + " failed:" + result[1];
+        String outcome = (kind == BrakNotificationKind.THRESHOLD ? "kind=THRESHOLD " : "")
+                + "sent:" + result[0] + " failed:" + result[1];
         if (result[1] == 0) {
             row.setStatus(BrakNotificationStatus.SENT);
             row.setLastError(null);
@@ -222,6 +262,37 @@ public class BrakNotificationDeliveryService {
                         row.getBrakEventId(), ex.getMessage());
             }
         }
+    }
+
+    /**
+     * Collects the order-wide brak history (epic #322), oldest first: every
+     * brak event of every instance in the order chain, with stage/step labels
+     * resolved from the template snapshot and confirmer names resolved from
+     * the users table. Missing values stay {@code null} — the composer
+     * renders them as {@code «—»}.
+     */
+    private List<BrakHistoryEntry> collectHistory(UUID orderId, SnapshotTemplate snapshot) {
+        List<FlowInstance> chain = new ArrayList<>(instanceRepository.findByOrderId(orderId));
+        chain.sort(Comparator.comparing(FlowInstance::getCreatedAt,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+        List<BrakHistoryEntry> history = new ArrayList<>();
+        for (FlowInstance chainInstance : chain) {
+            List<BrakEvent> events = new ArrayList<>(
+                    brakEventRepository.findByInstanceId(chainInstance.getId()));
+            events.sort(Comparator.comparing(BrakEvent::getCreatedAt,
+                    Comparator.nullsLast(Comparator.naturalOrder())));
+            for (BrakEvent event : events) {
+                User eventConfirmer = event.getCreatedBy() == null ? null
+                        : userRepository.findById(event.getCreatedBy()).orElse(null);
+                history.add(new BrakHistoryEntry(
+                        stageLabel(snapshot, event),
+                        stepLabel(snapshot, event),
+                        event.getCreatedAt(),
+                        eventConfirmer == null ? null : eventConfirmer.getFullName(),
+                        returnStageName(snapshot, event)));
+            }
+        }
+        return history;
     }
 
     private SnapshotTemplate parseSnapshot(FlowInstance instance, UUID brakEventId) {

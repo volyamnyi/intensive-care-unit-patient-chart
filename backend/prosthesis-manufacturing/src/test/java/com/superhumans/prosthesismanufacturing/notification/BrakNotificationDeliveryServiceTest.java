@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.prosthesismanufacturing.entity.BrakEvent;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationKind;
 import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
 import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
@@ -388,5 +389,72 @@ class BrakNotificationDeliveryServiceTest {
         assertThat(data.getValue().orderNumber()).isEqualTo("ПВ-26-0413");
         assertThat(data.getValue().patientId()).isEqualTo("900001");
         assertThat(data.getValue().confirmerName()).isEqualTo("Олег Романюк");
+        assertThat(data.getValue().brakCount()).isEqualTo(1L);
+        assertThat(data.getValue().brakHistory()).isEmpty();
+    }
+
+    @Test
+    void deliver_thresholdRowUsesThresholdBuilders() {
+        BrakNotificationOutbox row = thresholdRow(BrakNotificationStatus.PENDING, 0);
+        stubFullContext(row);
+        when(instanceRepository.findByOrderId(ORDER_ID)).thenReturn(List.of(instance()));
+        when(brakEventRepository.countByOrderId(ORDER_ID)).thenReturn(3L);
+        when(brakEventRepository.findByInstanceId(INSTANCE_ID)).thenReturn(List.of(brakEvent()));
+        when(userRepository.findById(0L)).thenReturn(Optional.empty());
+        when(notificationService.resolveRecipients())
+                .thenReturn(List.of(admin(1L, "a@hospital.local")));
+        when(composer.buildThresholdSubject(any())).thenReturn("TSUBJ");
+        when(composer.buildThresholdBody(any())).thenReturn("TBODY");
+        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+                .thenReturn(new int[]{1, 0});
+
+        service.deliver(EVENT_ID, CONFIRMER_ID);
+
+        assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
+        assertThat(row.getAttempts()).isEqualTo(1);
+        ArgumentCaptor<BrakNotificationData> data =
+                ArgumentCaptor.forClass(BrakNotificationData.class);
+        verify(composer).buildThresholdBody(data.capture());
+        assertThat(data.getValue().brakCount()).isEqualTo(3L);
+        assertThat(data.getValue().brakHistory()).hasSize(1);
+        verify(composer, never()).buildSubject(any());
+        verify(composer, never()).buildBody(any());
+        verify(auditService).logEvent("BrakNotification", EVENT_ID,
+                "SENT", CONFIRMER_ID, null, "kind=THRESHOLD sent:1 failed:0");
+    }
+
+    @Test
+    void deliver_thresholdRowWithoutOrderChainDeliversEmptyHistory() {
+        BrakNotificationOutbox row = thresholdRow(BrakNotificationStatus.PENDING, 0);
+        stubFullContext(row);
+        when(instanceRepository.findByOrderId(ORDER_ID)).thenReturn(List.of());
+        when(brakEventRepository.countByOrderId(ORDER_ID)).thenReturn(3L);
+        when(notificationService.resolveRecipients())
+                .thenReturn(List.of(admin(1L, "a@hospital.local")));
+        when(composer.buildThresholdSubject(any())).thenReturn("TSUBJ");
+        when(composer.buildThresholdBody(any())).thenReturn("TBODY");
+        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+                .thenReturn(new int[]{1, 0});
+
+        service.deliver(EVENT_ID, CONFIRMER_ID);
+
+        assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
+        ArgumentCaptor<BrakNotificationData> data =
+                ArgumentCaptor.forClass(BrakNotificationData.class);
+        verify(composer).buildThresholdBody(data.capture());
+        assertThat(data.getValue().brakHistory()).isEmpty();
+    }
+
+    private BrakNotificationOutbox thresholdRow(BrakNotificationStatus status, int attempts) {
+        BrakNotificationOutbox row = BrakNotificationOutbox.builder()
+                .brakEventId(EVENT_ID)
+                .kind(BrakNotificationKind.THRESHOLD)
+                .orderId(ORDER_ID)
+                .status(status)
+                .attempts(attempts)
+                .build();
+        row.setId(UUID.randomUUID());
+        row.setCreatedBy(CONFIRMER_ID);
+        return row;
     }
 }

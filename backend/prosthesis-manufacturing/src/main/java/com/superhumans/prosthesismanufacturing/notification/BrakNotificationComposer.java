@@ -1,6 +1,8 @@
 package com.superhumans.prosthesismanufacturing.notification;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
@@ -45,6 +47,21 @@ public class BrakNotificationComposer {
     }
 
     /**
+     * Builds the subject of the order-wide escalation email (epic #322).
+     * Format: {@code Брак №{N} у замовленні {orderNumber} (процес {shortId})},
+     * where {@code N} is the chain brak count and {@code shortId} is the first
+     * 8 characters of the original instance id. The numbered subject keeps
+     * repeated escalations (3rd, 4th, ...) distinguishable in the inbox.
+     */
+    public String buildThresholdSubject(BrakNotificationData data) {
+        return "Брак №" + data.brakCount() + " у замовленні "
+                + textOrMissing(data.orderNumber())
+                + " (процес "
+                + shortId(data.originalInstanceId())
+                + ")";
+    }
+
+    /**
      * Builds the plain-text email body: 11 blocks (event type, patient, order,
      * process, stage, date/time, confirmer, brak reasons, comment, return stage,
      * system link). The system-link block is omitted when no frontend URL
@@ -75,6 +92,73 @@ public class BrakNotificationComposer {
             block(body, "Процес у системі: " + link);
         }
         return body.toString().stripTrailing();
+    }
+
+    /**
+     * Builds the plain-text body of the order-wide escalation email
+     * (epic #322): the same blocks as {@link #buildBody} for the triggering
+     * brak, plus the chain brak count and the numbered history of all braks
+     * in the order (both trigger steps, oldest first). An empty or missing
+     * history renders as {@code «—»}; per-entry missing values render as
+     * {@code «—»} via the shared helpers.
+     */
+    public String buildThresholdBody(BrakNotificationData data) {
+        StringBuilder body = new StringBuilder();
+        block(body, "Перевищено поріг браків у замовленні (брак №" + data.brakCount() + ").");
+        block(body, "Кількість браків у замовленні: " + data.brakCount());
+        block(body, "Пацієнт (ID): " + textOrMissing(data.patientId()));
+        block(body, "Замовлення: " + textOrMissing(data.orderNumber())
+                + " (ID: " + textOrMissing(data.orderId()) + ")");
+        block(body, "Процес (ID): " + textOrMissing(data.originalInstanceId())
+                + "\nНова гілка (ID): " + textOrMissing(data.newInstanceId())
+                + "\nШаблон: " + textOrMissing(data.templateName()));
+        block(body, "Останній брак — етап: " + textOrMissing(data.stageLabel())
+                + "\nКрок: " + textOrMissing(data.stepLabel())
+                + "\n(Технічні ID — етап: " + textOrMissing(data.stageId())
+                + ", крок: " + textOrMissing(data.stepId()) + ")");
+        block(body, "Дата і час підтвердження: " + formatDateTime(data));
+        block(body, "Підтвердив: " + textOrMissing(data.confirmerName())
+                + " (логін: " + textOrMissing(data.confirmerLogin()) + ")");
+        block(body, SOFT_TISSUE_LABEL + ": " + yesNo(data.softTissueMisalignment())
+                + "\n" + PAIN_LABEL + ": " + yesNo(data.painDiscomfort()));
+        block(body, "Коментар: " + noteOrDefault(data.note()));
+        block(body, "Повернено на етап: " + textOrMissing(data.returnStageName()));
+        block(body, "Історія браків замовлення:\n" + historyOrMissing(data));
+        String link = systemLink(data);
+        if (link != null) {
+            block(body, "Процес у системі: " + link);
+        }
+        return body.toString().stripTrailing();
+    }
+
+    private String historyOrMissing(BrakNotificationData data) {
+        if (data.brakHistory() == null || data.brakHistory().isEmpty()) {
+            return MISSING;
+        }
+        StringBuilder history = new StringBuilder();
+        int index = 1;
+        for (BrakHistoryEntry entry : data.brakHistory()) {
+            if (entry == null) {
+                continue;
+            }
+            if (!history.isEmpty()) {
+                history.append('\n');
+            }
+            history.append(index++).append(". ")
+                    .append(textOrMissing(entry.stageLabel()))
+                    .append(" — ")
+                    .append(formatDateTime(entry.confirmedAt()))
+                    .append(" — ")
+                    .append(textOrMissing(entry.confirmerName()));
+        }
+        return history.isEmpty() ? MISSING : history.toString();
+    }
+
+    private String formatDateTime(LocalDateTime value) {
+        if (value == null) {
+            return MISSING;
+        }
+        return value.format(DATE_TIME_FORMAT);
     }
 
     private void block(StringBuilder body, String text) {
