@@ -26,6 +26,18 @@ public interface BrakEventRepository extends JpaRepository<BrakEvent, UUID> {
     long countByOrderId(@Param("orderId") UUID orderId);
 
     /**
+     * Chain count as of a triggering event (epic #322, issue #327): delivery
+     * of a {@code THRESHOLD} row may lag behind later braks of the same
+     * order, so the count backing the "Брак №N" subject must only include
+     * events confirmed no later than the triggering event itself.
+     */
+    @Query("select count(b) from BrakEvent b where b.instanceId in "
+            + "(select f.id from FlowInstance f where f.orderId = :orderId) "
+            + "and b.createdAt <= :cutoff")
+    long countByOrderIdUpTo(@Param("orderId") UUID orderId,
+            @Param("cutoff") java.time.LocalDateTime cutoff);
+
+    /**
      * Batch brak counts per originating instance for the production read-model.
      * Returns {@code [instanceId, count]} rows; instances without braks are absent.
      */

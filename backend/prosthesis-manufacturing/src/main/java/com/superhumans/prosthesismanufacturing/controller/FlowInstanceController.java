@@ -223,7 +223,7 @@ public class FlowInstanceController {
     @PostMapping("/{id}/brak")
     @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Fix brak at step e0000028 and create branch to allowed stage")
+    @Operation(summary = "Fix brak at step e0000028 (stage 6) or e0000032 (stage 9) and create branch to allowed stage")
     public BranchResponse createBrak(@PathVariable UUID id, @Valid @RequestBody BrakCreateRequest request) {
         return brakService.createBrakAndBranch(id, request, currentUser.userId());
     }

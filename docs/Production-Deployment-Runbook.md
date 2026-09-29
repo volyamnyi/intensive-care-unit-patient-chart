@@ -842,11 +842,18 @@ SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
 # (app.prosthetics.brak-notification.outbox-poll-ms, default 60 s) retries
 # PENDING/FAILED rows up to outbox-max-attempts (default 5);
 # exhausted rows go DEAD and need an operator. Inspect the queue:
-#   SELECT brak_event_id, status, attempts, last_error
+#   SELECT brak_event_id, kind, status, attempts, last_error
 #   FROM prosthetics_brak_notifications WHERE status <> 'SENT';
 # Re-drive after fixing SMTP (the next sweep picks the row up again):
 #   UPDATE prosthetics_brak_notifications
 #   SET status='PENDING', attempts=0, last_error=NULL WHERE status='DEAD';
+# Threshold escalation (epic #322, issues #322-#328): every brak whose order
+# chain reached count >= 3 (trigger steps of stages 6 and 9 summed per
+# orderId) additionally queues a THRESHOLD row (subject "Брак №N…", repeat on
+# every further brak). List escalations of one order:
+#   SELECT brak_event_id, status, attempts, last_error
+#   FROM prosthetics_brak_notifications
+#   WHERE kind='THRESHOLD' AND order_id='<order-uuid>' ORDER BY created_at;
 
 # --- Logging ---
 LOGGING_LEVEL_ROOT=INFO

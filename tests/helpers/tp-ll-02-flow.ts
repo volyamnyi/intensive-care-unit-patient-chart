@@ -176,3 +176,19 @@ export async function createBrakViaApi(
   expect(res.ok(), `POST brak returned ${res.status()}: ${await res.text()}`).toBeTruthy();
   return res.json();
 }
+
+/**
+ * Drive the instance to a brak trigger step and brak it there (epic #322).
+ * Returns the branch response; the new branch id is `branch.newInstanceId`.
+ * Chain by feeding the returned branch id back in with the next trigger.
+ */
+export async function driveToTriggerAndBrak(
+  request: APIRequestContext,
+  headers,
+  instanceId: string,
+  triggerStepId: string,
+  returnStageId: string,
+) {
+  await completeToStep(request, headers, instanceId, triggerStepId);
+  return createBrakViaApi(request, headers, instanceId, { returnStageId });
+}

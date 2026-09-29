@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -75,7 +76,7 @@ class BrakNotificationDeliveryServiceTest {
     void deliver_disabledReturnsEarly() {
         ReflectionTestUtils.setField(service, "enabled", false);
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         verify(auditService).logEvent("BrakNotification", EVENT_ID,
                 "SKIPPED_DISABLED", CONFIRMER_ID, null, null);
@@ -84,10 +85,10 @@ class BrakNotificationDeliveryServiceTest {
 
     @Test
     void deliver_missingRowReturnsSilently() {
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID))
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.empty());
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         verifyNoInteractions(notificationService);
         verify(auditService, never()).logEvent(any(), any(), any(), any(), any(), any());
@@ -95,14 +96,14 @@ class BrakNotificationDeliveryServiceTest {
 
     @Test
     void deliver_terminalRowsAreNeverRedelivered() {
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID)).thenReturn(
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE)).thenReturn(
                 Optional.of(outboxRow(BrakNotificationStatus.SENT, 3)),
                 Optional.of(outboxRow(BrakNotificationStatus.SKIPPED, 0)),
                 Optional.of(outboxRow(BrakNotificationStatus.DEAD, 5)));
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
-        service.deliver(EVENT_ID, CONFIRMER_ID);
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
     }
@@ -110,10 +111,10 @@ class BrakNotificationDeliveryServiceTest {
     @Test
     void deliver_exhaustedFailedRowGoesDead() {
         BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.FAILED, 5);
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID))
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.of(row));
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.DEAD);
         verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
@@ -130,7 +131,7 @@ class BrakNotificationDeliveryServiceTest {
         when(notificationService.sendToRecipients(any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
         assertThat(row.getAttempts()).isEqualTo(1);
@@ -150,7 +151,7 @@ class BrakNotificationDeliveryServiceTest {
         when(notificationService.sendToRecipients(any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
         assertThat(row.getAttempts()).isEqualTo(3);
@@ -167,7 +168,7 @@ class BrakNotificationDeliveryServiceTest {
         when(notificationService.sendToRecipients(any(), any(), any(), any()))
                 .thenReturn(new int[]{0, 1});
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.FAILED);
         assertThat(row.getAttempts()).isEqualTo(1);
@@ -187,7 +188,7 @@ class BrakNotificationDeliveryServiceTest {
         when(notificationService.sendToRecipients(any(), any(), any(), any()))
                 .thenReturn(new int[]{0, 1});
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.DEAD);
         assertThat(row.getAttempts()).isEqualTo(5);
@@ -199,7 +200,7 @@ class BrakNotificationDeliveryServiceTest {
         stubContextWithoutRecipients(row);
         when(notificationService.resolveRecipients()).thenReturn(List.of());
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SKIPPED);
         verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
@@ -210,12 +211,12 @@ class BrakNotificationDeliveryServiceTest {
     @Test
     void deliver_missingInstanceMarksSkipped() {
         BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.PENDING, 0);
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID))
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.of(row));
         when(brakEventRepository.findById(EVENT_ID)).thenReturn(Optional.of(brakEvent()));
         when(instanceRepository.findById(INSTANCE_ID)).thenReturn(Optional.empty());
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SKIPPED);
         verify(auditService).logEvent("BrakNotification", EVENT_ID,
@@ -230,7 +231,7 @@ class BrakNotificationDeliveryServiceTest {
                 List.of(BrakNotificationStatus.PENDING, BrakNotificationStatus.FAILED),
                 5, PageRequest.of(0, 20)))
                 .thenReturn(List.of(first, second));
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID))
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.of(first), Optional.of(second));
         when(brakEventRepository.findById(EVENT_ID)).thenReturn(Optional.of(brakEvent()));
         when(instanceRepository.findById(INSTANCE_ID)).thenReturn(Optional.of(instance()));
@@ -256,7 +257,7 @@ class BrakNotificationDeliveryServiceTest {
         BrakNotificationOutbox good = outboxRow(BrakNotificationStatus.PENDING, 0);
         when(outboxRepository.findByStatusInAndAttemptsLessThanOrderByCreatedAtAsc(
                 anyList(), anyInt(), any())).thenReturn(List.of(bad, good));
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID))
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.of(bad), Optional.of(good));
         when(brakEventRepository.findById(EVENT_ID)).thenReturn(Optional.of(brakEvent()));
         when(instanceRepository.findById(INSTANCE_ID)).thenReturn(Optional.of(instance()));
@@ -285,7 +286,11 @@ class BrakNotificationDeliveryServiceTest {
     }
 
     private void stubFullContext(BrakNotificationOutbox row) {
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID))
+        stubFullContext(row, BrakNotificationKind.SINGLE);
+    }
+
+    private void stubFullContext(BrakNotificationOutbox row, BrakNotificationKind kind) {
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, kind))
                 .thenReturn(Optional.of(row));
         when(brakEventRepository.findById(EVENT_ID)).thenReturn(Optional.of(brakEvent()));
         when(instanceRepository.findById(INSTANCE_ID)).thenReturn(Optional.of(instance()));
@@ -294,7 +299,7 @@ class BrakNotificationDeliveryServiceTest {
     }
 
     private void stubContextWithoutRecipients(BrakNotificationOutbox row) {
-        when(outboxRepository.findByBrakEventIdForUpdate(EVENT_ID))
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.of(row));
         when(brakEventRepository.findById(EVENT_ID)).thenReturn(Optional.of(brakEvent()));
         when(instanceRepository.findById(INSTANCE_ID)).thenReturn(Optional.of(instance()));
@@ -381,7 +386,7 @@ class BrakNotificationDeliveryServiceTest {
         when(notificationService.sendToRecipients(any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         ArgumentCaptor<BrakNotificationData> data =
                 ArgumentCaptor.forClass(BrakNotificationData.class);
@@ -396,9 +401,9 @@ class BrakNotificationDeliveryServiceTest {
     @Test
     void deliver_thresholdRowUsesThresholdBuilders() {
         BrakNotificationOutbox row = thresholdRow(BrakNotificationStatus.PENDING, 0);
-        stubFullContext(row);
+        stubFullContext(row, BrakNotificationKind.THRESHOLD);
         when(instanceRepository.findByOrderId(ORDER_ID)).thenReturn(List.of(instance()));
-        when(brakEventRepository.countByOrderId(ORDER_ID)).thenReturn(3L);
+        when(brakEventRepository.countByOrderIdUpTo(eq(ORDER_ID), any())).thenReturn(3L);
         when(brakEventRepository.findByInstanceId(INSTANCE_ID)).thenReturn(List.of(brakEvent()));
         when(userRepository.findById(0L)).thenReturn(Optional.empty());
         when(notificationService.resolveRecipients())
@@ -408,7 +413,7 @@ class BrakNotificationDeliveryServiceTest {
         when(notificationService.sendToRecipients(any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.THRESHOLD);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
         assertThat(row.getAttempts()).isEqualTo(1);
@@ -426,9 +431,9 @@ class BrakNotificationDeliveryServiceTest {
     @Test
     void deliver_thresholdRowWithoutOrderChainDeliversEmptyHistory() {
         BrakNotificationOutbox row = thresholdRow(BrakNotificationStatus.PENDING, 0);
-        stubFullContext(row);
+        stubFullContext(row, BrakNotificationKind.THRESHOLD);
         when(instanceRepository.findByOrderId(ORDER_ID)).thenReturn(List.of());
-        when(brakEventRepository.countByOrderId(ORDER_ID)).thenReturn(3L);
+        when(brakEventRepository.countByOrderIdUpTo(eq(ORDER_ID), any())).thenReturn(3L);
         when(notificationService.resolveRecipients())
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildThresholdSubject(any())).thenReturn("TSUBJ");
@@ -436,7 +441,7 @@ class BrakNotificationDeliveryServiceTest {
         when(notificationService.sendToRecipients(any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
-        service.deliver(EVENT_ID, CONFIRMER_ID);
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.THRESHOLD);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
         ArgumentCaptor<BrakNotificationData> data =

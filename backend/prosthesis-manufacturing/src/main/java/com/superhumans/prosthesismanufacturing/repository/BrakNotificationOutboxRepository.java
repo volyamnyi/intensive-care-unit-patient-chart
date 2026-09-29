@@ -1,5 +1,6 @@
 package com.superhumans.prosthesismanufacturing.repository;
 
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationKind;
 import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
 import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
 import jakarta.persistence.LockModeType;
@@ -18,7 +19,10 @@ import java.util.UUID;
 public interface BrakNotificationOutboxRepository
         extends JpaRepository<BrakNotificationOutbox, UUID> {
 
-    Optional<BrakNotificationOutbox> findByBrakEventId(UUID brakEventId);
+    Optional<BrakNotificationOutbox> findByBrakEventIdAndKind(
+            UUID brakEventId, BrakNotificationKind kind);
+
+    List<BrakNotificationOutbox> findAllByBrakEventId(UUID brakEventId);
 
     /**
      * Row claim for delivery: blocks a concurrent deliverer (eager listener vs
@@ -26,9 +30,11 @@ public interface BrakNotificationOutboxRepository
      * terminal state and skips. Requires an active transaction.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select o from BrakNotificationOutbox o where o.brakEventId = :brakEventId")
-    Optional<BrakNotificationOutbox> findByBrakEventIdForUpdate(
-            @Param("brakEventId") UUID brakEventId);
+    @Query("select o from BrakNotificationOutbox o "
+            + "where o.brakEventId = :brakEventId and o.kind = :kind")
+    Optional<BrakNotificationOutbox> findByBrakEventIdAndKindForUpdate(
+            @Param("brakEventId") UUID brakEventId,
+            @Param("kind") BrakNotificationKind kind);
 
     /**
      * Sweep window: retryable rows, oldest first. Single-instance scheduler;

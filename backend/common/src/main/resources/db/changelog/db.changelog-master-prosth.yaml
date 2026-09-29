@@ -32,3 +32,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/011-brak-threshold-kind.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/012-brak-outbox-event-kind-unique.sql

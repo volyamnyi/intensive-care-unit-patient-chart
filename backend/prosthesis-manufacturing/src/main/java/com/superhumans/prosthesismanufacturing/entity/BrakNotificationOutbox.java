@@ -13,8 +13,10 @@ import java.util.UUID;
  * Outbox row for one confirmed stage-6 brak email (issue #320, v2).
  *
  * <p>Inserted in the same transaction as the {@code BrakEvent} itself, so a
- * brak can never exist without its queued notification. Exactly one row per
- * brak ({@code UNIQUE(brak_event_id)}), which also makes redelivery idempotent.
+ * brak can never exist without its queued notification. At most one row per
+ * event and kind ({@code UNIQUE(brak_event_id, kind)}), which also makes
+ * redelivery idempotent: a stage-6 brak owns a {@code SINGLE} row, and from
+ * the 3rd brak on it additionally owns a {@code THRESHOLD} row.
  *
  * <p>Epic #322 adds {@link BrakNotificationKind#THRESHOLD} rows: one per
  * triggering brak event whose order chain reached brak count &gt;= 3 (both

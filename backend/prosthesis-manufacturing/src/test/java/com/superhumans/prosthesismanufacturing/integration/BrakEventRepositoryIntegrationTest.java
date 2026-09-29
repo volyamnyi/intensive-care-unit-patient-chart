@@ -83,6 +83,28 @@ class BrakEventRepositoryIntegrationTest {
     }
 
     @Test
+    void countByOrderIdUpTo_countsEventsUpToCutoff() {
+        UUID orderId = newOrder();
+        UUID i1 = newInstance(orderId, FlowInstanceStatus.BRANCHED);
+        UUID i2 = newInstance(orderId, FlowInstanceStatus.BRANCHED);
+        UUID i3 = newInstance(orderId, FlowInstanceStatus.IN_PROGRESS);
+
+        newBrakAt(i1, STAGE_D17, STEP_E0028,
+                java.time.LocalDateTime.of(2026, 9, 26, 10, 5));
+        newBrakAt(i2, STAGE_D17, STEP_E0028,
+                java.time.LocalDateTime.of(2026, 9, 27, 14, 40));
+        newBrakAt(i3, STAGE_D20, STEP_E0032,
+                java.time.LocalDateTime.of(2026, 9, 28, 11, 20));
+
+        assertThat(brakEventRepository.countByOrderIdUpTo(orderId,
+                java.time.LocalDateTime.of(2026, 9, 27, 14, 40))).isEqualTo(2L);
+        assertThat(brakEventRepository.countByOrderIdUpTo(orderId,
+                java.time.LocalDateTime.of(2026, 9, 28, 11, 20))).isEqualTo(3L);
+        assertThat(brakEventRepository.countByOrderIdUpTo(orderId,
+                java.time.LocalDateTime.of(2026, 9, 25, 0, 0))).isZero();
+    }
+
+    @Test
     void outboxRow_defaultsToSingleWithNullOrder() {
         BrakNotificationOutbox row = outboxRepository.save(BrakNotificationOutbox.builder()
                 .brakEventId(UUID.randomUUID())
@@ -147,11 +169,20 @@ class BrakEventRepositoryIntegrationTest {
     }
 
     private void newBrak(UUID instanceId, UUID stageId, UUID stepId) {
-        brakEventRepository.save(BrakEvent.builder()
+        newBrakAt(instanceId, stageId, stepId, null);
+    }
+
+    private void newBrakAt(UUID instanceId, UUID stageId, UUID stepId,
+            java.time.LocalDateTime createdAt) {
+        BrakEvent event = BrakEvent.builder()
                 .instanceId(instanceId)
                 .stageId(stageId)
                 .stepId(stepId)
                 .returnStageId(RETURN_D12)
-                .build());
+                .build();
+        if (createdAt != null) {
+            event.setCreatedAt(createdAt);
+        }
+        brakEventRepository.save(event);
     }
 }

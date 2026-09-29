@@ -33,8 +33,10 @@ import java.util.UUID;
 /**
  * Guaranteed delivery of queued brak emails (issue #320, v2).
  *
- * <p>Each confirmed stage-6 brak owns exactly one outbox row (written in the
- * brak transaction itself). This service delivers it on a schedule until it
+ * <p>Each confirmed stage-6 brak owns a {@code SINGLE} outbox row (written in
+ * the brak transaction itself); braks that push their order chain to count
+ * {@code >= 3} additionally own one {@code THRESHOLD} row per triggering
+ * event (epic #322). This service delivers every row on a schedule until it
  * reaches a terminal state ({@code SENT}, {@code SKIPPED}) or exhausts
  * {@code outbox-max-attempts} ({@code DEAD}, operator attention required).
  * Delivery runs only here (single-instance scheduler, consistent with the other
@@ -83,12 +85,16 @@ public class BrakNotificationDeliveryService {
     private int batchSize;
 
     /**
-     * Delivers one queued notification, claiming its row with a write lock so
-     * a concurrent deliverer (eager listener vs sweep) sees the terminal state
-     * and skips instead of double-sending. Never throws for mail problems.
+     * Delivers one queued notification of the given kind, claiming its row
+     * with a write lock so a concurrent deliverer (eager listener vs sweep)
+     * sees the terminal state and skips instead of double-sending. The kind
+     * is part of the claim key: since epic #322 a stage-6 brak that pushed
+     * its order chain to count {@code >= 3} owns both a {@code SINGLE} and a
+     * {@code THRESHOLD} row for the same event. Never throws for mail
+     * problems.
      */
     @Transactional
-    public void deliver(UUID brakEventId, Long actorId) {
+    public void deliver(UUID brakEventId, Long actorId, BrakNotificationKind kind) {
         if (!enabled) {
             log.info("Brak email delivery disabled, keeping it queued brakEventId={}",
                     brakEventId);
@@ -97,10 +103,10 @@ public class BrakNotificationDeliveryService {
             return;
         }
         BrakNotificationOutbox row = outboxRepository
-                .findByBrakEventIdForUpdate(brakEventId)
+                .findByBrakEventIdAndKindForUpdate(brakEventId, kind)
                 .orElse(null);
         if (row == null) {
-            log.warn("Brak email skipped, no outbox row brakEventId={}", brakEventId);
+            log.warn("Brak email skipped, no outbox row brakEventId={} kind={}", brakEventId, kind);
             return;
         }
         if (row.getStatus() == BrakNotificationStatus.SENT
@@ -157,11 +163,12 @@ public class BrakNotificationDeliveryService {
 
         String subject;
         String body;
-        BrakNotificationKind kind = row.getKind() == null
-                ? BrakNotificationKind.SINGLE : row.getKind();
         if (kind == BrakNotificationKind.THRESHOLD) {
-            long brakCount = brakEventRepository.countByOrderId(instance.getOrderId());
-            List<BrakHistoryEntry> history = collectHistory(instance.getOrderId(), snapshot);
+            java.time.LocalDateTime cutoff = brakEvent.getCreatedAt();
+            long brakCount = cutoff == null
+                    ? brakEventRepository.countByOrderId(instance.getOrderId())
+                    : brakEventRepository.countByOrderIdUpTo(instance.getOrderId(), cutoff);
+            List<BrakHistoryEntry> history = collectHistory(instance.getOrderId(), snapshot, cutoff);
             BrakNotificationData data = new BrakNotificationData(
                     instance.getPatientId(),
                     order == null ? null : order.getOrderNumber(),
@@ -256,7 +263,7 @@ public class BrakNotificationDeliveryService {
                         PageRequest.of(0, batchSize));
         for (BrakNotificationOutbox row : due) {
             try {
-                deliver(row.getBrakEventId(), row.getCreatedBy());
+                deliver(row.getBrakEventId(), row.getCreatedBy(), row.getKind());
             } catch (RuntimeException ex) {
                 log.error("Brak email sweep failed for row brakEventId={}: {}",
                         row.getBrakEventId(), ex.getMessage());
@@ -270,8 +277,13 @@ public class BrakNotificationDeliveryService {
      * resolved from the template snapshot and confirmer names resolved from
      * the users table. Missing values stay {@code null} — the composer
      * renders them as {@code «—»}.
+     *
+     * <p>When {@code cutoff} is non-null, only events confirmed no later than
+     * the triggering event are included, so a delayed delivery never
+     * backfills later braks into an earlier escalation email.
      */
-    private List<BrakHistoryEntry> collectHistory(UUID orderId, SnapshotTemplate snapshot) {
+    private List<BrakHistoryEntry> collectHistory(UUID orderId, SnapshotTemplate snapshot,
+            java.time.LocalDateTime cutoff) {
         List<FlowInstance> chain = new ArrayList<>(instanceRepository.findByOrderId(orderId));
         chain.sort(Comparator.comparing(FlowInstance::getCreatedAt,
                 Comparator.nullsLast(Comparator.naturalOrder())));
@@ -282,6 +294,10 @@ public class BrakNotificationDeliveryService {
             events.sort(Comparator.comparing(BrakEvent::getCreatedAt,
                     Comparator.nullsLast(Comparator.naturalOrder())));
             for (BrakEvent event : events) {
+                if (cutoff != null && event.getCreatedAt() != null
+                        && event.getCreatedAt().isAfter(cutoff)) {
+                    continue;
+                }
                 User eventConfirmer = event.getCreatedBy() == null ? null
                         : userRepository.findById(event.getCreatedBy()).orElse(null);
                 history.add(new BrakHistoryEntry(

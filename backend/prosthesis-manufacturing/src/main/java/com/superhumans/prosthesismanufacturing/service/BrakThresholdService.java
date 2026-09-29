@@ -23,9 +23,9 @@ import java.util.UUID;
  * path as the per-brak {@code SINGLE} rows from issue #320.
  *
  * <p>Idempotency: exactly one {@code THRESHOLD} row per triggering brak
- * event, enforced by {@code UNIQUE(brak_event_id)}. A concurrent duplicate
- * enqueue hits the constraint and is swallowed here (logged) so the brak
- * itself is never rolled back because of the notification.
+ * event, enforced by {@code UNIQUE(brak_event_id, kind)}. A concurrent
+ * duplicate enqueue hits the constraint and is swallowed here (logged) so
+ * the brak itself is never rolled back because of the notification.
  */
 @Slf4j
 @Service
