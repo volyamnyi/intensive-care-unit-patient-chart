@@ -22,8 +22,9 @@ import org.springframework.stereotype.Component;
  * java -jar app.jar --spring.profiles.active=migration
  *     --app.drug-interaction.import-file=C:\datasets\drug_interactions_dataset.json
  * </pre>
- * The runner is a no-op when the property is not set, so it coexists with
- * {@link MedicineImportRunner} on the same profile.
+ * The runner is a no-op when the property is not set (the legacy
+ * MedicineList importer was removed; this is now the only runner that can
+ * activate under the {@code migration} profile).
  */
 @Slf4j
 @Component
