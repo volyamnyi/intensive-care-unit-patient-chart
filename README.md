@@ -132,6 +132,7 @@
 - Backend integrates with MIS via a single `MisService` implementation (`MisServiceImpl` → real MIS API through `MisApiClient`; read-only, no mock implementations)
 - Scheduled tasks handle day transitions and escalation checks
 - **Module boundaries are enforced**: backend ArchUnit test (`backend/app/src/test/java/com/superhumans/architecture/ModuleBoundaryTest.java`) restricts the feature modules (`medication-sheet`, `prosthesis-manufacturing`) to a shared platform allowlist; frontend oxlint rules (`frontend/.oxlintrc.json` `no-restricted-imports`) forbid cross-feature imports
+- **Audit v2 is in progress** (#329–#338): phased design and module/action matrix are documented in [`docs/Audit-Improvement-Plan.md`](docs/Audit-Improvement-Plan.md); implementation starts only by explicit owner instruction
 - **Prosthetics Manufacturing** is a separate backend module (`prosthesis-manufacturing`) with its own entities, services, and REST endpoints under `/api/prosthesis-manufacturing`, with local mirror tables that take patient/order demographics from MIS
 
 ---

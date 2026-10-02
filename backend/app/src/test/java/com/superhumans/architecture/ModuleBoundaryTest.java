@@ -61,6 +61,7 @@ class ModuleBoundaryTest {
         "com.superhumans.entity.core..",
         "com.superhumans.repository.core..",
         "com.superhumans.exception..",
+        "com.superhumans.audit..",
         "com.superhumans.mis..",
         "com.superhumans.util..",
         "java..",

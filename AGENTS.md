@@ -265,11 +265,13 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 **Backend — ArchUnit** (`app/src/test/java/com/superhumans/architecture/ModuleBoundaryTest.java`, runs in `backend-test`): the feature namespaces `com.superhumans.medicationsheet..` and `com.superhumans.prosthesismanufacturing..` may depend ONLY on:
 - their own namespace,
-- the shared platform allowlist: `entity.base`, `entity.core`, `repository.core`, `exception`, `mis`, `util` (com.superhumans),
+- the shared platform allowlist: `audit`, `entity.base`, `entity.core`, `repository.core`, `exception`, `mis`, `util` (com.superhumans),
 - exact classes `AuditService`, `PermissionService`, `SpringContext`,
 - third-party runtime packages (java/jakarta/lombok/org.springframework/org.mapstruct/org.hibernate/org.slf4j/com.fasterxml.jackson/com.itextpdf/io.swagger).
 
 Everything else under `com.superhumans` — the ICU domain root packages (`controller`, `service`, `dto`, `entity`, `mapper`, `repository`) and `com.superhumans.icu.*` — is off-limits to features. Features must not depend on each other, and platform code must not depend on feature packages. The ICU feature is NOT subject to the allowlist: it lives in the platform packages by design (episodes, clinical days, orders, notes, scales, PDF, audit).
+
+**Audit v2 (implementation in progress, epic #329):** the shared event contract and atomic action catalog live in `com.superhumans.audit..`; feature modules may use this package, but may not import another feature's outbox/entity/repository. Full phased scope and action matrix: `docs/Audit-Improvement-Plan.md`.
 
 **Frontend — oxlint** (`frontend/.oxlintrc.json` `overrides` with `no-restricted-imports`, enforced by CI `format-check` via `npm run lint`): `pages/prescription` → forbid `components/icu` + `components/monitoring`; `pages/prosthetics` → forbid `components/icu` + `components/prescription`; `components/icu` → forbid `components/prescription` + `components/monitoring`; `components/prescription` → forbid `components/icu` + `components/monitoring`; `components/common` → forbid all feature components (`icu`, `monitoring`, `prescription`, `prosthetics`). Patterns are regex-based and match both relative specifiers and the `@/` alias form; shared code (api/, types/, lib/, utils/, ui/, navigation/) is importable from everywhere. `src/prosthetics/` is a fully isolated feature root (own API client, types, context).
 
