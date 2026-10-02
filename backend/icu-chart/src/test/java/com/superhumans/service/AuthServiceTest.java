@@ -41,6 +41,9 @@ class AuthServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
+    @Mock
     private ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
 
     @InjectMocks
@@ -162,5 +165,61 @@ class AuthServiceTest {
         authService.logout(userId, "DOCTOR", "10.0.0.1");
 
         verify(auditService).logAuth(eq("LOGOUT"), eq(userId), eq("DOCTOR"), eq("10.0.0.1"), any());
+    }
+
+    @Test
+    void login_withValidCredentials_recordsCanonicalLoginEvent() {
+        LoginRequest req = new LoginRequest("doctor1", "password123");
+
+        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("password123", "encodedPass")).thenReturn(true);
+
+        authService.login(req, "10.0.0.1");
+
+        var captor = org.mockito.ArgumentCaptor
+                .forClass(com.superhumans.audit.AuditEvent.class);
+        verify(auditEventRecorder).record(captor.capture());
+        assertThat(captor.getValue().action()).isEqualTo("platform.auth.session.login");
+        assertThat(captor.getValue().outcome())
+                .isEqualTo(com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS);
+        assertThat(captor.getValue().actor().id()).isEqualTo(userId.toString());
+    }
+
+    @Test
+    void login_withWrongPassword_recordsFailedEvent() {
+        LoginRequest req = new LoginRequest("doctor1", "wrongpass");
+
+        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("wrongpass", "encodedPass")).thenReturn(false);
+
+        authService.login(req, "10.0.0.1");
+
+        var captor = org.mockito.ArgumentCaptor
+                .forClass(com.superhumans.audit.AuditEvent.class);
+        verify(auditEventRecorder).record(captor.capture());
+        assertThat(captor.getValue().action()).isEqualTo("platform.auth.session.login.failed");
+        assertThat(captor.getValue().outcome())
+                .isEqualTo(com.superhumans.audit.AuditEvent.AuditOutcome.FAILURE);
+    }
+
+    @Test
+    void login_recordingFailureNeverBreaksAuthentication() {
+        LoginRequest req = new LoginRequest("doctor1", "password123");
+
+        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches("password123", "encodedPass")).thenReturn(true);
+        com.superhumans.service.CoreAuditEventWriter failingWriter =
+                org.mockito.Mockito.mock(com.superhumans.service.CoreAuditEventWriter.class);
+        org.mockito.Mockito.doThrow(new RuntimeException("store down"))
+                .when(failingWriter).append(any());
+        AuthService resilient = new AuthService(userRepository, passwordEncoder, auditService,
+                new com.superhumans.audit.AuditEventRecorder(
+                        new com.superhumans.audit.AuditEventFactory(), failingWriter),
+                ldapAuthServiceProvider);
+
+        ResponseEntity<LoginResponse> response = resilient.login(req, "10.0.0.1");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getLogin()).isEqualTo("doctor1");
     }
 }

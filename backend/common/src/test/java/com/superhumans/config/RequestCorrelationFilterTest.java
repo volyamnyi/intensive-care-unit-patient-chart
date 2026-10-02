@@ -12,7 +12,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class RequestCorrelationFilterTest {
 
-    private final RequestCorrelationFilter filter = new RequestCorrelationFilter();
+    private final RequestCorrelationFilter filter =
+            new RequestCorrelationFilter(mockProvider(new com.superhumans.audit.AuditClientIpResolver("")));
+
+    @SuppressWarnings("unchecked")
+    private static org.springframework.beans.factory.ObjectProvider<
+            com.superhumans.audit.AuditClientIpResolver> mockProvider(
+            com.superhumans.audit.AuditClientIpResolver resolver) {
+        org.springframework.beans.factory.ObjectProvider<
+                com.superhumans.audit.AuditClientIpResolver> provider =
+                org.mockito.Mockito.mock(org.springframework.beans.factory.ObjectProvider.class);
+        org.mockito.Mockito.when(provider.getIfAvailable()).thenReturn(resolver);
+        return provider;
+    }
 
     @Test
     void assignsRequestIdAndPropagatesValidUserActionIdWithoutTrustingClientRequestId() throws Exception {

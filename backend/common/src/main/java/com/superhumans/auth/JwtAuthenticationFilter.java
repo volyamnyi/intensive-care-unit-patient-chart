@@ -2,6 +2,12 @@ package com.superhumans.auth;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditClientIpResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditEventRecorder;
 import com.superhumans.repository.core.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,6 +32,8 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     JwtTokenProvider jwtTokenProvider;
+    ObjectProvider<AuditEventRecorder> auditEventRecorderProvider;
+    ObjectProvider<AuditClientIpResolver> clientIpResolverProvider;
     ObjectProvider<UserRepository> userRepositoryProvider;
     ObjectProvider<TokenRevocationService> tokenRevocationServiceProvider;
 
@@ -46,6 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 var currentUser = userId == null ? null : userRepository.findById(userId).orElse(null);
                 if (currentUser == null || Boolean.TRUE.equals(currentUser.getDeleted())
                         || !currentUser.getRole().name().equals(role)) {
+                    recordTokenRejected(request);
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -55,8 +64,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     List.of(new SimpleGrantedAuthority("ROLE_" + role)));
             SecurityContextHolder.getContext().setAuthentication(auth);
 
+        } else if (token != null) {
+            recordTokenRejected(request);
         }
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Records presenting an invalid, revoked or stale token. Only non-GET requests are
+     * recorded to avoid a write per idle-polling request with an expired session; the
+     * outcome is always DENIED and the token value itself is never stored.
+     */
+    private void recordTokenRejected(HttpServletRequest request) {
+        String method = request.getMethod();
+        if ("GET".equals(method) || "HEAD".equals(method) || "OPTIONS".equals(method)) {
+            return;
+        }
+        AuditEventRecorder recorder = auditEventRecorderProvider.getIfAvailable();
+        if (recorder == null) {
+            return;
+        }
+        AuditClientIpResolver resolver = clientIpResolverProvider.getIfAvailable();
+        recorder.record(AuditEvent.builder()
+                .actor(AuditActorResolver.unknown())
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("token")
+                .action("platform.auth.token.rejected")
+                .actionType(ActionType.ACCESS_DENIED)
+                .outcome(AuditEvent.AuditOutcome.DENIED)
+                .errorCode("AUTH_TOKEN_REJECTED")
+                .ipAddress(resolver == null ? null : resolver.resolveClientIp(request))
+                .userAgentClass(AuditClientIpResolver.reduceUserAgent(request.getHeader("User-Agent")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     private String resolveToken(HttpServletRequest request) {

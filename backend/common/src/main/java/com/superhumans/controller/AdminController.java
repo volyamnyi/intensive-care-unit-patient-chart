@@ -1,5 +1,11 @@
 package com.superhumans.controller;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditEventRecorder;
 import com.superhumans.dto.PermissionMatrixResponse;
 import com.superhumans.dto.PermissionResponse;
 import com.superhumans.dto.RolePermissionUpdateRequest;
@@ -32,6 +38,7 @@ public class AdminController {
 
     UserRepository userRepository;
     AuditService auditService;
+    AuditEventRecorder auditEventRecorder;
     PermissionService permissionService;
 
     @GetMapping("/users")
@@ -52,10 +59,25 @@ public class AdminController {
                                             Authentication auth) {
         UserRole newRole = parseRole(body == null ? null : body.get("role"));
         return userRepository.findById(id).map(user -> {
+            UserRole previousRole = user.getRole();
             user.setRole(newRole);
             user.setUpdatedBy(getUserId(auth));
             userRepository.save(user);
             auditService.logAction("User", null, "ADMIN_UPDATE_ROLE:" + newRole.name(), getUserId(auth));
+            auditEventRecorder.record(AuditEvent.builder()
+                    .actor(AuditActorResolver.fromAuthentication(auth))
+                    .eventClass(EventClass.SECURITY)
+                    .module("platform")
+                    .functionalArea("users")
+                    .action("platform.user.role.change")
+                    .actionType(ActionType.ROLE_CHANGE)
+                    .target(new AuditEvent.AuditTarget("User", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(new AuditEvent.AuditChange(
+                            "role", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER,
+                            previousRole == null ? null : previousRole.name(), newRole.name())))
+                    .source(AuditEvent.AuditSource.ADMIN_TOOL)
+                    .build());
             return ResponseEntity.ok(user);
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -72,6 +94,19 @@ public class AdminController {
             user.setUpdatedBy(currentUserId);
             userRepository.save(user);
             auditService.logAction("User", null, "ADMIN_DELETE_USER:soft-deleted", currentUserId);
+            auditEventRecorder.record(AuditEvent.builder()
+                    .actor(AuditActorResolver.fromAuthentication(auth))
+                    .eventClass(EventClass.SECURITY)
+                    .module("platform")
+                    .functionalArea("users")
+                    .action("platform.user.disable")
+                    .actionType(ActionType.DISABLE)
+                    .target(new AuditEvent.AuditTarget("User", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(new AuditEvent.AuditChange(
+                            "isDeleted", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER, false, true)))
+                    .source(AuditEvent.AuditSource.ADMIN_TOOL)
+                    .build());
             return ResponseEntity.status(HttpStatus.NO_CONTENT).<Void>build();
         }).orElse(ResponseEntity.notFound().build());
     }

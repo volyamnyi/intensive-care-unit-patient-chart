@@ -55,6 +55,9 @@ class AuthServiceLdapTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
+    @Mock
     private ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
 
     @Mock
@@ -112,6 +115,11 @@ class AuthServiceLdapTest {
         assertThat(fresh.getPhone()).isEqualTo("380500000000");
         assertThat(fresh.getSpecialityName()).isEqualTo("Doctor");
         verify(auditService).logAuth(eq("LOGIN"), eq(99L), eq("GUEST"), eq("10.0.0.1"), any());
+        var captor2 = ArgumentCaptor.forClass(com.superhumans.audit.AuditEvent.class);
+        verify(auditEventRecorder, org.mockito.Mockito.atLeastOnce()).record(captor2.capture());
+        assertThat(captor2.getAllValues()).anyMatch(event ->
+                "platform.auth.directory.provision".equals(event.action())
+                        && event.outcome() == com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS);
     }
 
     @Test

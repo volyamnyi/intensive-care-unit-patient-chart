@@ -42,6 +42,12 @@ class AuditControllerTest {
     private AuditService auditService;
 
     @MockitoBean
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
+    @MockitoBean
+    private com.superhumans.audit.AuditClientIpResolver clientIpResolver;
+
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @MockitoBean

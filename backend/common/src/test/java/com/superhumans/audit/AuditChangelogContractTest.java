@@ -16,6 +16,7 @@ class AuditChangelogContractTest {
 
     private static final List<ExpectedChangeset> EXPECTED = List.of(
             new ExpectedChangeset("db.changelog-master-core.yaml", "009-audit-events.sql", "9", "split-core"),
+            new ExpectedChangeset("db.changelog-master-core.yaml", "010-audit-security-access.sql", "10", "split-core"),
             new ExpectedChangeset("db.changelog-master-icu.yaml", "079-audit-outbox.sql", "79", "split-icu"),
             new ExpectedChangeset("db.changelog-master-med.yaml", "027-audit-outbox.sql", "27", "split-med"),
             new ExpectedChangeset("db.changelog-master-prosth.yaml", "033-audit-outbox.sql", "33", "split-prosth"));
@@ -30,7 +31,8 @@ class AuditChangelogContractTest {
             DatabaseChangeLog changeLog = parserFactory.getParser(path, accessor)
                     .parse(path, new ChangeLogParameters(), accessor);
             List<ChangeSet> matches = changeLog.getChangeSets().stream()
-                    .filter(changeSet -> changeSet.getFilePath().endsWith(expected.sqlFile()))
+                    .filter(changeSet -> changeSet.getFilePath().endsWith(expected.sqlFile())
+                            && changeSet.getId().equals(expected.changesetId()))
                     .toList();
 
             assertThat(matches)

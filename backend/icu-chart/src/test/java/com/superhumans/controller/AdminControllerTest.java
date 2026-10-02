@@ -39,6 +39,9 @@ class AdminControllerTest {
     private AuditService auditService;
 
     @MockitoBean
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
+    @MockitoBean
     private PermissionService permissionService;
 
     @MockitoBean

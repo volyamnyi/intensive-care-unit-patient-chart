@@ -29,10 +29,16 @@ public final class AuditRequestContext {
         private final UUID correlationId;
         private final long startedAtNanos;
         private final String httpMethod;
+        private final String clientIp;
         private volatile String routeTemplate;
 
         public Context(UUID requestId, UUID userActionId, UUID correlationId,
                        long startedAtNanos, String httpMethod) {
+            this(requestId, userActionId, correlationId, startedAtNanos, httpMethod, null);
+        }
+
+        public Context(UUID requestId, UUID userActionId, UUID correlationId,
+                       long startedAtNanos, String httpMethod, String clientIp) {
             if (requestId == null || correlationId == null) {
                 throw new IllegalArgumentException("Request and correlation IDs are required");
             }
@@ -41,6 +47,7 @@ public final class AuditRequestContext {
             this.correlationId = correlationId;
             this.startedAtNanos = startedAtNanos;
             this.httpMethod = httpMethod;
+            this.clientIp = clientIp;
         }
 
         public UUID requestId() {
@@ -61,6 +68,10 @@ public final class AuditRequestContext {
 
         public String httpMethod() {
             return httpMethod;
+        }
+
+        public String clientIp() {
+            return clientIp;
         }
 
         public String routeTemplate() {

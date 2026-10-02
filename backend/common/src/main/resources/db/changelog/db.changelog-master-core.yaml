@@ -26,3 +26,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/009-audit-events.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/010-audit-security-access.sql

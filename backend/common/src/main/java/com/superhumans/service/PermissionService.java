@@ -1,5 +1,11 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditEventRecorder;
 import com.superhumans.entity.core.Permission;
 import com.superhumans.entity.core.RolePermission;
 import com.superhumans.entity.core.UserRole;
@@ -40,6 +46,7 @@ public class PermissionService {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final AuditService auditService;
+    private final AuditEventRecorder auditEventRecorder;
 
     private volatile Map<UserRole, Set<String>> grantsCache;
 
@@ -107,6 +114,21 @@ public class PermissionService {
         auditService.logAction("RolePermission", null,
                 "PERMISSION_" + (granted ? "GRANT" : "REVOKE") + ":" + role + ":" + permissionCode,
                 currentUserId());
+        auditEventRecorder.record(AuditEvent.builder()
+                .actor(AuditActorResolver.fromAuthentication(
+                        SecurityContextHolder.getContext().getAuthentication()))
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("rbac")
+                .action(granted ? "platform.rbac.permission.grant" : "platform.rbac.permission.revoke")
+                .actionType(granted ? ActionType.PERMISSION_GRANT : ActionType.PERMISSION_REVOKE)
+                .target(new AuditEvent.AuditTarget(
+                        "RolePermission", role.name() + ":" + permissionCode, null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditEvent.AuditChange.fieldOnly(
+                        "permissionCode", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER)))
+                .source(AuditEvent.AuditSource.ADMIN_TOOL)
+                .build());
         invalidate();
     }
 

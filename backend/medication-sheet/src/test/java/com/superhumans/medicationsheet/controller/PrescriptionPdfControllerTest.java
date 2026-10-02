@@ -81,6 +81,12 @@ class PrescriptionPdfControllerTest {
     @MockitoBean
     private AuditService auditService;
 
+    @MockitoBean
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
+    @MockitoBean
+    private com.superhumans.audit.AuditClientIpResolver clientIpResolver;
+
     @MockitoBean(name = "permissionService")
     private PermissionService permissionService;
 

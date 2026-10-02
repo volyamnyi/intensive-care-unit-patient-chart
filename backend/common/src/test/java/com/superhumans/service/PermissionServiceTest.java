@@ -39,6 +39,9 @@ class PermissionServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
     private PermissionService permissionService;
 
     /** Backing store of the mock repository; grows/shrinks on save/delete. */
@@ -46,7 +49,8 @@ class PermissionServiceTest {
 
     @BeforeEach
     void setUp() {
-        permissionService = new PermissionService(permissionRepository, rolePermissionRepository, auditService);
+        permissionService = new PermissionService(permissionRepository, rolePermissionRepository,
+                auditService, auditEventRecorder);
         lenient().when(rolePermissionRepository.count()).thenAnswer(inv -> (long) grants.size());
         lenient().when(rolePermissionRepository.findAll()).thenAnswer(inv -> new ArrayList<>(grants));
         lenient().when(rolePermissionRepository.save(any(RolePermission.class))).thenAnswer(inv -> {
@@ -148,6 +152,12 @@ class PermissionServiceTest {
         verify(auditService).logAction(eq("RolePermission"), eq(null), actionCaptor.capture(), eq(1L));
         assertThat(actionCaptor.getValue())
                 .isEqualTo("PERMISSION_GRANT:NURSE:EPISODE_CREATE");
+        ArgumentCaptor<com.superhumans.audit.AuditEvent> eventCaptor =
+                ArgumentCaptor.forClass(com.superhumans.audit.AuditEvent.class);
+        verify(auditEventRecorder).record(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().action()).isEqualTo("platform.rbac.permission.grant");
+        assertThat(eventCaptor.getValue().outcome())
+                .isEqualTo(com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS);
         // Cache invalidated: fresh read reflects the grant.
         assertThat(permissionService.hasForRole(UserRole.NURSE, PermissionCatalog.EPISODE_CREATE)).isTrue();
     }
@@ -207,9 +217,10 @@ class PermissionServiceTest {
 
     @Test
     void catalog_containsAllDefinedCodes() {
-        assertThat(permissionService.catalog()).hasSize(28);
+        assertThat(permissionService.catalog()).hasSize(29);
         assertThat(PermissionCatalog.allCodes())
                 .contains(PermissionCatalog.EPISODE_CREATE, PermissionCatalog.AUDIT_ACCESS,
+                        PermissionCatalog.AUDIT_SECURITY_ACCESS,
                         PermissionCatalog.MODULE_ICU_ACCESS,
                         PermissionCatalog.MODULE_MEDICATION_ACCESS,
                         PermissionCatalog.MODULE_PROSTHETICS_ACCESS,
@@ -219,6 +230,16 @@ class PermissionServiceTest {
                         PermissionCatalog.PROSTHETICS_PRODUCTION_VIEW_ALL,
                         PermissionCatalog.PROSTHETICS_PRODUCTION_PATIENT_VIEW,
                         PermissionCatalog.PROSTHETICS_PRODUCTION_QUALITY_VIEW);
+    }
+
+    @Test
+    void defaultMatrix_grantsSecurityAuditAccessToAuditorOnly() {
+        Map<UserRole, Set<String>> matrix = PermissionCatalog.defaultMatrix();
+
+        assertThat(matrix.get(UserRole.AUDITOR)).contains(PermissionCatalog.AUDIT_SECURITY_ACCESS);
+        assertThat(matrix.get(UserRole.ADMINISTRATOR))
+                .contains(PermissionCatalog.AUDIT_ACCESS)
+                .doesNotContain(PermissionCatalog.AUDIT_SECURITY_ACCESS);
     }
 
     @Test

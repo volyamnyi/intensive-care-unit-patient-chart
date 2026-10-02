@@ -36,6 +36,7 @@ public final class PermissionCatalog {
 
     // Administration
     public static final String AUDIT_ACCESS = "AUDIT_ACCESS";
+    public static final String AUDIT_SECURITY_ACCESS = "AUDIT_SECURITY_ACCESS";
     public static final String AUDITOR_VIEW = "AUDITOR_VIEW";
 
     // Prosthetics manufacturing
@@ -94,6 +95,8 @@ public final class PermissionCatalog {
                     "Створення результатів клінічних шкал CAM-ICU, Браден, RASS", CLINICAL),
             new Def(AUDIT_ACCESS, "Журнал аудиту",
                     "Перегляд журналу аудиту", ADMINISTRATION),
+            new Def(AUDIT_SECURITY_ACCESS, "Журнал безпекових подій",
+                    "Перегляд безпекових подій аудиту (окремо від бізнес-журналу)", ADMINISTRATION),
             new Def(AUDITOR_VIEW, "Read-only доступ аудитора",
                     "Службовий read-only доступ ролі AUDITOR", ADMINISTRATION),
             new Def(PROSTHETICS_DASHBOARD, "Дашборд протезування",
@@ -149,7 +152,7 @@ public final class PermissionCatalog {
             Map.entry(UserRole.ADMINISTRATOR, Set.of(
                     PATIENT_VIEW, AUDIT_ACCESS, MODULE_ADMIN_ACCESS)),
             Map.entry(UserRole.AUDITOR, Set.of(
-                    AUDITOR_VIEW, MODULE_ADMIN_ACCESS)),
+                    AUDIT_SECURITY_ACCESS, AUDITOR_VIEW, MODULE_ADMIN_ACCESS)),
             Map.entry(UserRole.ADJACENT_SPECIALIST, Set.of(
                     PATIENT_VIEW)),
             Map.entry(UserRole.PROSTHETIST, Set.of(

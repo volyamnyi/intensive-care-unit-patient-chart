@@ -2,6 +2,11 @@ package com.superhumans.service;
 
 import com.superhumans.auth.LdapAuthService;
 import com.superhumans.auth.LdapUserProfile;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditEventRecorder;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.entity.core.AuthProvider;
@@ -22,6 +27,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -38,6 +44,7 @@ public class AuthService {
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
     AuditService auditService;
+    AuditEventRecorder auditEventRecorder;
     ObjectProvider<LdapAuthService> ldapAuthServiceProvider;
     Map<String, LoginAttempt> loginAttempts = new ConcurrentHashMap<>();
 
@@ -51,6 +58,18 @@ public class AuthService {
         if (!attempt.isAllowed()) {
             auditService.logAuth("LOGIN_BLOCKED", null, null, ipAddress,
                     "Login temporarily blocked for login: " + req.getLogin());
+            auditEventRecorder.record(AuditEvent.builder()
+                    .actor(attemptedLoginActor(req.getLogin()))
+                    .eventClass(EventClass.SECURITY)
+                    .module("platform")
+                    .functionalArea("session")
+                    .action("platform.auth.session.login.blocked")
+                    .actionType(ActionType.AUTHENTICATE)
+                    .outcome(AuditEvent.AuditOutcome.DENIED)
+                    .errorCode("AUTH_RATE_LIMITED")
+                    .ipAddress(ipAddress)
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(null);
         }
 
@@ -77,6 +96,26 @@ public class AuthService {
 
     public void logout(Long userId, String userRole, String ipAddress) {
         auditService.logAuth("LOGOUT", userId, userRole, ipAddress, "User logged out");
+        auditEventRecorder.record(AuditEvent.builder()
+                .actor(new AuditEvent.AuditActor(
+                        AuditEvent.ActorType.USER,
+                        userId == null ? null : userId.toString(),
+                        null,
+                        null,
+                        userRole == null ? Set.of() : Set.of(userRole),
+                        null,
+                        null))
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("session")
+                .action("platform.auth.session.logout")
+                .actionType(ActionType.LOGOUT)
+                .target(userId == null ? null
+                        : new AuditEvent.AuditTarget("User", userId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .ipAddress(ipAddress)
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     private LdapAuthService ldapService() {
@@ -119,7 +158,12 @@ public class AuthService {
     private User provisionLdapUser(LdapUserProfile profile) {
         User existing = userRepository.findByLogin(profile.login()).orElse(null);
         if (existing != null) {
-            return existing.getAuthProvider() == AuthProvider.LDAP ? existing : null;
+            if (existing.getAuthProvider() == AuthProvider.LDAP) {
+                return existing;
+            }
+            auditEventRecorder.record(provisionEvent(profile, null, AuditEvent.AuditOutcome.FAILURE,
+                    "AUTH_LOCAL_COLLISION"));
+            return null;
         }
         User fresh = User.builder()
                 .login(profile.login())
@@ -132,11 +176,46 @@ public class AuthService {
                 .specialityName(profile.specialityName())
                 .build();
         try {
-            return userRepository.save(fresh);
+            User saved = userRepository.save(fresh);
+            auditEventRecorder.record(provisionEvent(profile, saved, AuditEvent.AuditOutcome.SUCCESS, null));
+            return saved;
         } catch (DataIntegrityViolationException e) {
             // Concurrent first login won the race: reuse the winning row.
-            return userRepository.findByLogin(profile.login()).orElseThrow(() -> e);
+            User winner = userRepository.findByLogin(profile.login()).orElseThrow(() -> e);
+            auditEventRecorder.record(provisionEvent(profile, winner, AuditEvent.AuditOutcome.SUCCESS, null));
+            return winner;
         }
+    }
+
+    private AuditEvent provisionEvent(LdapUserProfile profile, User user,
+            AuditEvent.AuditOutcome outcome, String errorCode) {
+        return AuditEvent.builder()
+                .actor(new AuditEvent.AuditActor(
+                        AuditEvent.ActorType.SYSTEM,
+                        "ldap-provisioning",
+                        null,
+                        null,
+                        Set.of(),
+                        new AuditEvent.AuditActor(
+                                AuditEvent.ActorType.USER, null, profile.login(), profile.fullName(),
+                                Set.of(), null, null),
+                        null))
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("directory")
+                .action("platform.auth.directory.provision")
+                .actionType(ActionType.PROVISION)
+                .target(user == null || user.getId() == null ? null
+                        : new AuditEvent.AuditTarget("User", user.getId().toString(), null))
+                .outcome(outcome)
+                .errorCode(errorCode)
+                .source(AuditEvent.AuditSource.INTEGRATION)
+                .build();
+    }
+
+    private static AuditEvent.AuditActor attemptedLoginActor(String login) {
+        return new AuditEvent.AuditActor(
+                AuditEvent.ActorType.USER, null, login, null, Set.of(), null, null);
     }
 
     private ResponseEntity<LoginResponse> loginFailed(LoginRequest req, String ipAddress,
@@ -147,6 +226,20 @@ public class AuthService {
                 user == null ? null : user.getRole().name(),
                 ipAddress,
                 "Failed login attempt for login: " + req.getLogin());
+        auditEventRecorder.record(AuditEvent.builder()
+                .actor(user == null ? attemptedLoginActor(req.getLogin()) : AuditActorResolver.fromUser(user))
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("session")
+                .action("platform.auth.session.login.failed")
+                .actionType(ActionType.AUTHENTICATE)
+                .target(user == null || user.getId() == null ? null
+                        : new AuditEvent.AuditTarget("User", user.getId().toString(), null))
+                .outcome(AuditEvent.AuditOutcome.FAILURE)
+                .errorCode("AUTH_INVALID_CREDENTIALS")
+                .ipAddress(ipAddress)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
     }
 
@@ -155,6 +248,19 @@ public class AuthService {
         loginAttempts.remove(attemptKey);
         auditService.logAuth("LOGIN", user.getId(), user.getRole().name(), ipAddress,
                 "Successful login for login: " + user.getLogin());
+        auditEventRecorder.record(AuditEvent.builder()
+                .actor(AuditActorResolver.fromUser(user))
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("session")
+                .action("platform.auth.session.login")
+                .actionType(ActionType.AUTHENTICATE)
+                .target(user.getId() == null ? null
+                        : new AuditEvent.AuditTarget("User", user.getId().toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .ipAddress(ipAddress)
+                .source(AuditEvent.AuditSource.API)
+                .build());
 
         return ResponseEntity.ok(LoginResponse.builder()
                 .userId(user.getId())

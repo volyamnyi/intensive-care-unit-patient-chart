@@ -286,7 +286,7 @@ Workflow: `TRANSITION SIGN REOPEN CLOSE CANCEL ASSIGN REASSIGN COMPLETE FAIL PAU
 Легенда. `Flags`: `M` mandatory · `Rec` recommended · `T` technical · `S` security ·
 `R` read · `W` write · `D` destructive · `A` automated.
 Клас події — §C (`BUSINESS|USER_ACTIVITY|SECURITY`).
-Catalog v1: 118 атомарних кодів (`platform` 18, `icu` 42, `medication` 26, `prosthetics` 32),
+Catalog v1: 119 атомарних кодів (`platform` 19, `icu` 42, `medication` 26, `prosthetics` 32),
 зафіксованих у `AuditActionCatalog`; underscore дозволений у сегментах коду.
 `Tests`: ID з префіксом `PROP-` — **запропоновані** (не існуючі); мапінг:
 `PROP-IT-*` → `backend/*/src/test/...` (інтеграційні),
@@ -315,6 +315,7 @@ Catalog v1: 118 атомарних кодів (`platform` 18, `icu` 42, `medicat
 | P16 | `platform.mis.document.view` | Переглянути документ MIS | MIS document | `DOCUMENT_VIEW` / M,R / USER_ACTIVITY | document ID, availability outcome | USER; child SERVICE→INTEGRATION | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-05 | загальний `GET_PATIENT_DOCUMENTS` |
 | P17 | `platform.mis.catalog.view` | Пошук у каталозі ліків | Medicine catalog | `CATALOG_VIEW` / Rec,R / USER_ACTIVITY | scope/count | USER | SUCCESS | M2 | PROP-IT-PLAT-05 | загальний `SEARCH_MEDICINE_CATALOG` |
 | P18 | `platform.bootstrap.seed` | Стартовий сід users/roles/data | Seed scope | `BOOTSTRAP` / Rec,W,A / BUSINESS | версія, counts; без env values | SYSTEM | SUCCESS/PARTIAL/FAILURE | M1 | PROP-IT-SYS-01 | лише SLF4J |
+| P19 | `platform.auth.access.denied` | Відмова в доступі (403) | Захищений ресурс | `ACCESS_DENIED` / M,S,W / SECURITY | route, actor, ролі | USER | DENIED | M0 | PROP-SEC-04 | немає структурованої події |
 
 ### E.1 ICU Chart (I01–I42)
 

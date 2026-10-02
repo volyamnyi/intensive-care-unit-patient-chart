@@ -48,6 +48,12 @@ class SecurityConfigSslTest {
     private AuditService auditService;
 
     @MockitoBean
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
+    @MockitoBean
+    private com.superhumans.audit.AuditClientIpResolver clientIpResolver;
+
+    @MockitoBean
     private UserRepository userRepository;
 
     @MockitoBean

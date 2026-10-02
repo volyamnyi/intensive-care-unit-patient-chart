@@ -1,5 +1,6 @@
 package com.superhumans.config;
 
+import com.superhumans.audit.AuditClientIpResolver;
 import com.superhumans.audit.AuditRequestContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -7,8 +8,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -19,11 +22,14 @@ import org.springframework.web.servlet.HandlerMapping;
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@RequiredArgsConstructor
 public class RequestCorrelationFilter extends OncePerRequestFilter {
 
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
     public static final String USER_ACTION_ID_HEADER = "X-User-Action-Id";
     public static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
+
+    private final ObjectProvider<AuditClientIpResolver> clientIpResolverProvider;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -34,7 +40,8 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
         UUID correlationId = userActionId == null ? requestId : userActionId;
         long startedAt = System.nanoTime();
         var context = new AuditRequestContext.Context(
-                requestId, userActionId, correlationId, startedAt, request.getMethod());
+                requestId, userActionId, correlationId, startedAt, request.getMethod(),
+                resolveClientIp(request));
         response.setHeader(REQUEST_ID_HEADER, requestId.toString());
         response.setHeader(CORRELATION_ID_HEADER, correlationId.toString());
         request.setAttribute(AuditRequestContext.REQUEST_ATTRIBUTE, context);
@@ -63,6 +70,11 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
                 MDC.remove("requestId");
             }
         }
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        AuditClientIpResolver resolver = clientIpResolverProvider.getIfAvailable();
+        return resolver == null ? null : resolver.resolveClientIp(request);
     }
 
     private static UUID parseUuid(String value) {

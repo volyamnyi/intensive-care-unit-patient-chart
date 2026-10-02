@@ -17,11 +17,13 @@ public class AuditEventFactory {
         Long durationMs = event.durationMs() == null
                 ? Math.max(0L, (System.nanoTime() - context.startedAtNanos()) / 1_000_000L)
                 : event.durationMs();
+        String ipAddress = event.ipAddress() == null ? context.clientIp() : event.ipAddress();
         return event.toBuilder()
                 .requestId(event.requestId() == null ? context.requestId() : event.requestId())
                 .userActionId(event.userActionId() == null ? context.userActionId() : event.userActionId())
                 .correlationId(event.correlationId() == null ? context.correlationId() : event.correlationId())
                 .httpContext(httpContext)
+                .ipAddress(ipAddress)
                 .durationMs(durationMs)
                 .build();
     }

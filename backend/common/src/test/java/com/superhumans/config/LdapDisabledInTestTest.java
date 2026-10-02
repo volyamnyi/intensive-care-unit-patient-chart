@@ -57,6 +57,11 @@ class LdapDisabledInTestTest {
         AuditService auditService() {
             return mock(AuditService.class);
         }
+
+        @Bean
+        com.superhumans.audit.AuditEventRecorder auditEventRecorder() {
+            return mock(com.superhumans.audit.AuditEventRecorder.class);
+        }
     }
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
