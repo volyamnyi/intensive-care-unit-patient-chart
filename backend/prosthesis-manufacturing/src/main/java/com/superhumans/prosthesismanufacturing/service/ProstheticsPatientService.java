@@ -4,6 +4,13 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.prosthesismanufacturing.dto.ProstheticsPatientResponse;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsPatient;
 import com.superhumans.prosthesismanufacturing.mapper.ProstheticsPatientMapper;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
@@ -40,8 +47,9 @@ public class ProstheticsPatientService {
     MisService misService;
     ProstheticsPatientRepository patientRepository;
     ProstheticsPatientMapper patientMapper;
+    DomainAuditEmitter auditEmitter;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ProstheticsPatientResponse> search(String query) {
         List<PatientDTO> misPatients;
         try {
@@ -57,17 +65,43 @@ public class ProstheticsPatientService {
         for (PatientDTO mis : misPatients) {
             result.add(merge(mis, localPatient(mis.getId())));
         }
+        final int resultCount = result.size();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("candidate")
+                .action("prosthetics.candidate.search")
+                .actionType(ActionType.SEARCH)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("candidateSearch", DataClass.PII)))
+                .affectedRecords(resultCount)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return result;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ProstheticsPatientResponse get(String id) {
         Long misId = parseId(id);
         if (misId != null) {
             try {
                 Optional<PatientDTO> mis = misService.getPatient(misId);
                 if (mis.isPresent()) {
-                    return merge(mis.get(), localPatient(misId));
+                    ProstheticsPatientResponse response = merge(mis.get(), localPatient(misId));
+                    auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                            .actor(AuditActorResolver.fromCurrentContext())
+                            .eventClass(EventClass.USER_ACTIVITY)
+                            .module("prosthetics")
+                            .functionalArea("patient")
+                            .action("prosthetics.patient.record.view")
+                            .actionType(ActionType.VIEW)
+                            .target(new AuditEvent.AuditTarget(
+                                    "ProstheticsPatient", id, null))
+                            .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                            .source(AuditEvent.AuditSource.API)
+                            .build());
+                    return response;
                 }
             } catch (Exception e) {
                 log.warn("MIS patient lookup failed for id={}, falling back to local registry: {}", id, e.getMessage());

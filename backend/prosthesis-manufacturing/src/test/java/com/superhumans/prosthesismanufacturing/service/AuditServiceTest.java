@@ -95,7 +95,7 @@ class AuditServiceTest {
         service = new FlowInstanceService(instanceRepository, templateRepository, orderRepository,
                 executionRepository, resourceUsageRepository,
                 mock(FlowInstanceMapper.class), templateService, failureSnapshotService, pdfService,
-                auditService, parser, new ObjectMapper());
+                auditService, mock(com.superhumans.audit.DomainAuditEmitter.class), parser, new ObjectMapper());
         current = instance();
     }
 

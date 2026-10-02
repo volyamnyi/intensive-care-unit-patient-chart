@@ -10,6 +10,13 @@ import com.superhumans.prosthesismanufacturing.entity.OrderStatus;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsPatient;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.prosthesismanufacturing.mapper.ProstheticsOrderMapper;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
 import com.superhumans.prosthesismanufacturing.repository.ProstheticsPatientRepository;
@@ -43,6 +50,7 @@ public class ProstheticsOrderService {
     MisService misService;
     DocumentUrlAvailability documentUrlAvailability;
     ProstheticsPatientRepository patientRepository;
+    DomainAuditEmitter auditEmitter;
 
     @Transactional(readOnly = true)
     public List<ProstheticsOrderResponse> list(String patientId, String status) {
@@ -131,18 +139,37 @@ public class ProstheticsOrderService {
                     + request.getPatientId());
         }
         String orderNumber = "MIS-" + request.getPatientId() + "-" + request.getDocumentId();
-        return orderRepository.findByOrderNumber(orderNumber)
-                .map(orderMapper::toResponse)
-                .orElseGet(() -> orderMapper.toResponse(orderRepository.save(ProstheticsOrder.builder()
-                        .orderNumber(orderNumber)
-                        .patient(ensureLocalPatient(request.getPatientId(), numericPatientId, match))
-                        .productType(match.getDocumentTemplateId() == 120L
-                                ? ProductType.UPPER_LIMB : ProductType.LOWER_LIMB)
-                        .productCode(match.getProductCode())
-                        .prescriptionDate(match.getOrderDate() == null
-                                ? null : match.getOrderDate().toLocalDate())
-                        .status(OrderStatus.NEW)
-                        .build())));
+        UUID rootId = UUID.randomUUID();
+        try (var ignored = auditEmitter.beginOperation(rootId)) {
+            ProstheticsOrderResponse response = orderRepository.findByOrderNumber(orderNumber)
+                    .map(orderMapper::toResponse)
+                    .orElseGet(() -> orderMapper.toResponse(orderRepository.save(ProstheticsOrder.builder()
+                            .orderNumber(orderNumber)
+                            .patient(ensureLocalPatient(request.getPatientId(), numericPatientId, match))
+                            .productType(match.getDocumentTemplateId() == 120L
+                                    ? ProductType.UPPER_LIMB : ProductType.LOWER_LIMB)
+                            .productCode(match.getProductCode())
+                            .prescriptionDate(match.getOrderDate() == null
+                                    ? null : match.getOrderDate().toLocalDate())
+                            .status(OrderStatus.NEW)
+                            .build())));
+            final UUID provisionedOrderId = response.getId();
+            auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                    .auditId(rootId)
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("prosthetics")
+                    .functionalArea("order")
+                    .action("prosthetics.order.provision")
+                    .actionType(ActionType.ORDER_PROVISION)
+                    .target(new AuditEvent.AuditTarget(
+                            "ProstheticsOrder", provisionedOrderId.toString(), orderNumber))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(AuditChanges.fieldChanged("orderProvision", DataClass.PII)))
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+            return response;
+        }
     }
 
     private ProstheticsPatient ensureLocalPatient(
@@ -188,6 +215,54 @@ public class ProstheticsOrderService {
         } catch (NumberFormatException ex) {
             throw new NotFoundException("Patient id is not numeric: " + patientId);
         }
+    }
+
+    private static Long parsePatientIdAsLong(String patientId) {
+        try {
+            return Long.valueOf(patientId);
+        } catch (NumberFormatException ex) {
+            throw new NotFoundException("Patient id is not numeric: " + patientId);
+        }
+    }
+
+    /**
+     * Resolves the MIS-hosted URL for the order document
+     * ({@code spiDocumentProsthesCheck} → {@code documentUrl}). The client opens
+     * this URL directly — no PDF is proxied or generated by the application
+     * (MIS Data Policy: read-only). Resolving the URL is a document view.
+     */
+    @Transactional
+    public com.superhumans.prosthesismanufacturing.dto.OrderDocumentResponse resolveDocumentUrl(UUID id) {
+        ProstheticsOrder order = orderRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Order not found: " + id));
+        String patientId = order.getPatient() == null ? null : order.getPatient().getId();
+        if (patientId == null) {
+            throw new NotFoundException("Order has no patient: " + id);
+        }
+        Long numericPatientId = parsePatientIdAsLong(patientId);
+        List<DocumentMisDTO> documents = misService.getPatientDocuments(numericPatientId);
+        DocumentMisDTO match = documents.stream()
+                .filter(d -> d.getDocumentUrl() != null && !d.getDocumentUrl().isBlank())
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException(
+                        "Замовлення на протез не знайдено в MIS для пацієнта " + patientId));
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("order-document")
+                .action("prosthetics.order.document.view")
+                .actionType(ActionType.DOCUMENT_VIEW)
+                .target(new AuditEvent.AuditTarget("ProstheticsOrder", id.toString(),
+                        order.getOrderNumber()))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return com.superhumans.prosthesismanufacturing.dto.OrderDocumentResponse.builder()
+                .documentId(match.getDocumentId())
+                .documentTemplateName(match.getDocumentTemplateName())
+                .documentUrl(match.getDocumentUrl())
+                .build();
     }
 
     private ProstheticsOrder load(UUID id) {

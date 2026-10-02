@@ -43,6 +43,7 @@ class BrakServiceTest {
     @Mock StepExecutionRepository executionRepository;
     @Mock FlowInstanceMapper instanceMapper;
     @Mock AuditService auditService;
+    @Mock com.superhumans.audit.DomainAuditEmitter auditEmitter;
     @Mock BrakNotificationOutboxRepository outboxRepository;
     @Mock BrakThresholdService thresholdService;
 
@@ -66,7 +67,7 @@ class BrakServiceTest {
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         service = new BrakService(instanceRepository, brakEventRepository, executionRepository,
-                instanceMapper, parser, auditService, new ObjectMapper(), outboxRepository,
+                instanceMapper, parser, auditService, auditEmitter, new ObjectMapper(), outboxRepository,
                 thresholdService);
     }
 
@@ -156,6 +157,8 @@ class BrakServiceTest {
         assertThat(branch.getParentInstanceId()).isEqualTo(INSTANCE_ID);
         assertThat(branch.getCurrentStageId()).isEqualTo(STAGE_D12);
         assertThat(branch.getCurrentStepId()).isEqualTo(STEP_E0020);
+        var eventCaptor = ArgumentCaptor.forClass(java.util.function.Supplier.class);
+        verify(auditEmitter, times(3)).emit(eq("prosthetics"), eventCaptor.capture());
     }
 
     @Test

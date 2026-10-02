@@ -55,6 +55,7 @@ class BrakNotificationDeliveryServiceTest {
     @Mock ProstheticsOrderRepository orderRepository;
     @Mock UserRepository userRepository;
     @Mock AuditService auditService;
+    @Mock com.superhumans.audit.DomainAuditEmitter auditEmitter;
     @Mock TemplateSnapshotParser snapshotParser;
     @Mock BrakNotificationComposer composer;
     @Mock BrakNotificationService notificationService;
@@ -64,7 +65,7 @@ class BrakNotificationDeliveryServiceTest {
     @BeforeEach
     void setUp() {
         service = new BrakNotificationDeliveryService(outboxRepository, brakEventRepository,
-                instanceRepository, orderRepository, userRepository, auditService,
+                instanceRepository, orderRepository, userRepository, auditService, auditEmitter,
                 snapshotParser, composer, notificationService);
         ReflectionTestUtils.setField(service, "enabled", true);
         ReflectionTestUtils.setField(service, "frontendBaseUrl", "");

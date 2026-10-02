@@ -50,6 +50,8 @@ class ProstheticsOrderProvisionTest {
     private DocumentUrlAvailability documentUrlAvailability;
     @Mock
     private ProstheticsPatientRepository patientRepository;
+    @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     @InjectMocks
     private ProstheticsOrderService orderService;

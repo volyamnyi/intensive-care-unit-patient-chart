@@ -57,6 +57,7 @@ public class ProductionNormativeService {
 
     SystemSettingsRepository settingsRepository;
     AuditService auditService;
+    com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     /** Effective thresholds (defaults for absent/corrupt rows). */
     public record Normative(double overdueMultiplier, int staleDays) {
@@ -102,6 +103,20 @@ public class ProductionNormativeService {
         write(STALE_DAYS_KEY, String.valueOf(days),
                 "Днів без активності для прапорця STALE");
         auditService.logAction("SystemSettings", null, "PRODUCTION_NORMATIVE_UPDATE", userId);
+        auditEmitter.emit("prosthetics", () -> com.superhumans.audit.AuditEvent.builder()
+                .actor(com.superhumans.audit.AuditActorResolver.fromCurrentContext())
+                .eventClass(com.superhumans.audit.AuditActionDefinition.EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("production")
+                .action("prosthetics.production.normative.update")
+                .actionType(com.superhumans.audit.AuditActionDefinition.ActionType.CONFIG_UPDATE)
+                .target(new com.superhumans.audit.AuditEvent.AuditTarget(
+                        "SystemSettings", "production-normatives", null))
+                .outcome(com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(
+                        com.superhumans.audit.AuditChanges.fieldChanged("normatives", com.superhumans.audit.AuditActionDefinition.DataClass.IDENTIFIER)))
+                .source(com.superhumans.audit.AuditEvent.AuditSource.ADMIN_TOOL)
+                .build());
         return new Normative(multiplier, days);
     }
 

@@ -98,6 +98,7 @@ public class ProductionReadService {
     final ProductionNormativeService normativeService;
     final ProstheticsOrderMapper orderMapper;
     final ProstheticsPatientMapper patientMapper;
+    final com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     /** Test seam: fixed clock for deterministic elapsed-time math. */
     Clock clock = Clock.systemDefaultZone();
@@ -112,7 +113,7 @@ public class ProductionReadService {
      * after mapping (volumes are dashboard-scale; revisited with DB paging in
      * the performance pass, issue #281).
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<ProductionWorkItemDto> list(ProductionQuery query) {
         long started = System.currentTimeMillis();
         if (query.getPage() < 0) {
@@ -147,7 +148,24 @@ public class ProductionReadService {
                 new PageImpl<>(rows.subList(from, to), PageRequest.of(query.getPage(), query.getSize()), total);
         log.debug("Production list: {} rows ({} total) in {} ms",
                 result.getNumberOfElements(), total, System.currentTimeMillis() - started);
+        emitWorklistView(total);
         return result;
+    }
+
+    private void emitWorklistView(int resultCount) {
+        java.util.Map<String, Object> metadata = new java.util.TreeMap<>();
+        metadata.put("resultCount", resultCount);
+        auditEmitter.emit("prosthetics", () -> com.superhumans.audit.AuditEvent.builder()
+                .actor(com.superhumans.audit.AuditActorResolver.fromCurrentContext())
+                .eventClass(com.superhumans.audit.AuditActionDefinition.EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("production")
+                .action("prosthetics.production.worklist.view")
+                .actionType(com.superhumans.audit.AuditActionDefinition.ActionType.WORKLIST_VIEW)
+                .outcome(com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS)
+                .metadata(metadata)
+                .source(com.superhumans.audit.AuditEvent.AuditSource.API)
+                .build());
     }
 
     /**
@@ -172,7 +190,7 @@ public class ProductionReadService {
      *                              {@code PROSTHETICS_PRODUCTION_PATIENT_VIEW})
      * @throws NotFoundException when the instance does not exist or is foreign
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public ProductionDetailDto detail(UUID instanceId, Long userId,
             boolean viewAll, boolean includePatientDetails) {
         long started = System.currentTimeMillis();
@@ -235,13 +253,25 @@ public class ProductionReadService {
         log.debug("Production detail {}: {} timeline entries, {} braks, {} branches in {} ms",
                 instanceId, timeline.size(), brakEvents.size(), branches.size(),
                 System.currentTimeMillis() - started);
+        auditEmitter.emit("prosthetics", () -> com.superhumans.audit.AuditEvent.builder()
+                .actor(com.superhumans.audit.AuditActorResolver.fromCurrentContext())
+                .eventClass(com.superhumans.audit.AuditActionDefinition.EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("production")
+                .action("prosthetics.production.detail.view")
+                .actionType(com.superhumans.audit.AuditActionDefinition.ActionType.DETAIL_VIEW)
+                .target(new com.superhumans.audit.AuditEvent.AuditTarget(
+                        "FlowInstance", instanceId.toString(), null))
+                .outcome(com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS)
+                .source(com.superhumans.audit.AuditEvent.AuditSource.API)
+                .build());
         return result;
     }
     /**
      * KPI summary over the caller's scope. Pass the effective assignee
      * (own id without {@code VIEW_ALL}, {@code null} for the team scope).
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public ProductionSummaryDto summary(Long assigneeOrNull) {
         long started = System.currentTimeMillis();
         List<FlowInstance> instances = assigneeOrNull == null
@@ -264,6 +294,7 @@ public class ProductionReadService {
                 .build();
         log.debug("Production summary: {} items in {} ms",
                 result.getTotalItems(), System.currentTimeMillis() - started);
+        emitWorklistView(result.getTotalItems());
         return result;
     }
 
@@ -296,7 +327,7 @@ public class ProductionReadService {
      * Pass the effective assignee (own id without {@code VIEW_ALL},
      * {@code null} for the team scope).
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ProductionWorkItemDto> attention(Long assigneeOrNull) {
         long started = System.currentTimeMillis();
         List<FlowInstance> instances = assigneeOrNull == null
@@ -311,6 +342,7 @@ public class ProductionReadService {
                 .toList();
         log.debug("Production attention: {} flagged rows in {} ms",
                 result.size(), System.currentTimeMillis() - started);
+        emitWorklistView(result.size());
         return result;
     }
 
@@ -339,7 +371,7 @@ public class ProductionReadService {
      * item. Unassigned items surface through the NO_ASSIGNEE attention flag,
      * not here.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ProductionTeamRowDto> team() {
         long started = System.currentTimeMillis();
         Map<Long, List<ProductionWorkItemDto>> byUser = buildRows(instanceRepository.findAll())
@@ -376,6 +408,7 @@ public class ProductionReadService {
                 .toList();
         log.debug("Production team: {} members in {} ms",
                 result.size(), System.currentTimeMillis() - started);
+        emitWorklistView(result.size());
         return result;
     }
 

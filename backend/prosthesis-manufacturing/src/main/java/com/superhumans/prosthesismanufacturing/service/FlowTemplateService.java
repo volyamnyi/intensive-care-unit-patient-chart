@@ -4,6 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.dto.FlowTemplateResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateCreateRequest;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.prosthesismanufacturing.dto.TemplatePatchRequest;
 import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;
@@ -47,6 +54,7 @@ public class FlowTemplateService {
     TemplateElementRepository elementRepository;
     FlowTemplateMapper templateMapper;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     TemplateSnapshotParser snapshotParser;
     ObjectMapper objectMapper;
 
@@ -188,6 +196,22 @@ public class FlowTemplateService {
             }
         }
         auditService.logAction("FlowTemplate", template.getId(), "CREATE", userId);
+        final UUID createdTemplateId = template.getId();
+        final int createdVersion = template.getTemplateVersion() == null
+                ? 0 : template.getTemplateVersion();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("template")
+                .action("prosthetics.template.create.version")
+                .actionType(ActionType.CREATE_VERSION)
+                .target(new AuditEvent.AuditTarget("FlowTemplate", createdTemplateId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("templateTree", DataClass.RESTRICTED)))
+                .affectedRecords(createdVersion)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return templateMapper.toResponse(template);
     }
 
@@ -206,6 +230,18 @@ public class FlowTemplateService {
         }
         templateRepository.save(template);
         auditService.logAction("FlowTemplate", template.getId(), "UPDATE", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("template")
+                .action("prosthetics.template.update")
+                .actionType(ActionType.UPDATE)
+                .target(new AuditEvent.AuditTarget("FlowTemplate", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("templateMeta", DataClass.RESTRICTED)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return templateMapper.toResponse(template);
     }
 
@@ -216,6 +252,18 @@ public class FlowTemplateService {
         template.setStatus(TemplateStatus.ARCHIVED);
         templateRepository.save(template);
         auditService.logAction("FlowTemplate", template.getId(), "ARCHIVE", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("template")
+                .action("prosthetics.template.archive")
+                .actionType(ActionType.ARCHIVE)
+                .target(new AuditEvent.AuditTarget("FlowTemplate", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged("ACTIVE", "ARCHIVED")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     @Transactional(readOnly = true)

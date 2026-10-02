@@ -35,6 +35,8 @@ class ProstheticsOrderDocumentsTest {
     private MisService misService;
     @Mock
     private DocumentUrlAvailability documentUrlAvailability;
+    @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     @InjectMocks
     private ProstheticsOrderService orderService;

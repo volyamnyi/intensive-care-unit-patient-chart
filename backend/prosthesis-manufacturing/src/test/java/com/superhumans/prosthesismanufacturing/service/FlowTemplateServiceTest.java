@@ -44,6 +44,8 @@ class FlowTemplateServiceTest {
     TemplateElementRepository elementRepository;
     @Mock
     AuditService auditService;
+    @Mock
+    com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     FlowTemplateService service;
 
@@ -51,7 +53,7 @@ class FlowTemplateServiceTest {
     void setUp() {
         service = new FlowTemplateService(templateRepository, stageRepository, stepRepository,
                 elementRepository,
-                new FlowTemplateMapperImpl(), auditService,
+                new FlowTemplateMapperImpl(), auditService, auditEmitter,
                 new TemplateSnapshotParser(new ObjectMapper()), new ObjectMapper());
     }
 

@@ -77,7 +77,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Assertions are address- and order-based (never global counts), because the
  * shared dev database may contain other administrators with real addresses.
  */
-@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.ldap.enabled=false"})
+@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.ldap.enabled=false", "management.health.mail.enabled=false"})
 @Transactional("prosthTransactionManager")
 class BrakNotificationIntegrationTest {
 

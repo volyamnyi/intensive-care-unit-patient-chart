@@ -30,6 +30,13 @@ import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.Sn
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotTemplate;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.service.AuditService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -85,6 +92,7 @@ public class FlowInstanceService {
     FailureSnapshotService failureSnapshotService;
     ProstheticsPdfService pdfService;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     TemplateSnapshotParser snapshotParser;
     ObjectMapper objectMapper;
 
@@ -117,6 +125,21 @@ public class FlowInstanceService {
                 .build();
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "CREATE", userId);
+        final UUID createdInstanceId = instance.getId();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("FlowInstance", createdInstanceId.toString(), null))
+                .relatedEntities(List.of(new AuditEvent.AuditTarget(
+                        "ProstheticsOrder", request.getOrderId().toString(), null)))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged(null, "NEW")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(instance);
     }
 
@@ -193,6 +216,19 @@ public class FlowInstanceService {
         createExecution(instance, firstStage.getId(), firstStep.getId(),
                 nextAttemptNumber(instance, firstStep.getId()), now);
         auditService.logAction("FlowInstance", instance.getId(), "START", userId);
+        final UUID startedInstanceId = instance.getId();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.start")
+                .actionType(ActionType.START)
+                .target(new AuditEvent.AuditTarget("FlowInstance", startedInstanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged("NEW", "IN_PROGRESS")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(instance);
     }
 
@@ -237,7 +273,54 @@ public class FlowInstanceService {
 
         advance(instance, snapshot, stage, step, now, userId);
         auditService.logAction("StepExecution", execution.getId(), "COMPLETE", userId);
+        UUID rootId = UUID.randomUUID();
+        try (var ignored = auditEmitter.beginOperation(rootId)) {
+            emitResourcesRecorded(instance, execution, request.getResources());
+            final UUID completedExecutionId = execution.getId();
+            auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                    .auditId(rootId)
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("prosthetics")
+                    .functionalArea("step")
+                    .action("prosthetics.step.complete")
+                    .actionType(ActionType.STEP_COMPLETE)
+                    .target(new AuditEvent.AuditTarget(
+                            "StepExecution", completedExecutionId.toString(), null))
+                    .parentTarget(new AuditEvent.AuditTarget(
+                            "FlowInstance", instanceId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(
+                            AuditChanges.statusChanged("IN_PROGRESS", "COMPLETED"),
+                            AuditChanges.fieldChanged("stepValues", DataClass.RESTRICTED)))
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+        }
         return toResponse(instance);
+    }
+
+    private void emitResourcesRecorded(FlowInstance instance, StepExecution execution,
+            List<ResourceUsageRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return;
+        }
+        final UUID resourceExecutionId = execution.getId();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("resource")
+                .action("prosthetics.resource.record")
+                .actionType(ActionType.RESOURCE_RECORD)
+                .target(new AuditEvent.AuditTarget(
+                        "StepExecution", resourceExecutionId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget(
+                        "FlowInstance", instance.getId().toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("resourceUsage", DataClass.IDENTIFIER)))
+                .affectedRecords(requests.size())
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     @Transactional
@@ -251,6 +334,20 @@ public class FlowInstanceService {
         instance.setPauseCategory(request.getCategory());
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "PAUSE", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.pause")
+                .actionType(ActionType.PAUSE)
+                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(
+                        AuditChanges.statusChanged("IN_PROGRESS", "PAUSED"),
+                        AuditChanges.fieldChanged("pauseCategory", DataClass.IDENTIFIER)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(instance);
     }
 
@@ -270,6 +367,18 @@ public class FlowInstanceService {
         instance.setResumedAt(now);
         instanceRepository.save(instance);
         auditService.logAction("FlowInstance", instance.getId(), "RESUME", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.resume")
+                .actionType(ActionType.RESUME)
+                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged("PAUSED", "IN_PROGRESS")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(instance);
     }
 
@@ -323,6 +432,18 @@ public class FlowInstanceService {
         instanceRepository.save(instance);
         createExecution(instance, targetStageId, target.getId(), nextAttempt, now);
         auditService.logAction("FlowInstance", instance.getId(), "BACKWARD", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.backward")
+                .actionType(ActionType.BACKWARD)
+                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("currentStep", DataClass.IDENTIFIER)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(instance);
     }
 
@@ -351,6 +472,19 @@ public class FlowInstanceService {
         execution.setNote(trimmed);
         executionRepository.save(execution);
         auditService.logAction("StepExecution", execution.getId(), "NOTE", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("step")
+                .action("prosthetics.step.note.update")
+                .actionType(ActionType.UPDATE)
+                .target(new AuditEvent.AuditTarget("StepExecution", executionId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("note", DataClass.NARRATIVE)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return instanceMapper.toExecutionResponse(execution);
     }
 
@@ -383,15 +517,37 @@ public class FlowInstanceService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public FlowInstanceResponse get(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = requireOwner(instanceId, userId, allowAll);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.view")
+                .actionType(ActionType.VIEW)
+                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(instance);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> getSnapshot(UUID instanceId, Long userId, boolean allowAll) {
         String json = requireOwner(instanceId, userId, allowAll).getTemplateSnapshot();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.snapshot.view")
+                .actionType(ActionType.SNAPSHOT_VIEW)
+                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         if (!StringUtils.hasText(json)) {
             return Map.of();
         }
@@ -422,7 +578,7 @@ public class FlowInstanceService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public byte[] generateReport(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = requireOwner(instanceId, userId, allowAll);
         ProstheticsOrder order = orderRepository.findById(instance.getOrderId())
@@ -430,12 +586,27 @@ public class FlowInstanceService {
         SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
         List<StepExecution> executions = executionRepository.findByInstanceId(instanceId);
         List<ResourceUsage> resources = resourceUsageRepository.findByInstanceId(instanceId);
+        final byte[] report;
         if (instance.getStatus() == FlowInstanceStatus.FAILED) {
             String category = failureSnapshotService.getByInstance(instanceId).getCategory();
             String description = instance.getFailReason();
-            return pdfService.generateFailureReport(instance, order, snapshot, category, description);
+            report = pdfService.generateFailureReport(instance, order, snapshot, category, description);
+        } else {
+            report = pdfService.generateFinalReport(instance, order, snapshot, executions, resources);
         }
-        return pdfService.generateFinalReport(instance, order, snapshot, executions, resources);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("report")
+                .action("prosthetics.report.generate")
+                .actionType(ActionType.GENERATE)
+                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("reportContent", DataClass.RESTRICTED)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return report;
     }
 
     @Transactional
@@ -454,6 +625,20 @@ public class FlowInstanceService {
         instanceRepository.save(instance);
         failureSnapshotService.create(instance, category, description, snapshotJson, userId);
         auditService.logAction("FlowInstance", instance.getId(), "FAIL", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.fail")
+                .actionType(ActionType.FAIL)
+                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(
+                        AuditChanges.statusChanged("IN_PROGRESS", "FAILED"),
+                        AuditChanges.fieldChanged("failReason", DataClass.NARRATIVE)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(instance);
     }
 

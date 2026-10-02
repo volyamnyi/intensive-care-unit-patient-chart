@@ -22,6 +22,13 @@ import com.superhumans.prosthesismanufacturing.repository.StepExecutionRepositor
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotTemplate;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.service.AuditService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +71,7 @@ public class BrakService {
     FlowInstanceMapper instanceMapper;
     TemplateSnapshotParser snapshotParser;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     ObjectMapper objectMapper;
     BrakNotificationOutboxRepository outboxRepository;
     BrakThresholdService thresholdService;
@@ -201,6 +209,60 @@ public class BrakService {
         // Order-wide escalation (epic #322): a THRESHOLD row is queued in this
         // same transaction whenever the order chain reached brak count >= 3.
         thresholdService.maybeEnqueue(instance.getOrderId(), event.getId(), userId);
+        final UUID brakEventId = event.getId();
+        final UUID originalInstanceId = instance.getId();
+        final UUID newBranchId = branch.getId();
+        final UUID orderId = instance.getOrderId();
+        UUID rootId = UUID.randomUUID();
+        try (var ignored = auditEmitter.beginOperation(rootId)) {
+            auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("prosthetics")
+                    .functionalArea("brak")
+                    .action("prosthetics.brak.branch")
+                    .actionType(ActionType.BRANCH)
+                    .target(new AuditEvent.AuditTarget("FlowInstance", newBranchId.toString(), null))
+                    .parentTarget(new AuditEvent.AuditTarget(
+                            "FlowInstance", originalInstanceId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(AuditChanges.statusChanged("IN_PROGRESS", "BRANCHED")))
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+            auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("prosthetics")
+                    .functionalArea("notification")
+                    .action("prosthetics.notification.queue")
+                    .actionType(ActionType.QUEUE)
+                    .target(new AuditEvent.AuditTarget("BrakEvent", brakEventId.toString(), null))
+                    .parentTarget(new AuditEvent.AuditTarget(
+                            "ProstheticsOrder", orderId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+            auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                    .auditId(rootId)
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("prosthetics")
+                    .functionalArea("brak")
+                    .action("prosthetics.brak.confirm")
+                    .actionType(ActionType.BRAK_CONFIRM)
+                    .target(new AuditEvent.AuditTarget("BrakEvent", brakEventId.toString(), null))
+                    .parentTarget(new AuditEvent.AuditTarget(
+                            "FlowInstance", originalInstanceId.toString(), null))
+                    .relatedEntities(List.of(new AuditEvent.AuditTarget(
+                            "FlowInstance", newBranchId.toString(), null)))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(
+                            new AuditEvent.AuditChange("returnStageId", AuditEvent.ChangeType.SET,
+                                    DataClass.IDENTIFIER, null, request.returnStageId().toString()),
+                            AuditChanges.fieldChanged("brakReason", DataClass.NARRATIVE)))
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+        }
         return BranchResponse.builder()
                 .brakEventId(event.getId())
                 .originalInstanceId(instance.getId())

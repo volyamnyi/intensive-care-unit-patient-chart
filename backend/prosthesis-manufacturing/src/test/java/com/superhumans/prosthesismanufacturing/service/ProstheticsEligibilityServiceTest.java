@@ -53,7 +53,8 @@ class ProstheticsEligibilityServiceTest {
     @BeforeEach
     void setUp() {
         ProstheticsPatientService patientService =
-                new ProstheticsPatientService(misService, patientRepository, patientMapper);
+                new ProstheticsPatientService(misService, patientRepository, patientMapper,
+                        org.mockito.Mockito.mock(com.superhumans.audit.DomainAuditEmitter.class));
         service = new ProstheticsEligibilityService(misService, orderService,
                 patientService, patientRepository,
                 Clock.fixed(Instant.parse("2026-09-08T06:00:00Z"), ZoneOffset.UTC));
@@ -221,7 +222,8 @@ class ProstheticsEligibilityServiceTest {
     void documentsCache_refetchesAfterTtlExpiry() {
         MutableClock clock = new MutableClock(Instant.parse("2026-09-08T06:00:00Z"));
         ProstheticsPatientService patientService =
-                new ProstheticsPatientService(misService, patientRepository, patientMapper);
+                new ProstheticsPatientService(misService, patientRepository, patientMapper,
+                        org.mockito.Mockito.mock(com.superhumans.audit.DomainAuditEmitter.class));
         ProstheticsEligibilityService ticking =
                 new ProstheticsEligibilityService(misService, orderService,
                         patientService, patientRepository, clock);

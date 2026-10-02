@@ -52,8 +52,9 @@ import org.springframework.transaction.annotation.Transactional;
  * boundary, rejected brak on a PAUSED instance, recursive branch on a new
  * branch, and the three audit records written by a single brak).
  */
-@SpringBootTest(properties = {"app.seed-data.enabled=false"})
+@SpringBootTest(properties = {"app.seed-data.enabled=false", "management.health.mail.enabled=false"})
 @Transactional("prosthTransactionManager")
+@org.springframework.test.context.TestPropertySource(properties = "app.audit.relay.poll-ms=3600000")
 class BrakIntegrationTest {
 
     private static final UUID TEMPLATE_TP_LL_02 = UUID.fromString("c0000003-0000-0000-0000-000000000003");
@@ -78,6 +79,7 @@ class BrakIntegrationTest {
     @Autowired private BrakEventRepository brakEventRepository;
     @Autowired private TemplateSnapshotParser snapshotParser;
     @Autowired private com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository templateRepository;
+    @Autowired @Qualifier("prosthDataSource") private javax.sql.DataSource prosthDataSource;
     @Autowired @Qualifier("prosthEntityManagerFactory") private EntityManagerFactory emf;
 
     /**
@@ -221,6 +223,34 @@ class BrakIntegrationTest {
             return new ObjectMapper().writeValueAsString(map);
         } catch (Exception e) {
             return "{}";
+        }
+    }
+
+    @Test
+    void createBrak_emitsCanonicalRootWithChildrenInOutbox() {
+        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "prosthetist", PROSTHETIST, java.util.List.of(() -> "ROLE_PROSTHETIST"));
+        org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+        try {
+            UUID instanceId = createInstanceAtBrak();
+            var branch = brakService.createBrakAndBranch(
+                    instanceId, new BrakCreateRequest(STAGE_D12, true, false, "примітка 1"), PROSTHETIST);
+            assertThat(branch.getNewInstanceId()).isNotNull();
+
+            var jdbc = new org.springframework.jdbc.core.JdbcTemplate(prosthDataSource);
+            List<String> brakActions = jdbc.queryForList(
+                    "SELECT payload::jsonb->>'action' AS action FROM audit_outbox "
+                            + "WHERE payload::jsonb->>'action' LIKE 'prosthetics.brak.%' "
+                            + "OR payload::jsonb->>'action' = 'prosthetics.notification.queue'",
+                    String.class);
+
+            assertThat(brakActions).containsExactlyInAnyOrder(
+                    "prosthetics.brak.confirm",
+                    "prosthetics.brak.branch",
+                    "prosthetics.notification.queue");
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }
     }
 

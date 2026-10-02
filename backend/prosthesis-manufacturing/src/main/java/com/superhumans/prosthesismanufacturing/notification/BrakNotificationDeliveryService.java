@@ -15,6 +15,11 @@ import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotTemplate;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.AuditService;
 import lombok.RequiredArgsConstructor;
@@ -68,6 +73,7 @@ public class BrakNotificationDeliveryService {
     private final ProstheticsOrderRepository orderRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final DomainAuditEmitter auditEmitter;
     private final TemplateSnapshotParser snapshotParser;
     private final BrakNotificationComposer composer;
     private final BrakNotificationService notificationService;
@@ -149,6 +155,8 @@ public class BrakNotificationDeliveryService {
                     + "brakEventId={}", brakEventId);
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                     ACTION_SKIPPED_NO_RECIPIENTS, actorId, null, null);
+            emitDeliveryOutcome(brakEventId, kind, actorId,
+                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_NO_RECIPIENTS");
             return;
         }
 
@@ -239,10 +247,42 @@ public class BrakNotificationDeliveryService {
         outboxRepository.save(row);
         auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                 result[1] == 0 ? ACTION_SENT : ACTION_FAILED, actorId, null, outcome);
+        emitDeliveryOutcome(brakEventId, kind, actorId,
+                result[1] == 0 ? AuditEvent.AuditOutcome.SUCCESS : AuditEvent.AuditOutcome.FAILURE,
+                row.getStatus() == BrakNotificationStatus.DEAD ? "BRAK_NOTIFICATION_DEAD" : null);
         if (result[1] > 0 && row.getStatus() != BrakNotificationStatus.DEAD) {
             log.error("Brak email completed with failures brakEventId={} sent={} failed={}",
                     brakEventId, result[0], result[1]);
         }
+    }
+
+    private void emitDeliveryOutcome(UUID brakEventId, BrakNotificationKind kind, Long actorId,
+            AuditEvent.AuditOutcome outcome, String errorCode) {
+        final UUID deliveryEventId = brakEventId;
+        auditEmitter.emit("prosthetics", () -> {
+            AuditEvent.AuditActor initiatedBy = actorId == null ? null
+                    : new AuditEvent.AuditActor(AuditEvent.ActorType.USER,
+                            actorId.toString(), null, null, java.util.Set.of(), null, null);
+            java.util.Map<String, Object> metadata = new java.util.TreeMap<>();
+            metadata.put("deliveryKind", kind == null ? "UNKNOWN" : kind.name());
+            return AuditEvent.builder()
+                    .actor(new AuditEvent.AuditActor(AuditEvent.ActorType.SERVICE,
+                            "brak-notification-sweep", null, null, java.util.Set.of(),
+                            initiatedBy, null))
+                    .eventClass(EventClass.BUSINESS)
+                    .module("prosthetics")
+                    .functionalArea("notification")
+                    .action("prosthetics.notification.delivery.outcome")
+                    .actionType(ActionType.DELIVERY)
+                    .target(new AuditEvent.AuditTarget("BrakEvent", deliveryEventId.toString(), null))
+                    .outcome(outcome)
+                    .errorCode(errorCode)
+                    .changes(java.util.List.of(com.superhumans.audit.AuditChanges.fieldChanged(
+                            "deliveryStatus", DataClass.IDENTIFIER)))
+                    .metadata(metadata)
+                    .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                    .build();
+        });
     }
 
     /**

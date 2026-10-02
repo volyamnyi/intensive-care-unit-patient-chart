@@ -67,6 +67,8 @@ class FlowInstanceServiceTest {
     ProstheticsPdfService pdfService;
     @Mock
     AuditService auditService;
+    @Mock
+    com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     TemplateSnapshotParser parser;
     FlowInstanceService service;
@@ -84,7 +86,7 @@ class FlowInstanceServiceTest {
         service = new FlowInstanceService(instanceRepository, templateRepository, orderRepository,
                 executionRepository, resourceUsageRepository,
                 mock(com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper.class),
-                templateService, failureSnapshotService, pdfService, auditService, parser,
+                templateService, failureSnapshotService, pdfService, auditService, auditEmitter, parser,
                 new ObjectMapper());
     }
 

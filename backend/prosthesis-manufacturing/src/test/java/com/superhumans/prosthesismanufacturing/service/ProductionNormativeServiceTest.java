@@ -31,12 +31,13 @@ class ProductionNormativeServiceTest {
 
     @Mock SystemSettingsRepository settingsRepository;
     @Mock AuditService auditService;
+    @Mock com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     ProductionNormativeService service;
 
     @BeforeEach
     void setUp() {
-        service = new ProductionNormativeService(settingsRepository, auditService);
+        service = new ProductionNormativeService(settingsRepository, auditService, auditEmitter);
     }
 
     @Test

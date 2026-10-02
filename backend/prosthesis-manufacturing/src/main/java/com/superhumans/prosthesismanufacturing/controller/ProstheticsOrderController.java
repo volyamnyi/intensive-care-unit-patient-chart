@@ -1,11 +1,7 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
-import com.superhumans.exception.NotFoundException;
-import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.prosthesismanufacturing.dto.OrderDocumentResponse;
-import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
-import com.superhumans.prosthesismanufacturing.repository.ProstheticsOrderRepository;
 import com.superhumans.prosthesismanufacturing.service.ProstheticsOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,8 +29,6 @@ import java.util.UUID;
 public class ProstheticsOrderController {
 
     ProstheticsOrderService orderService;
-    ProstheticsOrderRepository orderRepository;
-    MisService misService;
 
     @GetMapping
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
@@ -99,31 +93,6 @@ public class ProstheticsOrderController {
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Resolve MIS-hosted order document URL")
     public OrderDocumentResponse getDocumentUrl(@PathVariable UUID id) {
-        ProstheticsOrder order = orderRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Order not found: " + id));
-        String patientId = order.getPatient() == null ? null : order.getPatient().getId();
-        if (patientId == null) {
-            throw new NotFoundException("Order has no patient: " + id);
-        }
-        Long numericPatientId = parseLong(patientId);
-        List<DocumentMisDTO> documents = misService.getPatientDocuments(numericPatientId);
-        DocumentMisDTO match = documents.stream()
-                .filter(d -> d.getDocumentUrl() != null && !d.getDocumentUrl().isBlank())
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException(
-                        "Замовлення на протез не знайдено в MIS для пацієнта " + patientId));
-        return OrderDocumentResponse.builder()
-                .documentId(match.getDocumentId())
-                .documentTemplateName(match.getDocumentTemplateName())
-                .documentUrl(match.getDocumentUrl())
-                .build();
-    }
-
-    private static Long parseLong(String value) {
-        try {
-            return Long.valueOf(value);
-        } catch (NumberFormatException ex) {
-            throw new NotFoundException("Patient id is not numeric: " + value);
-        }
+        return orderService.resolveDocumentUrl(id);
     }
 }

@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
  * order chain across branch instances, and new outbox rows default to
  * {@code SINGLE} with a {@code null} order anchor.
  */
-@SpringBootTest(properties = {"app.seed-data.enabled=false"})
+@SpringBootTest(properties = {"app.seed-data.enabled=false", "management.health.mail.enabled=false"})
 @Transactional("prosthTransactionManager")
 class BrakEventRepositoryIntegrationTest {
 

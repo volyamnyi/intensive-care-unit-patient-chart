@@ -19,6 +19,7 @@ class SecurityAuditIntegrationTest extends AbstractIntegrationTest {
 
         var events = auditEventRepository.findAll().stream()
                 .filter(event -> "platform.auth.session.login".equals(event.getAction()))
+                .filter(event -> adminUserId.toString().equals(event.getTargetId()))
                 .toList();
 
         assertThat(events).isNotEmpty();
@@ -34,6 +35,7 @@ class SecurityAuditIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void failedLogin_recordsDeniedSecurityEventWithoutPassword() {
+        java.time.Instant started = java.time.Instant.now().minusSeconds(5);
         var response = restTemplate.postForEntity(
                 "/api/auth/login",
                 new com.superhumans.dto.LoginRequest("admin", "wrong-password"),
@@ -42,6 +44,7 @@ class SecurityAuditIntegrationTest extends AbstractIntegrationTest {
         assertThat(response.getStatusCode().value()).isEqualTo(401);
         var events = auditEventRepository.findAll().stream()
                 .filter(event -> "platform.auth.session.login.failed".equals(event.getAction()))
+                .filter(event -> event.getOccurredAt() != null && !event.getOccurredAt().isBefore(started))
                 .toList();
 
         assertThat(events).isNotEmpty();

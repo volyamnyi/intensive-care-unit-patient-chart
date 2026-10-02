@@ -39,13 +39,15 @@ class EvidenceFileServiceTest {
     FlowInstanceService instanceService;
     @Mock
     AuditService auditService;
+    @Mock
+    com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     EvidenceFileService service;
 
     @BeforeEach
     void setUp() {
         service = new EvidenceFileService(evidenceFileRepository, executionRepository,
-                instanceService, auditService);
+                instanceService, auditService, auditEmitter);
     }
 
     @Test

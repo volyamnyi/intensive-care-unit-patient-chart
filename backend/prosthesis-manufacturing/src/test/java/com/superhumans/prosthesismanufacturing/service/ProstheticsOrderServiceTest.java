@@ -33,6 +33,9 @@ class ProstheticsOrderServiceTest {
     @Mock
     private ProstheticsOrderMapper orderMapper;
 
+    @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
     @InjectMocks
     private ProstheticsOrderService orderService;
 

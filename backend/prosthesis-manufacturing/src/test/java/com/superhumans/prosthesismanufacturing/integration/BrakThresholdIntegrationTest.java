@@ -76,7 +76,7 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link #cleanUp()}. Assertions are address- and order-based, because the
  * shared database may contain other administrators.
  */
-@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.ldap.enabled=false"})
+@SpringBootTest(properties = {"app.seed-data.enabled=false", "app.ldap.enabled=false", "management.health.mail.enabled=false"})
 @Transactional("prosthTransactionManager")
 class BrakThresholdIntegrationTest {
 

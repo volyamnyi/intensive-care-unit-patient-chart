@@ -3,6 +3,13 @@ package com.superhumans.prosthesismanufacturing.service;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
@@ -20,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -32,6 +40,7 @@ public class EvidenceFileService {
     StepExecutionRepository executionRepository;
     FlowInstanceService instanceService;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
 
     private static final int MAX_FILES_PER_EXECUTION = 10;
 
@@ -73,10 +82,27 @@ public class EvidenceFileService {
                 .build();
         evidenceFileRepository.save(evidence);
         auditService.logAction("EvidenceFile", evidence.getId(), "UPLOAD", userId);
+        final UUID uploadedFileId = evidence.getId();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("evidence")
+                .action("prosthetics.evidence.upload")
+                .actionType(ActionType.UPLOAD)
+                .target(new AuditEvent.AuditTarget("EvidenceFile", uploadedFileId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget(
+                        "StepExecution", executionId.toString(), null))
+                .relatedEntities(java.util.List.of(new AuditEvent.AuditTarget(
+                        "FlowInstance", instanceId.toString(), null)))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("fileMetadata", DataClass.IDENTIFIER)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(evidence);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public java.util.List<EvidenceFileResponse> listByExecution(UUID instanceId, UUID executionId, Long userId, boolean allowAll) {
         FlowInstance instance = instanceService.requireOwner(instanceId, userId, allowAll);
         StepExecution execution = executionRepository.findById(executionId)
@@ -84,9 +110,24 @@ public class EvidenceFileService {
         if (!instanceId.equals(execution.getInstance().getId())) {
             throw new BadRequestException("Execution does not belong to this instance");
         }
-        return evidenceFileRepository.findByStepExecutionId(executionId).stream()
+        java.util.List<EvidenceFileResponse> files = evidenceFileRepository.findByStepExecutionId(executionId).stream()
                 .map(this::toResponse)
                 .toList();
+        final int fileCount = files.size();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("evidence")
+                .action("prosthetics.evidence.list.view")
+                .actionType(ActionType.LIST_VIEW)
+                .target(new AuditEvent.AuditTarget("StepExecution", executionId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(fileCount)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return files;
     }
 
     @Transactional
@@ -106,15 +147,39 @@ public class EvidenceFileService {
         }
         evidenceFileRepository.delete(evidence);
         auditService.logAction("EvidenceFile", fileId, "DELETE", userId);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("prosthetics")
+                .functionalArea("evidence")
+                .action("prosthetics.evidence.delete")
+                .actionType(ActionType.DELETE)
+                .target(new AuditEvent.AuditTarget("EvidenceFile", fileId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget(
+                        "FlowInstance", instanceId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public EvidenceFile download(UUID fileId, Long userId, boolean allowAll) {
         EvidenceFile evidence = evidenceFileRepository.findById(fileId)
                 .orElseThrow(() -> new NotFoundException("Evidence file not found: " + fileId));
         if (!allowAll && !evidence.getStepExecution().getInstance().getAssignedUserId().equals(userId)) {
             throw new NotFoundException("Evidence file not found: " + fileId);
         }
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("evidence")
+                .action("prosthetics.evidence.download")
+                .actionType(ActionType.DOWNLOAD)
+                .target(new AuditEvent.AuditTarget("EvidenceFile", fileId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return evidence;
     }
 
