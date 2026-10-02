@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.LabResultCreateRequest;
 import com.superhumans.dto.LabResultPatchRequest;
 import com.superhumans.dto.LabResultResponse;
@@ -31,6 +38,7 @@ public class LabResultService {
     LabResultRepository labResultRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     LabResultMapper labResultMapper;
 
     public List<LabResultResponse> getLabResultsByClinicalDay(UUID clinicalDayId) {
@@ -61,6 +69,20 @@ public class LabResultService {
         labResult.setUpdatedBy(userId);
         labResult = labResultRepository.save(labResult);
         auditService.logCreate("LabResult", labResult.getId(), userId);
+        final UUID createdLabResultId = labResult.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("lab-result")
+                .action("icu.lab_result.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("LabResult", createdLabResultId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("ClinicalDay", clinicalDayId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("resultFields", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return labResultMapper.toResponse(labResult);
     }
 
@@ -84,6 +106,25 @@ public class LabResultService {
         labResult.setUpdatedBy(userId);
         labResult = labResultRepository.save(labResult);
         auditService.logUpdate("LabResult", id, userId, null, "Updated result");
+        final boolean resultChanged = request.getResult() != null;
+        auditEmitter.emit("icu", () -> {
+            java.util.List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
+            if (resultChanged) {
+                changes.add(AuditChanges.fieldChanged("resultFields", DataClass.CLINICAL));
+            }
+            return AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("lab-result")
+                    .action("icu.lab_result.update")
+                    .actionType(ActionType.UPDATE)
+                    .target(new AuditEvent.AuditTarget("LabResult", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(changes)
+                    .source(AuditEvent.AuditSource.API)
+                    .build();
+        });
         return labResultMapper.toResponse(labResult);
     }
 

@@ -43,6 +43,9 @@ class PatientStateAssessmentServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private PatientStateMapper patientStateMapper;
 
     @InjectMocks

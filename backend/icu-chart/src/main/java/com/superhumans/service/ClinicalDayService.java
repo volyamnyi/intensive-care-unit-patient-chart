@@ -1,4 +1,12 @@
 package com.superhumans.service;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditRequestContext;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.*;
 import com.superhumans.icu.entity.*;
 import com.superhumans.exception.*;
@@ -35,6 +43,7 @@ public class ClinicalDayService {
     private final EmailService emailService;
     private final FluidBalanceService fluidBalanceService;
     private final PdfGeneratorService pdfGeneratorService;
+    private final DomainAuditEmitter auditEmitter;
 
     @Value("${app.scheduling.signing-window-start:7}")
     private int signingWindowStartHour;
@@ -87,6 +96,20 @@ public class ClinicalDayService {
         day.setUpdatedBy(userId);
         day = clinicalDayRepository.save(day);
         auditService.logCreate("ClinicalDay", day.getId(), userId);
+        final UUID createdDayId = day.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("clinical-day")
+                .action("icu.clinical_day.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("ClinicalDay", createdDayId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget(
+                        "Episode", episode.getId().toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return clinicalDayMapper.toResponse(day);
     }
 
@@ -108,6 +131,30 @@ public class ClinicalDayService {
         }
         day.setUpdatedBy(userId);
         day = clinicalDayRepository.save(day);
+        final UUID updatedDayId = day.getId();
+        final boolean endChanged = request.getEndDateTime() != null;
+        final boolean weightChanged = request.getWeightKg() != null;
+        auditEmitter.emit("icu", () -> {
+            java.util.List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
+            if (endChanged) {
+                changes.add(AuditChanges.fieldChanged("endDateTime", DataClass.CLINICAL));
+            }
+            if (weightChanged) {
+                changes.add(AuditChanges.fieldChanged("weightKg", DataClass.CLINICAL));
+            }
+            return AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("clinical-day")
+                    .action("icu.clinical_day.update")
+                    .actionType(ActionType.UPDATE)
+                    .target(new AuditEvent.AuditTarget("ClinicalDay", updatedDayId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(changes)
+                    .source(AuditEvent.AuditSource.API)
+                    .build();
+        });
         return clinicalDayMapper.toResponse(day);
     }
 
@@ -134,6 +181,8 @@ public class ClinicalDayService {
 
         signatureService.assertNoNurseSignature(id);
 
+        final ClinicalDayStatus nursePreviousStatus = day.getStatus();
+
         Signature signature = signatureService.createSignature(day, userId, "NURSE", request.getHash(),
                 request.getCertSerialNumber(), request.getCertIssuer(), request.getCertSubject(),
                 request.getCertValidFrom(), request.getCertValidUntil());
@@ -144,6 +193,20 @@ public class ClinicalDayService {
         clinicalDayRepository.save(day);
 
         auditService.logAction("ClinicalDay", id, "SIGN_NURSE", userId);
+        final String nursePreviousStatusName =
+                nursePreviousStatus == null ? null : nursePreviousStatus.name();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("clinical-day")
+                .action("icu.clinical_day.sign.nurse")
+                .actionType(ActionType.SIGN)
+                .target(new AuditEvent.AuditTarget("ClinicalDay", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged(nursePreviousStatusName, "NURSE_SIGNED")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return signatureMapper.toResponse(signature);
     }
 
@@ -166,6 +229,8 @@ public class ClinicalDayService {
 
         signatureService.assertNoDoctorSignature(id);
 
+        final ClinicalDayStatus previousStatus = day.getStatus();
+
         Signature signature = signatureService.createSignature(day, userId, "DOCTOR", request.getHash(),
                 request.getCertSerialNumber(), request.getCertIssuer(), request.getCertSubject(),
                 request.getCertValidFrom(), request.getCertValidUntil());
@@ -177,11 +242,31 @@ public class ClinicalDayService {
         clinicalDayRepository.save(day);
 
         auditService.logAction("ClinicalDay", id, "SIGN_DOCTOR", userId);
-        try {
-            pdfGeneratorService.generatePdf(id, userId);
-            log.info("Auto-generated PDF for clinical day {}", id);
-        } catch (Exception e) {
-            log.error("Failed to auto-generate PDF for clinical day {}: {}", id, e.getMessage());
+        UUID rootId = UUID.randomUUID();
+        try (var ignored = auditEmitter.beginOperation(rootId)) {
+            try {
+                pdfGeneratorService.generatePdf(id, userId);
+                log.info("Auto-generated PDF for clinical day {}", id);
+            } catch (Exception e) {
+                log.error("Failed to auto-generate PDF for clinical day {}: {}", id, e.getMessage());
+            }
+            final String previousStatusName =
+                    previousStatus == null ? null : previousStatus.name();
+            auditEmitter.emit("icu", () -> AuditEvent.builder()
+                    .auditId(rootId)
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("clinical-day")
+                    .action("icu.clinical_day.sign.doctor")
+                    .actionType(ActionType.SIGN)
+                    .target(new AuditEvent.AuditTarget("ClinicalDay", id.toString(), null))
+                    .relatedEntities(List.of(new AuditEvent.AuditTarget(
+                            "Signature", signature.getId().toString(), null)))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(AuditChanges.statusChanged(previousStatusName, "DOCTOR_SIGNED")))
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
         }
         return signatureMapper.toResponse(signature);
     }
@@ -195,12 +280,29 @@ public class ClinicalDayService {
             throw new BusinessException(ErrorCode.DOCUMENT_LOCKED,
                     "Only open or reopened clinical days can be closed early");
         }
+        final ClinicalDayStatus closedPreviousStatus = day.getStatus();
         day.setStatus(ClinicalDayStatus.CLOSED);
         day.setClosedAt(LocalDateTime.now());
         day.setUpdatedBy(userId);
         clinicalDayRepository.save(day);
         auditService.logAction("ClinicalDay", id, "CLOSE_EARLY", userId);
-        log.info("Early closed clinical day {}: reason={}", id, reason);
+        final String closedPreviousStatusName =
+                closedPreviousStatus == null ? null : closedPreviousStatus.name();
+        final String closeReasonCode = reason == null || reason.isBlank() ? null : "EARLY_CLOSE_REQUESTED";
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("clinical-day")
+                .action("icu.clinical_day.close.early")
+                .actionType(ActionType.CLOSE)
+                .target(new AuditEvent.AuditTarget("ClinicalDay", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged(closedPreviousStatusName, "CLOSED")))
+                .reasonCode(closeReasonCode)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        log.info("Early closed clinical day {}", id);
     }
 
     @Transactional
@@ -218,6 +320,7 @@ public class ClinicalDayService {
 
         signatureService.revokeSignaturesByClinicalDay(id);
 
+        final ClinicalDayStatus reopenPreviousStatus = day.getStatus();
         day.setDoctorSigned(false);
         day.setNurseSigned(false);
         day.setStatus(ClinicalDayStatus.REOPENED);
@@ -225,6 +328,20 @@ public class ClinicalDayService {
         day.setUpdatedBy(userId);
         day = clinicalDayRepository.save(day);
         auditService.logAction("ClinicalDay", id, "REOPEN", userId);
+        final String reopenPreviousStatusName =
+                reopenPreviousStatus == null ? null : reopenPreviousStatus.name();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("clinical-day")
+                .action("icu.clinical_day.reopen")
+                .actionType(ActionType.REOPEN)
+                .target(new AuditEvent.AuditTarget("ClinicalDay", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged(reopenPreviousStatusName, "REOPENED")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return clinicalDayMapper.toResponse(day);
     }
 
@@ -252,24 +369,64 @@ public class ClinicalDayService {
     public void autoCloseExpiredDays() {
         List<ClinicalDay> daysToClose = clinicalDayRepository.findDaysToAutoClose(LocalDateTime.now());
         for (ClinicalDay day : daysToClose) {
-            day.setStatus(ClinicalDayStatus.CLOSED);
-            day.setClosedAt(LocalDateTime.now());
-            day.setUpdatedBy(0L);
-            clinicalDayRepository.save(day);
-            try {
-                fluidBalanceService.recalculate(day.getId(), 0L);
-            } catch (Exception e) {
-                log.warn("Failed to recalculate fluid balance for auto-closed day {}: {}", day.getId(), e.getMessage());
+            UUID rootId = UUID.randomUUID();
+            try (var correlation = installJobCorrelationScope();
+                 var operation = auditEmitter.beginOperation(rootId)) {
+                day.setStatus(ClinicalDayStatus.CLOSED);
+                day.setClosedAt(LocalDateTime.now());
+                day.setUpdatedBy(0L);
+                clinicalDayRepository.save(day);
+                try {
+                    fluidBalanceService.recalculate(day.getId(), 0L);
+                } catch (Exception e) {
+                    log.warn("Failed to recalculate fluid balance for auto-closed day {}: {}",
+                            day.getId(), e.getMessage());
+                }
+                try {
+                    pdfGeneratorService.generatePdf(day.getId(), 0L);
+                    log.info("Auto-generated PDF for auto-closed clinical day {}", day.getId());
+                } catch (Exception e) {
+                    log.error("Failed to auto-generate PDF for auto-closed clinical day {}: {}",
+                            day.getId(), e.getMessage());
+                }
+                log.info("Auto-closed clinical day {} for episode {}", day.getId(), day.getEpisode().getId());
+                auditService.logAction("ClinicalDay", day.getId(), "AUTO_CLOSE", 0L);
+                final UUID autoClosedDayId = day.getId();
+                final UUID autoClosedEpisodeId = day.getEpisode().getId();
+                auditEmitter.emit("icu", () -> AuditEvent.builder()
+                        .auditId(rootId)
+                        .actor(AuditActorResolver.system("clinical-day-job"))
+                        .eventClass(EventClass.BUSINESS)
+                        .module("icu")
+                        .functionalArea("clinical-day")
+                        .action("icu.clinical_day.auto_close")
+                        .actionType(ActionType.AUTO_CLOSE)
+                        .target(new AuditEvent.AuditTarget(
+                                "ClinicalDay", autoClosedDayId.toString(), null))
+                        .parentTarget(new AuditEvent.AuditTarget(
+                                "Episode", autoClosedEpisodeId.toString(), null))
+                        .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                        .changes(List.of(AuditChanges.statusChanged(null, "CLOSED")))
+                        .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                        .build());
+                emailService.sendEscalationIfUnsigned(day);
+            } catch (RuntimeException e) {
+                final UUID failedDayId = day.getId();
+                auditEmitter.emit("icu", () -> AuditEvent.builder()
+                        .actor(AuditActorResolver.system("clinical-day-job"))
+                        .eventClass(EventClass.BUSINESS)
+                        .module("icu")
+                        .functionalArea("clinical-day")
+                        .action("icu.clinical_day.auto_close")
+                        .actionType(ActionType.AUTO_CLOSE)
+                        .target(new AuditEvent.AuditTarget(
+                                "ClinicalDay", failedDayId.toString(), null))
+                        .outcome(AuditEvent.AuditOutcome.FAILURE)
+                        .errorCode("ICU_AUTO_CLOSE_FAILED")
+                        .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                        .build());
+                throw e;
             }
-            try {
-                pdfGeneratorService.generatePdf(day.getId(), 0L);
-                log.info("Auto-generated PDF for auto-closed clinical day {}", day.getId());
-            } catch (Exception e) {
-                log.error("Failed to auto-generate PDF for auto-closed clinical day {}: {}", day.getId(), e.getMessage());
-            }
-            log.info("Auto-closed clinical day {} for episode {}", day.getId(), day.getEpisode().getId());
-            auditService.logAction("ClinicalDay", day.getId(), "AUTO_CLOSE", 0L);
-            emailService.sendEscalationIfUnsigned(day);
         }
     }
 
@@ -282,7 +439,30 @@ public class ClinicalDayService {
             log.warn("ESCALATION: Clinical day {} (episode {}) still unsigned at 09:00",
                     day.getId(), day.getEpisode().getId());
             auditService.logAction("ClinicalDay", day.getId(), "ESCALATE", 0L);
-            emailService.sendEscalationIfUnsigned(day);
+            final UUID escalatedDayId = day.getId();
+            final UUID escalatedEpisodeId = day.getEpisode().getId();
+            try (var ignored = installJobCorrelationScope()) {
+                auditEmitter.emit("icu", () -> AuditEvent.builder()
+                        .actor(AuditActorResolver.system("clinical-day-job"))
+                        .eventClass(EventClass.BUSINESS)
+                        .module("icu")
+                        .functionalArea("clinical-day")
+                        .action("icu.clinical_day.escalate")
+                        .actionType(ActionType.ESCALATE)
+                        .target(new AuditEvent.AuditTarget(
+                                "ClinicalDay", escalatedDayId.toString(), null))
+                        .parentTarget(new AuditEvent.AuditTarget(
+                                "Episode", escalatedEpisodeId.toString(), null))
+                        .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                        .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                        .build());
+                emailService.sendEscalationIfUnsigned(day);
+            }
         }
+    }
+
+    private AuditRequestContext.Scope installJobCorrelationScope() {
+        return AuditRequestContext.install(new AuditRequestContext.Context(
+                UUID.randomUUID(), null, UUID.randomUUID(), System.nanoTime(), null));
     }
 }

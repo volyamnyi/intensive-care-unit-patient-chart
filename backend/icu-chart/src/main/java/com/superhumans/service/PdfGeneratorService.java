@@ -14,6 +14,13 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.PdfResponse;
 import com.superhumans.icu.entity.*;
 import com.superhumans.entity.core.User;
@@ -61,6 +68,7 @@ public class PdfGeneratorService {
     EpisodeRepository episodeRepository;
     HourlyRecordRepository hourlyRecordRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     MedicalOrderRepository medicalOrderRepository;
     OrderExecutionRepository orderExecutionRepository;
     MedicalNoteRepository medicalNoteRepository;
@@ -113,13 +121,34 @@ public class PdfGeneratorService {
         pdf.setUpdatedBy(userId);
         pdf = generatedPdfRepository.save(pdf);
         auditService.logAction("GeneratedPdf", clinicalDayId, "GENERATE", userId);
+        final UUID generatedPdfId = pdf.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContextOrSystem("icu-pdf-job"))
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("pdf")
+                .action("icu.pdf.generate")
+                .actionType(ActionType.GENERATE)
+                .target(new AuditEvent.AuditTarget(
+                        "GeneratedPdf", generatedPdfId.toString(), null))
+                .relatedEntities(List.of(new AuditEvent.AuditTarget(
+                        "ClinicalDay", clinicalDayId.toString(), null)))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("fileVersion", DataClass.IDENTIFIER)))
+                .affectedRecords(1)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return toResponse(pdf);
     }
 
     /**
      * Returns the stored PDF bytes for download/print in-module.
      * PDFs are never transferred anywhere (MIS is strictly read-only).
+     *
+     * <p>Transactional (not read-only): serving the bytes durably records the
+     * download access event in the same transaction (fail-closed read audit).
      */
+    @Transactional
     public byte[] getPdfBytes(UUID clinicalDayId) {
         GeneratedPdf pdf = generatedPdfRepository
                 .findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId)
@@ -127,6 +156,21 @@ public class PdfGeneratorService {
         if (pdf.getFileData() == null || pdf.getFileData().length == 0) {
             throw new NotFoundException("PDF-файл відсутній для клінічного дня: " + clinicalDayId);
         }
+        final UUID downloadedPdfId = pdf.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("icu")
+                .functionalArea("pdf")
+                .action("icu.pdf.download")
+                .actionType(ActionType.DOWNLOAD)
+                .target(new AuditEvent.AuditTarget(
+                        "GeneratedPdf", downloadedPdfId.toString(), null))
+                .relatedEntities(List.of(new AuditEvent.AuditTarget(
+                        "ClinicalDay", clinicalDayId.toString(), null)))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return pdf.getFileData();
     }
 

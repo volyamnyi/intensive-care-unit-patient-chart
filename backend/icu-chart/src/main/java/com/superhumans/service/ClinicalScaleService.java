@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
@@ -38,6 +45,7 @@ public class ClinicalScaleService {
     ClinicalDayRepository clinicalDayRepository;
     HourlyRecordRepository hourlyRecordRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     ScaleResultMapper scaleResultMapper;
     ObjectMapper objectMapper;
     ScaleAuthorizationService scaleAuthorizationService;
@@ -95,6 +103,20 @@ public class ClinicalScaleService {
         sr.setUpdatedBy(userId);
         sr = scaleResultRepository.save(sr);
         auditService.logCreate("ScaleResult", sr.getId(), userId);
+        final UUID createdDayScaleId = sr.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("scale")
+                .action("icu.scale.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("ScaleResult", createdDayScaleId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("ClinicalDay", clinicalDayId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("scaleResult", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return scaleResultMapper.toResponse(sr);
     }
 
@@ -118,6 +140,20 @@ public class ClinicalScaleService {
         sr.setUpdatedBy(userId);
         sr = scaleResultRepository.save(sr);
         auditService.logCreate("ScaleResult", sr.getId(), userId);
+        final UUID createdEpisodeScaleId = sr.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("scale")
+                .action("icu.scale.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("ScaleResult", createdEpisodeScaleId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("Episode", episodeId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("scaleResult", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return scaleResultMapper.toResponse(sr);
     }
 
@@ -162,6 +198,20 @@ public class ClinicalScaleService {
         sr.setUpdatedBy(userId);
         sr = scaleResultRepository.save(sr);
         auditService.logCreate("ScaleResult", sr.getId(), userId);
+        final UUID calculatedScaleId = sr.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("scale")
+                .action("icu.scale.calculate")
+                .actionType(ActionType.SCORE_CALCULATE)
+                .target(new AuditEvent.AuditTarget("ScaleResult", calculatedScaleId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("Episode", episodeId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("scaleResult", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return scaleResultMapper.toResponse(sr);
     }
 
@@ -298,6 +348,25 @@ public class ClinicalScaleService {
         result.setUpdatedBy(userId);
         result = scaleResultRepository.save(result);
         auditService.logUpdate("ScaleResult", id, userId, null, "Updated result");
+        final boolean scaleResultChanged = request.getResult() != null;
+        auditEmitter.emit("icu", () -> {
+            java.util.List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
+            if (scaleResultChanged) {
+                changes.add(AuditChanges.fieldChanged("scaleResult", DataClass.CLINICAL));
+            }
+            return AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("scale")
+                    .action("icu.scale.update")
+                    .actionType(ActionType.UPDATE)
+                    .target(new AuditEvent.AuditTarget("ScaleResult", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(changes)
+                    .source(AuditEvent.AuditSource.API)
+                    .build();
+        });
         return scaleResultMapper.toResponse(result);
     }
 

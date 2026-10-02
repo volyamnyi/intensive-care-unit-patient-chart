@@ -44,6 +44,9 @@ class LabResultServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private LabResultMapper labResultMapper;
 
     @InjectMocks

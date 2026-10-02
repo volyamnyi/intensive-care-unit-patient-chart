@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.VentilationCreateRequest;
 import com.superhumans.dto.VentilationPatchRequest;
 import com.superhumans.dto.VentilationResponse;
@@ -31,6 +38,7 @@ public class VentilationSettingsService {
     VentilationSettingsRepository ventilationRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     VentilationMapper ventilationMapper;
 
     public List<VentilationResponse> getByClinicalDay(UUID clinicalDayId) {
@@ -64,6 +72,20 @@ public class VentilationSettingsService {
         entity.setUpdatedBy(userId);
         entity = ventilationRepository.save(entity);
         auditService.logCreate("VentilationSettings", entity.getId(), userId);
+        final UUID createdVentilationId = entity.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("ventilation")
+                .action("icu.ventilation.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("VentilationSettings", createdVentilationId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("ClinicalDay", clinicalDayId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("ventilationFields", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return ventilationMapper.toResponse(entity);
     }
 
@@ -92,6 +114,18 @@ public class VentilationSettingsService {
         entity.setUpdatedBy(userId);
         entity = ventilationRepository.save(entity);
         auditService.logUpdate("VentilationSettings", id, userId, null, "Updated settings");
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("ventilation")
+                .action("icu.ventilation.update")
+                .actionType(ActionType.UPDATE)
+                .target(new AuditEvent.AuditTarget("VentilationSettings", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("ventilationFields", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return ventilationMapper.toResponse(entity);
     }
 

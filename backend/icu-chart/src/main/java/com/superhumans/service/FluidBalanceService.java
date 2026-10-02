@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.icu.entity.*;
 import com.superhumans.mapper.FluidBalanceMapper;
@@ -29,6 +36,7 @@ public class FluidBalanceService {
     OrderExecutionRepository orderExecutionRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     FluidBalanceMapper fluidBalanceMapper;
 
     public List<FluidBalanceResponse> getBalances(UUID clinicalDayId) {
@@ -107,6 +115,20 @@ public class FluidBalanceService {
         if (userId != null) {
             auditService.logAction("FluidBalance", clinicalDayId, "RECALCULATE", userId);
         }
+        final int recalculatedHours = results.size();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContextOrSystem("fluid-balance-job"))
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("fluid-balance")
+                .action("icu.fluid_balance.recalculate")
+                .actionType(ActionType.RECALCULATE)
+                .target(new AuditEvent.AuditTarget("FluidBalance", clinicalDayId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("hourlyAggregates", DataClass.CLINICAL)))
+                .affectedRecords(recalculatedHours)
+                .source(AuditEvent.AuditSource.API)
+                .build());
 
         List<FluidBalanceResponse> responses = results.stream()
                 .map(fluidBalanceMapper::toResponse).collect(Collectors.toList());

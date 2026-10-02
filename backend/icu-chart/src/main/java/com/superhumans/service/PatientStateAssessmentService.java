@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.PatientStateCreateRequest;
 import com.superhumans.dto.PatientStatePatchRequest;
 import com.superhumans.dto.PatientStateResponse;
@@ -31,6 +38,7 @@ public class PatientStateAssessmentService {
     PatientStateAssessmentRepository patientStateRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     PatientStateMapper patientStateMapper;
 
     public List<PatientStateResponse> getByClinicalDay(UUID clinicalDayId) {
@@ -60,6 +68,20 @@ public class PatientStateAssessmentService {
         entity.setUpdatedBy(userId);
         entity = patientStateRepository.save(entity);
         auditService.logCreate("PatientStateAssessment", entity.getId(), userId);
+        final UUID createdStateId = entity.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("patient-state")
+                .action("icu.patient_state.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("PatientStateAssessment", createdStateId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("ClinicalDay", clinicalDayId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("stateFields", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return patientStateMapper.toResponse(entity);
     }
 
@@ -80,10 +102,30 @@ public class PatientStateAssessmentService {
         if (request.getPeripheralCirculation() != null) entity.setPeripheralCirculation(request.getPeripheralCirculation());
         if (request.getBowelSounds() != null) entity.setBowelSounds(request.getBowelSounds());
         if (request.getGeneralCondition() != null) entity.setGeneralCondition(request.getGeneralCondition());
-        if (request.getAdditionalNotes() != null) entity.setAdditionalNotes(request.getAdditionalNotes());
+        final boolean stateNotesChanged = request.getAdditionalNotes() != null;
+        if (stateNotesChanged) entity.setAdditionalNotes(request.getAdditionalNotes());
         entity.setUpdatedBy(userId);
         entity = patientStateRepository.save(entity);
         auditService.logUpdate("PatientStateAssessment", id, userId, null, "Updated assessment");
+        auditEmitter.emit("icu", () -> {
+            java.util.List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
+            changes.add(AuditChanges.fieldChanged("stateFields", DataClass.CLINICAL));
+            if (stateNotesChanged) {
+                changes.add(AuditChanges.fieldChanged("additionalNotes", DataClass.NARRATIVE));
+            }
+            return AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("patient-state")
+                    .action("icu.patient_state.update")
+                    .actionType(ActionType.UPDATE)
+                    .target(new AuditEvent.AuditTarget("PatientStateAssessment", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(changes)
+                    .source(AuditEvent.AuditSource.API)
+                    .build();
+        });
         return patientStateMapper.toResponse(entity);
     }
 

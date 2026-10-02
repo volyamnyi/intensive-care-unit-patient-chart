@@ -54,6 +54,9 @@ class PdfGeneratorServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private MedicalOrderRepository medicalOrderRepository;
 
     @Mock

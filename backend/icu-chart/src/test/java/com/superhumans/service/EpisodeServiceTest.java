@@ -42,6 +42,9 @@ class EpisodeServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private MisService misService;
 
     @Mock
@@ -163,6 +166,7 @@ class EpisodeServiceTest {
         assertThat(res.getPatientId()).isEqualTo(patientId);
         assertThat(res.getStatus()).isEqualTo(EpisodeStatus.ACTIVE);
         verify(auditService).logCreate("Episode", episodeId, userId);
+        verify(auditEmitter).emit(eq("icu"), any());
     }
 
     @Test

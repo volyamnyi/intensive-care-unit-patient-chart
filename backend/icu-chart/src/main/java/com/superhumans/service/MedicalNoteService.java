@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.MedicalNoteCreateRequest;
 import com.superhumans.dto.MedicalNotePatchRequest;
 import com.superhumans.dto.MedicalNoteResponse;
@@ -33,6 +40,7 @@ public class MedicalNoteService {
     ClinicalDayRepository clinicalDayRepository;
     UserRepository userRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     MedicalNoteMapper medicalNoteMapper;
 
     public MedicalNoteResponse getNote(UUID id) {
@@ -66,6 +74,20 @@ public class MedicalNoteService {
         note.setUpdatedBy(userId);
         note = medicalNoteRepository.save(note);
         auditService.logCreate("MedicalNote", note.getId(), userId);
+        final UUID createdNoteId = note.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("medical-note")
+                .action("icu.medical_note.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("MedicalNote", createdNoteId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("ClinicalDay", clinicalDayId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("noteText", DataClass.NARRATIVE)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return medicalNoteMapper.toResponse(note);
     }
 
@@ -83,6 +105,25 @@ public class MedicalNoteService {
         note.setUpdatedBy(userId);
         note = medicalNoteRepository.save(note);
         auditService.logUpdate("MedicalNote", id, userId, null, "Updated note text");
+        final boolean textChanged = request.getText() != null;
+        auditEmitter.emit("icu", () -> {
+            java.util.List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
+            if (textChanged) {
+                changes.add(AuditChanges.fieldChanged("noteText", DataClass.NARRATIVE));
+            }
+            return AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("medical-note")
+                    .action("icu.medical_note.update")
+                    .actionType(ActionType.UPDATE)
+                    .target(new AuditEvent.AuditTarget("MedicalNote", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(changes)
+                    .source(AuditEvent.AuditSource.API)
+                    .build();
+        });
         return medicalNoteMapper.toResponse(note);
     }
 

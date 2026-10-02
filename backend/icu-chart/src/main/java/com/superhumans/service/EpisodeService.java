@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.EpisodeCloseRequest;
 import com.superhumans.dto.EpisodeCreateRequest;
 import com.superhumans.dto.EpisodePatchRequest;
@@ -37,6 +44,7 @@ public class EpisodeService {
     EpisodeRepository episodeRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     MisService misService;
     EpisodeMapper episodeMapper;
 
@@ -106,6 +114,24 @@ public class EpisodeService {
         day.setUpdatedBy(userId);
         clinicalDayRepository.save(day);
         auditService.logCreate("ClinicalDay", day.getId(), userId);
+        final UUID createdEpisodeId = episode.getId();
+        final Long createdPatientId = episode.getPatientId();
+        final UUID createdDayId = day.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("episode")
+                .action("icu.episode.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("Episode", createdEpisodeId.toString(),
+                        createdPatientId == null ? null : createdPatientId.toString()))
+                .relatedEntities(List.of(
+                        new AuditEvent.AuditTarget("ClinicalDay", createdDayId.toString(), null)))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(2)
+                .source(AuditEvent.AuditSource.API)
+                .build());
 
         return episodeMapper.toResponse(episode);
     }
@@ -119,24 +145,48 @@ public class EpisodeService {
             throw new VersionConflictException("Episode was modified by another user");
         }
 
+        List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
         if (request.getHospitalizationId() != null) {
+            changes.addAll(AuditChanges.diff("hospitalizationId", episode.getHospitalizationId(),
+                    request.getHospitalizationId(), DataClass.IDENTIFIER));
             episode.setHospitalizationId(request.getHospitalizationId());
         }
         if (request.getDepartmentId() != null) {
+            changes.addAll(AuditChanges.diff("departmentId", episode.getDepartmentId(),
+                    request.getDepartmentId(), DataClass.IDENTIFIER));
             episode.setDepartmentId(request.getDepartmentId());
         }
         if (request.getDischargeDate() != null) {
+            changes.add(AuditChanges.fieldChanged("dischargeDate", DataClass.CLINICAL));
             episode.setDischargeDate(request.getDischargeDate());
         }
         if (request.getHeightCm() != null) {
+            changes.add(AuditChanges.fieldChanged("heightCm", DataClass.CLINICAL));
             episode.setHeightCm(request.getHeightCm());
         }
         if (request.getAttendingDoctorId() != null) {
+            changes.addAll(AuditChanges.diff("attendingDoctorId", episode.getAttendingDoctorId(),
+                    request.getAttendingDoctorId(), DataClass.IDENTIFIER));
             episode.setAttendingDoctorId(request.getAttendingDoctorId());
         }
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
         auditService.logUpdate("Episode", id, userId, null, "Updated episode fields");
+        final Long updatedPatientId = episode.getPatientId();
+        final List<AuditEvent.AuditChange> recordedChanges = List.copyOf(changes);
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("episode")
+                .action("icu.episode.update")
+                .actionType(ActionType.UPDATE)
+                .target(new AuditEvent.AuditTarget("Episode", id.toString(),
+                        updatedPatientId == null ? null : updatedPatientId.toString()))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(recordedChanges)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return episodeMapper.toResponse(episode);
     }
 
@@ -154,6 +204,20 @@ public class EpisodeService {
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
         auditService.logAction("Episode", id, "CLOSE", userId);
+        final Long closedPatientId = episode.getPatientId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("episode")
+                .action("icu.episode.close")
+                .actionType(ActionType.CLOSE)
+                .target(new AuditEvent.AuditTarget("Episode", id.toString(),
+                        closedPatientId == null ? null : closedPatientId.toString()))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged("ACTIVE", "COMPLETED")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return episodeMapper.toResponse(episode);
     }
 
@@ -161,7 +225,22 @@ public class EpisodeService {
     public void archiveEpisode(UUID id) {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
+        String previousStatus = episode.getStatus() == null ? null : episode.getStatus().name();
         episode.setStatus(EpisodeStatus.ARCHIVED);
         episodeRepository.save(episode);
+        final Long archivedPatientId = episode.getPatientId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("episode")
+                .action("icu.episode.archive")
+                .actionType(ActionType.ARCHIVE)
+                .target(new AuditEvent.AuditTarget("Episode", id.toString(),
+                        archivedPatientId == null ? null : archivedPatientId.toString()))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged(previousStatus, "ARCHIVED")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 }

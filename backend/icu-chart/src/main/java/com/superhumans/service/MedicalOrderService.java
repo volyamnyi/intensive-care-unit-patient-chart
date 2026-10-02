@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.MedicalOrderCreateRequest;
 import com.superhumans.dto.MedicalOrderPatchRequest;
 import com.superhumans.dto.MedicalOrderResponse;
@@ -35,6 +42,7 @@ public class MedicalOrderService {
     MedicalOrderRepository medicalOrderRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     MedicalOrderMapper medicalOrderMapper;
 
     public MedicalOrderResponse getOrder(UUID id) {
@@ -71,6 +79,20 @@ public class MedicalOrderService {
 
         order = medicalOrderRepository.save(order);
         auditService.logCreate("MedicalOrder", order.getId(), userId);
+        final UUID createdOrderId = order.getId();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("medical-order")
+                .action("icu.medical_order.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("MedicalOrder", createdOrderId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("ClinicalDay", clinicalDayId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("orderFields", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return medicalOrderMapper.toResponse(order);
     }
 
@@ -91,6 +113,28 @@ public class MedicalOrderService {
         order.setUpdatedBy(userId);
         order = medicalOrderRepository.save(order);
         auditService.logUpdate("MedicalOrder", id, userId, null, "Updated order fields");
+        final boolean doseChanged = request.getDose() != null;
+        final boolean routeChanged = request.getRoute() != null;
+        final boolean frequencyChanged = request.getFrequency() != null;
+        final boolean endChanged = request.getEndTime() != null;
+        auditEmitter.emit("icu", () -> {
+            java.util.List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
+            if (doseChanged || routeChanged || frequencyChanged || endChanged) {
+                changes.add(AuditChanges.fieldChanged("orderFields", DataClass.CLINICAL));
+            }
+            return AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("medical-order")
+                    .action("icu.medical_order.update")
+                    .actionType(ActionType.UPDATE)
+                    .target(new AuditEvent.AuditTarget("MedicalOrder", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(changes)
+                    .source(AuditEvent.AuditSource.API)
+                    .build();
+        });
         return medicalOrderMapper.toResponse(order);
     }
 
@@ -110,10 +154,25 @@ public class MedicalOrderService {
             throw new DocumentLockedException("Medical order is already completed");
         }
 
+        final MedicalOrderStatus cancelledPreviousStatus = order.getStatus();
         order.setStatus(MedicalOrderStatus.CANCELLED);
         order.setUpdatedBy(userId);
         order = medicalOrderRepository.save(order);
         auditService.logAction("MedicalOrder", id, "CANCEL", userId);
+        final String cancelledPreviousStatusName =
+                cancelledPreviousStatus == null ? null : cancelledPreviousStatus.name();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("medical-order")
+                .action("icu.medical_order.cancel")
+                .actionType(ActionType.CANCEL)
+                .target(new AuditEvent.AuditTarget("MedicalOrder", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged(cancelledPreviousStatusName, "CANCELLED")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return medicalOrderMapper.toResponse(order);
     }
 

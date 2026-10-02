@@ -18,9 +18,9 @@ class AuditActionCatalogTest {
 
     @Test
     void catalog_containsAllAtomicModuleActions() {
-        assertThat(AuditActionCatalog.definitions()).hasSize(119);
+        assertThat(AuditActionCatalog.definitions()).hasSize(120);
         assertThat(AuditActionCatalog.forModule("platform")).hasSize(19);
-        assertThat(AuditActionCatalog.forModule("icu")).hasSize(42);
+        assertThat(AuditActionCatalog.forModule("icu")).hasSize(43);
         assertThat(AuditActionCatalog.forModule("medication")).hasSize(26);
         assertThat(AuditActionCatalog.forModule("prosthetics")).hasSize(32);
     }

@@ -3,8 +3,10 @@ package com.superhumans.audit;
 import com.superhumans.entity.core.User;
 import java.util.Set;
 import java.util.TreeSet;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /** Builds actor snapshots from trusted server-side security state. Never from client input. */
 public final class AuditActorResolver {
@@ -13,7 +15,8 @@ public final class AuditActorResolver {
     }
 
     public static AuditEvent.AuditActor fromAuthentication(Authentication authentication) {
-        if (authentication == null) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
             return unknown();
         }
         Long id = authentication.getCredentials() instanceof Long userId ? userId : null;
@@ -51,6 +54,21 @@ public final class AuditActorResolver {
     public static AuditEvent.AuditActor system(String serviceId) {
         return new AuditEvent.AuditActor(
                 AuditEvent.ActorType.SYSTEM, serviceId, null, null, Set.of(), null, null);
+    }
+
+    /** Actor from the current request's trusted authentication, or UNKNOWN outside requests. */
+    public static AuditEvent.AuditActor fromCurrentContext() {
+        try {
+            return fromAuthentication(SecurityContextHolder.getContext().getAuthentication());
+        } catch (RuntimeException exception) {
+            return unknown();
+        }
+    }
+
+    /** Request actor when present, otherwise the given system service identity. */
+    public static AuditEvent.AuditActor fromCurrentContextOrSystem(String serviceId) {
+        AuditEvent.AuditActor actor = fromCurrentContext();
+        return actor.type() == AuditEvent.ActorType.UNKNOWN ? system(serviceId) : actor;
     }
 
     public static AuditEvent.AuditActor unknown() {

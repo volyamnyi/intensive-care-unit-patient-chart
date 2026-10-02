@@ -53,6 +53,9 @@ class ClinicalScaleServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private ScaleResultMapper scaleResultMapper;
 
     @Mock

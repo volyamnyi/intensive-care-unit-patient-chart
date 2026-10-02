@@ -51,6 +51,9 @@ class OrderExecutionServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private FluidBalanceService fluidBalanceService;
 
     @Mock

@@ -1,5 +1,12 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.OrderExecutionCreateRequest;
 import com.superhumans.dto.OrderExecutionPatchRequest;
 import com.superhumans.dto.OrderExecutionPlanRequest;
@@ -43,6 +50,7 @@ public class OrderExecutionService {
     MedicalOrderRepository medicalOrderRepository;
     ClinicalDayRepository clinicalDayRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
     FluidBalanceService fluidBalanceService;
     OrderExecutionMapper orderExecutionMapper;
 
@@ -86,6 +94,8 @@ public class OrderExecutionService {
         execution = orderExecutionRepository.save(execution);
 
         auditService.logAction("OrderExecution", execution.getId(), "PLAN", userId);
+        emitExecution(orderId, execution.getId(), "icu.order_execution.plan", ActionType.PLAN,
+                List.of(AuditChanges.fieldChanged("plannedDose", DataClass.CLINICAL)));
         return orderExecutionMapper.toResponse(execution);
     }
 
@@ -107,6 +117,10 @@ public class OrderExecutionService {
         execution = orderExecutionRepository.save(execution);
 
         auditService.logAction("OrderExecution", execution.getId(), "PLAN_FINISH", userId);
+        emitExecution(orderId, execution.getId(), "icu.order_execution.plan.finish",
+                ActionType.PLAN_FINISH,
+                List.of(new AuditEvent.AuditChange("plannedFinished", AuditEvent.ChangeType.SET,
+                        DataClass.IDENTIFIER, false, true)));
         return orderExecutionMapper.toResponse(execution);
     }
 
@@ -129,6 +143,8 @@ public class OrderExecutionService {
         execution = orderExecutionRepository.save(execution);
 
         auditService.logAction("OrderExecution", execution.getId(), "CANCEL", userId);
+        emitExecution(orderId, execution.getId(), "icu.order_execution.cancel", ActionType.CANCEL,
+                List.of(AuditChanges.statusChanged("PLANNED", "CANCELLED")));
         return orderExecutionMapper.toResponse(execution);
     }
 
@@ -152,12 +168,19 @@ public class OrderExecutionService {
         execution.setUpdatedBy(userId);
         execution = orderExecutionRepository.save(execution);
 
-        if (request.getHour() < LocalDateTime.now().getHour()) {
+        boolean backdated = request.getHour() < LocalDateTime.now().getHour();
+        if (backdated) {
             log.info("BACK_ENTRY: OrderExecution {} executed for past hour {}", execution.getId(), request.getHour());
             auditService.logAction("OrderExecution", execution.getId(), "BACK_ENTRY", userId);
         }
 
         auditService.logAction("OrderExecution", execution.getId(), "EXECUTE", userId);
+        emitExecution(orderId, execution.getId(),
+                backdated ? "icu.order_execution.backdate" : "icu.order_execution.execute",
+                backdated ? ActionType.BACKDATE : ActionType.EXECUTE,
+                List.of(
+                        AuditChanges.statusChanged("PLANNED", execution.getStatus().name()),
+                        AuditChanges.fieldChanged("actualDose", DataClass.CLINICAL)));
         fluidBalanceService.recalculate(order.getClinicalDay().getId(), userId);
         return orderExecutionMapper.toResponse(execution);
     }
@@ -181,6 +204,10 @@ public class OrderExecutionService {
         execution = orderExecutionRepository.save(execution);
 
         auditService.logAction("OrderExecution", execution.getId(), "EXECUTE_FINISH", userId);
+        emitExecution(orderId, execution.getId(), "icu.order_execution.execute.finish",
+                ActionType.EXECUTE_FINISH,
+                List.of(new AuditEvent.AuditChange("completedFinished", AuditEvent.ChangeType.SET,
+                        DataClass.IDENTIFIER, false, true)));
         return orderExecutionMapper.toResponse(execution);
     }
 
@@ -207,6 +234,12 @@ public class OrderExecutionService {
         execution.setUpdatedBy(userId);
         execution = orderExecutionRepository.save(execution);
         auditService.logUpdate("OrderExecution", id, userId, null, "Updated execution");
+        final boolean correctionChanged = request.getActualDose() != null || request.getComment() != null;
+        if (correctionChanged) {
+            emitExecution(execution.getOrder().getId(), id, "icu.order_execution.correct",
+                    ActionType.UPDATE,
+                    List.of(AuditChanges.fieldChanged("executionFields", DataClass.CLINICAL)));
+        }
         return orderExecutionMapper.toResponse(execution);
     }
 
@@ -263,6 +296,23 @@ public class OrderExecutionService {
         return orderExecutionRepository.findByOrderIdAndHour(orderId, hour)
                 .orElseThrow(() -> new BusinessException(ErrorCode.BUSINESS_RULE,
                         "No execution record for this hour"));
+    }
+
+    private void emitExecution(UUID orderId, UUID executionId, String action, ActionType type,
+            List<AuditEvent.AuditChange> changes) {
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("order-execution")
+                .action(action)
+                .actionType(type)
+                .target(new AuditEvent.AuditTarget("OrderExecution", executionId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("MedicalOrder", orderId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(changes)
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     private OrderExecutionStatus resolveStatus(String actualDose, String plannedDose) {

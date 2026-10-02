@@ -50,6 +50,9 @@ class FluidBalanceServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private FluidBalanceMapper fluidBalanceMapper;
 
     @InjectMocks

@@ -46,6 +46,9 @@ class ClinicalDayServiceTest {
     private AuditService auditService;
 
     @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
     private HourlyRecordRepository hourlyRecordRepository;
 
     @Mock
@@ -330,12 +333,16 @@ class ClinicalDayServiceTest {
 
         when(clinicalDayRepository.findDaysToAutoClose(any())).thenReturn(List.of(day1, day2));
         when(clinicalDayRepository.save(any(ClinicalDay.class))).thenAnswer(i -> i.getArgument(0));
+        when(auditEmitter.beginOperation(any())).thenAnswer(
+                invocation -> com.superhumans.audit.AuditOperationContext.begin(
+                        invocation.getArgument(0)));
 
         clinicalDayService.autoCloseExpiredDays();
 
         verify(clinicalDayRepository, times(2)).save(any(ClinicalDay.class));
         verify(auditService, times(2)).logAction(eq("ClinicalDay"), any(), eq("AUTO_CLOSE"), eq(0L));
         verify(pdfGeneratorService, times(2)).generatePdf(any(UUID.class), eq(0L));
+        verify(auditEmitter, times(2)).emit(eq("icu"), any());
     }
 
     @Test
