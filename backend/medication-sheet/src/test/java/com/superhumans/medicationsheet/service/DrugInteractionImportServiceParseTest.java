@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class DrugInteractionImportServiceParseTest {
 
     private final DrugInteractionImportService service =
-            new DrugInteractionImportService(null, null, null, null);
+            new DrugInteractionImportService(null, null, null, null, null);
 
     @Test
     void parse_deduplicatesMirroredReferences() {

@@ -2,6 +2,13 @@ package com.superhumans.medicationsheet.service;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
@@ -21,6 +28,7 @@ import java.util.UUID;
 public class PrescriptionListService {
 
     PrescriptionListRepository listRepository;
+    DomainAuditEmitter auditEmitter;
 
     @Transactional(readOnly = true)
     public List<PrescriptionList> getByPatient(Long patientId) {
@@ -44,6 +52,20 @@ public class PrescriptionListService {
         list.setUpdatedBy(0L);
         list = listRepository.save(list);
         log.info("Prescription list created: id={}, patientId={}", list.getId(), patientId);
+        final UUID createdListId = list.getId();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("prescription-list")
+                .action("medication.list.create")
+                .actionType(ActionType.CREATE)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", createdListId.toString(),
+                        patientId == null ? null : patientId.toString()))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("listFields", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return list;
     }
 
@@ -85,12 +107,25 @@ public class PrescriptionListService {
     @Transactional
     public void close(UUID id) {
         PrescriptionList list = getById(id);
+        String previousStatus = list.getStatus();
         list.setStatus("Finished");
         list.setEditingUserId(null);
         list.setEditingStartedAt(null);
         list.setUpdatedBy(0L);
         listRepository.save(list);
         log.info("Prescription list closed: id={}", id);
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("prescription-list")
+                .action("medication.list.close")
+                .actionType(ActionType.CLOSE)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged(previousStatus, "Finished")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     @Transactional
@@ -99,5 +134,18 @@ public class PrescriptionListService {
         list.setDeleted(true);
         listRepository.save(list);
         log.info("Prescription list deleted (soft): id={}", id);
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("prescription-list")
+                .action("medication.list.delete")
+                .actionType(ActionType.DELETE)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(new AuditEvent.AuditChange("isDeleted", AuditEvent.ChangeType.SET,
+                        DataClass.IDENTIFIER, false, true)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 }

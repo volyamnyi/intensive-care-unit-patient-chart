@@ -3,6 +3,10 @@ package com.superhumans.medicationsheet.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.entity.core.SystemSettings;
 import com.superhumans.medicationsheet.dto.DrugInteractionImportReport;
 import com.superhumans.medicationsheet.entity.DrugInteractionDrug;
@@ -64,6 +68,7 @@ public class DrugInteractionImportService {
     DrugInteractionPairRepository pairRepository;
     SystemSettingsRepository settingsRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
 
     /** Thrown when the document parses to zero rows; carries the skip detail list. */
     @Getter
@@ -109,6 +114,30 @@ public class DrugInteractionImportService {
         settingsRepository.save(lastImport);
         auditService.logEvent("DrugInteractions", null, "IMPORT", adminId,
                 null, jsonOf(report), "drug-interactions-import");
+        final boolean runnerImport = adminId == null || adminId == 0L;
+        auditEmitter.emit("medication", () -> {
+            AuditEvent.AuditActor actor = runnerImport
+                    ? new AuditEvent.AuditActor(AuditEvent.ActorType.SERVICE,
+                            "drug-interaction-import-runner", null, null, java.util.Set.of(), null, null)
+                    : new AuditEvent.AuditActor(AuditEvent.ActorType.USER,
+                            adminId.toString(), null, null, java.util.Set.of("ADMINISTRATOR"), null, null);
+            java.util.Map<String, Object> metadata = new java.util.TreeMap<>();
+            metadata.put("sourceHash", report.getSourceHash());
+            metadata.put("durationMs", report.getDurationMs());
+            metadata.put("affectedRecords", report.getDrugs() + report.getInteractions());
+            return AuditEvent.builder()
+                    .actor(actor)
+                    .eventClass(EventClass.SECURITY)
+                    .module("medication")
+                    .functionalArea("interactions")
+                    .action("medication.interactions.import")
+                    .actionType(ActionType.IMPORT)
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .metadata(metadata)
+                    .source(runnerImport ? AuditEvent.AuditSource.STARTUP_IMPORT
+                            : AuditEvent.AuditSource.ADMIN_TOOL)
+                    .build();
+        });
         log.info("Drug-interactions import: drugs={}, pairs={}, skipped={}, {} ms",
                 parsed.drugs().size(), parsed.pairs().size(), parsed.skipped().size(), durationMs);
         return report;

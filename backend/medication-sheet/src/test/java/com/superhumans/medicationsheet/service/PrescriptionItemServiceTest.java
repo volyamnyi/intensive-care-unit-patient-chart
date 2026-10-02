@@ -32,6 +32,7 @@ class PrescriptionItemServiceTest {
     @Mock private PrescriptionDayPartRepository partRepository;
     @Mock private PrescriptionListRepository listRepository;
     @Mock private AuditService auditService;
+    @Mock private com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     @InjectMocks
     private PrescriptionItemService service;

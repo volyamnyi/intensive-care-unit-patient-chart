@@ -3,6 +3,13 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 import com.superhumans.medicationsheet.entity.PrescriptionList;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.entity.VitalSignDay;
 import com.superhumans.medicationsheet.entity.VitalSignEntry;
 import com.superhumans.medicationsheet.entity.VitalSignList;
@@ -28,6 +35,7 @@ public class VitalSignService {
     VitalSignDayRepository vitalDayRepository;
     VitalSignEntryRepository vitalEntryRepository;
     PrescriptionListRepository listRepository;
+    DomainAuditEmitter auditEmitter;
 
     @Transactional
     public VitalSignList getOrCreate(UUID prescriptionListId) {
@@ -62,6 +70,24 @@ public class VitalSignService {
                             vitalEntryRepository.save(entry);
                         }
                     }
+                    final UUID initializedListId = vitalList.getId();
+                    auditEmitter.emit("medication", () -> AuditEvent.builder()
+                            .actor(AuditActorResolver.fromCurrentContextOrSystem("vital-sign-job"))
+                            .eventClass(EventClass.BUSINESS)
+                            .module("medication")
+                            .functionalArea("vitals")
+                            .action("medication.vitals.grid.initialize")
+                            .actionType(ActionType.GRID_INITIALIZE)
+                            .target(new AuditEvent.AuditTarget(
+                                    "VitalSignList", initializedListId.toString(), null))
+                            .parentTarget(new AuditEvent.AuditTarget(
+                                    "PrescriptionList", prescriptionListId.toString(), null))
+                            .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                            .changes(List.of(
+                                    AuditChanges.fieldChanged("vitalGrid", DataClass.CLINICAL)))
+                            .affectedRecords(106)
+                            .source(AuditEvent.AuditSource.API)
+                            .build());
                     return vitalList;
                 });
     }
@@ -87,7 +113,21 @@ public class VitalSignService {
         if (update.getStool() != null) entry.setStool(update.getStool());
         if (update.getPainScore() != null) entry.setPainScore(update.getPainScore());
         entry.setUpdatedBy(0L);
-        return vitalEntryRepository.save(entry);
+        VitalSignEntry saved = vitalEntryRepository.save(entry);
+        final UUID updatedEntryId = saved.getId();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("vitals")
+                .action("medication.vitals.entry.update")
+                .actionType(ActionType.UPDATE)
+                .target(new AuditEvent.AuditTarget("VitalSignEntry", updatedEntryId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("vitalFields", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return saved;
     }
 
     @Transactional
@@ -101,7 +141,24 @@ public class VitalSignService {
                             .build();
                     entry.setCreatedBy(0L);
                     entry.setUpdatedBy(0L);
-                    return vitalEntryRepository.save(entry);
+                    VitalSignEntry saved = vitalEntryRepository.save(entry);
+                    final UUID createdEntryId = saved.getId();
+                    auditEmitter.emit("medication", () -> AuditEvent.builder()
+                            .actor(AuditActorResolver.fromCurrentContext())
+                            .eventClass(EventClass.BUSINESS)
+                            .module("medication")
+                            .functionalArea("vitals")
+                            .action("medication.vitals.entry.create")
+                            .actionType(ActionType.CREATE)
+                            .target(new AuditEvent.AuditTarget(
+                                    "VitalSignEntry", createdEntryId.toString(), null))
+                            .parentTarget(new AuditEvent.AuditTarget("VitalSignDay", dayId.toString(), null))
+                            .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                            .changes(List.of(
+                                    AuditChanges.fieldChanged("vitalFields", DataClass.CLINICAL)))
+                            .source(AuditEvent.AuditSource.API)
+                            .build());
+                    return saved;
                 });
     }
 

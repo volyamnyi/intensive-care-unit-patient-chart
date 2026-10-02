@@ -33,6 +33,7 @@ class PrescriptionExecutionServiceTest {
     @Mock private PrescriptionDayPartRepository partRepository;
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     @InjectMocks
     private PrescriptionExecutionService service;
@@ -107,6 +108,7 @@ class PrescriptionExecutionServiceTest {
         verify(partRepository).save(partCaptor.capture());
         assertThat(partCaptor.getValue().getIsCompleted()).isTrue();
         assertThat(partCaptor.getValue().getNurseName()).isEqualTo(CURRENT_USER_LOGIN + "/2P:" + SECOND_USER_LOGIN);
+        verify(auditEmitter).emit(eq("medication"), any());
     }
 
     @Test

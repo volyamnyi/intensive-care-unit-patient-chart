@@ -4,6 +4,13 @@ import lombok.experimental.FieldDefaults;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionExecution;
 import com.superhumans.exception.NotFoundException;
@@ -16,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -28,6 +36,7 @@ public class PrescriptionExecutionService {
     PrescriptionDayPartRepository partRepository;
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
+    DomainAuditEmitter auditEmitter;
 
     @Transactional
     public PrescriptionExecution execute(UUID dayPartId, Long currentUserId, String currentUserLogin, String actualDose, String secondPersonLogin, String secondPersonPassword) {
@@ -76,8 +85,38 @@ public class PrescriptionExecutionService {
         part.setUpdatedBy(currentUserId);
         partRepository.save(part);
 
-        log.info("Dose executed: dayPartId={}, firstPersonLogin={}, secondPersonLogin={}",
-                dayPartId, currentUserLogin, secondPersonLogin);
+        log.info("Dose executed: dayPartId={}", dayPartId);
+        final UUID executedDayPartId = dayPartId;
+        final Long executedFirstPersonId = currentUserId;
+        final Long executedSecondPersonId = secondPerson.getId();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(new AuditEvent.AuditActor(
+                        AuditEvent.ActorType.USER,
+                        executedFirstPersonId == null ? null : executedFirstPersonId.toString(),
+                        currentUserLogin,
+                        null,
+                        java.util.Set.of(),
+                        null,
+                        new AuditEvent.AuditActor(
+                                AuditEvent.ActorType.USER,
+                                executedSecondPersonId == null ? null : executedSecondPersonId.toString(),
+                                secondPersonLogin,
+                                null,
+                                java.util.Set.of("NURSE"),
+                                null,
+                                null)))
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("dose")
+                .action("medication.dose.execute")
+                .actionType(ActionType.DOSE_EXECUTE)
+                .target(new AuditEvent.AuditTarget("PrescriptionDayPart", executedDayPartId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(
+                        AuditChanges.statusChanged("PLANNED", "COMPLETED"),
+                        AuditChanges.fieldChanged("actualDose", DataClass.CLINICAL)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return exec;
     }
 }

@@ -27,6 +27,7 @@ class VitalSignServiceTest {
     @Mock private VitalSignDayRepository vitalDayRepository;
     @Mock private VitalSignEntryRepository vitalEntryRepository;
     @Mock private PrescriptionListRepository listRepository;
+    @Mock private com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     @InjectMocks
     private VitalSignService service;

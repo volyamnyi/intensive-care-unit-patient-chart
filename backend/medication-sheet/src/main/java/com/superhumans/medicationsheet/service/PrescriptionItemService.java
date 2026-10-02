@@ -2,6 +2,13 @@ package com.superhumans.medicationsheet.service;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionItem;
 import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
@@ -33,6 +40,7 @@ public class PrescriptionItemService {
     PrescriptionDayPartRepository partRepository;
     PrescriptionListRepository listRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
 
     @Transactional(readOnly = true)
     public List<PrescriptionItem> getByList(UUID listId) {
@@ -85,6 +93,21 @@ public class PrescriptionItemService {
         }
         log.info("Prescription item added: id={}, medicine={}, atc={}, 21 days created",
                 item.getId(), medicineName, item.getMedicineAtcCode());
+        final UUID createdItemId = item.getId();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("prescription-item")
+                .action("medication.item.add")
+                .actionType(ActionType.ITEM_ADD)
+                .target(new AuditEvent.AuditTarget("PrescriptionItem", createdItemId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("itemFields", DataClass.CLINICAL)))
+                .affectedRecords(106)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return item;
     }
 
@@ -114,6 +137,21 @@ public class PrescriptionItemService {
 
         PrescriptionItemDay day = createDay(item, nextDate);
         log.info("Prescription day added: itemId={}, dayDate={}", item.getId(), nextDate);
+        final UUID createdDayId = day.getId();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("prescription-day")
+                .action("medication.item.day.add")
+                .actionType(ActionType.DAY_ADD)
+                .target(new AuditEvent.AuditTarget("PrescriptionItemDay", createdDayId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("PrescriptionItem", itemId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.fieldChanged("dayDate", DataClass.IDENTIFIER)))
+                .affectedRecords(5)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return day;
     }
 
@@ -148,6 +186,20 @@ public class PrescriptionItemService {
         day.setUpdatedBy(userId);
         dayRepository.save(day);
         auditService.logAction("PrescriptionItemDay", day.getId(), "REMOVE", userId);
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("prescription-day")
+                .action("medication.item.day.remove")
+                .actionType(ActionType.DAY_REMOVE)
+                .target(new AuditEvent.AuditTarget("PrescriptionItemDay", dayId.toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget("PrescriptionItem", itemId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(new AuditEvent.AuditChange("isDeleted", AuditEvent.ChangeType.SET,
+                        DataClass.IDENTIFIER, false, true)))
+                .source(AuditEvent.AuditSource.API)
+                .build());
         log.info("Prescription day removed: itemId={}, dayId={}", itemId, dayId);
     }
 
@@ -183,6 +235,21 @@ public class PrescriptionItemService {
         item.setDeleted(true);
         item.setUpdatedBy(0L);
         itemRepository.save(item);
+        final UUID removedListId = item.getList() == null ? null : item.getList().getId();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("prescription-item")
+                .action("medication.item.remove")
+                .actionType(ActionType.ITEM_REMOVE)
+                .target(new AuditEvent.AuditTarget("PrescriptionItem", itemId.toString(), null))
+                .parentTarget(removedListId == null ? null
+                        : new AuditEvent.AuditTarget("PrescriptionList", removedListId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(List.of(AuditChanges.statusChanged("ACTIVE", "DELETED")))
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     @Transactional
@@ -203,6 +270,8 @@ public class PrescriptionItemService {
         part.setUpdatedBy(userId);
         PrescriptionDayPart saved = partRepository.save(part);
         auditService.logAction("PrescriptionDayPart", saved.getId(), "PLAN", userId);
+        emitDayPart(saved.getId(), "medication.dose.plan", ActionType.PLAN,
+                List.of(AuditChanges.fieldChanged("dose", DataClass.CLINICAL)));
         return saved;
     }
 
@@ -212,7 +281,10 @@ public class PrescriptionItemService {
         part.setIsCompleted(true);
         part.setNurseName(nurseId.toString());
         part.setUpdatedBy(0L);
-        return partRepository.save(part);
+        PrescriptionDayPart saved = partRepository.save(part);
+        emitDayPart(saved.getId(), "medication.dose.complete", ActionType.COMPLETE,
+                List.of(AuditChanges.statusChanged("PLANNED", "COMPLETED")));
+        return saved;
     }
 
     @Transactional
@@ -220,7 +292,10 @@ public class PrescriptionItemService {
         PrescriptionDayPart part = getDayPart(dayPartId);
         part.setIsCompletedFinished(true);
         part.setUpdatedBy(0L);
-        return partRepository.save(part);
+        PrescriptionDayPart saved = partRepository.save(part);
+        emitDayPart(saved.getId(), "medication.dose.complete", ActionType.COMPLETE,
+                List.of(AuditChanges.fieldChanged("completedFinished", DataClass.IDENTIFIER)));
+        return saved;
     }
 
     @Transactional
@@ -243,6 +318,8 @@ public class PrescriptionItemService {
         part.setUpdatedBy(userId);
         PrescriptionDayPart saved = partRepository.save(part);
         auditService.logAction("PrescriptionDayPart", saved.getId(), "CANCEL", userId);
+        emitDayPart(saved.getId(), "medication.dose.cancel", ActionType.CANCEL,
+                List.of(AuditChanges.statusChanged("PLANNED", "CANCELLED")));
         return saved;
     }
 
@@ -263,6 +340,8 @@ public class PrescriptionItemService {
         part.setUpdatedBy(userId);
         PrescriptionDayPart saved = partRepository.save(part);
         auditService.logAction("PrescriptionDayPart", saved.getId(), "REPLAN", userId);
+        emitDayPart(saved.getId(), "medication.dose.replan", ActionType.PLAN,
+                List.of(AuditChanges.statusChanged("CANCELLED", "PLANNED")));
         return saved;
     }
 
@@ -286,7 +365,39 @@ public class PrescriptionItemService {
         part.setUpdatedBy(userId);
         PrescriptionDayPart saved = partRepository.save(part);
         auditService.logAction("PrescriptionDayPart", saved.getId(), "CANCEL_ASSIGNMENT", userId);
+        emitDayPart(saved.getId(), "medication.dose.unassign", ActionType.UNASSIGN,
+                List.of(AuditChanges.statusChanged("PLANNED", "UNPLANNED")));
         return saved;
+    }
+
+    private void emitDayPart(UUID dayPartId, String action, ActionType type,
+            List<AuditEvent.AuditChange> changes) {
+        PrescriptionDayPart part = partRepository.findById(dayPartId).orElse(null);
+        final AuditEvent.AuditTarget dayTarget;
+        final AuditEvent.AuditTarget itemTarget;
+        if (part != null && part.getDay() != null) {
+            dayTarget = new AuditEvent.AuditTarget("PrescriptionItemDay",
+                    part.getDay().getId().toString(), null);
+            itemTarget = part.getDay().getItem() == null ? null : new AuditEvent.AuditTarget(
+                    "PrescriptionItem", part.getDay().getItem().getId().toString(), null);
+        } else {
+            dayTarget = null;
+            itemTarget = null;
+        }
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("dose")
+                .action(action)
+                .actionType(type)
+                .target(new AuditEvent.AuditTarget("PrescriptionDayPart", dayPartId.toString(), null))
+                .parentTarget(dayTarget)
+                .relatedEntities(itemTarget == null ? List.of() : List.of(itemTarget))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(changes)
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 
     public List<PrescriptionItemDay> getDays(UUID itemId) {
