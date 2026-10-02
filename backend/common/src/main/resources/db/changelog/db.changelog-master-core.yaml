@@ -23,3 +23,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/008-prosthetics-production-permissions.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/009-audit-events.sql

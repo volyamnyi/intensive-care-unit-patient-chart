@@ -35,3 +35,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/012-brak-outbox-event-kind-unique.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/033-audit-outbox.sql

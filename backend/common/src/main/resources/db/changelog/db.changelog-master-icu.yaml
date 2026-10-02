@@ -20,3 +20,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: icu/007-drop-pdf-transfer.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/079-audit-outbox.sql

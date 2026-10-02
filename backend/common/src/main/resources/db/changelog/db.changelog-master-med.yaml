@@ -14,3 +14,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: med/006-drop-import-staging.sql
+  - include:
+      relativeToChangelogFile: true
+      file: med/027-audit-outbox.sql
