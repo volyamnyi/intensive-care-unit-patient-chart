@@ -6,9 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
-import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.repository.core.UserRepository;
-import com.superhumans.service.AuditService;
 import jakarta.servlet.FilterChain;
 import java.io.IOException;
 import org.junit.jupiter.api.AfterEach;
@@ -41,8 +39,7 @@ class JwtAuthenticationFilterTest {
         ObjectProvider<TokenRevocationService> revocationProvider = mock(ObjectProvider.class);
         when(revocationProvider.getIfAvailable()).thenReturn(new TokenRevocationService());
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(
-                provider, mock(AuditLogRepository.class), mock(AuditService.class),
-                userRepositoryProvider, revocationProvider);
+                provider, userRepositoryProvider, revocationProvider);
         String token = provider.generateToken("doctor1", "DOCTOR", 11L);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/test");
         request.addHeader("Authorization", "Bearer " + token);

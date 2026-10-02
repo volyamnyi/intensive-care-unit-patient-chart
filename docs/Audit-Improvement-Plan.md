@@ -1,6 +1,7 @@
 # Audit v2 — план наскрізного аудиту реальних дій користувачів (виправлений за review)
 
-> **Статус:** планування. Реалізація коду — тільки після окремої вказівки.
+> **Статус:** реалізація розпочата за окремою вказівкою власника; F0 завершена локально, F1 розпочата.
+> Деплой/production-операції не виконуються автоматично; Liquibase-зміни перевіряються лише на local/test.
 > **Мова плану:** українська. Стабільні ідентифікатори дій і полів — англійською за §B1.
 > **Фази:** F0–F8 (§F). Кожна фаза має окремий GitHub Issue; номери — у §J.
 > План повністю описаний множиною Issues F0–F8 (§F цього файлу — огляд, Issues — нормативний опис фази).
@@ -18,7 +19,7 @@
 | R7 | Немає таблиці failure policy | §B4: нормативна таблиця за класами подій |
 | R8 | Немає naming/versioning для action codes | §B1: формат `<module>.<area>.<verb>[.<object>]`, версіонування каталогу, правило перейменувань |
 | R9 | Відкриті рішення не зібрані в одному місці | §B8: D1–D7, блокують старт етапів 3–5 |
-| R10 | Фактичні формулювання надто категоричні (індекси, proxy, метрики) | §A.7: caveats C1–C6 |
+| R10 | Фактичні формулювання надто категоричні (індекси, proxy, метрики) | §A.7: caveats C1–C7 |
 | R11 | Міграція naive `LocalDateTime` у UTC не описана | §H.5: явне правило міграції міток часу |
 | R12 | `createdBy/updatedBy=0L` виглядає як локальна проблема medication | §A.5: зафіксовано як системний патерн замовчування actor у всіх модулях |
 
@@ -89,7 +90,8 @@ user-caused записи в усіх модулях частково не нес
 
 Runbook (`docs/Production-Deployment-Runbook.md`, §3.6) описує 2 роки для `audit_logs` і місячне
 архівування, але архіватора, cleanup-job і retention enforcement **у коді не знайдено**.
-Runbook — початкова пропозиція, не реалізований контроль (рішення D1, §B8).
+Погоджено тимчасове правило: 2 роки для нових business/security audit events до юридичного/DPO
+затвердження; для старих подій і архівного видалення без окремої policy purge не виконувати.
 
 ### A.7. Factual caveats (R10)
 
@@ -101,6 +103,10 @@ Runbook — початкова пропозиція, не реалізовани
 - C5. `request.getRemoteAddr()` + згадка `X-Forwarded-For` у runbook передбачають proxy;
   proxy-конфігурація поза репозиторієм — зовнішня залежність (D7).
 - C6. Усі test ID з префіксом `PROP-` — запропоновані; мапінг на реальні шляхи — у легенді §E.
+- C7. Під час старту F0 власник обрав: fail-closed для critical writes і sensitive PHI reads;
+  IP + скорочений UA лише з довіреного proxy; мінімальний clinical diff; security events —
+  окремий RBAC permission; Actuator/Micrometer як метрики. Proxy CIDR/hops ще треба передати
+  через deployment configuration перед production; невідомі CIDR не можна вгадувати.
 
 ---
 
@@ -108,8 +114,9 @@ Runbook — початкова пропозиція, не реалізовани
 
 ### B1. Naming / versioning action codes (R8)
 
-- Формат: `<module>.<area>.<verb>[.<object>]`, lowercase, крапки-роздільники.
-  Приклади: `auth.session.login`, `icu.clinical_day.sign.nurse`, `medication.dose.execute`,
+- Формат: `<module>.<area>.<verb>[.<object>]`, lowercase, крапки-роздільники;
+  сегменти можуть містити `_` для узгодження з module/domain naming.
+Приклади: `platform.auth.session.login`, `icu.clinical_day.sign.nurse`, `medication.dose.execute`,
   `prosthetics.brak.confirm`, `platform.rbac.permission.grant`.
 - Каталог версіонується (`AUDIT_CATALOG_VERSION`, починаючи з `1`); запис несе `schemaVersion`.
 - Перейменування коду = новий код + alias на старий; старі коди ніколи не перевизначаються.
@@ -141,8 +148,8 @@ parentAuditId  — зв’язок root/child.
 
 | Клас | Audit write недоступний | Бізнес-операція | Retry | Виявлення втрати |
 |---|---|---|---|---|
-| Критична мутація (пацієнт/документ/призначення/процес) | локальний outbox недоступний | **Відхилити** (fail-closed), рішення D2 може пом’якшити лише для нечутливих класів | outbox зберігається; relay — exponential backoff, DLQ | моніторинг backlog + oldest-event age; alert |
-| Sensitive read (картка/документ/файл) | durable write недоступний | **Не віддавати контент** до запису спроби (D2), або віддати + зафіксувати gap-подія — за рішенням D2 | спроба пишеться окремо від транзакції читання | gap-детектор: контент віддано без access event |
+| Критична мутація (пацієнт/документ/призначення/процес) | локальний outbox недоступний | **Відхилити** (fail-closed); для цих операцій виняток не допускається | outbox зберігається; relay — exponential backoff, DLQ | моніторинг backlog + oldest-event age; alert |
+| Sensitive read (картка/документ/файл) | durable write недоступний | **Не віддавати контент** до запису спроби (fail-closed) | спроба пишеться окремо від транзакції читання | gap-детектор: контент віддано без access event |
 | Security denial / auth attempt | — | пишеться незалежно від відхиленої транзакції; ніколи не блокує відповідь `401/403` | локальна durable черга, best-effort з alert | лічильник dropped security events; alert на >0 |
 | Крок system job | outbox недоступний | job позначає крок `AUDIT_PENDING`, повторює | retry за розкладом | вік найстарішого `AUDIT_PENDING` |
 | Notification delivery | — | статус `PENDING/FAILED` зберігається в outbox (як зараз); лист не губиться мовчки | attempts + `DEAD` після ліміту | DLQ + alert |
@@ -207,15 +214,24 @@ parentAuditId  — зв’язок root/child.
 навантажувального тесту, не критерії приймання. Acceptance: виміряно на узгодженому обсязі
 і retention-горизонті, target затверджено, регресії ключових сценаріїв немає.
 
-### B8. Відкриті рішення (блокують старт F3–F5)
+### B8. Рішення F0 (узгоджено; реалізаційні параметри зазначено окремо)
 
-- D1. Retention за класами даних і юридична підстава (runbook: 2 роки audit vs 5 років медданих).
-- D2. Fail-closed vs fail-open для sensitive reads і нечутливих мутацій (§B4).
-- D3. Чи зберігати IP/UA, у якому вигляді та строк.
-- D4. Які PHI-деталі доступні в audit detail і кому (restricted detail + окремий доступ).
-- D5. Хто має доступ до security events (відмінний від business audit?).
-- D6. Механізм метрик (Actuator/інше).
-- D7. Proxy-конфігурація поза репозиторієм як зовнішня залежність (довірений ланцюжок IP).
+- D1. **Тимчасово 2 роки** для нових audit/security events; це не замінює юридичне/DPO
+  затвердження до production. Не видаляти legacy чи архів до окремого погодження.
+- D2. **Fail-closed**: critical mutation не commit-иться без durable local outbox;
+  sensitive PHI read не віддає контент без durable access event. Security denial залишається
+  denial і не блокується audit failure; dropped attempt генерує alert.
+- D3. **IP + скорочений UA** для security audit. Forwarded IP приймати лише від allowlist
+  довірених proxy hops; allowlist/CIDR є deployment config, його значення зараз не відомі.
+- D4. **Мінімальний diff**: field/fact за замовчуванням; точні клінічні значення — лише
+  structured allowlist і restricted detail permission після DPO-класифікації.
+- D5. **Окремий permission `AUDIT_SECURITY_ACCESS`**. Початковий default grant — лише AUDITOR;
+  Administrator отримує його лише через затверджену RBAC-зміну, а не неявно через `AUDIT_ACCESS`.
+- D6. **Actuator/Micrometer**; перевірити/додати dependency і безпечну інтеграцію з наявним
+  моніторингом. Не відкривати Prometheus endpoint анонімно.
+- D7. **Довірений reverse proxy**; forwarded headers довіряти лише від налаштованих proxy hops.
+  Якщо allowlist відсутній — фіксувати socket peer лише як proxy address або не зберігати client IP;
+  не довіряти клієнтському `X-Forwarded-For`.
 
 ---
 
@@ -270,6 +286,8 @@ Workflow: `TRANSITION SIGN REOPEN CLOSE CANCEL ASSIGN REASSIGN COMPLETE FAIL PAU
 Легенда. `Flags`: `M` mandatory · `Rec` recommended · `T` technical · `S` security ·
 `R` read · `W` write · `D` destructive · `A` automated.
 Клас події — §C (`BUSINESS|USER_ACTIVITY|SECURITY`).
+Catalog v1: 118 атомарних кодів (`platform` 18, `icu` 42, `medication` 26, `prosthetics` 32),
+зафіксованих у `AuditActionCatalog`; underscore дозволений у сегментах коду.
 `Tests`: ID з префіксом `PROP-` — **запропоновані** (не існуючі); мапінг:
 `PROP-IT-*` → `backend/*/src/test/...` (інтеграційні),
 `PROP-SEC-*` → security-інтеграційні, `PROP-E2E-*` → `tests/specs/...`,
@@ -279,17 +297,17 @@ Workflow: `TRANSITION SIGN REOPEN CLOSE CANCEL ASSIGN REASSIGN COMPLETE FAIL PAU
 
 | # | Action (код) | Дія користувача | Target | Type / Flags / Клас | Audit data | Actor | Outcome | Prio | Tests | Стан зараз |
 |---|---|---|---|---|---|---|---|---|---|---|
-| P01 | `auth.session.login` | Увійти (LOCAL/LDAP) | User | `AUTHENTICATE` / M,S,W / SECURITY | provider, role snapshot, error code; без пароля/токена | USER / INTEGRATION(LDAP bind) | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-01, PROP-SEC-01, PROP-E2E-PLAT-01 | LOGIN є |
-| P02 | `auth.session.login.failed` | Невдала спроба входу | User? | `AUTHENTICATE` / M,S,W / SECURITY | login у sanitized details, attempt counters | USER | FAILURE | M0 | PROP-SEC-01 | LOGIN_FAILED є |
-| P03 | `auth.session.login.blocked` | Заблокована спроба (rate-limit) | Login identity | `AUTHENTICATE` / M,S,W / SECURITY | причина блокування | SYSTEM | DENIED | M0 | PROP-SEC-01 | LOGIN_BLOCKED є |
-| P04 | `auth.session.logout` | Вийти | Session | `LOGOUT` / M,S,W / SECURITY | session ref | USER | SUCCESS | M0 | PROP-IT-PLAT-01 | LOGOUT є |
-| P05 | `auth.directory.provision` | Перший LDAP bind (створення GUEST) | User | `PROVISION` / M,S,W / SECURITY | LDAP login, collision outcome | SYSTEM (initiatedBy: LDAP identity) | SUCCESS/FAILURE | M0 | PROP-SEC-02 | окремої події немає |
-| P06 | `auth.token.rejected` | Невалідний/відкликаний токен | Session/token jti | `ACCESS_DENIED` / M,S,R / SECURITY | причина (expired/revoked/unknown), без токена | SYSTEM | DENIED | M0 | PROP-SEC-03 | немає структурованої події |
+| P01 | `platform.auth.session.login` | Увійти (LOCAL/LDAP) | User | `AUTHENTICATE` / M,S,W / SECURITY | provider, role snapshot, error code; без пароля/токена | USER / SYSTEM(initiatedBy: LDAP identity) | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-01, PROP-SEC-01, PROP-E2E-PLAT-01 | LOGIN є |
+| P02 | `platform.auth.session.login.failed` | Невдала спроба входу | User? | `AUTHENTICATE` / M,S,W / SECURITY | login у sanitized details, attempt counters | USER | FAILURE | M0 | PROP-SEC-01 | LOGIN_FAILED є |
+| P03 | `platform.auth.session.login.blocked` | Заблокована спроба (rate-limit) | Login identity | `AUTHENTICATE` / M,S,W / SECURITY | причина блокування | SYSTEM | DENIED | M0 | PROP-SEC-01 | LOGIN_BLOCKED є |
+| P04 | `platform.auth.session.logout` | Вийти | Session | `LOGOUT` / M,S,W / SECURITY | session ref | USER | SUCCESS | M0 | PROP-IT-PLAT-01 | LOGOUT є |
+| P05 | `platform.auth.directory.provision` | Перший LDAP bind (створення GUEST) | User | `PROVISION` / M,S,W / SECURITY | LDAP login, collision outcome | SYSTEM (initiatedBy: LDAP identity) | SUCCESS/FAILURE | M0 | PROP-SEC-02 | окремої події немає |
+| P06 | `platform.auth.token.rejected` | Невалідний/відкликаний токен | Session/token jti | `ACCESS_DENIED` / M,S,R / SECURITY | причина (expired/revoked/unknown), без токена | SYSTEM | DENIED | M0 | PROP-SEC-03 | немає структурованої події |
 | P07 | `platform.user.view` | Переглянути користувачів | User list | `VIEW` / Rec,S,R / USER_ACTIVITY | scope/count | ADMIN | SUCCESS/DENIED | M1 | PROP-E2E-PLAT-02 | немає |
-| P08 | `platform.user.role.change` | Змінити роль | User (numeric ID string) | `ROLE_CHANGE` / M,S,W / BUSINESS | old→new role, target user ID | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-02, PROP-SEC-04 | дія є, але `entityId=null`, старої ролі немає |
+| P08 | `platform.user.role.change` | Змінити роль | User (numeric ID string) | `ROLE_CHANGE` / M,S,W / SECURITY | old→new role, target user ID | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-02, PROP-SEC-04 | дія є, але `entityId=null`, старої ролі немає |
 | P09 | `platform.user.disable` | Soft-delete користувача | User | `DISABLE` / M,S,W,D / BUSINESS | попередній/новий state | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-02 | дія є, без target ID |
-| P10 | `platform.rbac.permission.grant` | Надати permission ролі | RolePermission | `PERMISSION_GRANT` / M,S,W / BUSINESS+SECURITY | role, code, old→new | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-03, PROP-SEC-05 | подія є, неструктурована |
-| P11 | `platform.rbac.permission.revoke` | Забрати permission | RolePermission | `PERMISSION_REVOKE` / M,S,W / BUSINESS+SECURITY | role, code, old→new | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-03 | подія є, неструктурована |
+| P10 | `platform.rbac.permission.grant` | Надати permission ролі | RolePermission | `PERMISSION_GRANT` / M,S,W / SECURITY | role, code, old→new | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-03, PROP-SEC-05 | подія є, неструктурована |
+| P11 | `platform.rbac.permission.revoke` | Забрати permission | RolePermission | `PERMISSION_REVOKE` / M,S,W / SECURITY | role, code, old→new | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PLAT-03 | подія є, неструктурована |
 | P12 | `platform.audit.search` | Шукати в аудиті | Audit query | `SEARCH` / Rec,S,R / USER_ACTIVITY | фільтри без PII, result count | USER | SUCCESS/DENIED | M1 | PROP-IT-AUD-01, PROP-E2E-AUD-01 | сам перегляд не аудититься |
 | P13 | `platform.audit.detail.view` | Відкрити картку події | AuditEvent | `RECORD_VIEW` / Rec,S,R / USER_ACTIVITY | auditId | USER | SUCCESS/DENIED | M1 | PROP-IT-AUD-01 | немає |
 | P14 | `platform.patient.search` | Пошук пацієнта (ICU/med/prosth scope) | Patient roster | `SEARCH` / M(S PHI),R / USER_ACTIVITY | scope, result count; без сирого query | USER | SUCCESS/DENIED | M0 | PROP-IT-PLAT-04, PROP-E2E-READ-01 | загальний `MIS GET_ALL_PATIENTS` |
@@ -298,7 +316,7 @@ Workflow: `TRANSITION SIGN REOPEN CLOSE CANCEL ASSIGN REASSIGN COMPLETE FAIL PAU
 | P17 | `platform.mis.catalog.view` | Пошук у каталозі ліків | Medicine catalog | `CATALOG_VIEW` / Rec,R / USER_ACTIVITY | scope/count | USER | SUCCESS | M2 | PROP-IT-PLAT-05 | загальний `SEARCH_MEDICINE_CATALOG` |
 | P18 | `platform.bootstrap.seed` | Стартовий сід users/roles/data | Seed scope | `BOOTSTRAP` / Rec,W,A / BUSINESS | версія, counts; без env values | SYSTEM | SUCCESS/PARTIAL/FAILURE | M1 | PROP-IT-SYS-01 | лише SLF4J |
 
-### E.1 ICU Chart
+### E.1 ICU Chart (I01–I42)
 
 | # | Action | Дія | Target | Type/Flags/Клас | Audit data | Actor | Outcome | Prio | Tests | Стан |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -331,16 +349,19 @@ Workflow: `TRANSITION SIGN REOPEN CLOSE CANCEL ASSIGN REASSIGN COMPLETE FAIL PAU
 | I27 | `icu.scale.create` | Додати результат шкали | ScaleResult | `CREATE` / M,W / BUSINESS | values за політикою | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є |
 | I28 | `icu.scale.calculate` | Розрахувати шкалу | ScaleResult | `SCORE_CALCULATE` / M,W / BUSINESS | inputs hash/class, result | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | виглядає як CREATE |
 | I29 | `icu.scale.update` | Змінити результат | ScaleResult | `UPDATE` / M,W / BUSINESS | diff | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | загальна фраза |
-| I30 | `icu.lab_result.create` / `.update` | Лабораторний результат | LabResult | `CREATE/UPDATE` / M,W / BUSINESS | allowlist diff | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є |
-| I31 | `icu.patient_state.create` / `.update` | Стан пацієнта | PatientStateAssessment | `CREATE/UPDATE` / M,W / BUSINESS | allowlist diff | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є |
-| I32 | `icu.ventilation.create` / `.update` | Вентиляція | VentilationSettings | `CREATE/UPDATE` / M,W / BUSINESS | allowlist diff | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є |
-| I33 | `icu.fluid_balance.recalculate` | Перерахунок балансу | FluidBalance | `RECALCULATE` / Rec,W(,A) / BUSINESS | trigger/parent action, delta | USER або SYSTEM | SUCCESS/FAILURE | M1 | PROP-IT-ICU-08 | є, без кореляції |
-| I34 | `icu.pdf.generate` | Сформувати PDF доби | GeneratedPdf | `GENERATE` / M,W / BUSINESS | version/checksum, target day | USER або SYSTEM | SUCCESS/FAILURE | M0 | PROP-IT-ICU-09 | є (`entityId`=day — виправити target) |
-| I35 | `icu.pdf.download` | Завантажити PDF | GeneratedPdf | `DOWNLOAD` / M,R / USER_ACTIVITY | version | USER | SUCCESS/DENIED | M0 | PROP-E2E-ICU-08 | не розділено |
-| I36 | `icu.pdf.print.requested` | Ініціювати друк | GeneratedPdf | `PRINT_REQUESTED` / M,R / USER_ACTIVITY | client intent | USER | SUCCESS | M0 | PROP-E2E-ICU-08 | не розділено |
-| I37 | `icu.clinical_day.auto_close` | Автозакриття 07:00 (root: close+recalc+pdf+email) | ClinicalDay | `AUTO_CLOSE` / M,W,A / BUSINESS | job ID, status diff, children | SYSTEM | SUCCESS/PARTIAL/FAILURE | M0 | PROP-IT-ICU-10, PROP-E2E-SYS-01 | є з actor `0L` |
-| I38 | `icu.clinical_day.escalate` | Ескалація 09:00 | ClinicalDay | `ESCALATE` / M,W,A / BUSINESS | job ID | SYSTEM | SUCCESS/FAILURE | M1 | PROP-IT-ICU-10 | є з actor `0L` |
-| I39 | `icu.notification.delivery.*` | Email-доставлення ескалації | Email delivery | `DELIVERY_*` / M,W,A / BUSINESS | attempts, provider outcome | SERVICE | SUCCESS/FAILURE | M0 | PROP-IT-ICU-10 | лише SLF4J |
+| I30 | `icu.lab_result.create` | Додати лабораторний результат | LabResult | `CREATE` / M,W / BUSINESS | allowlist значень | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є |
+| I31 | `icu.lab_result.update` | Змінити лабораторний результат | LabResult | `UPDATE` / M,W / BUSINESS | field diff | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є, без diff |
+| I32 | `icu.patient_state.create` | Додати оцінку стану | PatientStateAssessment | `CREATE` / M,W / BUSINESS | allowlist значень | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є |
+| I33 | `icu.patient_state.update` | Змінити оцінку стану | PatientStateAssessment | `UPDATE` / M,W / BUSINESS | field diff | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є, без diff |
+| I34 | `icu.ventilation.create` | Додати налаштування вентиляції | VentilationSettings | `CREATE` / M,W / BUSINESS | allowlist значень | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є |
+| I35 | `icu.ventilation.update` | Змінити налаштування вентиляції | VentilationSettings | `UPDATE` / M,W / BUSINESS | field diff | USER | SUCCESS/FAILURE | M0 | PROP-IT-ICU-07 | є, без diff |
+| I36 | `icu.fluid_balance.recalculate` | Перерахунок балансу | FluidBalance | `RECALCULATE` / Rec,W(,A) / BUSINESS | trigger/parent action, delta | USER або SYSTEM | SUCCESS/FAILURE | M1 | PROP-IT-ICU-08 | є, без кореляції |
+| I37 | `icu.pdf.generate` | Сформувати PDF доби | GeneratedPdf | `GENERATE` / M,W / BUSINESS | version/checksum, target PDF ID + day relation | USER або SYSTEM | SUCCESS/FAILURE | M0 | PROP-IT-ICU-09 | є (`entityId`=day — виправити target) |
+| I38 | `icu.pdf.download` | Завантажити PDF | GeneratedPdf | `DOWNLOAD` / M,R / USER_ACTIVITY | PDF ID/version | USER | SUCCESS/DENIED | M0 | PROP-E2E-ICU-08 | не розділено |
+| I39 | `icu.pdf.print.requested` | Ініціювати друк | GeneratedPdf | `PRINT_REQUESTED` / M,R / USER_ACTIVITY | client intent | USER | SUCCESS | M0 | PROP-E2E-ICU-08 | не розділено |
+| I40 | `icu.clinical_day.auto_close` | Автозакриття 07:00 (root: close+recalc+pdf+email) | ClinicalDay | `AUTO_CLOSE` / M,W,A / BUSINESS | job ID, status diff, children | SYSTEM | SUCCESS/PARTIAL/FAILURE | M0 | PROP-IT-ICU-10, PROP-E2E-SYS-01 | є з actor `0L` |
+| I41 | `icu.clinical_day.escalate` | Ескалація 09:00 | ClinicalDay | `ESCALATE` / M,W,A / BUSINESS | job ID | SYSTEM | SUCCESS/FAILURE | M1 | PROP-IT-ICU-10 | є з actor `0L` |
+| I42 | `icu.notification.delivery.outcome` | Email-доставлення ескалації | Email delivery | `DELIVERY_*` / M,W,A / BUSINESS | attempts, provider outcome | SERVICE | SUCCESS/FAILURE | M0 | PROP-IT-ICU-10 | лише SLF4J |
 
 ### E.2 Medication Sheet
 
@@ -373,7 +394,7 @@ Workflow: `TRANSITION SIGN REOPEN CLOSE CANCEL ASSIGN REASSIGN COMPLETE FAIL PAU
 | D25 | `medication.pdf.download` | Завантажити ZIP/PDF | Prescription PDF batch | `DOWNLOAD` / M,R / USER_ACTIVITY | format | USER | SUCCESS/DENIED | M0 | PROP-E2E-MED-07 | не розділено |
 | D26 | `medication.pdf.print.requested` | Ініціювати друк | Prescription PDF batch | `PRINT_REQUESTED` / M,R / USER_ACTIVITY | intent | USER | SUCCESS | M0 | PROP-E2E-MED-07 | не розділено |
 
-### E.3 Prosthetics Manufacturing
+### E.3 Prosthetics Manufacturing (R01–R32)
 
 | # | Action | Дія | Target | Type/Flags/Клас | Audit data | Actor | Outcome | Prio | Tests | Стан |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -381,32 +402,34 @@ Workflow: `TRANSITION SIGN REOPEN CLOSE CANCEL ASSIGN REASSIGN COMPLETE FAIL PAU
 | R02 | `prosthetics.patient.record.view` | Відкрити пацієнта | Patient (string ID) | `RECORD_VIEW` / M,R / USER_ACTIVITY | target | USER | SUCCESS/DENIED | M0 | PROP-E2E-PRO-01 | немає |
 | R03 | `prosthetics.order.document.view` | Переглянути документ MIS | MIS document | `DOCUMENT_VIEW` / M,R / USER_ACTIVITY | document ID, availability | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-01 | загальний audit |
 | R04 | `prosthetics.order.provision` | Provision local order (root; +local patient related) | ProstheticsOrder | `ORDER_PROVISION` / M,W / BUSINESS | MIS IDs, business key `MIS-{p}-{d}` | USER; child SERVICE→INTEGRATION | SUCCESS/FAILURE | M0 | PROP-IT-PRO-01, PROP-E2E-PRO-01 | створює order/patient без audit |
-| R05 | `prosthetics.template.create` | Створити версію (+tree) | FlowTemplate | `CREATE_VERSION` / M,W / BUSINESS | snapshot hash, counts | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PRO-02 | CREATE є |
+| R05 | `prosthetics.template.create.version` | Створити версію (+tree) | FlowTemplate | `CREATE_VERSION` / M,W / BUSINESS | snapshot hash, counts | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PRO-02 | CREATE є |
 | R06 | `prosthetics.template.update` | Змінити meta/status | FlowTemplate | `UPDATE` / M,W / BUSINESS | diff | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PRO-02 | без diff |
 | R07 | `prosthetics.template.archive` | Архівувати | FlowTemplate | `ARCHIVE` / M,W,D / BUSINESS | status old→new | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PRO-02 | ARCHIVE є |
 | R08 | `prosthetics.instance.create` | Створити instance | FlowInstance | `CREATE` / M,W / BUSINESS | order/patient refs, template version/hash | USER | SUCCESS/DENIED/FAILURE | M0 | PROP-IT-PRO-03, PROP-E2E-PRO-03 | CREATE є |
-| R09 | `prosthetics.instance.view` / `.snapshot.view` | Відкрити деталі/snapshot | FlowInstance | `RECORD_VIEW` / Rec,R / USER_ACTIVITY | target | USER | SUCCESS/DENIED | M1 | PROP-IT-PRO-03 | немає |
-| R10 | `prosthetics.instance.start` | Start | FlowInstance | `START` / M,W / BUSINESS | status/stage/step old→new | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | є |
-| R11 | `prosthetics.step.complete` | Complete step (root: values+resources+advance) | StepExecution | `STEP_COMPLETE` / M,W / BUSINESS | values allowlist, resources, advance refs | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04, PROP-E2E-PRO-04 | COMPLETE є, без зібраного diff |
-| R12 | `prosthetics.resource.record` | Зберегти витрати (у складі R11 або окремо) | ResourceUsage | `RESOURCE_RECORD` / M,W / BUSINESS | amounts | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | окремої події немає |
-| R13 | `prosthetics.step.note.update` | Змінити нотатку кроку | StepExecution | `UPDATE` / M,W / BUSINESS | факт + reason; текст TBD | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | NOTE є |
-| R14 | `prosthetics.instance.backward` | Повернення на крок | FlowInstance | `BACKWARD` / M,W / BUSINESS | old→new step | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | є |
-| R15 | `prosthetics.instance.pause` | Пауза з категорією | FlowInstance | `PAUSE` / M,W / BUSINESS | status, pause code | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-05 | є |
-| R16 | `prosthetics.instance.resume` | Відновлення | FlowInstance | `RESUME` / M,W / BUSINESS | status, idle delta | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-05 | є |
-| R17 | `prosthetics.instance.fail` | Terminal failure + snapshot | FlowInstance (+FailureSnapshot) | `FAIL` / M,W / BUSINESS | category, status old→new | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-05, PROP-E2E-PRO-05 | FAIL є |
-| R18 | `prosthetics.brak.confirm` | Підтвердити брак (root: R18–R20) | BrakEvent | `BRAK_CONFIRM` / M,W / BUSINESS | підстава/returnStage | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-06, PROP-E2E-PRO-06 | розбито на 3 записи без root |
-| R19 | `prosthetics.instance.branch` | BRANCH оригіналу + CREATE_BRANCH | FlowInstance | `BRANCH` / M,W / BUSINESS | parent/child refs, статуси | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-06 | є як окремі записи |
-| R20 | `prosthetics.notification.queue` | Поставити SINGLE/THRESHOLD | Outbox row | `QUEUE` / M,W / BUSINESS | kind, order chain count | USER (ініціатор) | SUCCESS | M0 | PROP-IT-PRO-06 | outbox є |
-| R21 | `prosthetics.evidence.upload` | Завантажити файл | EvidenceFile | `UPLOAD` / M,W / BUSINESS | name/MIME/size/checksum, parent | USER | SUCCESS/FAILURE/DENIED | M0 | PROP-IT-PRO-07, PROP-SEC-10 | UPLOAD є |
-| R22 | `prosthetics.evidence.list.view` | Переглянути список файлів | StepExecution files | `LIST_VIEW` / Rec,R / USER_ACTIVITY | count | USER | SUCCESS/DENIED | M1 | PROP-IT-PRO-07 | немає |
-| R23 | `prosthetics.evidence.download` | Завантажити bytes | EvidenceFile | `DOWNLOAD` / M,R / USER_ACTIVITY | file ID, checksum | USER | SUCCESS/DENIED | M0 | PROP-IT-PRO-07, PROP-E2E-PRO-07 | немає |
-| R24 | `prosthetics.evidence.delete` | Видалити файл | EvidenceFile | `DELETE` / M,W,D / BUSINESS | file ref | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-07 | DELETE є |
-| R25 | `prosthetics.report.generate` | Сформувати звіт | FlowInstance report | `GENERATE` / M,W / BUSINESS | type/version/checksum | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-08 | GET PDF не аудититься |
-| R26 | `prosthetics.report.download` / `.print.requested` | Завантажити / ініціювати друк | Report | `DOWNLOAD`/`PRINT_REQUESTED` / M,R / USER_ACTIVITY | intent/format | USER | SUCCESS/DENIED | M0 | PROP-E2E-PRO-08 | не розділено |
-| R27 | `prosthetics.production.worklist.view` | Списки/KPI/attention/team | Worklist scope | `WORKLIST_VIEW` / Rec,R / USER_ACTIVITY | scope/filters | USER | SUCCESS/DENIED | M1 | PROP-IT-PRO-09 | немає |
-| R28 | `prosthetics.production.detail.view` | Деталі work item | Work item | `DETAIL_VIEW` / M,R / USER_ACTIVITY | target; masking за PATIENT_VIEW | USER | SUCCESS/DENIED | M0 | PROP-IT-PRO-09, PROP-E2E-PRO-09 | немає |
-| R29 | `prosthetics.production.normative.update` | Змінити K/N | SystemSettings | `CONFIG_UPDATE` / M,S,W / BUSINESS | old→new | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PRO-09 | без old/new |
-| R30 | `prosthetics.notification.deliver` | Доставлення листа (sweep) | Outbox row | `DELIVERY_SENT/FAILED/SKIPPED/DEAD` / M,W,A / BUSINESS | kind/attempt/provider outcome/recipient count | SERVICE (initiatedBy: ініціатор браку) | SUCCESS/PARTIAL/FAILURE | M0 | PROP-IT-PRO-10, PROP-E2E-PRO-10 | частково є; actor доставлення виправити |
+| R09 | `prosthetics.instance.view` | Відкрити деталі процесу | FlowInstance | `RECORD_VIEW` / Rec,R / USER_ACTIVITY | target | USER | SUCCESS/DENIED | M1 | PROP-IT-PRO-03 | немає |
+| R10 | `prosthetics.instance.snapshot.view` | Відкрити snapshot шаблону | FlowInstance snapshot | `SNAPSHOT_VIEW` / M,R / USER_ACTIVITY | target, template version/hash | USER | SUCCESS/DENIED | M0 | PROP-IT-PRO-03 | немає |
+| R11 | `prosthetics.instance.start` | Start | FlowInstance | `START` / M,W / BUSINESS | status/stage/step old→new | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | є |
+| R12 | `prosthetics.step.complete` | Complete step (root: values+resources+advance) | StepExecution | `STEP_COMPLETE` / M,W / BUSINESS | values allowlist, resources, advance refs | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04, PROP-E2E-PRO-04 | COMPLETE є, без зібраного diff |
+| R13 | `prosthetics.resource.record` | Зберегти витрати (child step-complete) | ResourceUsage | `RESOURCE_RECORD` / M,W / BUSINESS | amounts | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | окремої події немає |
+| R14 | `prosthetics.step.note.update` | Змінити нотатку кроку | StepExecution | `UPDATE` / M,W / BUSINESS | факт + reason; текст TBD | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | NOTE є |
+| R15 | `prosthetics.instance.backward` | Повернення на крок | FlowInstance | `BACKWARD` / M,W / BUSINESS | old→new step | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-04 | є |
+| R16 | `prosthetics.instance.pause` | Пауза з категорією | FlowInstance | `PAUSE` / M,W / BUSINESS | status, pause code | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-05 | є |
+| R17 | `prosthetics.instance.resume` | Відновлення | FlowInstance | `RESUME` / M,W / BUSINESS | status, idle delta | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-05 | є |
+| R18 | `prosthetics.instance.fail` | Terminal failure + snapshot | FlowInstance (+FailureSnapshot) | `FAIL` / M,W / BUSINESS | category, status old→new | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-05, PROP-E2E-PRO-05 | FAIL є |
+| R19 | `prosthetics.brak.confirm` | Підтвердити брак (root: R19–R21) | BrakEvent | `BRAK_CONFIRM` / M,W / BUSINESS | підстава/returnStage | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-06, PROP-E2E-PRO-06 | розбито на 3 записи без root |
+| R20 | `prosthetics.brak.branch` | Змінити original + створити branch (child brаk) | FlowInstance | `BRANCH` / M,W / BUSINESS | parent/child refs, статуси | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-06 | є як окремі записи |
+| R21 | `prosthetics.notification.queue` | Поставити SINGLE/THRESHOLD | Outbox row | `QUEUE` / M,W / BUSINESS | kind, order chain count | USER (ініціатор) | SUCCESS | M0 | PROP-IT-PRO-06 | outbox є |
+| R22 | `prosthetics.evidence.upload` | Завантажити файл | EvidenceFile | `UPLOAD` / M,W / BUSINESS | name/MIME/size/checksum, parent | USER | SUCCESS/FAILURE/DENIED | M0 | PROP-IT-PRO-07, PROP-SEC-10 | UPLOAD є |
+| R23 | `prosthetics.evidence.list.view` | Переглянути список файлів | StepExecution files | `LIST_VIEW` / Rec,R / USER_ACTIVITY | count | USER | SUCCESS/DENIED | M1 | PROP-IT-PRO-07 | немає |
+| R24 | `prosthetics.evidence.download` | Завантажити bytes | EvidenceFile | `DOWNLOAD` / M,R / USER_ACTIVITY | file ID, checksum | USER | SUCCESS/DENIED | M0 | PROP-IT-PRO-07, PROP-E2E-PRO-07 | немає |
+| R25 | `prosthetics.evidence.delete` | Видалити файл | EvidenceFile | `DELETE` / M,W,D / BUSINESS | file ref | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-07 | DELETE є |
+| R26 | `prosthetics.report.generate` | Сформувати звіт | FlowInstance report | `GENERATE` / M,W / BUSINESS | type/version/checksum | USER | SUCCESS/FAILURE | M0 | PROP-IT-PRO-08 | GET PDF не аудититься |
+| R27 | `prosthetics.report.download` | Завантажити звіт | Report | `DOWNLOAD` / M,R / USER_ACTIVITY | intent/format | USER | SUCCESS/DENIED | M0 | PROP-E2E-PRO-08 | не розділено |
+| R28 | `prosthetics.report.print.requested` | Ініціювати друк звіту | Report | `PRINT_REQUESTED` / M,R / USER_ACTIVITY | client intent | USER | SUCCESS | M0 | PROP-E2E-PRO-08 | не розділено |
+| R29 | `prosthetics.production.worklist.view` | Списки/KPI/attention/team | Worklist scope | `WORKLIST_VIEW` / Rec,R / USER_ACTIVITY | scope/filters | USER | SUCCESS/DENIED | M1 | PROP-IT-PRO-09 | немає |
+| R30 | `prosthetics.production.detail.view` | Деталі work item | Work item | `DETAIL_VIEW` / M,R / USER_ACTIVITY | target; masking за PATIENT_VIEW | USER | SUCCESS/DENIED | M0 | PROP-IT-PRO-09, PROP-E2E-PRO-09 | немає |
+| R31 | `prosthetics.production.normative.update` | Змінити K/N | SystemSettings | `CONFIG_UPDATE` / M,S,W / BUSINESS | old→new | ADMIN | SUCCESS/FAILURE | M0 | PROP-IT-PRO-09 | без old/new |
+| R32 | `prosthetics.notification.delivery.outcome` | Доставлення листа (sweep) | Outbox row | `DELIVERY_*` / M,W,A / BUSINESS | kind/attempt/provider outcome/recipient count | SERVICE (initiatedBy: ініціатор браку) | SUCCESS/PARTIAL/FAILURE | M0 | PROP-IT-PRO-10, PROP-E2E-PRO-10 | частково є; actor доставлення виправити |
 
 App shell окремої бізнес-моделі не має; його scope — кореляція, security filter, bootstrap/seeds,
 scheduled/integration результати (відображені вище). CSV-експортів і активного legacy MedicineList
@@ -421,14 +444,14 @@ importer у поточному коді не знайдено; єдиний migr
 
 | Фаза | Назва | Залежності | Ключовий результат |
 |---|---|---|---|
-| F0 | Foundation: рішення, каталог, політики | — (потрібні D1–D7 від owner/DPO) | Затверджені taxonomy, atomic catalog, §B4, §B5-TBD, naming, failure/metrics правила |
-| F1 | Event model + storage | F0 | Контракт події, `audit_events` + module outbox tables, індекси, UTC-правила |
+| F0 | Foundation: рішення, каталог, політики | — (D1–D7 owner decisions отримані; DPO field allowlist лишається production prerequisite) | Catalog v1 (118 atomic actions), §B4, §B5-TBD, naming, failure/metrics правила; catalog + unit/ArchUnit tests implemented locally |
+| F1 | Event model + storage | F0 | Contract, `audit_events` + module outbox tables + `audit_event_targets`, indexes and UTC rules; schema smoke on PostgreSQL remains |
 | F2 | Correlation + relay | F1 | request/action/correlation IDs, `AuditRelay` at-least-once + dedupe, backlog-метрики |
 | F3 | Security audit | F0–F2 | Незалежний security path: auth/token/denials/provisioning/admin |
-| F4 | ICU coverage | F0–F3, D-рішення | E.1 повністю: writes + значущі reads + scheduled (I37–I39 як root/children) |
+| F4 | ICU coverage | F0–F3, D-рішення | E.1 повністю: writes + значущі reads + scheduled (I40–I42 як root/children) |
 | F5 | Medication coverage | F0–F3, D-рішення | E.2 повністю; прибрати `0L`, SLF4J-login-и, payload у `new_value` |
-| F6 | Prosthetics coverage | F0–F3, D-рішення | E.3 повністю; root для brak/step; actor доставки = SERVICE |
-| F7 | Read audit + frontend + консоль | F0–F3 | Межі read events, UI intent hook, новий пошук/detail/object history, аудит самої консолі |
+| F6 | Prosthetics coverage | F0–F3, D-рішення | E.3 повністю (R01–R32); root для brak/step; actor доставки = SERVICE |
+| F7 | Read audit + frontend + консоль | F0–F6 | Межі read events, UI intent hook, новий пошук/detail/object history, аудит самої консолі |
 | F8 | Migration + integrity + retention + monitoring + gate | F0–F7 | Dual write, legacy-backfill без вигадок, append-only, архів, coverage-guard, виміряна продуктивність |
 
 Порядок: F0 → F1 → F2 → F3, далі F4/F5/F6 можуть іти паралельно після F3, F7 після F4–F6

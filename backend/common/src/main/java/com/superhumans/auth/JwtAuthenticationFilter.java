@@ -2,10 +2,7 @@ package com.superhumans.auth;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
-import com.superhumans.entity.core.AuditLog;
-import com.superhumans.repository.core.AuditLogRepository;
 import com.superhumans.repository.core.UserRepository;
-import com.superhumans.service.AuditService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -21,7 +18,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -30,8 +26,6 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     JwtTokenProvider jwtTokenProvider;
-    AuditLogRepository auditLogRepository;
-    AuditService auditService;
     ObjectProvider<UserRepository> userRepositoryProvider;
     ObjectProvider<TokenRevocationService> tokenRevocationServiceProvider;
 
@@ -61,19 +55,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     List.of(new SimpleGrantedAuthority("ROLE_" + role)));
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-            String method = request.getMethod();
-            if (!"GET".equals(method) && !"HEAD".equals(method)) {
-                AuditLog auditLog = new AuditLog();
-                auditLog.setUserId(userId);
-                auditLog.setEntity(request.getRequestURI());
-                String action = "API_" + method;
-                auditLog.setAction(action);
-                auditLog.setDetails("Authenticated " + action + " by: " + login);
-                auditLog.setTimestamp(LocalDateTime.now());
-                auditLog.setIpAddress(request.getRemoteAddr());
-                auditLog.setUserRole(role);
-                auditService.logAsync(auditLog);
-            }
         }
         filterChain.doFilter(request, response);
     }

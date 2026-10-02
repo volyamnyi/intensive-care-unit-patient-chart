@@ -10,7 +10,6 @@ import com.superhumans.repository.core.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,8 +103,4 @@ public class AuditService {
         auditLogRepository.save(log);
     }
 
-    @Async
-    public void logAsync(AuditLog auditLog) {
-        auditLogRepository.save(auditLog);
-    }
 }

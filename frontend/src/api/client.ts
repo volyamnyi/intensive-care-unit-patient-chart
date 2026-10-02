@@ -8,6 +8,14 @@ const client = axios.create({
   withCredentials: true,
 });
 
+client.interceptors.request.use((config) => {
+  const auditActionId = (config as typeof config & { auditActionId?: string }).auditActionId;
+  if (auditActionId) {
+    config.headers.set('X-User-Action-Id', auditActionId);
+  }
+  return config;
+});
+
 client.interceptors.response.use(
   (res) => res,
   (err) => {

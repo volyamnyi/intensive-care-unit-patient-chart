@@ -106,6 +106,14 @@ app:
     signing-window-start: 0
     signing-window-end: 23
 
+  audit:
+    relay:
+      poll-ms: ${APP_AUDIT_RELAY_POLL_MS:1000}
+      batch-size: ${APP_AUDIT_RELAY_BATCH_SIZE:20}
+      lease-seconds: ${APP_AUDIT_RELAY_LEASE_SECONDS:60}
+      max-attempts: ${APP_AUDIT_RELAY_MAX_ATTEMPTS:12}
+    trusted-proxy-cidrs: ${APP_AUDIT_TRUSTED_PROXY_CIDRS:}
+
   prosthetics:
     brak-notification:
       # Confirmed-brak email to PROSTHETICS_ADMINISTRATOR (stage 6, TP-LL-02).
