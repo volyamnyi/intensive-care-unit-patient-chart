@@ -51,6 +51,9 @@ class ProductionControllerTest {
     MockMvc mockMvc;
 
     @MockitoBean
+    com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @MockitoBean
     ProductionReadService readService;
     @MockitoBean
     ProductionNormativeService normativeService;

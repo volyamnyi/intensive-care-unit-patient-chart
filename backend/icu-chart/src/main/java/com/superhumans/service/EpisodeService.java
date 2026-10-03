@@ -48,11 +48,24 @@ public class EpisodeService {
     MisService misService;
     EpisodeMapper episodeMapper;
 
+    @Transactional
     public EpisodeResponse getEpisode(UUID id) {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
         String patientName = misService.getPatient(episode.getPatientId())
                 .map(p -> p.getFullName()).orElse(null);
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("icu")
+                .functionalArea("episode")
+                .action("icu.episode.record.view")
+                .actionType(ActionType.VIEW)
+                .target(new AuditEvent.AuditTarget("Episode", id.toString(),
+                        episode.getPatientId() == null ? null : episode.getPatientId().toString()))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return episodeMapper.toResponse(episode, patientName);
     }
 
@@ -62,6 +75,7 @@ public class EpisodeService {
         return Math.round(weightKg / (heightM * heightM) * 10.0) / 10.0;
     }
 
+    @Transactional
     public List<EpisodeResponse> searchEpisodes(Long patientId, EpisodeStatus status) {
         List<Episode> episodes;
         if (patientId != null && status != null) {
@@ -83,9 +97,22 @@ public class EpisodeService {
                 namesByPatientId.put(p.getId(), p.getFullName());
             }
         }
-        return episodes.stream().map(ep ->
+        List<EpisodeResponse> responses = episodes.stream().map(ep ->
                 episodeMapper.toResponse(ep, namesByPatientId.get(ep.getPatientId()))
         ).collect(Collectors.toList());
+        final int rosterSize = responses.size();
+        auditEmitter.emit("icu", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("icu")
+                .functionalArea("roster")
+                .action("icu.roster.view")
+                .actionType(ActionType.VIEW)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(rosterSize)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return responses;
     }
 
     @Transactional

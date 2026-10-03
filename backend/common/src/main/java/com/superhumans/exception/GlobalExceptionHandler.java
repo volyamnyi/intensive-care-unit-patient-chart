@@ -1,5 +1,10 @@
 package com.superhumans.exception;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditEventRecorder;
 import com.superhumans.dto.ErrorResponse;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.validation.ConstraintViolationException;
@@ -20,8 +25,23 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class GlobalExceptionHandler {
+
+    AuditEventRecorder auditEventRecorder;
+
+    /**
+     * Optional injection: controller-slice tests import this advice without
+     * the audit infrastructure, and denial auditing is best-effort anyway
+     * (the recorder itself is fail-safe). Production always wires the bean.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setAuditEventRecorder(AuditEventRecorder auditEventRecorder) {
+        this.auditEventRecorder = auditEventRecorder;
+    }
+
+    private static final java.util.regex.Pattern ID_SEGMENT = java.util.regex.Pattern.compile(
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+");
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex) {
@@ -43,9 +63,40 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.security.authorization.AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDenied(
-            org.springframework.security.authorization.AuthorizationDeniedException ex) {
+            org.springframework.security.authorization.AuthorizationDeniedException ex,
+            jakarta.servlet.http.HttpServletRequest request) {
+        // ActorPolicy.USER catalog policy: anonymous denials carry no user
+        // actor, and building the event would fail validation — the 403
+        // itself must never break because of audit.
+        if (auditEventRecorder != null
+                && AuditActorResolver.fromCurrentContext().type() == AuditEvent.ActorType.USER) {
+            auditEventRecorder.record(AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.SECURITY)
+                    .module("platform")
+                    .functionalArea("authz")
+                    .action("platform.auth.access.denied")
+                    .actionType(ActionType.ACCESS_DENIED)
+                    .outcome(AuditEvent.AuditOutcome.DENIED)
+                    .source(AuditEvent.AuditSource.API)
+                    .httpContext(new AuditEvent.AuditHttpContext(
+                            request.getMethod(), sanitizeRoute(request.getServletPath())))
+                    .build());
+        }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                 new ErrorResponse(ErrorCode.FORBIDDEN, "Access denied", UUID.randomUUID().toString()));
+    }
+
+    /**
+     * Redacts identifier path segments (UUIDs and digit runs) so the denied
+     * route template carries no PII.
+     */
+    static String sanitizeRoute(String servletPath) {
+        if (servletPath == null || servletPath.isBlank()) {
+            return null;
+        }
+        String redacted = ID_SEGMENT.matcher(servletPath).replaceAll("{id}");
+        return redacted.length() > 200 ? redacted.substring(0, 200) : redacted;
     }
 
     @ExceptionHandler(VersionConflictException.class)

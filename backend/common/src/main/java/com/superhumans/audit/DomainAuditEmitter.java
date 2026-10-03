@@ -33,7 +33,7 @@ public class DomainAuditEmitter {
                 .collect(Collectors.toUnmodifiableMap(AuditOutboxStore::module, Function.identity()));
     }
 
-    public void emit(String module, java.util.function.Supplier<AuditEvent> eventSupplier) {
+    public void emit(String expectedModule, java.util.function.Supplier<AuditEvent> eventSupplier) {
         AuditEvent event = null;
         try {
             event = eventSupplier.get();
@@ -43,10 +43,15 @@ public class DomainAuditEmitter {
                     && !rootId.equals(enriched.auditId())) {
                 enriched = enriched.toBuilder().parentAuditId(rootId).build();
             }
-            writerFor(module).append(enriched);
+            if (!expectedModule.equals(enriched.module())) {
+                log.warn("Audit module routing follows the event, not the call site: "
+                        + "expected={} actual={} action={}",
+                        expectedModule, enriched.module(), enriched.action());
+            }
+            writerFor(enriched.module()).append(enriched);
         } catch (RuntimeException exception) {
             log.warn("Domain audit emission failed module={} action={} errorType={}",
-                    module, event == null ? null : event.action(),
+                    expectedModule, event == null ? null : event.action(),
                     exception.getClass().getSimpleName());
         }
     }

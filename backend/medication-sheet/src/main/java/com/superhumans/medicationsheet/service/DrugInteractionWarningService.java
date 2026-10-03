@@ -10,6 +10,11 @@ import com.superhumans.medicationsheet.entity.DrugInteractionDrug;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionItem;
 import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.repository.DrugInteractionDrugRepository;
 import com.superhumans.medicationsheet.repository.DrugInteractionPairRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionItemRepository;
@@ -57,6 +62,7 @@ public class DrugInteractionWarningService {
     DrugInteractionPairRepository pairRepository;
     DrugInteractionDrugRepository drugRepository;
     PrescriptionListRepository listRepository;
+    DomainAuditEmitter auditEmitter;
 
     public static boolean isPlanned(PrescriptionDayPart part) {
         return Boolean.TRUE.equals(part.getIsPlanned())
@@ -96,13 +102,25 @@ public class DrugInteractionWarningService {
         return start.isAfter(end) ? Optional.empty() : Optional.of(new LocalDate[]{start, end});
     }
 
-    @Transactional(readOnly = true, transactionManager = "medTransactionManager")
+    @Transactional(transactionManager = "medTransactionManager")
     public PrescriptionInteractionsResponse computeWarnings(UUID listId) {
         listRepository.findById(listId)
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
         List<PrescriptionItem> items = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId);
         if (items.isEmpty()) {
             // A freshly created list has no items yet — that is not an error.
+            auditEmitter.emit("medication", () -> AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.USER_ACTIVITY)
+                    .module("medication")
+                    .functionalArea("interactions")
+                    .action("medication.interactions.warning.view")
+                    .actionType(ActionType.WARNING_VIEW)
+                    .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .affectedRecords(0)
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
             return PrescriptionInteractionsResponse.builder()
                     .warnings(List.of())
                     .missingAtc(MissingAtcNotice.builder().present(false).names(List.of()).build())
@@ -205,10 +223,24 @@ public class DrugInteractionWarningService {
 
         log.info("Interaction warnings: listId={}, plannedItems={}, warnedItems={}",
                 listId, periods.size(), warnings.size());
-        return PrescriptionInteractionsResponse.builder()
+        PrescriptionInteractionsResponse response = PrescriptionInteractionsResponse.builder()
                 .warnings(warnings)
                 .missingAtc(missingAtc)
                 .build();
+        final int warnedItems = warnings.size();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("medication")
+                .functionalArea("interactions")
+                .action("medication.interactions.warning.view")
+                .actionType(ActionType.WARNING_VIEW)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(warnedItems)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return response;
     }
 
     /** Dataset {@code ukrainian_raw} wins for partner display; falls back to the stored item name. */

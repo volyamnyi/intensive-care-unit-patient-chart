@@ -1,7 +1,9 @@
 import client from './client';
+import type { AxiosRequestConfig } from 'axios';
 import type {
   User, PatientDto, LoginRequest, LoginResponse, PageResponse,
-  AuditLog, PermissionMatrix,
+  AuditLog, AuditEventSummary, AuditEventDetail, AuditObjectHistory,
+  AuditEventSearchParams, PermissionMatrix,
 } from '../types/core';
 
 export const authApi = {
@@ -47,6 +49,22 @@ export const auditApi = {
     client.get<AuditLog>(`/audit/${id}`),
 };
 
+/**
+ * Audit v2 read API (F7): combined-filter event search with stable
+ * pagination, event detail with relations and integrity state, and
+ * chronological object history. Legacy `auditApi` stays for migration (F8).
+ */
+export const auditEventsApi = {
+  search: (params?: AuditEventSearchParams) =>
+    client.get<PageResponse<AuditEventSummary>>('/audit/events', { params }),
+  detail: (auditId: string) =>
+    client.get<AuditEventDetail>(`/audit/events/${auditId}`),
+  objectHistory: (entityType: string, entityId: string) =>
+    client.get<AuditObjectHistory>(
+      `/audit/entities/${encodeURIComponent(entityType)}/${encodeURIComponent(entityId)}`,
+    ),
+};
+
 export const adminApi = {
   getUsers: () => client.get<User[]>('/admin/users'),
   getUser: (id: number) => client.get<User>(`/admin/users/${id}`),
@@ -54,6 +72,6 @@ export const adminApi = {
   deleteUser: (id: number) => client.delete(`/admin/users/${id}`),
   getStats: () => client.get<Record<string, number>>('/admin/stats'),
   getPermissions: () => client.get<PermissionMatrix>('/admin/permissions'),
-  updateRolePermission: (role: string, permissionCode: string, granted: boolean) =>
-    client.put<PermissionMatrix>('/admin/permissions', { role, permissionCode, granted }),
+  updateRolePermission: (role: string, permissionCode: string, granted: boolean, config?: AxiosRequestConfig) =>
+    client.put<PermissionMatrix>('/admin/permissions', { role, permissionCode, granted }, config),
 };

@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { flowInstanceApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
+import ObjectHistorySection from '@/components/common/ObjectHistorySection';
 import type {
   BrakEvent,
   FlowInstance,
@@ -302,6 +303,11 @@ export default function ProcessHistoryPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Візуалізація життєвого циклу процесу за даними інстансу — не повний аудит.
+            Канонічні події з цілісністю та звʼязками — у розділі «Канонічний аудит» нижче
+            та в консолі аудиту.
+          </p>
           <div className="relative">
             <div className="absolute left-[17px] top-2 bottom-2 w-px bg-border" />
             <div className="space-y-4">
@@ -341,6 +347,17 @@ export default function ProcessHistoryPage() {
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span>Події сортуються від найстарішої до найновішої</span>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Clock className="size-4" /> Канонічний аудит
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {id && <ObjectHistorySection entityType="FlowInstance" entityId={id} />}
+        </CardContent>
+      </Card>
     </div>
   );
 }

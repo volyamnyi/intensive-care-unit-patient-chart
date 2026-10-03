@@ -38,6 +38,9 @@ class ProstheticsOrderControllerTest {
     MockMvc mockMvc;
 
     @MockitoBean
+    com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @MockitoBean
     ProstheticsOrderService orderService;
     @MockitoBean
     ProstheticsOrderRepository orderRepository;

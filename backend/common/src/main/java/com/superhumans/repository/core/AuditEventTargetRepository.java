@@ -3,6 +3,7 @@ package com.superhumans.repository.core;
 import com.superhumans.entity.core.AuditEventTargetEntity;
 import com.superhumans.entity.core.AuditEventTargetId;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /** Read/insert-only repository for target references (no mutation/delete API). */
@@ -35,4 +36,6 @@ public interface AuditEventTargetRepository extends JpaRepository<AuditEventTarg
 
     List<AuditEventTargetEntity> findByEntityTypeAndEntityIdOrderByOccurredAtDesc(
             String entityType, String entityId);
+
+    List<AuditEventTargetEntity> findByAuditId(UUID auditId);
 }

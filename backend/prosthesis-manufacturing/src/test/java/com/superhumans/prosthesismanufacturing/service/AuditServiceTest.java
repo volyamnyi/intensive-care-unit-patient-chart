@@ -91,7 +91,8 @@ class AuditServiceTest {
     @BeforeEach
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
-        auditService = new AuditService(auditLogRepository, mock(AuditLogMapper.class));
+        auditService = new AuditService(auditLogRepository, mock(AuditLogMapper.class),
+                mock(com.superhumans.audit.AuditEventRecorder.class));
         service = new FlowInstanceService(instanceRepository, templateRepository, orderRepository,
                 executionRepository, resourceUsageRepository,
                 mock(FlowInstanceMapper.class), templateService, failureSnapshotService, pdfService,

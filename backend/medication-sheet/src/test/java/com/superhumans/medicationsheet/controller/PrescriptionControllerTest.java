@@ -67,6 +67,9 @@ class PrescriptionControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @MockitoBean
     private PrescriptionListService listService;
 
     @MockitoBean

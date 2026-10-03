@@ -35,10 +35,23 @@ public class PrescriptionListService {
         return listRepository.findByPatientIdAndDeletedFalse(patientId);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PrescriptionList getById(UUID id) {
-        return listRepository.findById(id)
+        PrescriptionList list = listRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Prescription list not found: " + id));
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("medication")
+                .functionalArea("prescription-list")
+                .action("medication.list.view")
+                .actionType(ActionType.VIEW)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", id.toString(),
+                        list.getPatientId() == null ? null : list.getPatientId().toString()))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return list;
     }
 
     @Transactional

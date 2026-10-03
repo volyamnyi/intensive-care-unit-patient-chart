@@ -1,5 +1,10 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.prosthesismanufacturing.dto.BrakCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.BrakEventResponse;
 import com.superhumans.prosthesismanufacturing.dto.BranchResponse;
@@ -57,6 +62,7 @@ public class FlowInstanceController {
     EvidenceFileService evidenceFileService;
     BrakService brakService;
     CurrentUser currentUser;
+    DomainAuditEmitter auditEmitter;
 
     @PostMapping
     @PreAuthorize("@permissionService.has('PROSTHETICS_INSTANCE_CREATE')")
@@ -81,15 +87,43 @@ public class FlowInstanceController {
     @GetMapping("/{id}")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get instance (owner or admin/HOD)")
+    @org.springframework.transaction.annotation.Transactional
     public FlowInstanceResponse get(@PathVariable UUID id) {
-        return instanceService.get(id, currentUser.userId(), currentUser.canViewAllInstances());
+        FlowInstanceResponse instance = instanceService.get(id, currentUser.userId(),
+                currentUser.canViewAllInstances());
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.view")
+                .actionType(ActionType.VIEW)
+                .target(new AuditEvent.AuditTarget("FlowInstance", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return instance;
     }
 
     @GetMapping("/{id}/snapshot")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Get the immutable template snapshot of the instance")
+    @org.springframework.transaction.annotation.Transactional
     public Map<String, Object> getSnapshot(@PathVariable UUID id) {
-        return instanceService.getSnapshot(id, currentUser.userId(), currentUser.canViewAllInstances());
+        Map<String, Object> snapshot = instanceService.getSnapshot(id, currentUser.userId(),
+                currentUser.canViewAllInstances());
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("instance")
+                .action("prosthetics.instance.snapshot.view")
+                .actionType(ActionType.SNAPSHOT_VIEW)
+                .target(new AuditEvent.AuditTarget("FlowInstance", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return snapshot;
     }
 
     @PostMapping("/{id}/start")
@@ -178,9 +212,25 @@ public class FlowInstanceController {
     @GetMapping("/{id}/evidence")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "List evidence files for a step execution")
+    @org.springframework.transaction.annotation.Transactional
     public List<EvidenceFileResponse> listEvidence(@PathVariable UUID id,
                                                    @RequestParam UUID executionId) {
-        return evidenceFileService.listByExecution(id, executionId, currentUser.userId(), currentUser.canViewAllInstances());
+        List<EvidenceFileResponse> files = evidenceFileService.listByExecution(id, executionId,
+                currentUser.userId(), currentUser.canViewAllInstances());
+        final int resultCount = files.size();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("evidence")
+                .action("prosthetics.evidence.list.view")
+                .actionType(ActionType.LIST_VIEW)
+                .target(new AuditEvent.AuditTarget("FlowInstance", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(resultCount)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return files;
     }
 
     @DeleteMapping("/{id}/evidence/{fileId}")
@@ -194,10 +244,22 @@ public class FlowInstanceController {
     @GetMapping("/{id}/evidence/{fileId}")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Download evidence file (owner or admin/HOD)")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ByteArrayResource> downloadEvidence(@PathVariable UUID id,
                                                               @PathVariable UUID fileId) {
         EvidenceFile evidence = evidenceFileService.download(fileId, currentUser.userId(),
                 currentUser.canViewAllInstances());
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("evidence")
+                .action("prosthetics.evidence.download")
+                .actionType(ActionType.DOWNLOAD)
+                .target(new AuditEvent.AuditTarget("EvidenceFile", fileId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + evidence.getFileName() + "\"")
@@ -209,9 +271,21 @@ public class FlowInstanceController {
     @GetMapping("/{id}/pdf")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Generate final or failure report PDF")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ByteArrayResource> generateReport(@PathVariable UUID id) {
         byte[] pdf = instanceService.generateReport(id, currentUser.userId(),
                 currentUser.canViewAllInstances());
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("report")
+                .action("prosthetics.report.download")
+                .actionType(ActionType.DOWNLOAD)
+                .target(new AuditEvent.AuditTarget("FlowInstance", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"report_" + id + ".pdf\"")

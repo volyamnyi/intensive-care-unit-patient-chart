@@ -2,6 +2,11 @@ package com.superhumans.medicationsheet.pdf;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.AuditService;
@@ -38,6 +43,7 @@ public class PrescriptionPdfService {
     PrescriptionPdfRenderer renderer;
     UserRepository userRepository;
     AuditService auditService;
+    DomainAuditEmitter auditEmitter;
 
     /** Batch metadata for the API/frontend contract (no PII). */
     public record PdfBatchInfo(int pages, String fileName) {
@@ -47,10 +53,23 @@ public class PrescriptionPdfService {
     public record PdfPageFile(String fileName, byte[] content) {
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PdfBatchInfo info(UUID listId) {
         List<PrescriptionPdfPagePlan> pages = plan(listId);
-        return new PdfBatchInfo(pages.size(), zipFileName(listId));
+        PdfBatchInfo info = new PdfBatchInfo(pages.size(), zipFileName(listId));
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("medication")
+                .functionalArea("pdf")
+                .action("medication.pdf.info")
+                .actionType(ActionType.PDF_INFO)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(info.pages())
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return info;
     }
 
     @Transactional(readOnly = true)

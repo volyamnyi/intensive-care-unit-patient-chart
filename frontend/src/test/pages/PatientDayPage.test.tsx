@@ -95,6 +95,11 @@ vi.mock('../../api/platform', () => ({
   patientApi: {
     getById: vi.fn().mockResolvedValue({ data: { birthDate: null } }),
   },
+  auditEventsApi: {
+    objectHistory: vi.fn().mockResolvedValue({
+      data: { entityType: 'Episode', entityId: 'a111', eventCount: 0, events: [] },
+    }),
+  },
 }));
 
 const TEST_USER = { id: 1, login: 'doctor1', fullName: 'Доктор', role: 'DOCTOR', email: '' } as const;

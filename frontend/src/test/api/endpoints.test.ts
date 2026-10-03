@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { authApi, patientApi, userApi, auditApi } from '../../api/platform';
+import { authApi, patientApi, userApi, auditApi, auditEventsApi, adminApi } from '../../api/platform';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi, pdfApi } from '../../api/icu';
 import { prescriptionApi, vitalSignApi } from '../../api/medication';
 
@@ -191,6 +191,37 @@ describe('auditApi', () => {
   it('list calls /audit with params', () => {
     auditApi.list({ page: 0, size: 10 });
     expect(mockClient.get).toHaveBeenCalledWith('/audit', { params: { page: 0, size: 10 } });
+  });
+});
+
+describe('auditEventsApi', () => {
+  it('search calls /audit/events with combined params', () => {
+    auditEventsApi.search({ module: 'platform', action: 'platform.user.view', outcome: 'SUCCESS', page: 0, size: 20 });
+    expect(mockClient.get).toHaveBeenCalledWith('/audit/events', {
+      params: { module: 'platform', action: 'platform.user.view', outcome: 'SUCCESS', page: 0, size: 20 },
+    });
+  });
+
+  it('detail calls /audit/events/:id', () => {
+    auditEventsApi.detail('audit-1');
+    expect(mockClient.get).toHaveBeenCalledWith('/audit/events/audit-1');
+  });
+
+  it('objectHistory calls /audit/entities/:type/:id', () => {
+    auditEventsApi.objectHistory('Episode', 'a111');
+    expect(mockClient.get).toHaveBeenCalledWith('/audit/entities/Episode/a111');
+  });
+});
+
+describe('adminApi', () => {
+  it('updateRolePermission forwards an axios config (audit intent correlation)', () => {
+    const config = { auditActionId: 'action-1' };
+    adminApi.updateRolePermission('DOCTOR', 'EPISODE_CREATE', true, config);
+    expect(mockClient.put).toHaveBeenCalledWith(
+      '/admin/permissions',
+      { role: 'DOCTOR', permissionCode: 'EPISODE_CREATE', granted: true },
+      config,
+    );
   });
 });
 

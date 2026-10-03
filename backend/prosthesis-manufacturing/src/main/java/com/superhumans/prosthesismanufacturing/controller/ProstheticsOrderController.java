@@ -1,5 +1,10 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.prosthesismanufacturing.dto.OrderDocumentResponse;
 import com.superhumans.prosthesismanufacturing.service.ProstheticsOrderService;
@@ -29,6 +34,7 @@ import java.util.UUID;
 public class ProstheticsOrderController {
 
     ProstheticsOrderService orderService;
+    DomainAuditEmitter auditEmitter;
 
     @GetMapping
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
@@ -92,7 +98,20 @@ public class ProstheticsOrderController {
     @GetMapping("/{id}/document-url")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
     @Operation(summary = "Resolve MIS-hosted order document URL")
+    @org.springframework.transaction.annotation.Transactional
     public OrderDocumentResponse getDocumentUrl(@PathVariable UUID id) {
-        return orderService.resolveDocumentUrl(id);
+        OrderDocumentResponse document = orderService.resolveDocumentUrl(id);
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("order-document")
+                .action("prosthetics.order.document.view")
+                .actionType(ActionType.DOCUMENT_VIEW)
+                .target(new AuditEvent.AuditTarget("ProstheticsOrder", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return document;
     }
 }

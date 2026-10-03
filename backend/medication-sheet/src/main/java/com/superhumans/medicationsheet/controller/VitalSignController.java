@@ -10,6 +10,13 @@ import com.superhumans.medicationsheet.mapper.VitalSignDayMapper;
 import com.superhumans.medicationsheet.mapper.VitalSignEntryMapper;
 import com.superhumans.medicationsheet.entity.VitalSignEntry;
 import com.superhumans.medicationsheet.entity.VitalSignList;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.DataClass;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditChanges;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.service.VitalSignService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +40,7 @@ public class VitalSignController {
     VitalSignService vitalSignService;
     VitalSignDayMapper vitalSignDayMapper;
     VitalSignEntryMapper vitalSignEntryMapper;
+    DomainAuditEmitter auditEmitter;
 
     @GetMapping
     public List<VitalSignDayResponse> getDaysByPrescriptionList(@RequestParam UUID prescriptionListId) {
@@ -50,10 +58,11 @@ public class VitalSignController {
     }
 
     @GetMapping("/grid")
+    @org.springframework.transaction.annotation.Transactional
     public List<Map<String, Object>> getGrid(@RequestParam UUID prescriptionListId) {
         VitalSignList list = vitalSignService.getOrCreate(prescriptionListId);
         List<com.superhumans.medicationsheet.entity.VitalSignDay> days = vitalSignService.getDays(list.getId());
-        return days.stream().map(day -> {
+        List<Map<String, Object>> grid = days.stream().map(day -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", day.getId().toString());
             m.put("dayDate", day.getDayDate().toString());
@@ -62,6 +71,22 @@ public class VitalSignController {
             m.put("entries", entries.stream().map(vitalSignEntryMapper::toResponse).toList());
             return m;
         }).toList();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("medication")
+                .functionalArea("vitals")
+                .action("medication.vitals.grid.view")
+                .actionType(ActionType.VIEW)
+                .target(new AuditEvent.AuditTarget(
+                        "VitalSignList", list.getId().toString(), null))
+                .parentTarget(new AuditEvent.AuditTarget(
+                        "PrescriptionList", prescriptionListId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(grid.size())
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return grid;
     }
 
     @PreAuthorize("@permissionService.has('VITALS_ENTER')")

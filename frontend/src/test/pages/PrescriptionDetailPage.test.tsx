@@ -19,6 +19,9 @@ const mockGetPdfPage = vi.fn();
 const mockPrintPdfBlob = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+const mockObjectHistory = vi.fn().mockResolvedValue({
+  data: { entityType: 'PrescriptionList', entityId: 'list-1', eventCount: 0, events: [] },
+});
 let mockAuth: () => unknown = () => doctorAuth;
 
 vi.mock('react-router-dom', async () => {
@@ -70,6 +73,12 @@ vi.mock('../../services/AuthContext', () => ({
 
 vi.mock('../../lib/printPdf', () => ({
   printPdfBlob: (...a: unknown[]) => mockPrintPdfBlob(...a),
+}));
+
+vi.mock('../../api/platform', () => ({
+  auditEventsApi: {
+    objectHistory: (...a: unknown[]) => mockObjectHistory(...a),
+  },
 }));
 
 vi.mock('sonner', () => ({

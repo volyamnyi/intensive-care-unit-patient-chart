@@ -33,6 +33,11 @@ vi.mock('../../api/platform', () => ({
   auditApi: {
     list: vi.fn().mockResolvedValue({ data: { content: [] } }),
   },
+  auditEventsApi: {
+    search: vi.fn().mockResolvedValue({ data: { content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 } }),
+    detail: vi.fn(),
+    objectHistory: vi.fn(),
+  },
 }));
 
 vi.mock('../../api/medication', () => ({
@@ -147,7 +152,6 @@ describe('AdminPage', () => {
       expect(mockGetCatalog).toHaveBeenLastCalledWith({ severity: 'high', query: undefined, page: 0, size: 50 });
     });
   });
-
   it('renders the permission matrix with role columns and grants', async () => {
     renderPage();
     await userEvent.click(screen.getByRole('tab', { name: 'Доступи та ролі' }));
@@ -158,5 +162,13 @@ describe('AdminPage', () => {
     // DOCTOR holds EPISODE_CREATE, NURSE does not
     expect(screen.getByRole('checkbox', { name: 'Створення епізоду — Лікар' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Створення епізоду — Медсестра' })).not.toBeChecked();
+  });
+
+  it('renders the Audit v2 console beside the legacy log in the audit tab', async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Журнал аудиту' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Переглянути' }));
+    expect(await screen.findByTestId('audit-event-console')).toBeInTheDocument();
+    expect(screen.getByText('Події (Audit v2)')).toBeInTheDocument();
   });
 });

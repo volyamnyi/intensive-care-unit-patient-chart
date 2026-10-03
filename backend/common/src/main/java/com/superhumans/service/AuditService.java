@@ -2,6 +2,11 @@ package com.superhumans.service;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditEventRecorder;
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.entity.core.AuditLog;
 import com.superhumans.exception.NotFoundException;
@@ -23,13 +28,26 @@ public class AuditService {
 
     AuditLogRepository auditLogRepository;
     AuditLogMapper auditLogMapper;
+    AuditEventRecorder auditEventRecorder;
 
+    @Transactional
     public AuditLogResponse getAuditLog(UUID id) {
         AuditLog log = auditLogRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Audit log not found: " + id));
-        return auditLogMapper.toResponse(log);
+        AuditLogResponse response = auditLogMapper.toResponse(log);
+        recordIfUser(AuditEvent.builder()
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("audit")
+                .action("platform.audit.detail.view")
+                .actionType(ActionType.VIEW)
+                .target(new AuditEvent.AuditTarget("AuditLog", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.ADMIN_TOOL));
+        return response;
     }
 
+    @Transactional
     public Page<AuditLogResponse> getAuditLogs(Long userId, String entity, UUID entityId, String action,
                                                 LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
         Page<AuditLog> logs;
@@ -46,7 +64,32 @@ public class AuditService {
         } else {
             logs = auditLogRepository.findAllByOrderByTimestampDesc(pageable);
         }
-        return logs.map(auditLogMapper::toResponse);
+        Page<AuditLogResponse> responses = logs.map(auditLogMapper::toResponse);
+        final long resultTotal = responses.getTotalElements();
+        recordIfUser(AuditEvent.builder()
+                .eventClass(EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("audit")
+                .action("platform.audit.search")
+                .actionType(ActionType.SEARCH)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(resultTotal > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) resultTotal)
+                .source(AuditEvent.AuditSource.ADMIN_TOOL));
+        return responses;
+    }
+
+    /**
+     * Records a console self-audit event only for real user actors. Both
+     * actions carry an ActorPolicy.USER catalog policy, so building the
+     * event with an UNKNOWN actor (non-request callers, unit tests) would
+     * fail validation and must never break the read itself.
+     */
+    private void recordIfUser(AuditEvent.AuditEventBuilder builder) {
+        AuditEvent.AuditActor actor = AuditActorResolver.fromCurrentContext();
+        if (actor.type() != AuditEvent.ActorType.USER) {
+            return;
+        }
+        auditEventRecorder.record(builder.actor(actor).build());
     }
 
     @Transactional

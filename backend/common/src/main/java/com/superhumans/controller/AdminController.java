@@ -42,14 +42,42 @@ public class AdminController {
     PermissionService permissionService;
 
     @GetMapping("/users")
+    @org.springframework.transaction.annotation.Transactional
     public List<User> getAllUsers() {
-        return userRepository.findAllByOrderByIdAsc();
+        List<User> users = userRepository.findAllByOrderByIdAsc();
+        final int resultCount = users.size();
+        auditEventRecorder.record(AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("platform")
+                .functionalArea("users")
+                .action("platform.user.view")
+                .actionType(ActionType.VIEW)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(resultCount)
+                .source(AuditEvent.AuditSource.ADMIN_TOOL)
+                .build());
+        return users;
     }
 
     @GetMapping("/users/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<User> getUser(@PathVariable Long id) {
         return userRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .map(user -> {
+                    auditEventRecorder.record(AuditEvent.builder()
+                            .actor(AuditActorResolver.fromCurrentContext())
+                            .eventClass(EventClass.USER_ACTIVITY)
+                            .module("platform")
+                            .functionalArea("users")
+                            .action("platform.user.view")
+                            .actionType(ActionType.VIEW)
+                            .target(new AuditEvent.AuditTarget("User", id.toString(), null))
+                            .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                            .source(AuditEvent.AuditSource.ADMIN_TOOL)
+                            .build());
+                    return ResponseEntity.ok(user);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 

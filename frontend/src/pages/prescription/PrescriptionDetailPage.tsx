@@ -12,6 +12,7 @@ import { useAuth } from '../../services/AuthContext'
 import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid'
 import VitalSignGrid from '../../components/prescription/VitalSignGrid'
 import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog'
+import ObjectHistorySection from '../../components/common/ObjectHistorySection'
 import { getErrorMessage } from '../../utils/errorMessage'
 import type { PrescriptionList, PrescriptionItem } from '../../types/medication';
 
@@ -345,6 +346,13 @@ export default function PrescriptionDetailPage() {
             allCompleted={false}
             closing={closing}
           />
+        </>
+      )}
+
+      {id && (
+        <>
+          <Separator className="my-3" />
+          <ObjectHistorySection entityType="PrescriptionList" entityId={id} title="Історія змін листка" />
         </>
       )}
     </div>

@@ -1,5 +1,10 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.prosthesismanufacturing.dto.ProductionDetailDto;
 import com.superhumans.prosthesismanufacturing.dto.ProductionNormativeDto;
@@ -47,10 +52,12 @@ public class ProductionController {
     ProductionNormativeService normativeService;
     PermissionService permissionService;
     CurrentUser currentUser;
+    DomainAuditEmitter auditEmitter;
 
     @GetMapping
     @PreAuthorize("@permissionService.has('PROSTHETICS_PRODUCTION_VIEW')")
     @Operation(summary = "List production work items (own only without VIEW_ALL)")
+    @org.springframework.transaction.annotation.Transactional
     public Page<ProductionWorkItemDto> list(
             @RequestParam(required = false) Long assigneeId,
             @RequestParam(required = false) String status,
@@ -63,7 +70,7 @@ public class ProductionController {
             @RequestParam(required = false, defaultValue = "20") int size) {
         Long effectiveAssignee = permissionService
                 .has(Codes.VIEW_ALL) ? assigneeId : currentUser.userId();
-        return readService.list(ProductionQuery.builder()
+        Page<ProductionWorkItemDto> items = readService.list(ProductionQuery.builder()
                 .assigneeId(effectiveAssignee)
                 .status(status)
                 .stageId(stageId)
@@ -74,6 +81,19 @@ public class ProductionController {
                 .page(page)
                 .size(size)
                 .build());
+        final long resultTotal = items.getTotalElements();
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("production")
+                .action("prosthetics.production.worklist.view")
+                .actionType(ActionType.WORKLIST_VIEW)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(resultTotal > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) resultTotal)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return items;
     }
 
     @GetMapping("/team")
@@ -102,10 +122,23 @@ public class ProductionController {
     @GetMapping("/{id}")
     @PreAuthorize("@permissionService.has('PROSTHETICS_PRODUCTION_VIEW')")
     @Operation(summary = "Detail view of one work item (masked without PATIENT_VIEW)")
+    @org.springframework.transaction.annotation.Transactional
     public ProductionDetailDto detail(@PathVariable UUID id) {
-        return readService.detail(id, currentUser.userId(),
+        ProductionDetailDto detail = readService.detail(id, currentUser.userId(),
                 permissionService.has(Codes.VIEW_ALL),
                 permissionService.has(Codes.PATIENT_VIEW));
+        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("prosthetics")
+                .functionalArea("production")
+                .action("prosthetics.production.detail.view")
+                .actionType(ActionType.DETAIL_VIEW)
+                .target(new AuditEvent.AuditTarget("FlowInstance", id.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return detail;
     }
 
     @GetMapping("/settings/normative")

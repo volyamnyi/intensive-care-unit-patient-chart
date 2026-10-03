@@ -33,6 +33,9 @@ class PatientControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @MockitoBean
     private MisService misService;
 
     @MockitoBean

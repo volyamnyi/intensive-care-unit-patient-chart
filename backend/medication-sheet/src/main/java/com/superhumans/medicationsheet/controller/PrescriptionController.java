@@ -4,6 +4,11 @@ import lombok.experimental.FieldDefaults;
 
 import com.superhumans.medicationsheet.dto.*;
 import com.superhumans.medicationsheet.mapper.*;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.pdf.PrescriptionPdfService;
 import com.superhumans.mis.MisService;
 import com.superhumans.medicationsheet.service.PrescriptionExecutionService;
@@ -45,6 +50,7 @@ public class PrescriptionController {
     PrescriptionItemMapper prescriptionItemMapper;
     PrescriptionDayPartMapper prescriptionDayPartMapper;
     MedicineCatalogMapper medicineCatalogMapper;
+    DomainAuditEmitter auditEmitter;
 
     @GetMapping
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
@@ -276,9 +282,22 @@ public class PrescriptionController {
     })
     public List<MedicineCatalogResponse> searchMedicineCatalog(
             @Parameter(description = "Search keyword (optional)") @RequestParam(required = false) String keyword) {
-        return misService.searchMedicineCatalog(keyword == null ? "" : keyword).stream()
+        List<MedicineCatalogResponse> catalog = misService.searchMedicineCatalog(keyword == null ? "" : keyword).stream()
                 .map(medicineCatalogMapper::toResponse)
                 .toList();
+        final int resultCount = catalog.size();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("platform")
+                .functionalArea("mis")
+                .action("platform.mis.catalog.view")
+                .actionType(ActionType.CATALOG_VIEW)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(resultCount)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return catalog;
     }
 
     @GetMapping("/{id}/pdf/info")

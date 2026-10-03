@@ -8,6 +8,11 @@ import com.superhumans.medicationsheet.dto.DrugInteractionCatalogResponse.PairRo
 import com.superhumans.medicationsheet.dto.DrugInteractionCatalogResponse.Summary;
 import com.superhumans.medicationsheet.entity.DrugInteractionDrug;
 import com.superhumans.medicationsheet.entity.DrugInteractionPair;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.repository.DrugInteractionDrugRepository;
 import com.superhumans.medicationsheet.repository.DrugInteractionPairRepository;
 import com.superhumans.repository.core.SystemSettingsRepository;
@@ -35,8 +40,9 @@ public class DrugInteractionCatalogService {
     DrugInteractionDrugRepository drugRepository;
     DrugInteractionPairRepository pairRepository;
     SystemSettingsRepository settingsRepository;
+    DomainAuditEmitter auditEmitter;
 
-    @Transactional(readOnly = true, transactionManager = "medTransactionManager")
+    @Transactional(transactionManager = "medTransactionManager")
     public DrugInteractionCatalogResponse getCatalog(String severity, String query, Pageable pageable) {
         String sev = (severity == null || severity.isBlank()) ? null : severity.trim().toLowerCase();
         if (sev != null && !DrugInteractionImportService.SEVERITIES.contains(sev)) {
@@ -63,7 +69,7 @@ public class DrugInteractionCatalogService {
                 .orElse(null);
 
         List<PairRow> content = page.getContent().stream().map(this::toPairRow).toList();
-        return DrugInteractionCatalogResponse.builder()
+        DrugInteractionCatalogResponse response = DrugInteractionCatalogResponse.builder()
                 .summary(Summary.builder()
                         .drugs(drugs.size())
                         .interactions(pairRepository.count())
@@ -77,6 +83,19 @@ public class DrugInteractionCatalogService {
                         .totalPages(page.getTotalPages())
                         .build())
                 .build();
+        final long resultCount = page.getTotalElements();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("medication")
+                .functionalArea("interactions")
+                .action("medication.interactions.catalog.view")
+                .actionType(ActionType.CATALOG_VIEW)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords((int) Math.min(resultCount, Integer.MAX_VALUE))
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return response;
     }
 
     private DrugRow toDrugRow(DrugInteractionDrug d) {

@@ -33,6 +33,9 @@ class AdminControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @MockitoBean
     private UserRepository userRepository;
 
     @MockitoBean

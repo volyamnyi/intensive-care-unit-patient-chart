@@ -44,6 +44,9 @@ class ProstheticsPatientControllerTest {
     MockMvc mockMvc;
 
     @MockitoBean
+    com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @MockitoBean
     ProstheticsPatientService patientService;
     @MockitoBean
     ProstheticsEligibilityService eligibilityService;

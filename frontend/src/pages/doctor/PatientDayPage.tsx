@@ -10,6 +10,7 @@ import { useAuth } from '../../services/AuthContext'
 import DoctorDashboard from '../../components/monitoring/DoctorDashboard'
 import NurseDashboard from '../../components/monitoring/NurseDashboard'
 import DocumentHeader from '../../components/icu/DocumentHeader'
+import ObjectHistorySection from '../../components/common/ObjectHistorySection'
 import { printPdfBlob } from '../../lib/printPdf'
 import type { Episode, ClinicalDay, HourlyRecord, MedicalOrder, FluidBalanceItem } from '../../types/icu';
 
@@ -369,6 +370,12 @@ export default function PatientDayPage() {
           <Alert variant={feedback.severity === 'error' ? 'destructive' : 'default'} className="text-xs shadow-lg">
             {feedback.message}
           </Alert>
+        </div>
+      )}
+
+      {episodeId && (
+        <div className="no-print mt-3">
+          <ObjectHistorySection entityType="Episode" entityId={episodeId} title="Історія змін епізоду" />
         </div>
       )}
     </div>

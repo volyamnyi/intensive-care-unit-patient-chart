@@ -46,6 +46,9 @@ class DrugInteractionCatalogServiceTest {
     @Mock
     private SystemSettingsRepository settingsRepository;
 
+    @Mock
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
     @InjectMocks
     private DrugInteractionCatalogService catalogService;
 

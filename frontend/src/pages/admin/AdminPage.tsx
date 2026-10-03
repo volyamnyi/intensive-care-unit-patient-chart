@@ -39,8 +39,10 @@ import { auditApi, adminApi, settingsApi } from '../../api/platform';
 import { drugInteractionAdminApi } from '../../api/medication';
 import type { DrugInteractionCatalog, DrugInteractionImportReport } from '../../types/medication';
 import AuditLogTable from '../../components/common/AuditLogTable';
+import AuditEventConsole from '../../components/common/AuditEventConsole';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { useAuth } from '../../services/AuthContext';
+import { useAuditAction } from '../../hooks/useAuditAction';
 import type { User, AuditLog, PermissionMatrix, PermissionDef } from '../../types/core';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -61,6 +63,8 @@ const DI_SEV_CLASS: Record<string, string> = { critical: 'bg-red-500', high: 'bg
 export default function AdminPage() {
   useEffect(() => { document.title = 'Адмін — Superhumans Lviv'; }, []);
   const { hasPermission, user } = useAuth();
+  /** One UI intent for the whole matrix save: all grant/revoke PUTs share the action ID. */
+  const matrixSaveIntent = useAuditAction();
   const isDiAdmin = user?.role === 'ADMINISTRATOR';
   const [tabValue, setTabValue] = useState('users');
   const [users, setUsers] = useState<User[]>([]);
@@ -230,7 +234,7 @@ export default function AdminPage() {
     }
     try {
       for (const c of changes) {
-        await adminApi.updateRolePermission(c.role, c.code, c.granted);
+        await adminApi.updateRolePermission(c.role, c.code, c.granted, matrixSaveIntent.config);
       }
       await loadMatrix();
       setMatrixNotice(changes.length > 0 ? `Збережено змін: ${changes.length}` : 'Змін немає');
@@ -465,6 +469,9 @@ export default function AdminPage() {
                     <AuditLogTable logs={auditLogs} loading={auditLoading} />
                   </>
                 )}
+              </div>
+              <div className="mt-2.5">
+                <AuditEventConsole />
               </div>
             </TabsContent>
 
