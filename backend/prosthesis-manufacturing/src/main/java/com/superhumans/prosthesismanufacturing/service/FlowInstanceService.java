@@ -520,34 +520,16 @@ public class FlowInstanceService {
     @Transactional
     public FlowInstanceResponse get(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = requireOwner(instanceId, userId, allowAll);
-        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.USER_ACTIVITY)
-                .module("prosthetics")
-                .functionalArea("instance")
-                .action("prosthetics.instance.view")
-                .actionType(ActionType.VIEW)
-                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        // No audit emit here: the instance view fires once per opening at the
+        // controller boundary (FlowInstanceController.get).
         return toResponse(instance);
     }
 
     @Transactional
     public Map<String, Object> getSnapshot(UUID instanceId, Long userId, boolean allowAll) {
         String json = requireOwner(instanceId, userId, allowAll).getTemplateSnapshot();
-        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.USER_ACTIVITY)
-                .module("prosthetics")
-                .functionalArea("instance")
-                .action("prosthetics.instance.snapshot.view")
-                .actionType(ActionType.SNAPSHOT_VIEW)
-                .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        // No audit emit here: the snapshot view fires once per opening at the
+        // controller boundary (FlowInstanceController.getSnapshot).
         if (!StringUtils.hasText(json)) {
             return Map.of();
         }

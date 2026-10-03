@@ -40,14 +40,12 @@ class ProstheticsPatientServiceTest {
     ProstheticsPatientRepository patientRepository;
     @Mock
     ProstheticsPatientMapper patientMapper;
-    @Mock
-    com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     ProstheticsPatientService service;
 
     @BeforeEach
     void setUp() {
-        service = new ProstheticsPatientService(misService, patientRepository, patientMapper, auditEmitter);
+        service = new ProstheticsPatientService(misService, patientRepository, patientMapper);
     }
 
     private PatientDTO misPatient(String sexCode) {

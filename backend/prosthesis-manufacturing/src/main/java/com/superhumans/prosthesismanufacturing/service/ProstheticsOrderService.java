@@ -246,18 +246,8 @@ public class ProstheticsOrderService {
                 .findFirst()
                 .orElseThrow(() -> new NotFoundException(
                         "Замовлення на протез не знайдено в MIS для пацієнта " + patientId));
-        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.USER_ACTIVITY)
-                .module("prosthetics")
-                .functionalArea("order-document")
-                .action("prosthetics.order.document.view")
-                .actionType(ActionType.DOCUMENT_VIEW)
-                .target(new AuditEvent.AuditTarget("ProstheticsOrder", id.toString(),
-                        order.getOrderNumber()))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        // No audit emit here: the document view fires once per opening at the
+        // controller boundary (ProstheticsOrderController.getDocumentUrl).
         return com.superhumans.prosthesismanufacturing.dto.OrderDocumentResponse.builder()
                 .documentId(match.getDocumentId())
                 .documentTemplateName(match.getDocumentTemplateName())

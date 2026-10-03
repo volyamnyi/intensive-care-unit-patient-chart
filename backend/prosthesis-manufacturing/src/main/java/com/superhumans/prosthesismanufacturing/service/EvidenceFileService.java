@@ -113,20 +113,8 @@ public class EvidenceFileService {
         java.util.List<EvidenceFileResponse> files = evidenceFileRepository.findByStepExecutionId(executionId).stream()
                 .map(this::toResponse)
                 .toList();
-        final int fileCount = files.size();
-        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.USER_ACTIVITY)
-                .module("prosthetics")
-                .functionalArea("evidence")
-                .action("prosthetics.evidence.list.view")
-                .actionType(ActionType.LIST_VIEW)
-                .target(new AuditEvent.AuditTarget("StepExecution", executionId.toString(), null))
-                .parentTarget(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .affectedRecords(fileCount)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        // No audit emit here: the evidence list view fires once per opening at
+        // the controller boundary (FlowInstanceController.listEvidence).
         return files;
     }
 
@@ -169,17 +157,8 @@ public class EvidenceFileService {
         if (!allowAll && !evidence.getStepExecution().getInstance().getAssignedUserId().equals(userId)) {
             throw new NotFoundException("Evidence file not found: " + fileId);
         }
-        auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.USER_ACTIVITY)
-                .module("prosthetics")
-                .functionalArea("evidence")
-                .action("prosthetics.evidence.download")
-                .actionType(ActionType.DOWNLOAD)
-                .target(new AuditEvent.AuditTarget("EvidenceFile", fileId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        // No audit emit here: the evidence download fires once per opening at
+        // the controller boundary (FlowInstanceController.downloadEvidence).
         return evidence;
     }
 

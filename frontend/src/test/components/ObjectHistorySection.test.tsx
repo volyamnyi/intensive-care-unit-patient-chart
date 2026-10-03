@@ -11,6 +11,12 @@ vi.mock('../../api/platform', () => ({
   },
 }));
 
+const mockHasPermission = vi.fn(() => true);
+
+vi.mock('../../services/AuthContext', () => ({
+  useAuth: () => ({ user: { role: 'ADMINISTRATOR' }, hasPermission: mockHasPermission }),
+}));
+
 vi.mock('../../utils/errorMessage', () => ({
   getErrorMessage: (_err: unknown, fallback: string) => fallback,
 }));
@@ -87,5 +93,13 @@ describe('ObjectHistorySection', () => {
     renderSection();
     expect(await screen.findByTestId('object-history-denied')).toBeInTheDocument();
     expect(screen.getByText('Історія змін доступна ролям із доступом до консолі аудиту.')).toBeInTheDocument();
+  });
+
+  it('never fires the request without console access (no 403 noise)', async () => {
+    mockHasPermission.mockReturnValue(false);
+    renderSection();
+    expect(await screen.findByTestId('object-history-denied')).toBeInTheDocument();
+    expect(mockHistory).not.toHaveBeenCalled();
+    mockHasPermission.mockReturnValue(true);
   });
 });

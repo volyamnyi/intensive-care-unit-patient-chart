@@ -110,6 +110,7 @@ vi.mock('../../services/AuthContext', () => ({
     token: 'mock-token',
     isAuthenticated: true,
     hasRole: (...roles: string[]) => roles.includes('DOCTOR'),
+    hasPermission: () => true,
   }),
 }));
 

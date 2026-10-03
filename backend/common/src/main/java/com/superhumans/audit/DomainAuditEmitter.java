@@ -35,6 +35,16 @@ public class DomainAuditEmitter {
     }
 
     public void emit(String expectedModule, java.util.function.Supplier<AuditEvent> eventSupplier) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager
+                .isCurrentTransactionReadOnly()) {
+            // An outbox INSERT inside a read-only transaction aborts the whole
+            // PostgreSQL transaction — even swallowed, it would poison the
+            // caller. Read events belong to read-write boundaries
+            // (controllers); internal fetches inside read-only work skip.
+            log.warn("Domain audit emission skipped in read-only transaction module={}", expectedModule);
+            auditMetrics.skippedReadOnly(expectedModule);
+            return;
+        }
         AuditEvent event = null;
         try {
             event = eventSupplier.get();

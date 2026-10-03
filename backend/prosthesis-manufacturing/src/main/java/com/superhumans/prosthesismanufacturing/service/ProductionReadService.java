@@ -57,11 +57,11 @@ import java.util.stream.Collectors;
 /**
  * Read-model behind the prosthetics production dashboard (manufacturing epic
  * #271, issue #273). Builds {@link ProductionWorkItemDto} rows from the
- * existing domain — no parallel accounting, no new entities.
+ * existing domain вЂ” no parallel accounting, no new entities.
  *
  * <p>Query shape is fixed: 1 instance query (assignee/status filtered) plus
  * batch IN-queries (orders with patients, templates, users, execution active
- * sums, brak counts, branch children counts) — never per-row fetches.
+ * sums, brak counts, branch children counts) вЂ” never per-row fetches.
  * Stage/step names and normative times resolve from the immutable per-instance
  * template snapshot, so later template edits cannot shift dashboard history.
  */
@@ -98,7 +98,6 @@ public class ProductionReadService {
     final ProductionNormativeService normativeService;
     final ProstheticsOrderMapper orderMapper;
     final ProstheticsPatientMapper patientMapper;
-    final com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     /** Test seam: fixed clock for deterministic elapsed-time math. */
     Clock clock = Clock.systemDefaultZone();
@@ -108,7 +107,7 @@ public class ProductionReadService {
     }
 
     /**
-     * Lists dashboard rows for the given filters, newest activity last —
+     * Lists dashboard rows for the given filters, newest activity last вЂ”
      * actually sorted per {@link ProductionQuery#getSort()}, paged in memory
      * after mapping (volumes are dashboard-scale; revisited with DB paging in
      * the performance pass, issue #281).
@@ -148,24 +147,9 @@ public class ProductionReadService {
                 new PageImpl<>(rows.subList(from, to), PageRequest.of(query.getPage(), query.getSize()), total);
         log.debug("Production list: {} rows ({} total) in {} ms",
                 result.getNumberOfElements(), total, System.currentTimeMillis() - started);
-        emitWorklistView(total);
+        // No audit emit here: the worklist view fires once per opening at the
+        // controller boundary (ProductionController.list).
         return result;
-    }
-
-    private void emitWorklistView(int resultCount) {
-        java.util.Map<String, Object> metadata = new java.util.TreeMap<>();
-        metadata.put("resultCount", resultCount);
-        auditEmitter.emit("prosthetics", () -> com.superhumans.audit.AuditEvent.builder()
-                .actor(com.superhumans.audit.AuditActorResolver.fromCurrentContext())
-                .eventClass(com.superhumans.audit.AuditActionDefinition.EventClass.USER_ACTIVITY)
-                .module("prosthetics")
-                .functionalArea("production")
-                .action("prosthetics.production.worklist.view")
-                .actionType(com.superhumans.audit.AuditActionDefinition.ActionType.WORKLIST_VIEW)
-                .outcome(com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS)
-                .metadata(metadata)
-                .source(com.superhumans.audit.AuditEvent.AuditSource.API)
-                .build());
     }
 
     /**
@@ -253,18 +237,8 @@ public class ProductionReadService {
         log.debug("Production detail {}: {} timeline entries, {} braks, {} branches in {} ms",
                 instanceId, timeline.size(), brakEvents.size(), branches.size(),
                 System.currentTimeMillis() - started);
-        auditEmitter.emit("prosthetics", () -> com.superhumans.audit.AuditEvent.builder()
-                .actor(com.superhumans.audit.AuditActorResolver.fromCurrentContext())
-                .eventClass(com.superhumans.audit.AuditActionDefinition.EventClass.USER_ACTIVITY)
-                .module("prosthetics")
-                .functionalArea("production")
-                .action("prosthetics.production.detail.view")
-                .actionType(com.superhumans.audit.AuditActionDefinition.ActionType.DETAIL_VIEW)
-                .target(new com.superhumans.audit.AuditEvent.AuditTarget(
-                        "FlowInstance", instanceId.toString(), null))
-                .outcome(com.superhumans.audit.AuditEvent.AuditOutcome.SUCCESS)
-                .source(com.superhumans.audit.AuditEvent.AuditSource.API)
-                .build());
+        // No audit emit here: the detail view fires once per opening at the
+        // controller boundary (ProductionController.detail).
         return result;
     }
     /**
@@ -294,7 +268,7 @@ public class ProductionReadService {
                 .build();
         log.debug("Production summary: {} items in {} ms",
                 result.getTotalItems(), System.currentTimeMillis() - started);
-        emitWorklistView(result.getTotalItems());
+        // No worklist-view emit here: summary/attention/team are dashboard aggregates without a dedicated catalog action;
         return result;
     }
 
@@ -342,7 +316,7 @@ public class ProductionReadService {
                 .toList();
         log.debug("Production attention: {} flagged rows in {} ms",
                 result.size(), System.currentTimeMillis() - started);
-        emitWorklistView(result.size());
+        // No worklist-view emit here: summary/attention/team are dashboard aggregates without a dedicated catalog action;
         return result;
     }
 
@@ -408,7 +382,7 @@ public class ProductionReadService {
                 .toList();
         log.debug("Production team: {} members in {} ms",
                 result.size(), System.currentTimeMillis() - started);
-        emitWorklistView(result.size());
+        // No worklist-view emit here: summary/attention/team are dashboard aggregates without a dedicated catalog action;
         return result;
     }
 
@@ -497,7 +471,7 @@ public class ProductionReadService {
         return to == null || !value.isAfter(to);
     }
 
-    /** One batch load per aggregate — no per-row queries past this point. */
+    /** One batch load per aggregate вЂ” no per-row queries past this point. */
     private Batch loadBatch(List<FlowInstance> instances) {
         Batch batch = new Batch();
         if (instances.isEmpty()) {

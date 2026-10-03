@@ -38,6 +38,14 @@ public class AuditMetrics {
                 .increment();
     }
 
+    public void skippedReadOnly(String module) {
+        Counter.builder("audit.events.skipped")
+                .tag("module", module)
+                .tag("reason", "read_only_transaction")
+                .register(meterRegistry)
+                .increment();
+    }
+
     public void backfilled(int rows) {
         Counter.builder("audit.backfill.rows").register(meterRegistry).increment(rows);
     }

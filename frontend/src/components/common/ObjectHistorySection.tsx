@@ -2,20 +2,25 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { auditEventsApi } from '../../api/platform';
 import { getErrorMessage } from '../../utils/errorMessage';
+import { useAuth } from '../../services/AuthContext';
 import type { AuditObjectHistory } from '../../types/core';
 import { AuditObjectHistoryView } from './AuditEventConsole';
 
 /**
  * Object-history entry point (Audit v2 F7): chronological canonical events
- * touching one entity, oldest first. Renders nothing-but-a-hint when the
- * caller lacks console access (backend answers 403) — the section never
- * fabricates history from non-audit sources.
+ * touching one entity, oldest first. The query API is gated server-side by
+ * AUDIT_ACCESS/AUDITOR, so the section never fires the request without that
+ * grant — a denied fetch would log a 403 network error to the console on
+ * every page load. Renders nothing-but-a-hint when the caller lacks console
+ * access; it never fabricates history from non-audit sources.
  */
 export default function ObjectHistorySection({ entityType, entityId, title }: {
   entityType: string;
   entityId: string;
   title?: string;
 }) {
+  const { hasPermission, user } = useAuth();
+  const canAudit = hasPermission('AUDIT_ACCESS') || user?.role === 'AUDITOR';
   const [history, setHistory] = useState<AuditObjectHistory | null>(null);
   const [denied, setDenied] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
@@ -40,10 +45,14 @@ export default function ObjectHistorySection({ entityType, entityId, title }: {
   }, [entityType, entityId]);
 
   useEffect(() => {
+    if (!canAudit) {
+      setDenied(true);
+      return;
+    }
     const controller = new AbortController();
     load(controller.signal);
     return () => controller.abort();
-  }, [load]);
+  }, [canAudit, load]);
 
   if (denied) {
     return (

@@ -73,7 +73,6 @@ class ProductionReadServiceTest {
     @Mock ProductionNormativeService normativeService;
     @Mock ProstheticsOrderMapper orderMapper;
     @Mock ProstheticsPatientMapper patientMapper;
-    @Mock com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     TemplateSnapshotParser parser;
     ProductionReadService service;
@@ -86,8 +85,7 @@ class ProductionReadServiceTest {
         parser = new TemplateSnapshotParser(new ObjectMapper());
         service = new ProductionReadService(instanceRepository, orderRepository, patientRepository,
                 templateRepository, executionRepository, brakEventRepository, userRepository, parser,
-                instanceService, brakService, orderService, normativeService, orderMapper, patientMapper,
-                auditEmitter);
+                instanceService, brakService, orderService, normativeService, orderMapper, patientMapper);
         service.setClock(Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
         lenient().when(normativeService.get()).thenReturn(NORM);
     }
