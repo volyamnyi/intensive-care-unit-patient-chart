@@ -6,7 +6,9 @@ import com.superhumans.audit.AuditActionDefinition.EventClass;
 import com.superhumans.audit.AuditActorResolver;
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.AuditEventRecorder;
+import com.superhumans.dto.AuditRetentionReportResponse;
 import com.superhumans.dto.LegacyBackfillReportResponse;
+import com.superhumans.service.AuditRetentionService;
 import com.superhumans.dto.PermissionMatrixResponse;import com.superhumans.dto.PermissionResponse;
 import com.superhumans.dto.RolePermissionUpdateRequest;
 import com.superhumans.entity.core.User;
@@ -42,6 +44,7 @@ public class AdminController {
     AuditEventRecorder auditEventRecorder;
     PermissionService permissionService;
     LegacyAuditBackfillService backfillService;
+    AuditRetentionService retentionService;
 
     @GetMapping("/users")
     @org.springframework.transaction.annotation.Transactional
@@ -196,6 +199,23 @@ public class AdminController {
         LegacyBackfillReportResponse report = backfillService.backfill();
         auditService.logEvent("AuditBackfill", null, "BACKFILL", getUserId(auth),
                 null, "inserted=" + report.getInserted() + " verified=" + report.isVerified());
+        return ResponseEntity.ok(report);
+    }
+
+    /**
+     * Manual retention cycle trigger (F8, D1). The scheduled cycle only runs
+     * when {@code app.audit.retention.enabled=true}; this endpoint runs the
+     * same unit of work on demand and reports what moved where.
+     */
+    @PostMapping("/audit/retention/run")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public ResponseEntity<AuditRetentionReportResponse> runRetention(
+            Authentication auth) {
+        AuditRetentionReportResponse report =
+                retentionService.runOnce(java.time.Instant.now());
+        auditService.logEvent("AuditRetention", null, "RETENTION_RUN", getUserId(auth),
+                null, "archivedEvents=" + report.getArchivedEvents()
+                        + " archivedLegacy=" + report.getArchivedLegacy());
         return ResponseEntity.ok(report);
     }
 

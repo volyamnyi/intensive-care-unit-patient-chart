@@ -182,6 +182,15 @@ export interface LegacyBackfillReport {
   verified: boolean;
 }
 
+export interface AuditRetentionReport {
+  enabled: boolean;
+  cutoff: string;
+  archivedEvents: number;
+  archivedTargets: number;
+  archivedLegacy: number;
+  deletedOutboxByModule: Record<string, number>;
+}
+
 /** Chronological object history, oldest first, root/child via parentAuditId. */
 export interface AuditObjectHistory {
   entityType: string;

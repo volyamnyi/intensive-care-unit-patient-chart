@@ -38,7 +38,7 @@ import {
 import { auditApi, adminApi, settingsApi } from '../../api/platform';
 import { drugInteractionAdminApi } from '../../api/medication';
 import type { DrugInteractionCatalog, DrugInteractionImportReport } from '../../types/medication';
-import type { LegacyBackfillReport } from '../../types/core';
+import type { LegacyBackfillReport, AuditRetentionReport } from '../../types/core';
 import AuditLogTable from '../../components/common/AuditLogTable';
 import AuditEventConsole from '../../components/common/AuditEventConsole';
 import { getErrorMessage } from '../../utils/errorMessage';
@@ -78,6 +78,8 @@ export default function AdminPage() {
   const [backfillReport, setBackfillReport] = useState<LegacyBackfillReport | null>(null);
   const [backfillBusy, setBackfillBusy] = useState(false);
   const [backfillError, setBackfillError] = useState<string | null>(null);
+  const [retentionReport, setRetentionReport] = useState<AuditRetentionReport | null>(null);
+  const [retentionBusy, setRetentionBusy] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -203,6 +205,19 @@ export default function AdminPage() {
       setBackfillError(getErrorMessage(err, 'Не вдалося виконати backfill'));
     } finally {
       setBackfillBusy(false);
+    }
+  }, []);
+
+  const runRetention = useCallback(async () => {
+    setRetentionBusy(true);
+    setBackfillError(null);
+    try {
+      const res = await adminApi.runRetention();
+      setRetentionReport(res.data);
+    } catch (err) {
+      setBackfillError(getErrorMessage(err, 'Не вдалося виконати retention'));
+    } finally {
+      setRetentionBusy(false);
     }
   }, []);
 
@@ -493,10 +508,16 @@ export default function AdminPage() {
               <div className="mt-2.5 rounded-xl border bg-card text-card-foreground shadow-sm p-2.5">
                 <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-rubik text-base font-medium">Backfill legacy-історії (§H.4)</h2>
-                  <Button size="sm" variant="outline" onClick={runBackfill} disabled={backfillBusy}>
-                    <RefreshCw className="mr-1 size-4" />
-                    {backfillBusy ? 'Виконуємо…' : 'Запустити backfill'}
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={runBackfill} disabled={backfillBusy}>
+                      <RefreshCw className="mr-1 size-4" />
+                      {backfillBusy ? 'Виконуємо…' : 'Запустити backfill'}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={runRetention} disabled={retentionBusy}>
+                      <RefreshCw className="mr-1 size-4" />
+                      {retentionBusy ? 'Виконуємо…' : 'Запустити retention'}
+                    </Button>
+                  </div>
                 </div>
                 <p className="mb-1.5 text-xs text-muted-foreground">
                   Ідемпотентне копіювання audit_logs у audit_legacy_events (дослівно, без реконструкції фактів)
@@ -514,6 +535,18 @@ export default function AdminPage() {
                     <div className="rounded-lg border p-2">Вже було: <b>{backfillReport.skippedExisting}</b></div>
                     <div className="rounded-lg border p-2">
                       Звірка: <b>{backfillReport.verified ? 'OK' : 'РОЗБІЖНІСТЬ'}</b>
+                    </div>
+                  </div>
+                )}
+                {retentionReport && (
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4" data-testid="retention-report">
+                    <div className="rounded-lg border p-2">Архів подій: <b>{retentionReport.archivedEvents}</b></div>
+                    <div className="rounded-lg border p-2">Архів legacy: <b>{retentionReport.archivedLegacy}</b></div>
+                    <div className="rounded-lg border p-2">
+                      Outbox видалено: <b>{Object.values(retentionReport.deletedOutboxByModule ?? {}).reduce((a, b) => a + b, 0)}</b>
+                    </div>
+                    <div className="rounded-lg border p-2">
+                      Режим: <b>{retentionReport.enabled ? 'увімкнено' : 'вимкнено (dry-run)'}</b>
                     </div>
                   </div>
                 )}

@@ -228,6 +228,11 @@ describe('adminApi', () => {
     adminApi.runLegacyBackfill();
     expect(mockClient.post).toHaveBeenCalledWith('/admin/audit/backfill');
   });
+
+  it('runRetention posts to /admin/audit/retention/run', () => {
+    adminApi.runRetention();
+    expect(mockClient.post).toHaveBeenCalledWith('/admin/audit/retention/run');
+  });
 });
 
 describe('prescriptionApi', () => {

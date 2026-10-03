@@ -12,6 +12,7 @@ const mockGetPermissions = vi.fn();
 const mockGetCatalog = vi.fn();
 const mockImportDataset = vi.fn();
 const mockRunBackfill = vi.fn();
+const mockRunRetention = vi.fn();
 
 const emptyCatalog = {
   summary: { drugs: 0, interactions: 0, bySeverity: { low: 0, medium: 0, high: 0, critical: 0 }, lastImportAt: null },
@@ -31,6 +32,7 @@ vi.mock('../../api/platform', () => ({
     getPermissions: (...args: unknown[]) => mockGetPermissions(...args),
     updateRolePermission: vi.fn(),
     runLegacyBackfill: (...args: unknown[]) => mockRunBackfill(...args),
+    runRetention: (...args: unknown[]) => mockRunRetention(...args),
   },
   auditApi: {
     list: vi.fn().mockResolvedValue({ data: { content: [] } }),
@@ -187,5 +189,19 @@ describe('AdminPage', () => {
     expect(mockRunBackfill).toHaveBeenCalledTimes(1);
     expect(await screen.findByTestId('backfill-report')).toBeInTheDocument();
     expect(screen.getByText('OK')).toBeInTheDocument();
+  });
+
+  it('runs retention on demand and shows the archive report', async () => {
+    mockRunRetention.mockResolvedValue({ data: {
+      enabled: false, cutoff: '2026-10-03T00:00:00Z',
+      archivedEvents: 0, archivedTargets: 0, archivedLegacy: 0,
+      deletedOutboxByModule: {},
+    } });
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Журнал аудиту' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Запустити retention' }));
+    expect(mockRunRetention).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId('retention-report')).toBeInTheDocument();
+    expect(screen.getByText('вимкнено (dry-run)')).toBeInTheDocument();
   });
 });

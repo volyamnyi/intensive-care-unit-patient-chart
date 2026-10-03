@@ -35,3 +35,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/012-audit-append-only.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/013-audit-retention-archive.sql

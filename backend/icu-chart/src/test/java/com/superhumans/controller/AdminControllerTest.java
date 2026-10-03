@@ -39,6 +39,9 @@ class AdminControllerTest {
     private com.superhumans.service.LegacyAuditBackfillService backfillService;
 
     @MockitoBean
+    private com.superhumans.service.AuditRetentionService retentionService;
+
+    @MockitoBean
     private UserRepository userRepository;
 
     @MockitoBean
