@@ -164,6 +164,24 @@ function renderPage(auth: () => unknown = () => doctorAuth, items = [makeItem()]
   );
 }
 
+async function openDayMenuItem(name: RegExp) {
+  // The grid re-renders as its async loads settle, so a previously queried cell
+  // node can go stale mid-test — a contextmenu fired on a detached node never
+  // reaches React and the menu silently never opens. Re-query fresh on every
+  // attempt instead of holding a node across awaits.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const row = (await screen.findByText('Dopamine')).closest('tr');
+    expect(row).not.toBeNull();
+    fireEvent.contextMenu(row!.querySelectorAll('td')[1]);
+    try {
+      return await screen.findByRole('menuitem', { name }, { timeout: 1000 });
+    } catch {
+      if (attempt === 2) throw new Error(`day menu item ${name} did not open`);
+    }
+  }
+  throw new Error('unreachable');
+}
+
 describe('PrescriptionDetailPage — per-item day actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -212,12 +230,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
   it('doctor: «Відмінити це призначення» calls cancelAssignment and refreshes items', async () => {
     renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: false })]);
 
-    const row = (await screen.findByText('Dopamine')).closest('tr');
-    expect(row).not.toBeNull();
-    const cell = row!.querySelectorAll('td')[1];
-    fireEvent.contextMenu(cell);
-
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити це призначення/ }));
+    await userEvent.click(await openDayMenuItem(/Відмінити це призначення/));
 
     await waitFor(() => expect(mockCancelAssignment).toHaveBeenCalledTimes(1));
     expect(mockCancelAssignment).toHaveBeenCalledWith('dp-1');
@@ -230,12 +243,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     mockCancelAssignment.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
     renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: false })]);
 
-    const row = (await screen.findByText('Dopamine')).closest('tr');
-    expect(row).not.toBeNull();
-    const cell = row!.querySelectorAll('td')[1];
-    fireEvent.contextMenu(cell);
-
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити це призначення/ }));
+    await userEvent.click(await openDayMenuItem(/Відмінити це призначення/));
 
     await waitFor(() => expect(mockCancelAssignment).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mockToastError).toHaveBeenCalledWith(ukMessage));
@@ -245,12 +253,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
   it('doctor: «Відмінити препарат» calls cancelMedication and refreshes items', async () => {
     renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: false })]);
 
-    const row = (await screen.findByText('Dopamine')).closest('tr');
-    expect(row).not.toBeNull();
-    const cell = row!.querySelectorAll('td')[1];
-    fireEvent.contextMenu(cell);
-
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Відмінити препарат/ }));
+    await userEvent.click(await openDayMenuItem(/Відмінити препарат/));
 
     await waitFor(() => expect(mockCancelMedication).toHaveBeenCalledTimes(1));
     expect(mockCancelMedication).toHaveBeenCalledWith('dp-1');
@@ -261,12 +264,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
   it('doctor: «Повернути у Заплановано» calls restoreToPlanned and refreshes items', async () => {
     renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: true })]);
 
-    const row = (await screen.findByText('Dopamine')).closest('tr');
-    expect(row).not.toBeNull();
-    const cell = row!.querySelectorAll('td')[1];
-    fireEvent.contextMenu(cell);
-
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Повернути у Заплановано/ }));
+    await userEvent.click(await openDayMenuItem(/Повернути у Заплановано/));
 
     await waitFor(() => expect(mockRestoreToPlanned).toHaveBeenCalledTimes(1));
     expect(mockRestoreToPlanned).toHaveBeenCalledWith('dp-1');
@@ -279,12 +277,7 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
     mockRestoreToPlanned.mockRejectedValue({ response: { data: { message: ukMessage }, status: 422 } });
     renderPage(() => doctorAuth, [makeCellItem({ isPlanned: true, isPlannedFinished: true })]);
 
-    const row = (await screen.findByText('Dopamine')).closest('tr');
-    expect(row).not.toBeNull();
-    const cell = row!.querySelectorAll('td')[1];
-    fireEvent.contextMenu(cell);
-
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Повернути у Заплановано/ }));
+    await userEvent.click(await openDayMenuItem(/Повернути у Заплановано/));
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
     expect(mockToastError).toHaveBeenCalledWith(ukMessage);

@@ -64,10 +64,29 @@ async function renderAndLogin() {
 }
 
 describe('Axios client cookie-transport contract', () => {
-  it('sends credentials (cookie auth) and registers no request interceptor', async () => {
+  it('sends credentials (cookie auth) and registers only the audit-correlation interceptor', async () => {
     const mod = await import('../../api/client');
     expect(mod.default.defaults.withCredentials).toBe(true);
-    expect(mod.default.interceptors.request.handlers?.filter((h) => h !== null) ?? []).toHaveLength(0);
+    // F2 audit intent (issue #332): exactly one request interceptor — the
+    // X-User-Action-Id correlation hook. It must never carry auth material.
+    expect(mod.default.interceptors.request.handlers?.filter((h) => h !== null) ?? []).toHaveLength(1);
+  });
+
+  it('never injects an Authorization header, with or without an audit action ID', async () => {
+    const mod = await import('../../api/client');
+    const stubAdapter = (config: unknown) =>
+      Promise.resolve({ data: {}, status: 200, statusText: 'OK', headers: {}, config });
+    const plain = await mod.default.request({ url: '/probe', method: 'get', adapter: stubAdapter } as never);
+    const plainHeaders = plain.config.headers as unknown as Record<string, unknown>;
+    expect(plainHeaders.Authorization).toBeUndefined();
+    expect(plainHeaders['X-User-Action-Id']).toBeUndefined();
+
+    const correlated = await mod.default.request({
+      url: '/probe', method: 'get', adapter: stubAdapter, auditActionId: 'action-1',
+    } as never);
+    const correlatedHeaders = correlated.config.headers as unknown as Record<string, unknown>;
+    expect(correlatedHeaders.Authorization).toBeUndefined();
+    expect(correlatedHeaders['X-User-Action-Id']).toBe('action-1');
   });
 
   it('never injects an Authorization header into defaults', async () => {
