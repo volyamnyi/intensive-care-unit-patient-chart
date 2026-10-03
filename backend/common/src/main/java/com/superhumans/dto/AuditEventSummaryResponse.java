@@ -32,4 +32,5 @@ public class AuditEventSummaryResponse {
     UUID correlationId;
     UUID userActionId;
     UUID parentAuditId;
+    boolean legacy;
 }

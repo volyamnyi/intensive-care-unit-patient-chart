@@ -29,3 +29,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/010-audit-security-access.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/011-audit-legacy-backfill.sql

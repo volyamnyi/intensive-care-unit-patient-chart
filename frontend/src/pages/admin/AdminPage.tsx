@@ -38,6 +38,7 @@ import {
 import { auditApi, adminApi, settingsApi } from '../../api/platform';
 import { drugInteractionAdminApi } from '../../api/medication';
 import type { DrugInteractionCatalog, DrugInteractionImportReport } from '../../types/medication';
+import type { LegacyBackfillReport } from '../../types/core';
 import AuditLogTable from '../../components/common/AuditLogTable';
 import AuditEventConsole from '../../components/common/AuditEventConsole';
 import { getErrorMessage } from '../../utils/errorMessage';
@@ -74,6 +75,9 @@ export default function AdminPage() {
   const [auditLoading, setAuditLoading] = useState(false);
   const [showAudit, setShowAudit] = useState(false);
   const [auditFilterEntity, setAuditFilterEntity] = useState('');
+  const [backfillReport, setBackfillReport] = useState<LegacyBackfillReport | null>(null);
+  const [backfillBusy, setBackfillBusy] = useState(false);
+  const [backfillError, setBackfillError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +192,19 @@ export default function AdminPage() {
       setAuditLoading(false);
     }
   }, [auditFilterEntity]);
+
+  const runBackfill = useCallback(async () => {
+    setBackfillBusy(true);
+    setBackfillError(null);
+    try {
+      const res = await adminApi.runLegacyBackfill();
+      setBackfillReport(res.data);
+    } catch (err) {
+      setBackfillError(getErrorMessage(err, 'Не вдалося виконати backfill'));
+    } finally {
+      setBackfillBusy(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (showAudit) loadAudit();
@@ -472,6 +489,34 @@ export default function AdminPage() {
               </div>
               <div className="mt-2.5">
                 <AuditEventConsole />
+              </div>
+              <div className="mt-2.5 rounded-xl border bg-card text-card-foreground shadow-sm p-2.5">
+                <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-rubik text-base font-medium">Backfill legacy-історії (§H.4)</h2>
+                  <Button size="sm" variant="outline" onClick={runBackfill} disabled={backfillBusy}>
+                    <RefreshCw className="mr-1 size-4" />
+                    {backfillBusy ? 'Виконуємо…' : 'Запустити backfill'}
+                  </Button>
+                </div>
+                <p className="mb-1.5 text-xs text-muted-foreground">
+                  Ідемпотентне копіювання audit_logs у audit_legacy_events (дослівно, без реконструкції фактів)
+                  + звірка кількості та контрольних сум.
+                </p>
+                {backfillError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{backfillError}</AlertDescription>
+                  </Alert>
+                )}
+                {backfillReport && (
+                  <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4" data-testid="backfill-report">
+                    <div className="rounded-lg border p-2">Перевірено: <b>{backfillReport.scanned}</b></div>
+                    <div className="rounded-lg border p-2">Додано: <b>{backfillReport.inserted}</b></div>
+                    <div className="rounded-lg border p-2">Вже було: <b>{backfillReport.skippedExisting}</b></div>
+                    <div className="rounded-lg border p-2">
+                      Звірка: <b>{backfillReport.verified ? 'OK' : 'РОЗБІЖНІСТЬ'}</b>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

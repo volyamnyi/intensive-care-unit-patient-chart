@@ -223,6 +223,11 @@ describe('adminApi', () => {
       config,
     );
   });
+
+  it('runLegacyBackfill posts to /admin/audit/backfill', () => {
+    adminApi.runLegacyBackfill();
+    expect(mockClient.post).toHaveBeenCalledWith('/admin/audit/backfill');
+  });
 });
 
 describe('prescriptionApi', () => {

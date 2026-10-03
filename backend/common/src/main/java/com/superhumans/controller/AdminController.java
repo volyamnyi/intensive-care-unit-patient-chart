@@ -6,14 +6,15 @@ import com.superhumans.audit.AuditActionDefinition.EventClass;
 import com.superhumans.audit.AuditActorResolver;
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.AuditEventRecorder;
-import com.superhumans.dto.PermissionMatrixResponse;
-import com.superhumans.dto.PermissionResponse;
+import com.superhumans.dto.LegacyBackfillReportResponse;
+import com.superhumans.dto.PermissionMatrixResponse;import com.superhumans.dto.PermissionResponse;
 import com.superhumans.dto.RolePermissionUpdateRequest;
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.AuditService;
+import com.superhumans.service.LegacyAuditBackfillService;
 import com.superhumans.service.PermissionCatalog;
 import com.superhumans.service.PermissionService;
 import jakarta.validation.Valid;
@@ -40,6 +41,7 @@ public class AdminController {
     AuditService auditService;
     AuditEventRecorder auditEventRecorder;
     PermissionService permissionService;
+    LegacyAuditBackfillService backfillService;
 
     @GetMapping("/users")
     @org.springframework.transaction.annotation.Transactional
@@ -181,9 +183,24 @@ public class AdminController {
         return getPermissionMatrix();
     }
 
+    /**
+     * Idempotent backfill of {@code audit_logs} into {@code audit_legacy_events}
+     * (F8, §H.4). Returns counts by legacy kind plus counts/checksum
+     * verification. The run itself is recorded as a legacy row (old world,
+     * clearly marked) so the migration trail survives in both stores.
+     */
+    @PostMapping("/audit/backfill")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public ResponseEntity<LegacyBackfillReportResponse> backfillAudit(
+            Authentication auth) {
+        LegacyBackfillReportResponse report = backfillService.backfill();
+        auditService.logEvent("AuditBackfill", null, "BACKFILL", getUserId(auth),
+                null, "inserted=" + report.getInserted() + " verified=" + report.isVerified());
+        return ResponseEntity.ok(report);
+    }
+
     @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getStats() {
-        List<User> all = userRepository.findAll();
+    public ResponseEntity<Map<String, Object>> getStats() {        List<User> all = userRepository.findAll();
         long doctors = all.stream().filter(u -> u.getRole() == UserRole.DOCTOR).count();
         long nurses = all.stream().filter(u -> u.getRole() == UserRole.NURSE).count();
         long hods = all.stream().filter(u -> u.getRole() == UserRole.HEAD_OF_DEPARTMENT).count();

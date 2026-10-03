@@ -82,6 +82,8 @@ export interface AuditEventSummary {
   correlationId: string | null;
   userActionId: string | null;
   parentAuditId: string | null;
+  /** Backfilled legacy row (§H.4) — never proof of a successful operation. */
+  legacy: boolean;
 }
 
 export interface AuditChange {
@@ -140,6 +142,44 @@ export interface AuditEventDetail {
   integrityHash: string | null;
   integrityVerified: boolean;
   restrictedDetail: boolean;
+  legacy: boolean;
+  legacyDetail: LegacyEventDetail | null;
+}
+
+export interface LegacyEventDetail {
+  legacyKind: string;
+  sourceTable: string;
+  sourceId: string | null;
+  legacyEntity: string;
+  legacyEntityId: string | null;
+  legacyAction: string;
+  legacyUserId: number | null;
+  legacyUserRole: string | null;
+  legacyIpAddress: string | null;
+  legacyOldValue: string | null;
+  legacyNewValue: string | null;
+  legacyDetails: string | null;
+  legacyCorrelationId: string | null;
+  legacyIsDeleted: boolean | null;
+  schemaVersion: number;
+  contextCompleteness: string;
+  timestampPrecision: string;
+  outcome: string;
+  checksum: string | null;
+  backfilledAt: string | null;
+}
+
+export interface LegacyBackfillReport {
+  scanned: number;
+  inserted: number;
+  skippedExisting: number;
+  skippedInvalid: number;
+  httpRequestKind: number;
+  auditActionKind: number;
+  legacySourceCount: number;
+  backfilledCount: number;
+  checksumMismatches: string[];
+  verified: boolean;
 }
 
 /** Chronological object history, oldest first, root/child via parentAuditId. */

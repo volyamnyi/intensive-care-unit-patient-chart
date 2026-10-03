@@ -129,4 +129,44 @@ describe('AuditEventConsole', () => {
       expect(screen.getByText('Не вдалося завантажити події аудиту')).toBeInTheDocument();
     });
   });
+
+  it('marks legacy rows and renders the legacy disclaimer block', async () => {
+    const legacyRow = { ...summaryRow, legacy: true, action: 'legacy.audit.action' };
+    mockSearch.mockResolvedValue({
+      data: { content: [legacyRow], totalElements: 1, totalPages: 1, number: 0, size: 20 },
+    });
+    mockDetail.mockResolvedValue({ data: {
+      ...detail,
+      legacy: true,
+      integrityVerified: true,
+      legacyDetail: {
+        legacyKind: 'legacy.audit.action',
+        sourceTable: 'audit_logs',
+        sourceId: '22222222-2222-2222-2222-222222222222',
+        legacyEntity: 'Episode',
+        legacyEntityId: null,
+        legacyAction: 'CREATE',
+        legacyUserId: 11,
+        legacyUserRole: 'DOCTOR',
+        legacyIpAddress: null,
+        legacyOldValue: null,
+        legacyNewValue: 'probe-new',
+        legacyDetails: null,
+        legacyCorrelationId: null,
+        legacyIsDeleted: false,
+        schemaVersion: 0,
+        contextCompleteness: 'LEGACY',
+        timestampPrecision: 'LEGACY_NAIVE',
+        outcome: 'UNKNOWN_LEGACY',
+        checksum: 'def456',
+        backfilledAt: '2026-10-03T10:00:00Z',
+      },
+    } });
+    renderConsole();
+    await userEvent.click(screen.getByRole('button', { name: 'Пошук' }));
+    await userEvent.click(await screen.findByText('legacy.audit.action'));
+    expect(await screen.findByTestId('audit-legacy-block')).toBeInTheDocument();
+    expect(screen.getByText(/не є доказом успішної операції/)).toBeInTheDocument();
+    expect(screen.getByText(/audit_logs/)).toBeInTheDocument();
+  });
 });

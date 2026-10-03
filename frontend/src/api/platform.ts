@@ -3,7 +3,7 @@ import type { AxiosRequestConfig } from 'axios';
 import type {
   User, PatientDto, LoginRequest, LoginResponse, PageResponse,
   AuditLog, AuditEventSummary, AuditEventDetail, AuditObjectHistory,
-  AuditEventSearchParams, PermissionMatrix,
+  AuditEventSearchParams, LegacyBackfillReport, PermissionMatrix,
 } from '../types/core';
 
 export const authApi = {
@@ -71,6 +71,7 @@ export const adminApi = {
   updateRole: (id: number, role: string) => client.put<User>(`/admin/users/${id}/role`, { role }),
   deleteUser: (id: number) => client.delete(`/admin/users/${id}`),
   getStats: () => client.get<Record<string, number>>('/admin/stats'),
+  runLegacyBackfill: () => client.post<LegacyBackfillReport>('/admin/audit/backfill'),
   getPermissions: () => client.get<PermissionMatrix>('/admin/permissions'),
   updateRolePermission: (role: string, permissionCode: string, granted: boolean, config?: AxiosRequestConfig) =>
     client.put<PermissionMatrix>('/admin/permissions', { role, permissionCode, granted }, config),

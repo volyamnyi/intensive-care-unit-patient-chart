@@ -59,4 +59,6 @@ public class AuditEventDetailResponse {
     String integrityHash;
     boolean integrityVerified;
     boolean restrictedDetail;
+    boolean legacy;
+    LegacyEventDetailResponse legacyDetail;
 }

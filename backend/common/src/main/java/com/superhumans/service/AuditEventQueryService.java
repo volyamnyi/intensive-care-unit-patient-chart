@@ -3,21 +3,29 @@ package com.superhumans.service;
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.AuditEventFilter;
 import com.superhumans.audit.AuditEventSerializer;
+import com.superhumans.audit.LegacyAuditChecksum;
 import com.superhumans.dto.AuditChangeResponse;
 import com.superhumans.dto.AuditEventDetailResponse;
 import com.superhumans.dto.AuditEventSummaryResponse;
 import com.superhumans.dto.AuditObjectHistoryResponse;
 import com.superhumans.dto.AuditTargetRefResponse;
+import com.superhumans.dto.LegacyEventDetailResponse;
 import com.superhumans.entity.core.AuditEventEntity;
 import com.superhumans.entity.core.AuditEventTargetEntity;
+import com.superhumans.entity.core.AuditLegacyEvent;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.repository.core.AuditEventRepository;
 import com.superhumans.repository.core.AuditEventTargetRepository;
+import com.superhumans.repository.core.AuditLegacyEventRepository;
 import jakarta.persistence.criteria.Predicate;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -32,9 +40,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Read side of the Audit v2 event store (F7): combined-filter search with
+ * Read side of the Audit v2 event store (F7–F8): combined-filter search with
  * stable pagination, event detail with relations and integrity state, and
- * chronological object history with root/child linkage.
+ * chronological object history with root/child linkage. Backfilled legacy
+ * rows (§H.4) are served through the same API, explicitly marked.
  */
 @Service
 @RequiredArgsConstructor
@@ -43,17 +52,44 @@ public class AuditEventQueryService {
 
     AuditEventRepository eventRepository;
     AuditEventTargetRepository targetRepository;
+    AuditLegacyEventRepository legacyEventRepository;
     AuditEventSerializer serializer;
     PermissionService permissionService;
 
     public Page<AuditEventSummaryResponse> search(AuditEventFilter filter, Pageable pageable) {
+        if (filter != null && "legacy".equals(filter.module())) {
+            return searchLegacy(filter, pageable);
+        }
         Page<AuditEventEntity> page = eventRepository.findAll(
                 specification(filter), stablePageable(pageable));
         return page.map(AuditEventQueryService::toSummary);
     }
 
+    /**
+     * Legacy-only branch (F8, §H.4): only action/outcome/period/target
+     * filters are meaningful on backfilled rows — legacy rows carry no
+     * actor login, correlation, request/action IDs, actor type, criticality
+     * or functional area, so combining any of those yields an empty page
+     * rather than silently ignoring the filter.
+     */
+    Page<AuditEventSummaryResponse> searchLegacy(AuditEventFilter filter, Pageable pageable) {
+        if (filter.actorLogin() != null || filter.correlationId() != null
+                || filter.requestId() != null || filter.userActionId() != null
+                || filter.actorType() != null || filter.criticality() != null
+                || filter.functionalArea() != null) {
+            return Page.empty(stablePageable(pageable));
+        }
+        Page<AuditLegacyEvent> page = legacyEventRepository.findAll(
+                legacySpecification(filter), stablePageable(pageable));
+        return page.map(AuditEventQueryService::toLegacySummary);
+    }
+
     @Transactional(readOnly = true)
     public AuditEventDetailResponse detail(UUID auditId) {
+        Optional<AuditLegacyEvent> legacy = legacyEventRepository.findById(auditId);
+        if (legacy.isPresent()) {
+            return toLegacyDetail(legacy.get());
+        }
         AuditEventEntity entity = eventRepository.findById(auditId)
                 .orElseThrow(() -> new NotFoundException("Audit event not found: " + auditId));
         return toDetail(entity, restrictedDetail());
@@ -64,18 +100,42 @@ public class AuditEventQueryService {
         List<AuditEventTargetEntity> refs =
                 targetRepository.findByEntityTypeAndEntityIdOrderByOccurredAtDesc(entityType, entityId);
         List<UUID> auditIds = refs.stream().map(AuditEventTargetEntity::getAuditId).distinct().toList();
-        List<AuditEventSummaryResponse> events = auditIds.isEmpty() ? List.of()
-                : eventRepository.findAllById(auditIds).stream()
-                        .sorted(Comparator.comparing(AuditEventEntity::getOccurredAt)
-                                .thenComparing(AuditEventEntity::getAuditId))
-                        .map(AuditEventQueryService::toSummary)
-                        .toList();
+        List<AuditEventSummaryResponse> events = new ArrayList<>();
+        if (!auditIds.isEmpty()) {
+            eventRepository.findAllById(auditIds).stream()
+                    .sorted(Comparator.comparing(AuditEventEntity::getOccurredAt)
+                            .thenComparing(AuditEventEntity::getAuditId))
+                    .map(AuditEventQueryService::toSummary)
+                    .forEach(events::add);
+        }
+        events.addAll(legacyHistory(entityType, entityId));
+        events.sort(Comparator.comparing(AuditEventSummaryResponse::getOccurredAt)
+                .thenComparing(AuditEventSummaryResponse::getAuditId));
+        if (events.size() > 1000) {
+            events = new ArrayList<>(events.subList(events.size() - 1000, events.size()));
+        }
         return AuditObjectHistoryResponse.builder()
                 .entityType(entityType)
                 .entityId(entityId)
                 .eventCount(events.size())
-                .events(events)
+                .events(List.copyOf(events))
                 .build();
+    }
+
+    private List<AuditEventSummaryResponse> legacyHistory(String entityType, String entityId) {
+        UUID legacyId;
+        try {
+            legacyId = UUID.fromString(entityId);
+        } catch (IllegalArgumentException notUuid) {
+            return List.of();
+        }
+        return legacyEventRepository
+                .findByLegacyEntityAndLegacyEntityIdOrderByOccurredAtAsc(entityType, legacyId)
+                .stream().map(AuditEventQueryService::toLegacySummary).toList();
+    }
+
+    private static Instant occurredAtOfSummary(AuditEventSummaryResponse summary) {
+        return summary.getOccurredAt();
     }
 
     private AuditEventDetailResponse toDetail(AuditEventEntity entity, boolean restricted) {
@@ -161,6 +221,101 @@ public class AuditEventQueryService {
                 .anyMatch(authority -> "ROLE_AUDITOR".equals(authority.getAuthority()));
     }
 
+    private static AuditEventSummaryResponse toLegacySummary(AuditLegacyEvent entity) {
+        return AuditEventSummaryResponse.builder()
+                .auditId(entity.getAuditId())
+                .occurredAt(entity.getOccurredAt())
+                .eventClass("LEGACY")
+                .module("legacy")
+                .functionalArea("legacy")
+                .action(entity.getLegacyKind())
+                .actionType("LEGACY")
+                .criticality("UNKNOWN")
+                .actorType(entity.getLegacyUserId() == null ? "UNKNOWN" : "USER")
+                .actorLogin(null)
+                .targetType(entity.getLegacyEntity())
+                .targetId(entity.getLegacyEntityId() == null ? null
+                        : entity.getLegacyEntityId().toString())
+                .outcome(entity.getOutcome())
+                .legacy(true)
+                .build();
+    }
+
+    private static AuditEventDetailResponse toLegacyDetail(AuditLegacyEvent entity) {
+        String recomputed = LegacyAuditChecksum.sha256(LegacyAuditChecksum.canonical(
+                entity.getLegacyEntity(),
+                entity.getLegacyEntityId(),
+                entity.getLegacyAction(),
+                entity.getLegacyUserId(),
+                entity.getLegacyOldValue(),
+                entity.getLegacyNewValue(),
+                entity.getLegacyCorrelationId(),
+                entity.getLegacyDetails(),
+                entity.getLegacyIpAddress(),
+                entity.getLegacyUserRole(),
+                entity.getLegacyIsDeleted(),
+                entity.getOccurredAt() == null ? null
+                        : LocalDateTime.ofInstant(entity.getOccurredAt(), ZoneOffset.UTC),
+                entity.getSourceId()));
+        AuditTargetRefResponse primary = AuditTargetRefResponse.builder()
+                .relationType("PRIMARY")
+                .entityType(entity.getLegacyEntity())
+                .entityId(entity.getLegacyEntityId() == null ? null
+                        : entity.getLegacyEntityId().toString())
+                .businessKey(null)
+                .build();
+        return AuditEventDetailResponse.builder()
+                .auditId(entity.getAuditId())
+                .occurredAt(entity.getOccurredAt())
+                .recordedAt(entity.getBackfilledAt())
+                .eventClass("LEGACY")
+                .criticality("UNKNOWN")
+                .module("legacy")
+                .functionalArea("legacy")
+                .action(entity.getLegacyKind())
+                .actionType("LEGACY")
+                .actorType(entity.getLegacyUserId() == null ? "UNKNOWN" : "USER")
+                .actorId(entity.getLegacyUserId() == null ? null : entity.getLegacyUserId().toString())
+                .targetType(entity.getLegacyEntity())
+                .targetId(entity.getLegacyEntityId() == null ? null
+                        : entity.getLegacyEntityId().toString())
+                .outcome(entity.getOutcome())
+                .changes(List.of())
+                .targets(primary.getEntityId() == null ? List.of() : List.of(primary))
+                .children(List.of())
+                .externalCalls(List.of())
+                .metadata(Map.of())
+                .integrityHash(entity.getChecksum())
+                .integrityVerified(entity.getChecksum() != null && entity.getChecksum().equals(recomputed))
+                .restrictedDetail(false)
+                .legacy(true)
+                .legacyDetail(LegacyEventDetailResponse.builder()
+                        .legacyKind(entity.getLegacyKind())
+                        .sourceTable(entity.getSourceTable())
+                        .sourceId(entity.getSourceId() == null ? null : entity.getSourceId().toString())
+                        .legacyEntity(entity.getLegacyEntity())
+                        .legacyEntityId(entity.getLegacyEntityId() == null ? null
+                                : entity.getLegacyEntityId().toString())
+                        .legacyAction(entity.getLegacyAction())
+                        .legacyUserId(entity.getLegacyUserId())
+                        .legacyUserRole(entity.getLegacyUserRole())
+                        .legacyIpAddress(entity.getLegacyIpAddress())
+                        .legacyOldValue(entity.getLegacyOldValue())
+                        .legacyNewValue(entity.getLegacyNewValue())
+                        .legacyDetails(entity.getLegacyDetails())
+                        .legacyCorrelationId(entity.getLegacyCorrelationId())
+                        .legacyIsDeleted(entity.getLegacyIsDeleted())
+                        .schemaVersion(entity.getSchemaVersion())
+                        .contextCompleteness(entity.getContextCompleteness())
+                        .timestampPrecision(entity.getTimestampPrecision())
+                        .outcome(entity.getOutcome())
+                        .checksum(entity.getChecksum())
+                        .backfilledAt(entity.getBackfilledAt() == null ? null
+                                : entity.getBackfilledAt().toString())
+                        .build())
+                .build();
+    }
+
     private static AuditEventSummaryResponse toSummary(AuditEventEntity entity) {
         return AuditEventSummaryResponse.builder()
                 .auditId(entity.getAuditId())
@@ -232,6 +387,39 @@ public class AuditEventQueryService {
             }
             if (filter.userActionId() != null) {
                 predicates.add(criteria.equal(root.get("userActionId"), filter.userActionId()));
+            }
+            if (filter.occurredFrom() != null) {
+                predicates.add(criteria.greaterThanOrEqualTo(root.get("occurredAt"), filter.occurredFrom()));
+            }
+            if (filter.occurredTo() != null) {
+                predicates.add(criteria.lessThanOrEqualTo(root.get("occurredAt"), filter.occurredTo()));
+            }
+            return criteria.and(predicates.toArray(Predicate[]::new));
+        };
+    }
+
+    private static Specification<AuditLegacyEvent> legacySpecification(AuditEventFilter filter) {
+        return (root, query, criteria) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (filter == null) {
+                return criteria.conjunction();
+            }
+            if (filter.action() != null) {
+                predicates.add(criteria.equal(root.get("legacyKind"), filter.action()));
+            }
+            if (filter.targetType() != null) {
+                predicates.add(criteria.equal(root.get("legacyEntity"), filter.targetType()));
+            }
+            if (filter.targetId() != null) {
+                try {
+                    predicates.add(criteria.equal(root.get("legacyEntityId"),
+                            UUID.fromString(filter.targetId())));
+                } catch (IllegalArgumentException notUuid) {
+                    return criteria.disjunction();
+                }
+            }
+            if (filter.outcome() != null) {
+                predicates.add(criteria.equal(root.get("outcome"), filter.outcome()));
             }
             if (filter.occurredFrom() != null) {
                 predicates.add(criteria.greaterThanOrEqualTo(root.get("occurredAt"), filter.occurredFrom()));

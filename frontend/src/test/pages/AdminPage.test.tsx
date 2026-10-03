@@ -11,6 +11,7 @@ const mockGetStats = vi.fn();
 const mockGetPermissions = vi.fn();
 const mockGetCatalog = vi.fn();
 const mockImportDataset = vi.fn();
+const mockRunBackfill = vi.fn();
 
 const emptyCatalog = {
   summary: { drugs: 0, interactions: 0, bySeverity: { low: 0, medium: 0, high: 0, critical: 0 }, lastImportAt: null },
@@ -29,6 +30,7 @@ vi.mock('../../api/platform', () => ({
     getStats: (...args: unknown[]) => mockGetStats(...args),
     getPermissions: (...args: unknown[]) => mockGetPermissions(...args),
     updateRolePermission: vi.fn(),
+    runLegacyBackfill: (...args: unknown[]) => mockRunBackfill(...args),
   },
   auditApi: {
     list: vi.fn().mockResolvedValue({ data: { content: [] } }),
@@ -170,5 +172,20 @@ describe('AdminPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Переглянути' }));
     expect(await screen.findByTestId('audit-event-console')).toBeInTheDocument();
     expect(screen.getByText('Події (Audit v2)')).toBeInTheDocument();
+  });
+
+  it('runs the legacy backfill and shows the verification report', async () => {
+    mockRunBackfill.mockResolvedValue({ data: {
+      scanned: 10, inserted: 4, skippedExisting: 6, skippedInvalid: 0,
+      httpRequestKind: 1, auditActionKind: 3,
+      legacySourceCount: 10, backfilledCount: 10,
+      checksumMismatches: [], verified: true,
+    } });
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Журнал аудиту' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Запустити backfill' }));
+    expect(mockRunBackfill).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId('backfill-report')).toBeInTheDocument();
+    expect(screen.getByText('OK')).toBeInTheDocument();
   });
 });

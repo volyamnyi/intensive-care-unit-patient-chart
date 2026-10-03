@@ -23,7 +23,7 @@ import { auditEventsApi } from '../../api/platform';
 import { getErrorMessage } from '../../utils/errorMessage';
 import type { AuditEventDetail, AuditEventSummary, AuditObjectHistory } from '../../types/core';
 
-const MODULES = ['platform', 'icu', 'medication', 'prosthetics'];
+const MODULES = ['platform', 'icu', 'medication', 'prosthetics', 'legacy'];
 const OUTCOMES = ['SUCCESS', 'FAILURE', 'DENIED', 'PARTIAL', 'CANCELLED'];
 const PAGE_SIZE = 20;
 
@@ -47,6 +47,7 @@ export function AuditEventDetailCard({ detail, onSelect }: {
     <div className="mt-2 rounded-lg border p-2.5" data-testid="audit-event-detail">
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge variant={outcomeVariantMap[detail.outcome] || 'default'}>{detail.outcome}</Badge>
+        {detail.legacy && <Badge variant="secondary">legacy</Badge>}
         <span className="font-mono text-xs">{detail.action}</span>
         <span className="text-xs text-muted-foreground">
           {detail.module} · {detail.functionalArea} · {formatTime(detail.occurredAt)}
@@ -118,6 +119,23 @@ export function AuditEventDetailCard({ detail, onSelect }: {
           ))}
         </div>
       )}
+      {detail.legacy && detail.legacyDetail && (
+        <div className="mt-1.5 rounded border p-1.5 text-xs" data-testid="audit-legacy-block">
+          <div className="font-medium">
+            Legacy-запис ({detail.legacyDetail.legacyKind}) — не є доказом успішної операції.
+          </div>
+          <div className="mt-0.5 grid gap-0.5 sm:grid-cols-2">
+            <div>Джерело: <span className="font-mono">{detail.legacyDetail.sourceTable} #{detail.legacyDetail.sourceId?.slice(0, 8)}</span></div>
+            <div>Оригінал: <span className="font-mono">{detail.legacyDetail.legacyEntity} / {detail.legacyDetail.legacyAction}</span></div>
+            <div>Контрольна сума: <span className="font-mono">{detail.legacyDetail.checksum?.slice(0, 12)}…</span></div>
+            <div>Точність часу: <span className="font-mono">{detail.legacyDetail.timestampPrecision}</span></div>
+            {detail.legacyDetail.legacyOldValue && <div>Було: <span className="font-mono">{detail.legacyDetail.legacyOldValue}</span></div>}
+            {detail.legacyDetail.legacyNewValue && <div>Стало: <span className="font-mono">{detail.legacyDetail.legacyNewValue}</span></div>}
+            {detail.legacyDetail.legacyDetails && <div className="sm:col-span-2">Деталі: {detail.legacyDetail.legacyDetails}</div>}
+            {detail.legacyDetail.legacyIsDeleted && <div>Позначено видаленим у legacy-сховищі</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -144,6 +162,7 @@ export function AuditObjectHistoryView({ history, onSelect }: {
               <button type="button" className="font-mono text-primary underline" onClick={() => onSelect(e.auditId)}>
                 {e.action}
               </button>
+              {e.legacy && <Badge variant="secondary">legacy</Badge>}
               <span className="text-muted-foreground">{e.actorLogin ?? e.actorType} · {e.outcome}</span>
             </li>
           ))}
@@ -304,7 +323,10 @@ export default function AuditEventConsole() {
                   <TableRow key={row.auditId} className="cursor-pointer" onClick={() => loadDetail(row.auditId)}>
                     <TableCell className="whitespace-nowrap">{formatTime(row.occurredAt)}</TableCell>
                     <TableCell>{row.actorLogin ?? row.actorType}</TableCell>
-                    <TableCell><Badge variant="outline">{row.action}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{row.action}</Badge>
+                      {row.legacy && <Badge variant="secondary" className="ml-1">legacy</Badge>}
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {row.targetType ? `${row.targetType} #${row.targetId?.slice(0, 8)}` : '—'}
                     </TableCell>
