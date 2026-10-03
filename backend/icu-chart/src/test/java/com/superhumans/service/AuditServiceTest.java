@@ -220,4 +220,37 @@ class AuditServiceTest {
         verify(auditLogRepository).save(logCaptor.capture());
         assertThat(logCaptor.getValue().getAction()).isEqualTo("CANCEL");
     }
+
+    @Test
+    void legacyWriteDisabled_logEventSkipsSaveAndReturnsNull() {
+        org.springframework.test.util.ReflectionTestUtils.setField(auditService, "legacyWriteEnabled", false);
+        try {
+            assertThat(auditService.logEvent("Episode", entityId, "CREATE", userId, null, null)).isNull();
+            verify(auditLogRepository, never()).save(any(AuditLog.class));
+        } finally {
+            org.springframework.test.util.ReflectionTestUtils.setField(auditService, "legacyWriteEnabled", true);
+        }
+    }
+
+    @Test
+    void legacyWriteDisabled_logAuthSkipsSave() {
+        org.springframework.test.util.ReflectionTestUtils.setField(auditService, "legacyWriteEnabled", false);
+        try {
+            auditService.logAuth("LOGIN", userId, "DOCTOR", "127.0.0.1", null);
+            verify(auditLogRepository, never()).save(any(AuditLog.class));
+        } finally {
+            org.springframework.test.util.ReflectionTestUtils.setField(auditService, "legacyWriteEnabled", true);
+        }
+    }
+
+    @Test
+    void legacyWriteEnabled_readsStillWork() {
+        when(auditLogRepository.findByUserIdOrderByTimestampDesc(eq(userId), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        Page<AuditLogResponse> result = auditService.getAuditLogs(userId, null, null, null, null, null,
+                PageRequest.of(0, 10));
+
+        assertThat(result).isEmpty();
+    }
 }

@@ -13,6 +13,9 @@ import com.superhumans.exception.NotFoundException;
 import com.superhumans.mapper.AuditLogMapper;
 import com.superhumans.repository.core.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.experimental.NonFinal;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,18 @@ public class AuditService {
     AuditLogRepository auditLogRepository;
     AuditLogMapper auditLogMapper;
     AuditEventRecorder auditEventRecorder;
+
+    /**
+     * Legacy-table write gate (F8 cutover). While {@code true} (default) every
+     * business operation dual-writes: the canonical v2 event plus the legacy
+     * {@code audit_logs} row. Flipping it to {@code false} makes the legacy
+     * table read-only — new history lives only in {@code audit_events} (plus
+     * backfilled {@code audit_legacy_events}) — without a code change. Reads
+     * are unaffected in both positions. No caller uses the returned entity.
+     */
+    @Value("${app.audit.legacy-write-enabled:true}")
+    @NonFinal
+    boolean legacyWriteEnabled = true;
 
     @Transactional
     public AuditLogResponse getAuditLog(UUID id) {
@@ -101,6 +116,9 @@ public class AuditService {
     @Transactional
     public AuditLog logEvent(String entity, UUID entityId, String action, Long userId,
                              String oldValue, String newValue, String correlationId) {
+        if (!legacyWriteEnabled) {
+            return null;
+        }
         AuditLog log = AuditLog.builder()
                 .entity(entity)
                 .entityId(entityId)
@@ -135,6 +153,9 @@ public class AuditService {
 
     @Transactional
     public void logAuth(String action, Long userId, String userRole, String ipAddress, String details) {
+        if (!legacyWriteEnabled) {
+            return;
+        }
         AuditLog log = AuditLog.builder()
                 .entity("AUTH")
                 .action(action)
