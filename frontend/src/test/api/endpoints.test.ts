@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { authApi, patientApi, userApi, auditApi, auditEventsApi, adminApi } from '../../api/platform';
+import { auditActionConfig } from '../../lib/auditAction';
 import { episodeApi, clinicalDayApi, hourlyRecordApi, medicalOrderApi, orderExecutionApi, medicalNoteApi, clinicalScaleApi, fluidBalanceApi, pdfApi } from '../../api/icu';
 import { prescriptionApi, vitalSignApi } from '../../api/medication';
 
@@ -215,12 +216,11 @@ describe('auditEventsApi', () => {
 
 describe('adminApi', () => {
   it('updateRolePermission forwards an axios config (audit intent correlation)', () => {
-    const config = { auditActionId: 'action-1' };
-    adminApi.updateRolePermission('DOCTOR', 'EPISODE_CREATE', true, config);
+    adminApi.updateRolePermission('DOCTOR', 'EPISODE_CREATE', true, auditActionConfig('action-1'));
     expect(mockClient.put).toHaveBeenCalledWith(
       '/admin/permissions',
       { role: 'DOCTOR', permissionCode: 'EPISODE_CREATE', granted: true },
-      config,
+      { auditActionId: 'action-1' },
     );
   });
 

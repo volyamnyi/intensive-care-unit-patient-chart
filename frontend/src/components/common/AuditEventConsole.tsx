@@ -274,7 +274,7 @@ export default function AuditEventConsole() {
         <h2 className="font-rubik text-base font-medium">Події (Audit v2)</h2>
       </div>
       <div className="flex flex-wrap gap-1">
-        <Select value={filters.module || 'all'} onValueChange={(v) => setFilters((p) => ({ ...p, module: v === 'all' ? '' : v }))}>
+        <Select value={filters.module || 'all'} onValueChange={(v) => setFilters((p) => ({ ...p, module: !v || v === 'all' ? '' : v }))}>
           <SelectTrigger className="w-full sm:w-[160px]" aria-label="Модуль">
             <SelectValue placeholder="Модуль" />
           </SelectTrigger>
@@ -284,7 +284,7 @@ export default function AuditEventConsole() {
           </SelectContent>
         </Select>
         <Input placeholder="Дія (точний код)" value={filters.action} onChange={set('action')} className="w-full sm:w-[220px]" />
-        <Select value={filters.outcome || 'all'} onValueChange={(v) => setFilters((p) => ({ ...p, outcome: v === 'all' ? '' : v }))}>
+        <Select value={filters.outcome || 'all'} onValueChange={(v) => setFilters((p) => ({ ...p, outcome: !v || v === 'all' ? '' : v }))}>
           <SelectTrigger className="w-full sm:w-[160px]" aria-label="Результат">
             <SelectValue placeholder="Результат" />
           </SelectTrigger>
