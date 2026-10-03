@@ -12,7 +12,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 /**
@@ -24,8 +23,8 @@ import lombok.experimental.FieldDefaults;
  */
 @Entity
 @Table(name = "audit_legacy_events")
+@org.hibernate.annotations.Immutable
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

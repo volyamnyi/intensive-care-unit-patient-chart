@@ -12,15 +12,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 /** Indexed entity-reference projection used to build cross-aggregate history. */
 @Entity
 @Table(name = "audit_event_targets")
 @IdClass(AuditEventTargetId.class)
+@org.hibernate.annotations.Immutable
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

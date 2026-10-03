@@ -32,3 +32,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/011-audit-legacy-backfill.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/012-audit-append-only.sql

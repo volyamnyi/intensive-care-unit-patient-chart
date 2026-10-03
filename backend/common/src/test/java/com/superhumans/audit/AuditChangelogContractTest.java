@@ -18,6 +18,7 @@ class AuditChangelogContractTest {
             new ExpectedChangeset("db.changelog-master-core.yaml", "009-audit-events.sql", "9", "split-core"),
             new ExpectedChangeset("db.changelog-master-core.yaml", "010-audit-security-access.sql", "10", "split-core"),
             new ExpectedChangeset("db.changelog-master-core.yaml", "011-audit-legacy-backfill.sql", "11", "split-core"),
+            new ExpectedChangeset("db.changelog-master-core.yaml", "012-audit-append-only.sql", "12", "split-core"),
             new ExpectedChangeset("db.changelog-master-icu.yaml", "079-audit-outbox.sql", "79", "split-icu"),
             new ExpectedChangeset("db.changelog-master-med.yaml", "027-audit-outbox.sql", "27", "split-med"),
             new ExpectedChangeset("db.changelog-master-prosth.yaml", "033-audit-outbox.sql", "33", "split-prosth"));

@@ -12,7 +12,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -20,8 +19,8 @@ import org.hibernate.type.SqlTypes;
 /** Searchable projection and immutable JSON payload for the Audit v2 event store. */
 @Entity
 @Table(name = "audit_events")
+@org.hibernate.annotations.Immutable
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
