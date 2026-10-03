@@ -20,14 +20,17 @@ public class AuditEventRecorder {
 
     AuditEventFactory eventFactory;
     CoreAuditEventWriter writer;
+    AuditMetrics auditMetrics;
 
     public void record(AuditEvent event) {
         try {
             AuditEvent enriched = eventFactory.attachRequestContext(event);
             writer.append(enriched);
+            auditMetrics.emitted(enriched.module());
         } catch (RuntimeException exception) {
             log.warn("Audit event recording failed action={} errorType={}",
                     event == null ? null : event.action(), exception.getClass().getSimpleName());
+            auditMetrics.failed("platform", exception.getClass().getSimpleName());
         }
     }
 }

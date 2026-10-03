@@ -2,6 +2,7 @@ package com.superhumans.service;
 
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.AuditIntegrityException;
+import com.superhumans.audit.AuditMetrics;
 import com.superhumans.entity.core.AuditEventEntity;
 import com.superhumans.mapper.AuditEventEntityMapper;
 import com.superhumans.repository.core.AuditEventRepository;
@@ -21,6 +22,7 @@ public class AuditEventPersistenceService {
     AuditEventRepository auditEventRepository;
     AuditEventTargetRepository auditEventTargetRepository;
     AuditEventEntityMapper mapper;
+    AuditMetrics auditMetrics;
 
     @Transactional(transactionManager = "coreTransactionManager")
     public void persist(AuditEvent event, String integrityHash) {
@@ -29,9 +31,11 @@ public class AuditEventPersistenceService {
             if (!integrityHash.equals(existing.getIntegrityHash())) {
                 throw new AuditIntegrityException("Audit event ID already exists with a different integrity hash");
             }
+            auditMetrics.duplicate(event.module());
             return;
         }
         auditEventRepository.save(mapper.toEntity(event, integrityHash));
         auditEventTargetRepository.saveAll(mapper.toTargetEntities(event));
+        auditMetrics.stored(event.module());
     }
 }

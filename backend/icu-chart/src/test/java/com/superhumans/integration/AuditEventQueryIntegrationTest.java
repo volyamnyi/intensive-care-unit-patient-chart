@@ -188,4 +188,17 @@ class AuditEventQueryIntegrationTest extends AbstractIntegrationTest {
                 authGet(getAdminToken()), String.class, UUID.randomUUID());
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    @Test
+    void actuator_exposesAuditMetersBehindAuth() {
+        getJson("/api/audit/events?module={module}", getAdminToken(), "platform");
+
+        var anonymous = restTemplate.exchange("/actuator/metrics/audit.events.emitted",
+                HttpMethod.GET, org.springframework.http.HttpEntity.EMPTY, String.class);
+        assertThat(anonymous.getStatusCode().is4xxClientError()).isTrue();
+
+        JsonNode meter = getJson("/actuator/metrics/{name}", getAdminToken(), "audit.events.emitted");
+        assertThat(meter.get("name").asText()).isEqualTo("audit.events.emitted");
+        assertThat(meter.get("measurements").isArray()).isTrue();
+    }
 }

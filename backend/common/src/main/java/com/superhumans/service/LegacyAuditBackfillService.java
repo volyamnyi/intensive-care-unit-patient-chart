@@ -1,5 +1,6 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditMetrics;
 import com.superhumans.audit.LegacyAuditChecksum;
 import com.superhumans.dto.LegacyBackfillReportResponse;
 import com.superhumans.entity.core.AuditLegacyEvent;
@@ -33,6 +34,7 @@ public class LegacyAuditBackfillService {
 
     LegacyAuditLogReader legacyAuditLogReader;
     AuditLegacyEventRepository legacyEventRepository;
+    AuditMetrics auditMetrics;
 
     @Transactional(transactionManager = "coreTransactionManager")
     public LegacyBackfillReportResponse backfill() {
@@ -65,6 +67,7 @@ public class LegacyAuditBackfillService {
                 auditAction++;
             }
         }
+        auditMetrics.backfilled(inserted);
         return verify(rows, inserted, skippedExisting, skippedInvalid, httpRequest, auditAction);
     }
 

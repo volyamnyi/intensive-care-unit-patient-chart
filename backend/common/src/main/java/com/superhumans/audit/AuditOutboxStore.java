@@ -18,6 +18,12 @@ public interface AuditOutboxStore extends AuditEventWriter {
 
     long pendingCount();
 
+    /**
+     * Creation time of the oldest not-yet-delivered row, or empty when the
+     * outbox is drained. Drives the relay-stall age gauge (F8 monitoring).
+     */
+    java.util.Optional<java.time.Instant> oldestPendingAt();
+
     record ClaimedAuditEvent(UUID auditId, String payload, String payloadHash, int attempts) {
     }
 }

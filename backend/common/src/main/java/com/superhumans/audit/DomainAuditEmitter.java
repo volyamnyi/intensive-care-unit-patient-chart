@@ -27,6 +27,7 @@ public class DomainAuditEmitter {
     @Qualifier("platformAuditEventWriter")
     private final AuditEventWriter platformAuditEventWriter;
     private final List<AuditOutboxStore> outboxStores;
+    private final AuditMetrics auditMetrics;
 
     private Map<String, AuditOutboxStore> storesByModule() {
         return outboxStores.stream()
@@ -49,10 +50,12 @@ public class DomainAuditEmitter {
                         expectedModule, enriched.module(), enriched.action());
             }
             writerFor(enriched.module()).append(enriched);
+            auditMetrics.emitted(enriched.module());
         } catch (RuntimeException exception) {
             log.warn("Domain audit emission failed module={} action={} errorType={}",
                     expectedModule, event == null ? null : event.action(),
                     exception.getClass().getSimpleName());
+            auditMetrics.failed(expectedModule, exception.getClass().getSimpleName());
         }
     }
 

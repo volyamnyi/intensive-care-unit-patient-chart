@@ -126,6 +126,15 @@ public class AuditOutboxJdbcStore implements AuditOutboxStore {
         return count == null ? 0L : count;
     }
 
+    @Override
+    public java.util.Optional<java.time.Instant> oldestPendingAt() {
+        java.sql.Timestamp oldest = jdbcTemplate.queryForObject(
+                "SELECT MIN(created_at) FROM audit_outbox WHERE relay_status IN ('PENDING', 'PROCESSING')",
+                java.sql.Timestamp.class);
+        return oldest == null ? java.util.Optional.empty()
+                : java.util.Optional.of(oldest.toInstant());
+    }
+
     private static ClaimedAuditEvent mapClaimedEvent(ResultSet resultSet, int rowNumber) throws SQLException {
         return new ClaimedAuditEvent(
                 resultSet.getObject("audit_id", UUID.class),

@@ -3,6 +3,7 @@ package com.superhumans.service;
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.AuditIntegrityException;
 import com.superhumans.audit.AuditEventSerializer;
+import com.superhumans.audit.AuditMetrics;
 import com.superhumans.audit.AuditOutboxStore;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -37,7 +38,9 @@ public class AuditEventRelay {
     final AuditEventSerializer serializer;
     final AuditEventPersistenceService persistenceService;
     final MeterRegistry meterRegistry;
+    final AuditMetrics auditMetrics;
     final Map<String, AtomicLong> backlog = new ConcurrentHashMap<>();
+    final Map<String, AtomicLong> oldestPendingAgeSeconds = new ConcurrentHashMap<>();
 
     @Value("${app.audit.relay.batch-size:20}")
     int batchSize;
@@ -55,6 +58,10 @@ public class AuditEventRelay {
             Gauge.builder("audit.outbox.backlog", value, AtomicLong::get)
                     .tag("module", store.module())
                     .register(meterRegistry);
+            AtomicLong age = oldestPendingAgeSeconds.computeIfAbsent(store.module(), ignored -> new AtomicLong());
+            Gauge.builder("audit.outbox.oldest_pending_age_seconds", age, AtomicLong::get)
+                    .tag("module", store.module())
+                    .register(meterRegistry);
         });
     }
 
@@ -68,6 +75,10 @@ public class AuditEventRelay {
                 }
                 backlog.computeIfAbsent(store.module(), ignored -> new AtomicLong())
                         .set(store.pendingCount());
+                oldestPendingAgeSeconds.computeIfAbsent(store.module(), ignored -> new AtomicLong())
+                        .set(store.oldestPendingAt()
+                                .map(oldest -> Duration.between(oldest, Instant.now()).getSeconds())
+                                .orElse(0L));
             } catch (RuntimeException exception) {
                 increment("audit.outbox.poll.failure", store.module());
                 log.error("Audit outbox poll failed module={} errorType={}",
@@ -105,6 +116,7 @@ public class AuditEventRelay {
             store.markDead(claimed.auditId(), "AUDIT_CANONICAL_HASH_CONFLICT");
             increment("audit.outbox.events.dead", store.module());
             increment("audit.integrity.failures", store.module());
+            auditMetrics.duplicate(store.module());
             log.error("Audit integrity conflict module={} auditId={}", store.module(), claimed.auditId());
         } catch (DataAccessException exception) {
             scheduleRetry(store, claimed, "AUDIT_STORE_UNAVAILABLE");

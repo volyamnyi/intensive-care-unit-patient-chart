@@ -3,6 +3,7 @@ package com.superhumans.service;
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.AuditEventFilter;
 import com.superhumans.audit.AuditEventSerializer;
+import com.superhumans.audit.AuditMetrics;
 import com.superhumans.audit.LegacyAuditChecksum;
 import com.superhumans.dto.AuditChangeResponse;
 import com.superhumans.dto.AuditEventDetailResponse;
@@ -55,14 +56,20 @@ public class AuditEventQueryService {
     AuditLegacyEventRepository legacyEventRepository;
     AuditEventSerializer serializer;
     PermissionService permissionService;
+    AuditMetrics auditMetrics;
 
     public Page<AuditEventSummaryResponse> search(AuditEventFilter filter, Pageable pageable) {
-        if (filter != null && "legacy".equals(filter.module())) {
-            return searchLegacy(filter, pageable);
+        var sample = auditMetrics.searchTimer();
+        try {
+            if (filter != null && "legacy".equals(filter.module())) {
+                return searchLegacy(filter, pageable);
+            }
+            Page<AuditEventEntity> page = eventRepository.findAll(
+                    specification(filter), stablePageable(pageable));
+            return page.map(AuditEventQueryService::toSummary);
+        } finally {
+            auditMetrics.stopSearch(sample, "search");
         }
-        Page<AuditEventEntity> page = eventRepository.findAll(
-                specification(filter), stablePageable(pageable));
-        return page.map(AuditEventQueryService::toSummary);
     }
 
     /**
@@ -86,13 +93,18 @@ public class AuditEventQueryService {
 
     @Transactional(readOnly = true)
     public AuditEventDetailResponse detail(UUID auditId) {
-        Optional<AuditLegacyEvent> legacy = legacyEventRepository.findById(auditId);
-        if (legacy.isPresent()) {
-            return toLegacyDetail(legacy.get());
+        var sample = auditMetrics.searchTimer();
+        try {
+            Optional<AuditLegacyEvent> legacy = legacyEventRepository.findById(auditId);
+            if (legacy.isPresent()) {
+                return toLegacyDetail(legacy.get());
+            }
+            AuditEventEntity entity = eventRepository.findById(auditId)
+                    .orElseThrow(() -> new NotFoundException("Audit event not found: " + auditId));
+            return toDetail(entity, restrictedDetail());
+        } finally {
+            auditMetrics.stopSearch(sample, "detail");
         }
-        AuditEventEntity entity = eventRepository.findById(auditId)
-                .orElseThrow(() -> new NotFoundException("Audit event not found: " + auditId));
-        return toDetail(entity, restrictedDetail());
     }
 
     @Transactional(readOnly = true)

@@ -1,6 +1,15 @@
 server:
   port: 8085
 
+management:
+  endpoints:
+    web:
+      exposure:
+        # Audit metrics are scraped as JSON here (same auth as the API);
+        # Prometheus scrape format needs micrometer-registry-prometheus,
+        # which is not vendored — see the runbook alerting section.
+        include: health,info,metrics
+
 spring:
   data:
     jpa:

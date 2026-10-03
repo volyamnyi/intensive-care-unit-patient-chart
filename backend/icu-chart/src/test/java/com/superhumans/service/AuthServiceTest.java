@@ -214,7 +214,8 @@ class AuthServiceTest {
                 .when(failingWriter).append(any());
         AuthService resilient = new AuthService(userRepository, passwordEncoder, auditService,
                 new com.superhumans.audit.AuditEventRecorder(
-                        new com.superhumans.audit.AuditEventFactory(), failingWriter),
+                        new com.superhumans.audit.AuditEventFactory(), failingWriter,
+                        org.mockito.Mockito.mock(com.superhumans.audit.AuditMetrics.class)),
                 ldapAuthServiceProvider);
 
         ResponseEntity<LoginResponse> response = resilient.login(req, "10.0.0.1");

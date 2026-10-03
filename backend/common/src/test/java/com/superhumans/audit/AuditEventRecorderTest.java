@@ -24,6 +24,9 @@ class AuditEventRecorderTest {
     @Mock
     private CoreAuditEventWriter writer;
 
+    @Mock
+    private AuditMetrics auditMetrics;
+
     @InjectMocks
     private AuditEventRecorder recorder;
 
