@@ -1373,4 +1373,141 @@ CI pipeline (`.github/workflows/playwright.yml`) — **не** деплоює. Ц
 
 ---
 
+## Appendix F — Audit v2: експлуатація (epic #329, фаза F8 #338)
+
+Канонічне сховище: `audit_events` + `audit_event_targets` (+ `audit_legacy_events`
+після backfill) у `my_fullstack_core`. Транспортні копії: `audit_outbox` у кожній
+модульній БД. Холодний архів: `audit_events_archive`, `audit_event_targets_archive`,
+`audit_legacy_events_archive` (тільки append, консоль їх не читає).
+
+### F.1 Cutover: dual-write → тільки v2 (порядок дій)
+
+1. Деплой релізу з F8: застосунок пише ОБИДВА світи (v2 події + legacy `audit_logs`).
+2. У low-traffic вікно: `POST /api/admin/audit/backfill` (ADMINISTRATOR).
+   Очікувано: `verified: true`, `checksumMismatches: []`.
+   Якщо `verified: false` — дивитись `checksumMismatches` (до 100 записів), НЕ йти далі.
+3. Повторити backfill (ідемпотентно) до `inserted: 0` + `verified: true`.
+4. Перемкнути консоль: основна — «Події (Audit v2)» (`/api/audit/events`);
+   legacy-таблиця лишається для звірки на період сумісності.
+5. Зупинити legacy-записи: `APP_AUDIT_LEGACY_WRITE_ENABLED=false` (env, рестарт).
+   Властивість: `app.audit.legacy-write-enabled` (default `true`).
+   Відкат: повернути `true` — нові legacy-рядки знову пишуться, backfill їх підбере.
+6. Історію при rollout НЕ видаляти (`audit_logs` лишається недоторканим).
+
+### F.2 Least-privilege ролі (застосувати DBA до cutover)
+
+Застосунок працює з привілейованою роллю; кодовий захист — `@Immutable` сутності,
+delete-blocking репозиторії (доведено `AuditAppendOnlyIntegrationTest`), Liquibase
+`core/012` (`REVOKE UPDATE, DELETE ... FROM PUBLIC`). Для prod-ролей додати:
+
+```sql
+-- Виконувати роллю-власником БД. ICTC_APP замінити на реальну роль застосунку.
+REVOKE UPDATE, DELETE ON audit_events, audit_event_targets, audit_legacy_events FROM ICTC_APP;
+REVOKE UPDATE, DELETE ON audit_events_archive, audit_event_targets_archive,
+    audit_legacy_events_archive FROM ICTC_APP;
+-- Модульні outbox-таблиці relay ОНОВЛЮЄ за дизайном (claim/lease/retry/delivered):
+-- їх НЕ чіпати. Перевірити в кожній модульній БД:
+--   my_fullstack_icu, my_fullstack_med, my_fullstack_prosth: audit_outbox — без REVOKE.
+
+-- Read-only роль для розслідувань (SELECT-only, без права бачити medicale деталі
+-- поза ALLOWLIST — точні клінічні значення віддає тільки AUDIT_SECURITY_ACCESS/AUDITOR):
+CREATE ROLE audit_reader NOLOGIN;
+GRANT CONNECT ON DATABASE my_fullstack_core TO audit_reader;
+GRANT USAGE ON SCHEMA public TO audit_reader;
+GRANT SELECT ON audit_events, audit_event_targets, audit_legacy_events,
+    audit_events_archive, audit_event_targets_archive, audit_legacy_events_archive
+    TO audit_reader;
+```
+
+Перевірка: під `ictc_app` виконати `UPDATE audit_events SET outcome='X' WHERE ...`
+→ має бути відхилено (`ERROR: permission denied`).
+
+### F.3 Backfill (§H.4): правила експлуатації
+
+- Запускати в low-traffic вікно: під час прогону legacy-райтери працюють (dual-write),
+  рядки, закомічені після снепшота, підбере наступний прогін (verify рахує тільки снепшот).
+- `API_*` → `legacy.http.request`, решта ручних → `legacy.audit.action`; `outcome`
+  завжди `UNKNOWN_LEGACY`, `schema_version: 0`, `contextCompleteness: LEGACY`.
+- Naive `timestamp` мігрує як UTC-assumed з прапорцем `LEGACY_NAIVE`: точний
+  server-local offset невідомий — запити за legacy-період несуть похибку ±offset.
+  Нові події — завжди `Instant` UTC.
+- Нічого не реконструюється: відсутні old/new лишаються `null`; legacy-запис
+  ніколи не подається як доказ успішної операції (бейдж у консолі).
+
+### F.4 Retention (D1: тимчасові 2 роки) та архів
+
+- `retention_until` рахується автоматично (`occurredAt + 2 роки`) для нових і backfill-рядків.
+- Архіватор вимкнений за замовчуванням. Увімкнення:
+  `APP_AUDIT_RETENTION_ENABLED=true` (+ опційно `APP_AUDIT_RETENTION_CRON`, default `0 0 3 * * *`,
+  `APP_AUDIT_RETENTION_OUTBOX_DELIVERED_DAYS`, default `30`).
+  Властивості: `app.audit.retention.enabled/cron/outbox-delivered-days`.
+- Цикл: expired `audit_events` (+ їх targets) і `audit_legacy_events` → archive-таблиці,
+  потім DELETE оригіналів (targets першими — живий FK `RESTRICT`); DELIVERED outbox-копії
+  старші за N днів видаляються; DEAD лишаються для розбору.
+- Ручний запуск: `POST /api/admin/audit/retention/run` (ADMINISTRATOR) → звіт
+  `{archivedEvents, archivedTargets, archivedLegacy, deletedOutboxByModule}`.
+- Backup: щоденний `pg_dump -Fc` (Appendix D) покриває і archive-таблиці
+  (та ж БД `my_fullstack_core`); PITR через pgBackRest — без змін.
+
+### F.5 Моніторинг і алерти (механізм D6: Actuator)
+
+Ендпоінти (та ж автентифікація, що й API): `/actuator/health`, `/actuator/info`,
+`/actuator/metrics` (JSON; Prometheus scrape-формат потребує
+`micrometer-registry-prometheus` — не вендорено, див. нижче).
+Ключові метрики (`module` = platform/icu/medication/prosthetics/legacy):
+
+| Метрика | Тип | Поріг алерту (пропозиція) | Дія |
+|---|---|---|---|
+| `audit.outbox.backlog{module}` | gauge | `> 1000` понад 10 хв | Перевірити relay-лог, БД модуля, `audit.outbox.events.dead` |
+| `audit.outbox.oldest_pending_age_seconds{module}` | gauge | `> 900` | Relay stall: `markDead`/retry-ланцюг, місце на диску, конекти |
+| `audit.outbox.events.dead{module}` | counter, rate | `> 0` за 5 хв | Розбір `last_error_code` в outbox; identity/hash-конфлікти = інцидент цілісності |
+| `audit.integrity.failures{module}` | counter, rate | `> 0` | Інцидент: звірити payload/outbox/canonical sha256 вручну |
+| `audit.events.failed{module,reason}` | counter, rate | `> 0` за 5 хв | Емісія падає (fail-safe гасить) — дивитись `reason` + лог `Domain audit emission failed` |
+| `audit.events.duplicate{module}` | counter, rate | сплеск | Норма для at-least-once (retry); сплеск = перевірити relay-таймінги |
+| `audit.query.duration{operation}` | timer p95 | search `> 2s`, detail `> 1s` | Індекси `audit_events`/`targets` (`\di+`), обсяг таблиць, `EXPLAIN` |
+| `audit.retention.archived.*` | counter | `== 0` 7 днів при увімкненому retention | Архіватор не спрацьовує (cron/флаг) |
+| `audit.backfill.rows` | counter | — | Інформаційна (backfill-прогони) |
+
+Обсяг сховища: `SELECT pg_total_relation_size('audit_events')` (і `_archive`,
+`audit_legacy_events`, `audit_outbox` у кожній БД) — у щотижневий чек.
+Покриття (хто що не пише): `audit.events.emitted{module}` ≈ 0 при живому трафіку
+модуля = зламаний emit-шлях.
+
+Prometheus: для scrape-формату додати `micrometer-registry-prometheus`
+(потребує доступу до Maven Central на збірці) — тоді `/actuator/prometheus`.
+
+### F.6 Restore-drill для аудиту (щоквартально)
+
+1. На staging відновити `my_fullstack_core` з dump (Appendix D/E).
+2. Перевірити: `SELECT COUNT(*) FROM audit_events_archive` збігається з prod;
+   `GET /api/audit/events/{auditId}` для 3 випадкових подій → `integrityVerified: true`.
+3. Вибірково: перерахувати sha256 payload вручну проти `integrity_hash`.
+4. Зафіксувати результат (дата, хто, OK/FAIL) — Issue/Confluence.
+
+### F.7 Виміряні орієнтири (§B7, локальний стенд, scratch-БД)
+
+`AuditLoadPerfIntegrationTest` (`-Daudit.local.perf=true`, у CI — SKIP):
+
+| Операція | Обсяг | Виміряно | Регресійний поріг у тесті |
+|---|---|---|---|
+| Canonical write (батч, одна транзакція) | 10 000 подій | ~358 rows/s (~28 c) | `> 50 rows/s` |
+| Пошук з фільтром (10 000 збігів) | стор. 20 | ~72 мс | `< 5 c` |
+| Картка події + цілісність | 1 подія | ~48 мс | `< 2 c` |
+| Backfill (3 legacy-рядки → копія+verify) | 5 000 рядків | ~171 rows/s (~29 c), verified | `> 20 rows/s`, verified |
+| Relay drain (claim→deliver→mark) | 500 подій | ~133 events/s (~4 c), dead-delta 0 | `> 5 events/s`, dead-delta 0 |
+
+Target на затвердження власником: пошук p95 < 2 c / картка < 1 c при 100k подій;
+relay drain ≥ 50 events/s; backfill ≥ 100 rows/s. Пороги у тесті свідомо мʼякші
+(залізо CI/ноутбуків різне) — жорсткі SLO виставляти в алертах (F.5), не в тестах.
+
+### F.8 Що свідомо НЕ входить у код (рішення власника/середовище)
+
+- Незмінне WORM-сховище поза БД (S3 Object Lock тощо) для архівних батчів —
+  операційне рішення; зараз архів = append-таблиці + щоденний dump + PITR.
+- Окрема архівна роль БД з правом тільки INSERT/SELECT в archive-таблиці —
+  створити DBA за зразком F.2.
+- Prometheus/Grafana/Alertmanager інстанси та пейджинг — за таблицею F.5.
+
+---
+
 *Кінець документа.*
