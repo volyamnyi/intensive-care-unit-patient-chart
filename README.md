@@ -388,6 +388,7 @@ java -jar app/target/app-*.jar
 | `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
 | `GET` | `/api/prescriptions/{listId}/interactions` | Yes | Drug-interaction warnings for planned items (non-blocking, #304) |
 | `POST` | `/api/admin/drug-interactions/import` | Administrator | Import the drug-interactions dataset (multipart JSON, ≤20 MB, full sync) |
+| `GET` | `/api/admin/drug-interactions?severity&query&page&size` | Administrator | Browse the interaction dataset: summary + drugs[] + paged pairs (#305) |
 
 ### Prosthetics Manufacturing (Виробництво протезів)
 | Method | URL | Auth | Description |
@@ -550,7 +551,7 @@ icu-patient-chart/
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (99 spec files, 452 tests) |
+| `npx playwright test` | Run all E2E tests (100 files: 99 specs + auth setup, 454 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -575,7 +576,7 @@ CI jobs run in parallel when triggered; if any fails, fix and repeat until every
 - **Backend tests**: 209 test files across the multi-module reactor — common (41) + icu-chart (87) + medication-sheet (23) + prosthesis-manufacturing (57) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 351 tests — `mvn test -Pintegration-test`
 - **Frontend Vitest tests**: 952 tests (104 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 99 spec files (452 tests), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **E2E Playwright tests**: 100 files (454 tests: 99 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
