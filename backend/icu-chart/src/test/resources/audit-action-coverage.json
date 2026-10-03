@@ -1,0 +1,1170 @@
+﻿{
+    "version":  1,
+    "note":  "F8 coverage gate (issue #338): every Audit v2 catalog action maps to covering test class(es), or carries an approved exclusion. Level emission = the test drives the operation and asserts the canonical event; level operation = the test covers the owning operation (emission asserted structurally by the relay/query/integration suite). Test sources are resolved per module - a renamed or deleted class fails the gate.",
+    "actions":  [
+                    {
+                        "action":  "platform.auth.session.login",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.SecurityAuditIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "platform.auth.session.login.failed",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.SecurityAuditIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "platform.auth.session.login.blocked",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.SecurityAuditIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.auth.session.logout",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.AuthServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.auth.directory.provision",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.AuthServiceLdapTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "platform.auth.token.rejected",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.auth.JwtAuthenticationFilterTest",
+                                          "module":  "common"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "platform.auth.access.denied",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AuditEventQueryIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "platform.user.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AuditEventQueryIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "platform.user.role.change",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AdminPermissionsIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.user.disable",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AdminPermissionsIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.rbac.permission.grant",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AuditEventQueryIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "platform.rbac.permission.revoke",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AdminPermissionsIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.audit.search",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AuditEventQueryIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.audit.detail.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.AuditEventQueryIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.patient.search",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.controller.PatientControllerTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.patient.record.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.controller.PatientControllerTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.mis.document.view",
+                        "excluded":  "Superseded by prosthetics.order.document.view for the single MIS document-opening path; one opening emits one canonical event, no double-counting."
+                    },
+                    {
+                        "action":  "platform.mis.catalog.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.controller.PrescriptionControllerTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "platform.bootstrap.seed",
+                        "excluded":  "Matrix P18 prescribes SLF4J-only startup logging; no v2 event by design."
+                    },
+                    {
+                        "action":  "icu.roster.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.controller.EpisodeControllerTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.episode.record.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.controller.EpisodeControllerTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.episode.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.IcuAuditEmissionIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "icu.episode.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.EpisodeServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.episode.close",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.EpisodeServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.episode.archive",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.EpisodeServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.sign.nurse",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.sign.doctor",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.close.early",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.reopen",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.auto_close",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.clinical_day.escalate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.hourly_record.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.HourlyRecordServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.hourly_record.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.HourlyRecordServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.hourly_record.backdate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.HourlyRecordServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.medical_order.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.MedicalOrderServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.medical_order.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.MedicalOrderServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.medical_order.cancel",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.MedicalOrderServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.order_execution.plan",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.OrderExecutionServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.order_execution.plan.finish",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.OrderExecutionServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.order_execution.cancel",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.OrderExecutionServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.order_execution.execute",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.OrderExecutionServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.order_execution.execute.finish",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.OrderExecutionServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.order_execution.backdate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.OrderExecutionServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.order_execution.correct",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.OrderExecutionServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.medical_note.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.MedicalNoteServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.medical_note.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.MedicalNoteServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.scale.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalScaleServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.scale.calculate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalScaleServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.scale.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalScaleServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.lab_result.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.LabResultServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.lab_result.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.LabResultServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.patient_state.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.PatientStateAssessmentServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.patient_state.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.PatientStateAssessmentServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.ventilation.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.VentilationSettingsServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.ventilation.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.VentilationSettingsServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.fluid_balance.recalculate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.FluidBalanceServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.pdf.generate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.PdfGeneratorServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.pdf.download",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.controller.PdfControllerTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "icu.pdf.print.requested",
+                        "excluded":  "Browser-local print via printPdfBlob; no server observation point. Server-side generate/download are separately covered."
+                    },
+                    {
+                        "action":  "icu.notification.delivery.outcome",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.service.ClinicalDayServiceTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.list.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.controller.PrescriptionControllerTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.list.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.MedicationAuditEmissionIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "medication.list.rename",
+                        "excluded":  "No rename operation exists in the product; the catalog reserves the code."
+                    },
+                    {
+                        "action":  "medication.list.close",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.controller.PrescriptionControllerTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.list.delete",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.controller.PrescriptionControllerTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.item.add",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.MedicationAuditEmissionIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "medication.item.remove",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.item.day.add",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.item.day.remove",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.dose.plan",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.MedicationAuditEmissionIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "medication.dose.cancel",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.dose.replan",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.dose.unassign",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.dose.complete",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.dose.execute",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.MedicationAuditEmissionIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "medication.vitals.grid.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.VitalSignServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.vitals.grid.initialize",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.VitalSignServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.vitals.entry.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.VitalSignServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.vitals.entry.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.VitalSignServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.interactions.import",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.DrugInteractionImportServiceParseTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.interactions.catalog.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.DrugInteractionCatalogServiceTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.interactions.warning.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.service.DrugInteractionWarningServiceLogicTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.pdf.info",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.controller.PrescriptionPdfControllerTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.pdf.generate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.controller.PrescriptionPdfControllerTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.pdf.download",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.medicationsheet.controller.PrescriptionPdfControllerTest",
+                                          "module":  "medication-sheet"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "medication.pdf.print.requested",
+                        "excluded":  "Browser-local print via printPdfBlob; no server observation point. Server-side info/generate/download are separately covered."
+                    },
+                    {
+                        "action":  "prosthetics.candidate.search",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.ProstheticsEligibilityServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.patient.record.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.ProstheticsPatientServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.order.document.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.ProstheticsOrderDocumentsIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.order.provision",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.ProstheticsOrderProvisionIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.template.create.version",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowTemplateServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.template.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowTemplateServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.template.archive",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowTemplateServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.create",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.controller.FlowInstanceControllerTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.snapshot.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.controller.FlowInstanceControllerTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.start",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.step.complete",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.resource.record",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.step.note.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.backward",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.pause",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.resume",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.instance.fail",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.brak.confirm",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.BrakIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "prosthetics.brak.branch",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.BrakIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "prosthetics.notification.queue",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.BrakIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "prosthetics.evidence.upload",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.EvidenceFileServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.evidence.list.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.EvidenceFileServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.evidence.download",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.EvidenceFileServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.evidence.delete",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.EvidenceFileServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.report.generate",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.service.FlowInstanceServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.report.download",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.controller.FlowInstanceControllerTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.report.print.requested",
+                        "excluded":  "Browser-local print via printPdfBlob; no server observation point. Server-side generate/download are separately covered."
+                    },
+                    {
+                        "action":  "prosthetics.production.worklist.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.ProductionReadServiceIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.production.detail.view",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.ProductionDetailIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.production.normative.update",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.integration.ProductionNormativeIntegrationTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    },
+                    {
+                        "action":  "prosthetics.notification.delivery.outcome",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.prosthesismanufacturing.notification.BrakNotificationDeliveryServiceTest",
+                                          "module":  "prosthesis-manufacturing"
+                                      }
+                                  ],
+                        "level":  "operation"
+                    }
+                ]
+}

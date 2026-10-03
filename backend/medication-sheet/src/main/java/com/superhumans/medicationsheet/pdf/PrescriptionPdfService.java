@@ -72,7 +72,7 @@ public class PrescriptionPdfService {
         return info;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public byte[] generateZip(UUID listId, Long userId) {
         List<PdfPageFile> files = renderAll(listId);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -94,6 +94,19 @@ public class PrescriptionPdfService {
             throw new IllegalStateException("Failed to build prescription PDF batch for " + listId, e);
         }
         auditService.logAction("PrescriptionPdf", listId, "GENERATE", userId);
+        final int pageCount = files.size();
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("pdf")
+                .action("medication.pdf.generate")
+                .actionType(ActionType.GENERATE)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(pageCount)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         log.info("Prescription PDF batch generated: listId={}, pages={}", listId, files.size());
         return out.toByteArray();
     }
@@ -104,7 +117,7 @@ public class PrescriptionPdfService {
         return crc.getValue();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public byte[] generatePage(UUID listId, int pageIndex, Long userId) {
         List<PrescriptionPdfPagePlan> pages = plan(listId);
         if (pageIndex < 0 || pageIndex >= pages.size()) {
@@ -112,6 +125,17 @@ public class PrescriptionPdfService {
         }
         byte[] content = renderer.render(pages.get(pageIndex));
         auditService.logAction("PrescriptionPdf", listId, "GENERATE_PAGE", userId);
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.USER_ACTIVITY)
+                .module("medication")
+                .functionalArea("pdf")
+                .action("medication.pdf.download")
+                .actionType(ActionType.DOWNLOAD)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .build());
         return content;
     }
 
