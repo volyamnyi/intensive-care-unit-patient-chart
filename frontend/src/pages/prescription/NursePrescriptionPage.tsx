@@ -325,7 +325,7 @@ export default function NursePrescriptionPage() {
               </TableRow>
             ) : (
               filteredRows.map(row => (
-                <TableRow key={row.patient.id} className={getPatientRowClasses(row.lists)}>
+                <TableRow key={row.patient.id} className={getPatientRowClasses(row.patient.patientStatus)}>
                   <TableCell>{row.patient.id}</TableCell>
                   <TableCell>
                     <span className="font-semibold">{row.patient.fullName}</span>

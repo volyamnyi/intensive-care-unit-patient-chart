@@ -236,7 +236,7 @@ export default function PatientPoolSection({ onOpenDrawer, storageKey }: Patient
                     return (
                       <TableRow
                         key={patient.id}
-                        className={getPatientRowClasses(lists)}
+                        className={getPatientRowClasses(patient.patientStatus)}
                       >
                         <TableCell>{patient.id}</TableCell>
                         <TableCell>
