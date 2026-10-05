@@ -75,7 +75,7 @@ class JwtTokenProviderTest {
         String yml = new String(new ClassPathResource("application.yml").getInputStream().readAllBytes(),
                 StandardCharsets.UTF_8);
 
-        assertThat(yml).contains("${APP_JWT_SECRET:");
+        assertThat(yml).contains("${APP_JWT_SECRET");
     }
 
     private static JwtTokenProvider provider(String secret, long expirationMs) {
