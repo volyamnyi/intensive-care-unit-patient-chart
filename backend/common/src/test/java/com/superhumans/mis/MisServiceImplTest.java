@@ -183,7 +183,11 @@ class MisServiceImplTest {
                 PatientDTO.builder().patientStatus("  ").build())).isTrue();
         assertThat(MisService.isUnderTreatment(
                 PatientDTO.builder().patientStatus("XYZ").build())).isTrue();
-        for (String code : List.of("MOV", "CMP", "CNC", "REJ")) {
+        for (String code : List.of("PRG", "PLN", "RES", "RET", "REP", "AWY")) {
+            assertThat(MisService.isUnderTreatment(
+                    PatientDTO.builder().patientStatus(code).build())).isTrue();
+        }
+        for (String code : List.of("MOV", "CMP", "CNC", "REJ", "CLS", "DED")) {
             assertThat(MisService.isUnderTreatment(
                     PatientDTO.builder().patientStatus(code).build())).isFalse();
         }

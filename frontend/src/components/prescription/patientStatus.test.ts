@@ -12,11 +12,14 @@ const finished = { status: 'Finished' } as PrescriptionList;
 describe('getPatientStatusText', () => {
   it('maps known MIS codes with priority over lists', () => {
     expect(MIS_STATUS_LABELS).toMatchObject({
+      PRG: 'В ході',
       MOV: 'Переведено',
       CMP: 'Виписано',
       CNC: 'Скасовано',
       REJ: 'Відхилено',
     });
+    expect(getPatientStatusText('PRG', [])).toBe('В ході');
+    expect(getPatientStatusText('PRG', [finished])).toBe('В ході');
     expect(getPatientStatusText('MOV', [open])).toBe('Переведено');
     expect(getPatientStatusText('CMP', [open])).toBe('Виписано');
     expect(getPatientStatusText('CNC', [])).toBe('Скасовано');

@@ -24,7 +24,12 @@ import {
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 400;
-const STATUS_FILTERS = ['', 'MOV', 'CMP', 'CNC', 'REJ'];
+/** Full 12-code MIS stay-state dictionary (issue #341); '' = unfiltered pool. */
+const STATUS_FILTERS = [
+  '',
+  'PRG', 'PLN', 'RES', 'RET', 'REP', 'AWY',
+  'MOV', 'CMP', 'CLS', 'CNC', 'REJ', 'DED',
+];
 
 interface PatientPoolSectionProps {
   onOpenDrawer: (patient: PatientDto, lists: PrescriptionList[]) => void;
@@ -102,6 +107,7 @@ export default function PatientPoolSection({ onOpenDrawer, storageKey }: Patient
 
   const pagePatients = useMemo(() => data?.content ?? [], [data]);
   const totalPages = data?.totalPages ?? 0;
+  const totalElements = data?.totalElements ?? 0;
 
   useEffect(() => {
     if (!open || pagePatients.length === 0) {
@@ -268,7 +274,7 @@ export default function PatientPoolSection({ onOpenDrawer, storageKey }: Patient
                   ← Назад
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Сторінка {page + 1} з {Math.max(totalPages, 1)}
+                  Сторінка {page + 1} з {Math.max(totalPages, 1)} · Всього {totalElements}
                 </span>
                 <Button
                   variant="outline"

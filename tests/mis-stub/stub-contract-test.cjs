@@ -100,6 +100,22 @@ describe('mis-stub patient procedure', () => {
     assert.equal(byId.get(10101).departmentId, 37);
     // Terminal stay status (excluded from treatment views by MisService).
     assert.equal(byId.get(10401).patientStatus, 'MOV');
+    // Full 12-code stay-state dictionary (issue #341): live active code PRG
+    // on both medication departments + one row per remaining code.
+    assert.equal(byId.get(10601).patientStatus, 'PRG');
+    assert.equal(byId.get(10601).departmentId, 19);
+    assert.equal(byId.get(10602).patientStatus, 'PRG');
+    assert.equal(byId.get(10602).departmentId, 37);
+    assert.equal(byId.get(10603).patientStatus, 'AWY');
+    assert.equal(byId.get(10604).patientStatus, 'CLS');
+    assert.equal(byId.get(10605).patientStatus, 'CMP');
+    assert.equal(byId.get(10606).patientStatus, 'CNC');
+    assert.equal(byId.get(10607).patientStatus, 'DED');
+    assert.equal(byId.get(10608).patientStatus, 'PLN');
+    assert.equal(byId.get(10609).patientStatus, 'REJ');
+    assert.equal(byId.get(10610).patientStatus, 'REP');
+    assert.equal(byId.get(10611).patientStatus, 'RES');
+    assert.equal(byId.get(10612).patientStatus, 'RET');
     // Non-prosthetics department (present in raw pool, ineligible).
     assert.equal(byId.get(10501).departmentId, 2);
 

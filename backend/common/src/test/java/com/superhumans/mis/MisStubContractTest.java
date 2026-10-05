@@ -63,22 +63,26 @@ class MisStubContractTest {
     void roster_parsesAllPatientsWithFourteenFields() {
         List<PatientDTO> patients = service.getAllPatients();
 
-        assertThat(patients).hasSize(7);
+        assertThat(patients).hasSize(19);
         PatientDTO seed = byId(patients, 900001L);
         assertThat(seed.getFullName()).isEqualTo("Сніжко Іван Петрович");
         assertThat(seed.getDepartmentId()).isEqualTo(19L);
         assertThat(byId(patients, 900002L).getDepartmentId()).isEqualTo(19L);
         assertThat(byId(patients, 13373L).getDepartmentId()).isEqualTo(19L);
         assertThat(byId(patients, 10101L).getDepartmentId()).isEqualTo(37L);
+        // Full 12-code stay-state dictionary (issue #341): live active code.
+        assertThat(byId(patients, 10601L).getPatientStatus()).isEqualTo("PRG");
+        assertThat(byId(patients, 10602L).getPatientStatus()).isEqualTo("PRG");
     }
 
     @Test
     void treatmentFilter_excludesTerminalStatusesButKeepsOtherDepartments() {
         List<PatientDTO> treated = service.getPatientsUnderTreatment();
 
-        assertThat(treated).hasSize(6);
-        assertThat(treated.stream().map(PatientDTO::getId)).doesNotContain(10401L);
-        assertThat(treated.stream().map(PatientDTO::getId)).contains(10501L);
+        assertThat(treated).hasSize(13);
+        assertThat(treated.stream().map(PatientDTO::getId))
+                .doesNotContain(10401L, 10604L, 10605L, 10606L, 10607L, 10609L);
+        assertThat(treated.stream().map(PatientDTO::getId)).contains(10501L, 10601L, 10602L);
     }
 
     @Test

@@ -22,8 +22,14 @@ import org.springframework.data.domain.Pageable;
  */
 public interface MisService {
 
-    /** MIS stay states that exclude a patient from treatment views. */
-    Set<String> NON_TREATMENT_STATUSES = Set.of("MOV", "CMP", "CNC", "REJ");
+    /**
+     * MIS stay states that exclude a patient from treatment views (issue #341:
+     * full 12-code dictionary confirmed by the MIS owner — AWY, CLS, CMP, CNC,
+     * DED, MOV, PLN, PRG, REJ, REP, RES, RET). Terminal states are Closed,
+     * Completed, Cancelled, Deceased, Moved and Rejected; PRG/PLN/RES/RET/REP
+     * (active/planned) and AWY (temporarily away) stay in treatment views.
+     */
+    Set<String> NON_TREATMENT_STATUSES = Set.of("MOV", "CMP", "CNC", "REJ", "CLS", "DED");
 
     /**
      * Treatment check: a patient counts as under treatment unless MIS reports

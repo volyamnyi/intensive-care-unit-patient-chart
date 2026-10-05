@@ -1,12 +1,22 @@
 import type { PatientDto } from '../../types/core';
 import type { PrescriptionList } from '../../types/medication';
 
-/** MIS stay states with dedicated Ukrainian labels (MIS priority). */
+/** MIS stay states with dedicated Ukrainian labels (MIS priority, issue #341).
+ * Full 12-code dictionary confirmed by the MIS owner; PRG ('In Progress')
+ * is the live active code ('В ході'). */
 export const MIS_STATUS_LABELS: Record<string, string> = {
+  PRG: 'В ході',
+  PLN: 'Заплановано',
+  RES: 'Зарезервовано',
+  RET: 'Повернено',
+  REP: 'В ремонті',
+  AWY: 'Відсутній',
   MOV: 'Переведено',
   CMP: 'Виписано',
+  CLS: 'Закрито',
   CNC: 'Скасовано',
   REJ: 'Відхилено',
+  DED: 'Померлий',
 };
 
 /**
