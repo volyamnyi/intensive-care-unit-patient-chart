@@ -280,6 +280,28 @@ class MisServiceImplTest {
     }
 
     @Test
+    void getPatientPool_filtersLiveActiveCodePrg() {
+        stubPatientList("""
+                {"spiPatientProsthesCheck":[
+                  {"id":1,"fullName":"Progress","patientStatus":"PRG"},
+                  {"id":2,"fullName":"Moved","patientStatus":"MOV"},
+                  {"id":3,"fullName":"Planned","patientStatus":"PLN"}
+                ]}
+                """);
+        // Unfiltered pool returns every stay status (the «all patients» view).
+        var all = service.getPatientPool(null, null,
+                org.springframework.data.domain.PageRequest.of(0, 20));
+        assertThat(all.getContent()).extracting(PatientDTO::getId)
+                .containsExactly(1L, 2L, 3L);
+        assertThat(all.getTotalElements()).isEqualTo(3L);
+        // Exact status match isolates the live active code.
+        var prg = service.getPatientPool(null, "PRG",
+                org.springframework.data.domain.PageRequest.of(0, 20));
+        assertThat(prg.getContent()).extracting(PatientDTO::getId)
+                .containsExactly(1L);
+    }
+
+    @Test
     void getPatientPool_clampsSize() {
         stubPoolOfFive();
         var clamped = service.getPatientPool(null, null,

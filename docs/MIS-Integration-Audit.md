@@ -276,3 +276,16 @@ getPatientDocuments/searchMedicineCatalog/sendPdf` (`sendPdf` — не `spz`, л
   (рішення — Phase 11), витік object-URL (verify-only: залишки коректно revoke'ають).
 - Фікстура: 900001/900002 отримали `patientDepartmentID: 19` (setup-флоу E2E
   йде через кандидати; локальні ордери PR-2026-* на місці); `MisParityTest` пінить.
+
+### Stay-state dictionary (epic #339, issues #340–#343)
+
+- Живий словник статусів перебування MIS — 12 кодів (підтверджено власником):
+  `PRG` (In Progress — активний код, «В ході»), `PLN`, `RES`, `RET`, `REP`,
+  `AWY`, `MOV`, `CMP`, `CLS`, `CNC`, `REJ`, `DED`. Стабний `TREAT` —
+  legacy-аліас стабу, у живій MIS не зустрічається.
+- `NON_TREATMENT_STATUSES` = `MOV/CMP/CNC/REJ/CLS/DED` (термінальні поза
+  лікувальними в'ю); `PRG/PLN/RES/RET/REP/AWY` лишаються в treatment;
+  невідомі коди — fail-open (ніколи не ховають пацієнта).
+- Пул «Всі пацієнти» — сирий ростер (`GET /api/patients/pool`, без dept-фільтра,
+  exact-match фільтр `?status=`); основний ростер — `getPatientsUnderTreatment`
+  + dept 19/37. Колір рядка — чиста функція MIS-статусу (не стану листків).

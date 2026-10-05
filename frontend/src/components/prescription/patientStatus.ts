@@ -6,6 +6,10 @@ import type { PrescriptionList } from '../../types/medication';
  * is the live active code ('В ході'). */
 export const MIS_STATUS_LABELS: Record<string, string> = {
   PRG: 'В ході',
+  // Stub-only legacy alias of the active state (tests/mis-stub); the real
+  // MIS uses PRG. Mapping it keeps stub roster rows from rendering a raw
+  // code; real-MIS behaviour is unchanged (TREAT never arrives there).
+  TREAT: 'В ході',
   PLN: 'Заплановано',
   RES: 'Зарезервовано',
   RET: 'Повернено',
@@ -50,6 +54,8 @@ export function getPatientStatusText(
  */
 const MIS_STATUS_ROW_CLASSES: Record<string, string> = {
   PRG: 'bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-l-emerald-500',
+  // Stub-only legacy alias of the active state — same tint as PRG.
+  TREAT: 'bg-emerald-50 dark:bg-emerald-950/30 border-l-4 border-l-emerald-500',
   PLN: 'bg-sky-50 dark:bg-sky-950/30 border-l-4 border-l-sky-400',
   RES: 'bg-indigo-50 dark:bg-indigo-950/30 border-l-4 border-l-indigo-400',
   RET: 'bg-amber-50 dark:bg-amber-950/30 border-l-4 border-l-amber-400',

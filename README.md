@@ -294,6 +294,8 @@ java -jar app/target/app-*.jar
 | Method | URL | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/patients` | Yes | Search patients by query (name, card#, phone) |
+| `GET` | `/api/patients/{id}` | Yes | Get patient by ID |
+| `GET` | `/api/patients/pool` | Yes | Paged pool of all MIS patients (query + stay-status filter, epic #339) |
 
 ### Clinical Days
 | Method | URL | Auth | Description |

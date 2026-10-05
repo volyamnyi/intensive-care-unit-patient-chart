@@ -10,9 +10,12 @@ import lombok.experimental.FieldDefaults;
  * {@code id, fullName, birthDate, sexCode, address, phone, email, bloodGroup,
  * rhFactor, departmentId, room, bed, doctorName, patientStatus}.
  * <p>
- * {@code patientStatus} carries the MIS stay state when present
- * ({@code MOV} transferred, {@code CMP} completed/discharged, {@code CNC}
- * cancelled, {@code REJ} rejected, possibly others); absent means no
+ * {@code patientStatus} carries the MIS stay state when present (full
+ * 12-code dictionary, epic #339: {@code PRG} in progress («В ході» — the
+ * live active code), {@code PLN} planned, {@code RES} reserved, {@code RET}
+ * returned, {@code REP} repairing, {@code AWY} away, {@code MOV} transferred,
+ * {@code CMP} completed/discharged, {@code CLS} closed, {@code CNC}
+ * cancelled, {@code REJ} rejected, {@code DED} deceased); absent means no
  * MIS-provided status. Unknown codes pass through untouched — never fail
  * parsing because of them.
  * <p>

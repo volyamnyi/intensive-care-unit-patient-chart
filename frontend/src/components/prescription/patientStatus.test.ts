@@ -20,6 +20,7 @@ describe('getPatientStatusText', () => {
     });
     expect(getPatientStatusText('PRG', [])).toBe('В ході');
     expect(getPatientStatusText('PRG', [finished])).toBe('В ході');
+    expect(getPatientStatusText('TREAT', [open])).toBe('В ході');
     expect(getPatientStatusText('MOV', [open])).toBe('Переведено');
     expect(getPatientStatusText('CMP', [open])).toBe('Виписано');
     expect(getPatientStatusText('CNC', [])).toBe('Скасовано');
@@ -43,6 +44,7 @@ describe('getPatientStatusText', () => {
     // Active / planned / attention / transfer tints carry a left accent bar.
     expect(getPatientRowClasses('PRG')).toContain('bg-emerald-50');
     expect(getPatientRowClasses('PRG')).toContain('border-l-emerald-500');
+    expect(getPatientRowClasses('TREAT')).toContain('bg-emerald-50');
     expect(getPatientRowClasses('PLN')).toContain('bg-sky-50');
     expect(getPatientRowClasses('AWY')).toContain('bg-yellow-50');
     expect(getPatientRowClasses('MOV')).toContain('bg-cyan-50');
@@ -52,6 +54,11 @@ describe('getPatientStatusText', () => {
     expect(getPatientRowClasses('CNC')).toContain('bg-red-50');
     expect(getPatientRowClasses('REJ')).toContain('bg-rose-50');
     expect(getPatientRowClasses('DED')).toContain('bg-zinc-200');
+    // Every tinted status ships a dark-mode variant.
+    for (const code of ['PRG', 'PLN', 'RES', 'RET', 'REP', 'AWY', 'MOV', 'CMP', 'CNC', 'REJ', 'DED']) {
+      expect(getPatientRowClasses(code)).toMatch(/dark:/);
+    }
+    expect(getPatientRowClasses('CLS')).toContain('bg-muted/50');
     // Unknown and absent codes render untinted (fail-open).
     expect(getPatientRowClasses('XYZ')).toBe('');
     for (const missing of [null, undefined, ''] as const) {

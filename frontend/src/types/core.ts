@@ -233,6 +233,8 @@ export interface PatientDto {
   room?: string;
   bed?: string;
   doctorName?: string;
-  /** MIS stay state (MOV/CMP/CNC/REJ/…, absent when unknown). */
+  /** MIS stay state (epic #339 full 12-code dictionary: PRG «В ході» is the
+   * live active code; PLN/RES/RET/REP/AWY active-or-planned; MOV/CMP/CLS/CNC/
+   * REJ/DED terminal; absent when unknown). */
   patientStatus?: string | null;
 }

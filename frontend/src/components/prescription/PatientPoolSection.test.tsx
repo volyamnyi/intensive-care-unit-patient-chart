@@ -117,6 +117,36 @@ describe('PatientPoolSection', () => {
     expect(onOpenDrawer.mock.calls[0][1]).toEqual([]);
   });
 
+  it('loads «Усі» unfiltered and renders the PRG label with tint', async () => {
+    mockedPool.mockResolvedValue(
+      pageOf([patient(11, { patientStatus: 'PRG' })], 1, 0),
+    );
+    await openSection();
+    expect(await screen.findByText('Пацієнт 11')).toBeInTheDocument();
+
+    // 'Усі' sends no status key (axios omits undefined).
+    expect(mockedPool).toHaveBeenCalledWith(
+      expect.objectContaining({ status: undefined, page: 0, size: 20 }),
+      expect.any(AbortSignal),
+    );
+
+    const row = screen.getByText('Пацієнт 11').closest('tr') as HTMLElement;
+    expect(within(row).getByText('В ході')).toBeInTheDocument();
+    expect(row.className).toMatch(/bg-emerald-50/);
+  });
+
+  it('filters by the PRG chip and resets to the first page', async () => {
+    mockedPool.mockResolvedValue(pageOf([patient(12, { patientStatus: 'PRG' })]));
+    await openSection();
+    expect(await screen.findByText('Пацієнт 12')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'В ході' }));
+    expect(mockedPool).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'PRG', page: 0 }),
+      expect.any(AbortSignal),
+    );
+  });
+
   it('filters by status chip and resets to the first page', async () => {
     mockedPool.mockResolvedValue(pageOf([patient(9)]));
     await openSection();
