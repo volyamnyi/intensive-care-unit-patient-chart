@@ -55,19 +55,19 @@ spring:
 
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:cGF0aWVudC1jaGFydC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi0yMDI2}
+    secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000
 
   datasource:
     core:
       url: jdbc:postgresql://localhost:5432/my_fullstack_core
       username: postgres
-      password: admin
+      password: 
       driver-class-name: org.postgresql.Driver
     icu:
       url: jdbc:postgresql://localhost:5432/my_fullstack_icu
       username: postgres
-      password: admin
+      password: 
       driver-class-name: org.postgresql.Driver
     med:
       url: jdbc:postgresql://localhost:5432/my_fullstack_med
@@ -103,7 +103,7 @@ app:
     description: API for interacting with MIS Doctor Eleks records
 
   ldap:
-    enabled: false
+    enabled: ${APP_LDAP_ENABLED:false}
     urls: ${APP_LDAP_URLS}
     base: ${APP_LDAP_BASE}
     username: ${APP_LDAP_USERNAME}
