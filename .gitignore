@@ -44,3 +44,5 @@ pixel-perfect-studio-main/
 *.png
 # Виняток: ілюстрації ЗІЗ для візарда «Виробництво протезів» мають жити в git (#293)
 !frontend/public/ppe/*.png
+# Local-only production run cheat-sheet (operator machine, not for CI/repo)
+docs/Production-Run-Commands.md
