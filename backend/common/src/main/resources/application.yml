@@ -86,6 +86,9 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
 
+  websocket:
+    allowed-origins: ${APP_WEBSOCKET_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+
   mis:
     api:
       base-url: ${APP_MIS_API_BASE_URL:}
@@ -216,11 +219,13 @@ springdoc:
     enabled: false
 
 server:
+  # TLS terminates at nginx with the corporate certificate (runbook Appendix C) —
+  # never in the embedded container. The proxy forwards X-Forwarded-Proto/For/Host;
+  # the framework strategy makes request.isSecure()/getRemoteAddr see the external
+  # https client (jwt Secure cookie in AuthController, audit IP in AuditClientIpResolver).
+  forward-headers-strategy: framework
   ssl:
-    enabled: true
-    key-store: classpath:keystore.p12
-    key-store-password: ${SSL_KEYSTORE_PASSWORD}
-    key-store-type: PKCS12
+    enabled: false
 
 app:
   seed-data:

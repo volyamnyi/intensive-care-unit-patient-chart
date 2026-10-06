@@ -14,6 +14,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    /**
+     * STOMP handshake allowlist for {@code /ws}. Production value comes from
+     * {@code APP_WEBSOCKET_ALLOWED_ORIGINS} (e.g. {@code https://supercare.superhumans.com});
+     * keep it in sync with the CORS allowlist — a browser rejected here never reaches SockJS.
+     */
     @Value("${app.websocket.allowed-origins:http://localhost:5173,http://localhost:3000}")
     String[] allowedOrigins;
 
