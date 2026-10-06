@@ -62,22 +62,22 @@ app:
     core:
       url: jdbc:postgresql://localhost:5432/my_fullstack_core
       username: postgres
-      password: 
+      password:
       driver-class-name: org.postgresql.Driver
     icu:
       url: jdbc:postgresql://localhost:5432/my_fullstack_icu
       username: postgres
-      password: 
+      password:
       driver-class-name: org.postgresql.Driver
     med:
       url: jdbc:postgresql://localhost:5432/my_fullstack_med
       username: postgres
-      password: admin
+      password:
       driver-class-name: org.postgresql.Driver
     prosth:
       url: jdbc:postgresql://localhost:5432/my_fullstack_prosth
       username: postgres
-      password: admin
+      password:
       driver-class-name: org.postgresql.Driver
 
   seed-data:
