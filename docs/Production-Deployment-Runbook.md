@@ -137,7 +137,8 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_DATASOURCE_MED_URL/USERNAME/PASSWORD` | … `my_fullstack_med` | |
 | `APP_DATASOURCE_PROSTH_URL/USERNAME/PASSWORD` | … `my_fullstack_prosth` | |
 | `APP_JWT_SECRET` | `openssl rand -base64 64` | Замінити дев-секрет з `application.yml:43`; `JwtSecretGuard` падає на старті в `prod`, якщо стоїть дев-дефолт (A1) |
-| `APP_CORS_ALLOWED_ORIGINS` | `https://<домен>` (кома-список) | Точний allowlist для credentialed CORS; дефолт — лише localhost (#184/F5) |
+| `APP_CORS_ALLOWED_ORIGINS` | `https://supercare.superhumans.com` (кома-список) | Точний allowlist для credentialed CORS (P0 #345; wildcard заборонено); дефолт — лише localhost |
+| `APP_WEBSOCKET_ALLOWED_ORIGINS` | `https://supercare.superhumans.com` (кома-список) | Allowlist хендшейку `/ws` (P0 #345); тримати в синхроні з CORS |
 | `APP_SEED_DATA_ENABLED` | **`false`** | Критично — інакше демо-дані |
 | `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Єдиний MIS-клієнт (`MisServiceImpl`, див. 1.5); моків/режимів немає |
 | `APP_MIS_API_LOGIN` / `APP_MIS_API_PASSWORD` / `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Інтеграційні credentials MIS, не в yml, не в git, ніколи в логи |
@@ -239,9 +240,9 @@ psql -d my_fullstack_core -c "SELECT login FROM users;"          # лише ре
 ### 1.8 Реверс-проксі (nginx)
 
 Шаблон — [Appendix C](#appendix-c--nginx-reverse-proxy). Ключові моменти:
-- Тирингу на `:8085` + TLS (LE-сертифікат або комерційний).
+- TLS термінує nginx (Cloudflare Origin для `supercare.superhumans.com`, epic #344); вбудований SSL застосунку вимкнено, backend — plain HTTP на `:8085` (P0 #345).
 - `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` — інакше `AuditLog.ipAddress` (§79 ТЗ) буде IP nginx, а не користувача.
-- `X-Forwarded-Proto https`.
+- `X-Forwarded-Proto https` — інакше `jwt` cookie вийде без `Secure` (P0 #345).
 - `client_max_body_size` — для завантаження evidence-файлів у prosthetics (10 МБ ліміт у `EvidenceFileService`).
 
 ### 1.9 Перевірка з'єднання з MIS
@@ -793,6 +794,12 @@ SPRING_DATASOURCE_HIKARI_CONNECTION-TIMEOUT=30000
 # --- Seed-data (КРИТИЧНО: false в проді) ---
 APP_SEED_DATA_ENABLED=false
 
+# --- CORS / WebSocket (same-origin через nginx; allowlist — defence-in-depth) ---
+# Точний allowlist, без wildcard (з credentials wildcard відображав би
+# будь-який origin з jwt-cookie). Прод-значення — домен застосунку.
+APP_CORS_ALLOWED_ORIGINS=https://supercare.superhumans.com
+APP_WEBSOCKET_ALLOWED_ORIGINS=https://supercare.superhumans.com
+
 # --- MIS (єдиний реальний клієнт; моків немає) ---
 APP_MIS_API_BASE_URL=https://mis.internal/api
 APP_MIS_API_TOKEN_PATH=/token
@@ -1019,7 +1026,14 @@ ExecStartPost=/usr/bin/curl -fsS http://localhost:8085/api/health || true
 
 ---
 
-## Appendix C — nginx reverse proxy
+## Appendix C — nginx reverse proxy (supercare.superhumans.com, внутрішня мережа)
+
+> Рішення власника (epic #344, P1 #346, 07.10.2026): домен доступний лише з LAN/VPN.
+> Публічного DNS, Let's Encrypt і certbot — нема. TLS термінує nginx постійним
+> **Cloudflare Origin** сертифікатом (`serial 28314EEE…`, термін 90 днів — поновлення
+> закласти в щомісячний чек §4.3). Вбудований SSL застосунку вимкнено (P0 #345);
+> backend завжди plain HTTP на `127.0.0.1:8085`, `server.forward-headers-strategy: framework`.
+> Клієнти мусять довіряти кореню `origin_ca_rsa_root.pem` (розгорнути через групові політики).
 
 ```nginx
 # /etc/nginx/conf.d/ictc.conf
@@ -1033,17 +1047,20 @@ upstream ictc_backend {
 
 server {
     listen 80;
-    server_name ictc.example.com;
+    server_name supercare.superhumans.com;
+    # Тримати відкритим лише якщо це дозволено політикою мережі; інакше порт 80 закритий.
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name ictc.example.com;
+    server_name supercare.superhumans.com;
 
-    # TLS
-    ssl_certificate     /etc/letsencrypt/live/ictc.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/ictc.example.com/privkey.pem;
+    # TLS — Cloudflare Origin (P1 #346). Увага: файли БЕЗ розширення .pem,
+    # права root:root 0600 (nginx читає як root до drop privileges — перевірити
+    # `nginx -t` після кожної ротації сертифіката).
+    ssl_certificate     /etc/nginx/tls/supercare/fullchain;
+    ssl_certificate_key /etc/nginx/tls/supercare/privkey;
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_ciphers         HIGH:!aNULL:!MD5;
     ssl_session_cache   shared:SSL:10m;
@@ -1072,7 +1089,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;   # ← КРИТИЧНО для AuditLog.ipAddress
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;                    # ← КРИТИЧНО для Secure jwt cookie (P0 #345)
         proxy_set_header X-Forwarded-Host $host;
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
@@ -1089,11 +1106,12 @@ server {
 }
 ```
 
-**Перевірка:**
+**Перевірка (з LAN-машини):**
 ```bash
 nginx -t
 sudo systemctl reload nginx
-curl -I https://ictc.example.com/api/patients
+curl -I https://supercare.superhumans.com/api/patients
+openssl s_client -connect supercare.superhumans.com:443 -showcerts  # ланцюжок Cloudflare Origin
 ```
 
 ---

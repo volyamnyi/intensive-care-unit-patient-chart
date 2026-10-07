@@ -42,7 +42,7 @@ https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/345
 - Logout clear-cookie дзеркалить `Secure`/`SameSite=Lax`.
 - `CorsConfigTest` переписано під allowlist-контракт. Frontend перевірено (відносний `/api`, без змін).
 
-Стан: код виконано локально (коміти `d241fa6` — прибрані `admin`-паролі БД med/prosth, env-only; `c769c3e` — готовність до nginx-термінації). Не запушено — CI лише за окремим запитом. Локальні докази: compile + checkstyle чисто; `CorsConfigTest` 4/4, `WebSocketConfigTest` 4/4, `SecurityConfigSslTest` 3/3, Jwt-слайс + `PermissionServiceTest` зелені; oxlint 0 errors; `tsc` чисто. Докази зафіксовано коментарем у #345.
+Стан: код виконано локально (коміти `d241fa6` — прибрані `admin`-паролі БД med/prosth, env-only; `c769c3e` — готовність до nginx-термінації; `e322b86b` — tripwire-сумісний фейк-хост у тесті). Запушено; CI: ран `37613980713` — 5/6 зелено, E2E 420/421 (один флейк `prescription-medication-cancel.spec.ts:149`, доведено флейком); перепрогон `37617949060` на тому ж head — ALL GREEN. P0 CI-гейт пройдено.
 
 ## P1 #346 — Внутрішній DNS + корпоративний сертифікат
 
@@ -83,4 +83,6 @@ https://github.com/volyamnyi/intensive-care-unit-patient-chart/issues/349
 
 Виконавець: локальна розробка (assigned @volyamnyi). Мітки: `documentation`, `database`.
 
-Зміст: коміт доків (runbook Appendix C під домен без certbot/LE, Appendix A — `APP_WEBSOCKET_ALLOWED_ORIGINS`, запис у `AGENTS.md`, перевірка README без обіцянок публічного доступу); координація щоденних `pg_dump -Fc` ×4 + внутрішній offsite + перший restore-drill на scratch-БД (дата, тривалість, OK — коментарем); перевірка exit criteria epic; закриття P0–P4, потім epic.
+Зміст: коміт доків (runbook Appendix C під домен + Cloudflare Origin без certbot/LE, Appendix A — `APP_WEBSOCKET_ALLOWED_ORIGINS`, запис у `AGENTS.md`, перевірка README без обіцянок публічного доступу); координація щоденних `pg_dump -Fc` ×4 + внутрішній offsite + перший restore-drill на scratch-БД (дата, тривалість, OK — коментарем); перевірка exit criteria epic; закриття P0–P4, потім epic.
+
+Стан (07.10.2026): доки DONE (коміт нижче). README перевірено — обіцянок LE/публічного доступу нема, правити нічого. Бекапи + drill ЗАБЛОКОВАНО на P3 (деплой ще не виконано — нема чого бекапити/відновлювати); чекліст для прод — коментарем у #349. Закриття issues + epic — після P3 + drill.
