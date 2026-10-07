@@ -17,7 +17,7 @@ class CorsConfigTest {
     void setUp() {
         corsConfig = new CorsConfig();
         ReflectionTestUtils.setField(corsConfig, "allowedOrigins",
-                "https://supercare.superhumans.com,http://localhost:5173");
+                "https://portal.example,http://localhost:5173");
     }
 
     @Test
@@ -29,7 +29,7 @@ class CorsConfigTest {
         assertThat(config.getAllowCredentials()).isTrue();
         assertThat(config.getAllowedOrigins()).isNull();
         assertThat(config.getAllowedOriginPatterns())
-                .containsExactly("https://supercare.superhumans.com", "http://localhost:5173");
+                .containsExactly("https://portal.example", "http://localhost:5173");
         assertThat(config.getAllowedMethods())
                 .contains("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
         assertThat(config.getAllowedHeaders()).containsExactly("*");
@@ -42,8 +42,8 @@ class CorsConfigTest {
         CorsConfiguration config = source.getCorsConfiguration(
                 new MockHttpServletRequest("OPTIONS", "/api/test"));
 
-        assertThat(config.checkOrigin("https://supercare.superhumans.com"))
-                .isEqualTo("https://supercare.superhumans.com");
+        assertThat(config.checkOrigin("https://portal.example"))
+                .isEqualTo("https://portal.example");
         assertThat(config.checkOrigin("http://localhost:5173"))
                 .isEqualTo("http://localhost:5173");
         assertThat(config.checkOrigin("https://evil.example.com")).isNull();
@@ -52,13 +52,13 @@ class CorsConfigTest {
     @Test
     void corsConfiguration_trimsWhitespaceAndDropsBlanks() {
         ReflectionTestUtils.setField(corsConfig, "allowedOrigins",
-                " https://supercare.superhumans.com ,, http://localhost:5173 ");
+                " https://portal.example ,, http://localhost:5173 ");
 
         CorsConfiguration config = corsConfig.corsConfigurationSource().getCorsConfiguration(
                 new MockHttpServletRequest("OPTIONS", "/api/test"));
 
         assertThat(config.getAllowedOriginPatterns())
-                .containsExactly("https://supercare.superhumans.com", "http://localhost:5173");
+                .containsExactly("https://portal.example", "http://localhost:5173");
     }
 
     @Test
