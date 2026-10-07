@@ -40,6 +40,7 @@ import { drugInteractionAdminApi } from '../../api/medication';
 import type { DrugInteractionCatalog, DrugInteractionImportReport } from '../../types/medication';
 import type { LegacyBackfillReport, AuditRetentionReport } from '../../types/core';
 import AuditLogTable from '../../components/common/AuditLogTable';
+import { SEVERITY_LABELS } from '../../components/prescription/interactionSeverity';
 import AuditEventConsole from '../../components/common/AuditEventConsole';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { useAuth } from '../../services/AuthContext';
@@ -57,8 +58,7 @@ const ROLE_LABELS: Record<string, string> = {
   ADJACENT_SPECIALIST: 'Суміжний спеціаліст',
 };
 
-/** Interaction severity labels/colors for the «Зміст бази» section (#305). Extends SEVERITY_LABELS with `low`. */
-const DI_SEV_LABEL: Record<string, string> = { critical: 'критично', high: 'високо', medium: 'помірно', low: 'низько' };
+/** Interaction severity colors for the «Зміст бази» section (#305); labels come from the shared config (#350). */
 const DI_SEV_CLASS: Record<string, string> = { critical: 'bg-red-500', high: 'bg-orange-500', medium: 'bg-amber-500', low: 'bg-gray-400' };
 
 export default function AdminPage() {
@@ -668,7 +668,7 @@ export default function AdminPage() {
                                     <div className="text-xs text-muted-foreground">{p.drugBAtc}</div>
                                   </TableCell>
                                   <TableCell>
-                                    <Badge className={DI_SEV_CLASS[p.severity] ?? ''}>{DI_SEV_LABEL[p.severity] ?? p.severity}</Badge>
+                                    <Badge className={DI_SEV_CLASS[p.severity] ?? ''}>{SEVERITY_LABELS[p.severity] ?? p.severity}</Badge>
                                   </TableCell>
                                   <TableCell title={p.interaction}>
                                     {p.interaction.length > 80 ? `${p.interaction.slice(0, 80)}…` : p.interaction}

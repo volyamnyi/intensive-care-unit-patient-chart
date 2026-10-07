@@ -214,6 +214,16 @@
   }
 }
 
+/* Medication interaction alert entrance (#354): one-time slide-in from the left */
+@keyframes interactionAlertIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.interaction-alert-enter {
+  animation: interactionAlertIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* Fullscreen hourly grid dialog morph (#136, Phase 3) */
 @keyframes modalMorphIn {
   from { opacity: 0; transform: scale(0.94); }
@@ -385,7 +395,8 @@ body:has([data-slot="dialog-content"][data-fullscreen="true"]) [data-slot="dialo
   [data-slot="dropdown-menu-content"],
   [data-slot="dropdown-menu-sub-content"],
   [data-slot="tooltip-content"],
-  [data-slot="popover-content"] {
+  [data-slot="popover-content"],
+  .interaction-alert-enter {
     animation: none;
   }
 }

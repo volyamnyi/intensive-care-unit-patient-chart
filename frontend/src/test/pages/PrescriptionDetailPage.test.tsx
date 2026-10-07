@@ -409,7 +409,9 @@ describe('PrescriptionDetailPage — drug interaction warnings (#304)', () => {
       },
     });
     renderPage(() => doctorAuth, [makePlannedItem()]);
-    await screen.findByText('Dopamine');
+    // 'Dopamine' now renders twice: the grid row and the interaction alert title (#354).
+    const matches = await screen.findAllByText('Dopamine');
+    expect(matches.length).toBeGreaterThanOrEqual(1);
     await waitFor(() => {
       expect(document.querySelector('.interaction-warn')).not.toBeNull();
       expect(document.querySelector('td[data-interaction-warn="true"]')).not.toBeNull();

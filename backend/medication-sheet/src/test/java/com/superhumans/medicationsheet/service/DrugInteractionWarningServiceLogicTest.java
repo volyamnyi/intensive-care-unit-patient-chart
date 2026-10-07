@@ -92,4 +92,11 @@ class DrugInteractionWarningServiceLogicTest {
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 5));
         assertThat(none).isEmpty();
     }
+
+    @Test
+    void dangerousSeverities_excludesLow() {
+        // Contract pin (#350): low pairs are stored but never warned.
+        assertThat(DrugInteractionWarningService.DANGEROUS_SEVERITIES)
+                .containsExactly("medium", "high", "critical");
+    }
 }

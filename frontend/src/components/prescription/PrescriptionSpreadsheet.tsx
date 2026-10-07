@@ -5,9 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { PrescriptionDayPart, PrescriptionInteractionsResponse, PairInteractionWarning as PairInteraction } from '../../types/medication';
 import type { GridItem } from './PrescriptionGrid';
 import { gridDateMeta, shouldMarkAddedCell } from './prescriptionDateMeta';
-
-const SEVERITY_ORDER: Record<string, number> = { critical: 3, high: 2, medium: 1 };
-const SEVERITY_LABELS: Record<string, string> = { critical: 'критично', high: 'високо', medium: 'помірно' };
+import { SEVERITY_LABELS, SEVERITY_ORDER } from './interactionSeverity';
 
 const PERIODS = ['morning', 'day', 'evening', 'night'] as const;
 const PERIOD_LABELS: Record<string, string> = {
@@ -481,6 +479,7 @@ export default function PrescriptionSpreadsheet({
               {gridItems.map(item => (
                 <tr key={item.id}>
                   <td
+                    data-item-id={item.id}
                     className="sticky left-0 bg-card z-10 p-1 min-w-[180px] md:min-w-[140px] border border-border shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                     style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
                   >
