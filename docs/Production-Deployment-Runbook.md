@@ -240,7 +240,7 @@ psql -d my_fullstack_core -c "SELECT login FROM users;"          # лише ре
 ### 1.8 Реверс-проксі (nginx)
 
 Шаблон — [Appendix C](#appendix-c--nginx-reverse-proxy). Ключові моменти:
-- TLS термінує nginx (Cloudflare Origin для `supercare.superhumans.com`, epic #344); вбудований SSL застосунку вимкнено, backend — plain HTTP на `:8085` (P0 #345).
+- TLS термінує nginx (Let's Encrypt, DNS-01 через Cloudflare API, epic #344); вбудований SSL застосунку вимкнено, backend — plain HTTP на `:8085` (P0 #345).
 - `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` — інакше `AuditLog.ipAddress` (§79 ТЗ) буде IP nginx, а не користувача.
 - `X-Forwarded-Proto https` — інакше `jwt` cookie вийде без `Secure` (P0 #345).
 - `client_max_body_size` — для завантаження evidence-файлів у prosthetics (10 МБ ліміт у `EvidenceFileService`).
@@ -1028,12 +1028,16 @@ ExecStartPost=/usr/bin/curl -fsS http://localhost:8085/api/health || true
 
 ## Appendix C — nginx reverse proxy (supercare.superhumans.com, внутрішня мережа)
 
-> Рішення власника (epic #344, P1 #346, 07.10.2026): домен доступний лише з LAN/VPN.
-> Публічного DNS, Let's Encrypt і certbot — нема. TLS термінує nginx постійним
-> **Cloudflare Origin** сертифікатом (`serial 28314EEE…`, термін 90 днів — поновлення
-> закласти в щомісячний чек §4.3). Вбудований SSL застосунку вимкнено (P0 #345);
-> backend завжди plain HTTP на `127.0.0.1:8085`, `server.forward-headers-strategy: framework`.
-> Клієнти мусять довіряти кореню `origin_ca_rsa_root.pem` (розгорнути через групові політики).
+> Рішення власника (epic #344, корекція 07.10.2026, P1 #346): домен доступний лише з LAN/VPN
+> (публічного DNS нема — NXDOMAIN зовні), але сертифікат — публічний **Let's Encrypt**
+> (ECDSA, діє до 05.01.2027): випуск/поновлення — **DNS-01 через Cloudflare API**,
+> `certbot.timer` увімкнено, не вимикати і не видаляти `certbot`. Cloudflare Origin
+> для прямого використання **відхилено** (клієнти давали `ERR_CERT_AUTHORITY_INVALID`,
+> встановлення кореня заборонено; правильна Cloudflare-схема з публічним DNS несумісна
+> з «тільки LAN») — його файли лишаються в `/etc/nginx/tls/supercare/` лише як резерв,
+> nginx їх не використовує. Вбудований SSL застосунку вимкнено (P0 #345); backend завжди
+> plain HTTP на `127.0.0.1:8085`, `server.forward-headers-strategy: framework`.
+> Credentials Cloudflare API живуть тільки на прод-хості — ніколи в репо.
 
 ```nginx
 # /etc/nginx/conf.d/ictc.conf
@@ -1056,11 +1060,11 @@ server {
     listen 443 ssl http2;
     server_name supercare.superhumans.com;
 
-    # TLS — Cloudflare Origin (P1 #346). Увага: файли БЕЗ розширення .pem,
-    # права root:root 0600 (nginx читає як root до drop privileges — перевірити
-    # `nginx -t` після кожної ротації сертифіката).
-    ssl_certificate     /etc/nginx/tls/supercare/fullchain;
-    ssl_certificate_key /etc/nginx/tls/supercare/privkey;
+    # TLS — Let's Encrypt, DNS-01 (P1 #346, корекція 07.10.2026).
+    # Стандартний layout certbot; фактичні шляхи звірити на хості
+    # (`certbot certificates`). Після кожної ротації — `nginx -t` + reload.
+    ssl_certificate     /etc/letsencrypt/live/supercare.superhumans.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/supercare.superhumans.com/privkey.pem;
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_ciphers         HIGH:!aNULL:!MD5;
     ssl_session_cache   shared:SSL:10m;
