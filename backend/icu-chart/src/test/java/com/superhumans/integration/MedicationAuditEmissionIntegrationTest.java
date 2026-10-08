@@ -27,7 +27,7 @@ class MedicationAuditEmissionIntegrationTest extends AbstractIntegrationTest {
     private org.springframework.context.ApplicationContext applicationContext;
 
     @Test
-    void prescriptionFlow_emitsCanonicalEventsWithWitnessAndNoSecrets() {
+    void prescriptionFlow_emitsCanonicalEventsWithWitnessAndNoSecrets() throws InterruptedException {
         PrescriptionListCreateRequest listReq = new PrescriptionListCreateRequest();
         listReq.setPatientId("1003");
         var listRes = restTemplate.exchange("/api/prescriptions", HttpMethod.POST,
@@ -71,9 +71,12 @@ class MedicationAuditEmissionIntegrationTest extends AbstractIntegrationTest {
                 HttpMethod.POST, authEntity(execReq, getNurseToken()), String.class, dayPartId);
         assertThat(execRes.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        applicationContext.getBean(com.superhumans.service.AuditEventRelay.class).poll();
-
-        List<AuditEventEntity> events = auditEventRepository.findAll();
+        // The relay also runs on a 1s schedule and claims rows with a lease:
+        // poll until our four rows are all delivered instead of asserting
+        // immediately after a single poll (flaky under CI load, run 37745944254).
+        com.superhumans.service.AuditEventRelay relay =
+                applicationContext.getBean(com.superhumans.service.AuditEventRelay.class);
+        List<AuditEventEntity> events = awaitEvents(relay, listId, itemId, dayPartId);
         AuditEventEntity created = singleEvent(events, "medication.list.create", listId.toString());
         assertThat(created.getOutcome()).isEqualTo("SUCCESS");
         assertThat(created.getActorId()).isEqualTo(doctorUserId.toString());
@@ -90,6 +93,31 @@ class MedicationAuditEmissionIntegrationTest extends AbstractIntegrationTest {
         assertThat(executed.getActorId()).isEqualTo(nurseUserId.toString());
         assertThat(executed.getEventPayload()).contains("nurse2");
         assertThat(executed.getEventPayload()).doesNotContain("nurse123");
+    }
+
+    private List<AuditEventEntity> awaitEvents(
+            com.superhumans.service.AuditEventRelay relay,
+            UUID listId, UUID itemId, UUID dayPartId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 15000;
+        List<AuditEventEntity> events = List.of();
+        while (System.currentTimeMillis() < deadline) {
+            relay.poll();
+            events = auditEventRepository.findAll();
+            if (hasEvent(events, "medication.list.create", listId.toString())
+                    && hasEvent(events, "medication.item.add", itemId.toString())
+                    && hasEvent(events, "medication.dose.plan", dayPartId.toString())
+                    && hasEvent(events, "medication.dose.execute", dayPartId.toString())) {
+                return events;
+            }
+            Thread.sleep(250);
+        }
+        return events;
+    }
+
+    private static boolean hasEvent(
+            List<AuditEventEntity> events, String action, String targetId) {
+        return events.stream()
+                .anyMatch(event -> action.equals(event.getAction()) && targetId.equals(event.getTargetId()));
     }
 
     private static AuditEventEntity singleEvent(
