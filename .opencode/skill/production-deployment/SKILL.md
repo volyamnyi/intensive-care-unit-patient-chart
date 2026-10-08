@@ -251,11 +251,11 @@ calls `pg_restore` "low risk" without mentioning the lost writes; §3.2 recommen
 archiving but gives no PITR procedure; 1.3 lists the `APP_MIS_API_*`
 variables twice; and it says nothing on `DATABASECHANGELOGLOCK`, `runInTransaction:false`
 or `lock_timeout`. Appendix D.3 has an abbreviated pgBackRest time-target restore command,
-but not a validated end-to-end PITR procedure. There is also a first-deploy TLS mismatch:
-the `prod` profile enables HTTPS on the app (`application.yml`), while the nginx template
-proxies to the backend over plain HTTP (Appendix C). Treat this as a deployment blocker:
-the system owner must choose/verify the TLS termination design and align both configs
-before deployment. Retention (7d local / 4m NAS / 1y offsite, WAL 30d) is a proposal.
+but not a validated end-to-end PITR procedure. The former first-deploy TLS mismatch
+(embedded HTTPS in the `prod` profile vs plain-HTTP nginx proxy) was resolved in
+epic #344/P0 #345: embedded SSL is off, TLS terminates at nginx, and the prod
+deploy was verified over that design — the blocker note is retired, not deleted,
+as history. Retention (7d local / 4m NAS / 1y offsite, WAL 30d) is a proposal.
 
 ## Anti-patterns (reject these)
 
