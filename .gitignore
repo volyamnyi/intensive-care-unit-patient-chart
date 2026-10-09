@@ -44,5 +44,8 @@ pixel-perfect-studio-main/
 *.png
 # Виняток: ілюстрації ЗІЗ для візарда «Виробництво протезів» мають жити в git (#293)
 !frontend/public/ppe/*.png
+# Виняток: Playwright screenshot baselines сповіщення про взаємодії (#352) —
+# без цього toHaveScreenshot падає «snapshot doesn't exist» на кожному прогоні
+!tests/specs/*/*.spec.ts-snapshots/*.png
 # Local-only production run cheat-sheet (operator machine, not for CI/repo)
 docs/Production-Run-Commands.md
