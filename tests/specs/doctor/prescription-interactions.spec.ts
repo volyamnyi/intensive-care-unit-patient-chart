@@ -1,4 +1,4 @@
-import { type APIRequestContext } from '@playwright/test';
+import { type APIRequestContext, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/index';
 import { testUser } from '../../helpers/test-users';
 import {
@@ -7,12 +7,14 @@ import {
   ensureMedicationList,
 } from '../../helpers/medication';
 
-// Issue #304 — drug-interaction warnings. The dataset lives in the `med` DB
-// (drug_interaction_drugs/pairs); imports are ADMINISTRATOR-only and replace
-// the whole dataset, so the spec is serial and self-contained: it imports a
-// 2-drug dataset (N02BE01 ↔ M01AE01, matching the MIS-stub `itemKindATC`
-// fixtures), adds + plans both drugs on overlapping periods and verifies the
-// read endpoint, the UI surfaces and the RBAC.
+// Issues #304/#355 — drug-interaction warnings + animated alert. The dataset
+// lives in the `med` DB (drug_interaction_drugs/pairs); imports are
+// ADMINISTRATOR-only and replace the whole dataset, so the spec is serial
+// and self-contained: it imports a 2-drug dataset (N02BE01 ↔ M01AE01,
+// matching the MIS-stub `itemKindATC` fixtures), adds + plans both drugs on
+// overlapping periods and verifies the read endpoint, the UI surfaces, the
+// RBAC, the alert banner (announcement + severity), the medium downgrade,
+// the banner unmount on delete, and the screenshot baselines.
 
 const API = 'http://localhost:8085/api';
 
@@ -58,17 +60,26 @@ async function loginToken(request: APIRequestContext, slot: number): Promise<str
   return (await res.json()).token as string;
 }
 
-async function importDataset(request: APIRequestContext, token: string) {
+async function importDataset(request: APIRequestContext, token: string, payload: unknown = dataset()) {
   return request.post(`${API}/admin/drug-interactions/import`, {
     headers: { Authorization: `Bearer ${token}` },
     multipart: {
       file: {
         name: 'interactions.json',
         mimeType: 'application/json',
-        buffer: Buffer.from(JSON.stringify(dataset())),
+        buffer: Buffer.from(JSON.stringify(payload)),
       },
     },
   });
+}
+
+// Same pair, medium severity — for the downgrade scenario (#355).
+function mediumDataset() {
+  const d = dataset();
+  d.drugs[0].drug_interactions[0].severity = 'medium';
+  d.drugs[0].drug_interactions[0].interaction = 'Помірна взаємодія: потрібен моніторинг стану';
+  d.drugs[0].drug_interactions[0].interaction_id = 'DI-0002';
+  return d;
 }
 
 test.describe.serial('Drug interaction warnings (#304)', () => {
@@ -237,15 +248,113 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     expect((await adminRes.json()).drugs).toBeGreaterThanOrEqual(2);
   });
 
-  test('UI: item name blinks and the planned day cell carries the red border', async ({ request, page }) => {
+  test('UI: item name carries the severity mark and the planned day cell carries the red border', async ({ request, page }) => {
     await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
 
-    await expect(page.locator('p.interaction-warn').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('td[data-interaction-severity="high"]').first()).toBeVisible({ timeout: 10000 });
     const warnedCells = page.locator('td[data-interaction-warn="true"]');
     // One planned day per item → at least 2 warned cells. Wait for the first
     // to appear, then check the count (toHaveCount takes a fixed number).
     await expect(warnedCells.first()).toBeVisible({ timeout: 10000 });
     expect(await warnedCells.count()).toBeGreaterThanOrEqual(2);
+  });
+
+  test('alert: HIGH banner appears after planning with the exact announcement (#355)', async ({ page }) => {
+    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+
+    const alert = page.getByTestId('interaction-alert');
+    await expect(alert).toBeVisible({ timeout: 10000 });
+    await expect(alert).toHaveAttribute('role', 'alert');
+    await expect(alert).toHaveAttribute(
+      'aria-label',
+      /Увага\. Виявлено взаємодію високого рівня: IT304-Paracetamol та IT304-Ibuprofen\./,
+    );
+    await expect(alert.getByText('високо', { exact: true })).toBeVisible();
+    await expect(alert.getByText(/IT304-Paracetamol \+ IT304-Ibuprofen/)).toBeVisible();
+  });
+
+  test('screenshots: HIGH banner at desktop and narrow widths', async ({ page }) => {
+    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+    const alert = page.getByTestId('interaction-alert');
+    await expect(alert).toBeVisible({ timeout: 10000 });
+
+    await expect(alert).toHaveScreenshot('interaction-alert-high-1280.png', { maxDiffPixels: 200 });
+    await page.setViewportSize({ width: 360, height: 800 });
+    await expect(alert).toHaveScreenshot('interaction-alert-high-360.png', { maxDiffPixels: 200 });
+  });
+
+  test('medium-only dataset downgrades the banner, then the high set is restored', async ({ request, page }) => {
+    const adminRes = await importDataset(request, await loginToken(request, 6), mediumDataset());
+    expect(adminRes.ok()).toBeTruthy();
+
+    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+    const alert = page.getByTestId('interaction-alert');
+    await expect(alert).toBeVisible({ timeout: 10000 });
+    await expect(alert.getByText('помірно', { exact: true })).toBeVisible();
+    await expect(alert.getByText('високо', { exact: true })).toHaveCount(0);
+
+    await page.setViewportSize({ width: 768, height: 800 });
+    await expect(alert).toHaveScreenshot('interaction-alert-medium-768.png', { maxDiffPixels: 200 });
+
+    // Restore the high set for the tests below (and the shared DB afterwards).
+    const restoreRes = await importDataset(request, await loginToken(request, 6));
+    expect(restoreRes.ok()).toBeTruthy();
+    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('interaction-alert').getByText('високо', { exact: true })).toBeVisible({ timeout: 10000 });
+  });
+
+  test('screenshots: reduced-motion, forced-colors and 200% zoom on HIGH', async ({ browser }) => {
+    // HIGH dataset is active again (restored by the previous test).
+    async function openList(contextOpts: object): Promise<{ ctx: BrowserContext; pg: Page }> {
+      const ctx = await browser.newContext({ storageState: '.auth/doctor.json', ...contextOpts });
+      const pg = await ctx.newPage();
+      await pg.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+      await expect(pg.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+      await expect(pg.getByTestId('interaction-alert')).toBeVisible({ timeout: 10000 });
+      return { ctx, pg };
+    }
+
+    const reduced = await openList({ reducedMotion: 'reduce' });
+    await expect(reduced.pg.getByTestId('interaction-alert')).toHaveScreenshot(
+      'interaction-alert-reduced-motion.png', { maxDiffPixels: 200 },
+    );
+    await reduced.ctx.close();
+
+    const forced = await openList({ forcedColors: 'active' });
+    await expect(forced.pg.getByTestId('interaction-alert')).toHaveScreenshot(
+      'interaction-alert-forced-colors.png', { maxDiffPixels: 200 },
+    );
+    await forced.ctx.close();
+
+    const zoomed = await openList({});
+    await zoomed.pg.evaluate(() => { document.body.style.zoom = '200%'; });
+    await expect(zoomed.pg.getByTestId('interaction-alert')).toHaveScreenshot(
+      'interaction-alert-zoom200.png', { maxDiffPixels: 200 },
+    );
+    await zoomed.ctx.close();
+  });
+
+  test('delete ibuprofen unmounts the banner and clears the marks', async ({ request, page }) => {
+    const itemsRes = await request.get(`${API}/prescriptions/${listId}/items`, {
+      headers: { Authorization: `Bearer ${doctorToken}` },
+    });
+    const ibuprofen = (await itemsRes.json()).find((i: any) => i?.medicineName === 'IT304-Ibuprofen');
+    expect(ibuprofen).toBeTruthy();
+    const delRes = await request.delete(`${API}/prescriptions/items/${ibuprofen.id}`, {
+      headers: { Authorization: `Bearer ${doctorToken}` },
+    });
+    expect(delRes.ok()).toBeTruthy();
+    const idx = addedItemIds.indexOf(ibuprofen.id);
+    if (idx >= 0) addedItemIds.splice(idx, 1);
+
+    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('interaction-alert')).toHaveCount(0);
+    await expect(page.locator('td[data-interaction-warn="true"]')).toHaveCount(0);
+    await expect(page.locator('td[data-interaction-severity]')).toHaveCount(0);
   });
 });

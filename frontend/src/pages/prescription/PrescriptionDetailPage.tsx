@@ -257,7 +257,7 @@ export default function PrescriptionDetailPage() {
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-rubik text-2xl font-extrabold text-foreground">
+          <h1 className="font-rubik text-2xl font-extrabold text-foreground" tabIndex={-1}>
             {prescription.documentName}
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -306,7 +306,7 @@ export default function PrescriptionDetailPage() {
         </Alert>
       )}
 
-      <InteractionAlert interactions={interactions} />
+      <InteractionAlert interactions={interactions} listId={id} />
 
       <PrescriptionGrid
         items={items}

@@ -197,20 +197,20 @@
   }
 }
 
-/* Drug-interaction warning blink (#304) */
-@keyframes interactionBlink {
-  0%, 100% { color: #B91C1C; }
-  50% { color: #DC2626; }
+/* Active interaction pair highlight driven by the alert (#351): temporary
+   ring on the two paired rows' name cells + their overlap cells.
+   Pure chrome toggle (attribute add/remove) — no layout shift. */
+[data-active-pair="true"] {
+  outline: 2px solid var(--color-ring);
+  outline-offset: -2px;
 }
 
-.interaction-warn {
-  animation: interactionBlink 1.2s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .interaction-warn {
-    animation: none;
-    color: #B91C1C;
+/* Forced colors (#355): severity borders vanish, so warned cells keep a
+   system-color outline; text labels (never color-only) carry the meaning. */
+@media (forced-colors: active) {
+  [data-interaction-severity] {
+    outline: 2px solid Mark;
+    outline-offset: -2px;
   }
 }
 

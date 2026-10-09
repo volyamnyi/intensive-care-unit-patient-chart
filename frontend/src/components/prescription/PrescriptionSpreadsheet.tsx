@@ -1,11 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Plus, Minus, Trash2, X, Undo2, Eraser } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PrescriptionDayPart, PrescriptionInteractionsResponse, PairInteractionWarning as PairInteraction } from '../../types/medication';
 import type { GridItem } from './PrescriptionGrid';
 import { gridDateMeta, shouldMarkAddedCell } from './prescriptionDateMeta';
-import { SEVERITY_LABELS, SEVERITY_ORDER } from './interactionSeverity';
+import { INTERACTION_SEVERITY, SEVERITY_LABELS, SEVERITY_ORDER } from './interactionSeverity';
+
+/** Warned-cell border color per severity (#351); status fills still win, only chrome is tinted. */
+const WARN_BORDER: Record<string, string> = { critical: '#DC2626', high: '#EA580C', medium: '#D97706' };
+
+/** Warned-name cell accent per severity (#351): left indicator + light tint, never a full saturated row. */
+const NAME_ACCENT: Record<string, string> = {
+  critical: 'border-l-4 border-l-destructive bg-destructive/5',
+  high: 'border-l-4 border-l-[#EA580C] bg-[#EA580C]/5',
+  medium: 'border-l-4 border-l-warning bg-warning/10',
+};
 
 const PERIODS = ['morning', 'day', 'evening', 'night'] as const;
 const PERIOD_LABELS: Record<string, string> = {
@@ -80,6 +91,8 @@ interface PrescriptionCellProps {
   visibleDatesLen: number;
   markedAdded: boolean;
   isWarnedCell: boolean;
+  /** Max pair severity for this cell (#351); undefined when not warned. */
+  warnSeverity?: string;
   isEditing: boolean;
   editingDose: string;
   onEditDoseChange: (v: string) => void;
@@ -95,7 +108,7 @@ interface PrescriptionCellProps {
 }
 
 function PrescriptionCell({
-  dp, date, period, dateIdx, visibleDatesLen, markedAdded, isWarnedCell,
+  dp, date, period, dateIdx, visibleDatesLen, markedAdded, isWarnedCell, warnSeverity,
   isEditing, editingDose, onEditDoseChange, onCommitEdit,
   onClick, onOpenDayMenu, label, itemPairs, itemName, PERIOD_FULL,
   SEVERITY_ORDER, SEVERITY_LABELS,
@@ -114,6 +127,7 @@ function PrescriptionCell({
   }, [dp, date, onOpenDayMenu]);
 
   const bg = cellBg(dp);
+  const warnColor = isWarnedCell ? (WARN_BORDER[warnSeverity ?? ''] ?? '#EF4444') : null;
 
   return (
     <td
@@ -122,12 +136,13 @@ function PrescriptionCell({
       className={markedAdded ? 'bg-muted' : undefined}
       data-added-day={markedAdded ? 'true' : undefined}
       data-interaction-warn={isWarnedCell ? 'true' : undefined}
+      data-interaction-severity={warnColor ? (warnSeverity ?? undefined) : undefined}
       style={{
         width: 68, height: 32, cursor: bg === '#fff' || !dp ? 'default' : 'pointer',
         backgroundColor: markedAdded ? undefined : bg, textAlign: 'center', verticalAlign: 'middle',
         position: 'relative',
-        border: isWarnedCell ? '2px solid #EF4444' : '1px solid var(--color-border)',
-        ...(isWarnedCell ? { borderRightColor: '#EF4444', borderBottomColor: '#EF4444', borderLeftColor: '#EF4444', borderTopColor: '#EF4444' } : null),
+        border: warnColor ? `2px solid ${warnColor}` : '1px solid var(--color-border)',
+        ...(warnColor ? { borderRightColor: warnColor, borderBottomColor: warnColor, borderLeftColor: warnColor, borderTopColor: warnColor } : null),
         ...(period === 'night' && dateIdx < visibleDatesLen - 1
           ? { borderRightWidth: 2, borderRightColor: '#94a3b8' }
           : null),
@@ -260,7 +275,42 @@ export default function PrescriptionSpreadsheet({
     }
     return map;
   }, [interactions]);
-  const warnedItemIds = useMemo(() => new Set(itemPairs.keys()), [itemPairs]);
+  // Max severity per warned item and per warned (item, date) cell (#351).
+  // Relative order matches the old blink-era contract; only chrome (not fills) is tinted.
+  const warnedItemSeverity = useMemo(() => {
+    const map = new Map<string, string>();
+    if (interactions) {
+      for (const w of interactions.warnings) {
+        for (const p of w.interactions) {
+          for (const id of [w.itemId, p.otherItemId]) {
+            const cur = map.get(id);
+            if (!cur || (SEVERITY_ORDER[p.severity] ?? 0) > (SEVERITY_ORDER[cur] ?? 0)) map.set(id, p.severity);
+          }
+        }
+      }
+    }
+    return map;
+  }, [interactions]);
+  const warnedCellSeverity = useMemo(() => {
+    const map = new Map<string, Map<string, string>>();
+    const put = (id: string, date: string, sev: string) => {
+      let perItem = map.get(id);
+      if (!perItem) { perItem = new Map(); map.set(id, perItem); }
+      const cur = perItem.get(date);
+      if (!cur || (SEVERITY_ORDER[sev] ?? 0) > (SEVERITY_ORDER[cur] ?? 0)) perItem.set(date, sev);
+    };
+    if (interactions) {
+      for (const w of interactions.warnings) {
+        for (const p of w.interactions) {
+          for (const d of rangeDays(p.overlapStart, p.overlapEnd)) {
+            put(w.itemId, d, p.severity);
+            put(p.otherItemId, d, p.severity);
+          }
+        }
+      }
+    }
+    return map;
+  }, [interactions]);
   const warnedDates = useMemo(() => {
     const map = new Map<string, Set<string>>();
     if (interactions) {
@@ -476,11 +526,15 @@ export default function PrescriptionSpreadsheet({
               </tr>
             </thead>
             <tbody>
-              {gridItems.map(item => (
+              {gridItems.map(item => {
+                const itemSev = warnedItemSeverity.get(item.id);
+                const sevDef = itemSev ? INTERACTION_SEVERITY[itemSev as keyof typeof INTERACTION_SEVERITY] : undefined;
+                const ItemIcon = sevDef?.icon;
+                return (
                 <tr key={item.id}>
                   <td
                     data-item-id={item.id}
-                    className="sticky left-0 bg-card z-10 p-1 min-w-[180px] md:min-w-[140px] border border-border shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
+                    className={`sticky left-0 bg-card z-10 p-1 min-w-[180px] md:min-w-[140px] border border-border shadow-[2px_0_4px_rgba(0,0,0,0.05)]${itemSev ? ` ${NAME_ACCENT[itemSev] ?? ''}` : ''}`}
                     style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
                   >
                     <div className="flex items-start gap-0.5">
@@ -496,12 +550,16 @@ export default function PrescriptionSpreadsheet({
                         </Button>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className={warnedItemIds.has(item.id) ? 'text-sm font-semibold interaction-warn' : 'text-sm font-semibold'}>
+                        <p className={itemSev ? 'text-sm font-semibold text-[#7F1D1D] dark:text-[#FCA5A5]' : 'text-sm font-semibold'}>
+                          {ItemIcon && <ItemIcon aria-hidden className="mr-1 inline size-3.5 align-[-2px]" />}
                           {item.medicineName}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
                           {item.medicineMethod || ''}{item.regime ? ` • ${item.regime}` : ''}
                         </p>
+                        {itemSev && sevDef && (
+                          <Badge className={sevDef.badgeClass}>{sevDef.label}</Badge>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -536,6 +594,7 @@ export default function PrescriptionSpreadsheet({
                           visibleDatesLen={visibleDates.length}
                           markedAdded={markedAdded}
                           isWarnedCell={isWarnedCell}
+                          warnSeverity={isWarnedCell ? warnedCellSeverity.get(item.id)?.get(date) : undefined}
                           isEditing={isEditing}
                           editingDose={editingDose}
                           onEditDoseChange={setEditingDose}
@@ -583,7 +642,8 @@ export default function PrescriptionSpreadsheet({
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

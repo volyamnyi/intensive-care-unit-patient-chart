@@ -13,6 +13,7 @@ const mockCancelMedication = vi.fn();
 const mockRestoreToPlanned = vi.fn();
 const mockCancelAssignment = vi.fn();
 const mockGetInteractions = vi.fn().mockResolvedValue({ data: { warnings: [], missingAtc: null } });
+const mockRemoveItem = vi.fn();
 const mockGetPdfZip = vi.fn();
 const mockGetPdfInfo = vi.fn();
 const mockGetPdfPage = vi.fn();
@@ -40,7 +41,7 @@ vi.mock('../../api/medication', () => ({
     restoreToPlanned: (...a: unknown[]) => mockRestoreToPlanned(...a),
     cancelAssignment: (...a: unknown[]) => mockCancelAssignment(...a),
     executeDose: vi.fn(),
-    addItem: vi.fn(), removeItem: vi.fn(), create: vi.fn(), delete: vi.fn(), close: vi.fn(),
+    addItem: vi.fn(), removeItem: (...a: unknown[]) => mockRemoveItem(...a), create: vi.fn(), delete: vi.fn(), close: vi.fn(),
     getByPatient: vi.fn(),
     getInteractions: (...a: unknown[]) => mockGetInteractions(...a),
     getMedicineCatalog: () => Promise.resolve({ data: [] }),
@@ -413,7 +414,7 @@ describe('PrescriptionDetailPage — drug interaction warnings (#304)', () => {
     const matches = await screen.findAllByText('Dopamine');
     expect(matches.length).toBeGreaterThanOrEqual(1);
     await waitFor(() => {
-      expect(document.querySelector('.interaction-warn')).not.toBeNull();
+      expect(document.querySelector('td[data-interaction-severity="high"]')).not.toBeNull();
       expect(document.querySelector('td[data-interaction-warn="true"]')).not.toBeNull();
     });
   });
@@ -421,7 +422,68 @@ describe('PrescriptionDetailPage — drug interaction warnings (#304)', () => {
   it('shows no interaction marks when the list has no warnings', async () => {
     renderPage(() => doctorAuth, [makePlannedItem()]);
     await screen.findByText('Dopamine');
-    expect(document.querySelector('.interaction-warn')).toBeNull();
+    expect(document.querySelector('td[data-interaction-severity]')).toBeNull();
+    expect(document.querySelector('td[data-interaction-warn="true"]')).toBeNull();
+  });
+
+  it('shows a HIGH banner with max-severity summary and one deduped row (#355)', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const pair = {
+      otherItemId: 'item-2', otherNameUk: 'Warfarin', severity: 'high',
+      interactionText: 'Повернення підвищує ризик кровотечі',
+      overlapStart: today, overlapEnd: today, interactionIds: ['i-1'],
+    };
+    mockGetInteractions.mockResolvedValue({
+      data: {
+        warnings: [
+          { itemId: 'item-1', nameUk: 'Dopamine', interactions: [pair] },
+          {
+            itemId: 'item-2', nameUk: 'Warfarin',
+            interactions: [{ ...pair, otherItemId: 'item-1', otherNameUk: 'Dopamine' }],
+          },
+        ],
+        missingAtc: null,
+      },
+    });
+    renderPage(() => doctorAuth, [makePlannedItem()]);
+    const alert = await screen.findByRole('alert');
+    const label = alert.getAttribute('aria-label') ?? '';
+    expect(label).toContain('Увага. Виявлено взаємодію високого рівня: Dopamine та Warfarin.');
+    expect(label).toContain('Повернення підвищує ризик кровотечі');
+    expect(label).toContain('Період перетину:');
+    expect(screen.getByText('Dopamine + Warfarin')).toBeInTheDocument();
+  });
+
+  it('removing the warned item clears the banner and announces resolution (#355)', async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const warned = {
+      warnings: [{
+        itemId: 'item-1', nameUk: 'Dopamine',
+        interactions: [{
+          otherItemId: 'item-2', otherNameUk: 'Warfarin', severity: 'high',
+          interactionText: 'Повернення підвищує ризик кровотечі',
+          overlapStart: today, overlapEnd: today, interactionIds: ['i-1'],
+        }],
+      }],
+      missingAtc: null,
+    };
+    mockGetItems
+      .mockResolvedValueOnce({ data: [makePlannedItem()] })
+      .mockResolvedValue({ data: [] });
+    mockGetInteractions
+      .mockResolvedValueOnce({ data: warned })
+      .mockResolvedValue({ data: { warnings: [], missingAtc: null } });
+    mockRemoveItem.mockResolvedValue({ data: null });
+    renderPage(() => doctorAuth, [makePlannedItem()]);
+
+    await screen.findByRole('alert');
+    await userEvent.click(screen.getByRole('button', { name: 'Видалити препарат' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Видалити' }));
+    await waitFor(() => expect(mockRemoveItem).toHaveBeenCalledWith('item-1'));
+
+    await waitFor(() => expect(screen.queryByTestId('interaction-alert')).toBeNull());
+    expect(await screen.findByText('Взаємодій препаратів більше не виявлено.')).toBeInTheDocument();
+    expect(document.querySelector('td[data-interaction-severity]')).toBeNull();
     expect(document.querySelector('td[data-interaction-warn="true"]')).toBeNull();
   });
 });
