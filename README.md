@@ -35,6 +35,7 @@
 - **Prescription Management** — Create and cancel medication/lab orders with dose, route, frequency
 - **Prescription Dashboard** — Department toggle (Хірургія/Реабілітація), sortable patient table, search filter; patient roster served by the MIS (filterable by `?module=medication` departments 19/37)
 - **Prescription Grid** — Inline 21-day spreadsheet with 7-day scroll window, color-coded cells (blue=planned, green=completed, purple=cancelled), click-to-edit dose editing
+- **Drug-Interaction Alert** — Persistent contextual alert above the grid for planned-overlap interactions (#304/#350–#355): max-severity summary (critical/high/medium, low config-only) with an expandable per-pair list (drug names + description + overlap dates), one-time slide-in animation (gated by `prefers-reduced-motion`), per-severity row marks (accent border + tint, icon + label badge, severity-colored overlap-cell borders), hover/focus/click «Показати в таблиці» pair focus ring, assertive screen-reader announcements on detect/escalation only; never blocks planning
 - **Clinical Scale Assessments** — Record and view APACHE II, SOFA, RASS, CAM-ICU, Braden scores
 - **Medical Notes** — Add typed clinical notes per day
 - **Digital Sign-Off** — Two-stage signing workflow (nurse → doctor/HOD), triggers PDF generation
@@ -389,7 +390,7 @@ java -jar app/target/app-*.jar
 | `GET` | `/api/prescriptions/allergies?patientId=` | Yes | Patient allergies (from MIS) |
 | `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
 | `GET` | `/api/prescriptions/{listId}/interactions` | Yes | Drug-interaction warnings for planned items (non-blocking, #304) |
-| `POST` | `/api/admin/drug-interactions/import` | Administrator | Import the drug-interactions dataset (multipart JSON, ≤20 MB, full sync) |
+| `POST` | `/api/admin/drug-interactions/import` | Administrator | Import the drug-interactions dataset (multipart JSON, ≤40 MB, full sync) |
 | `GET` | `/api/admin/drug-interactions?severity&query&page&size` | Administrator | Browse the interaction dataset: summary + drugs[] + paged pairs (#305) |
 
 ### Prosthetics Manufacturing (Виробництво протезів)
@@ -516,8 +517,8 @@ icu-patient-chart/
 │       ├── services/           # AuthContext
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
-│   └── test/               # Vitest tests (104 files)
-├── tests/                      # Playwright E2E (99 spec files, 10 projects)
+  │   └── test/               # Vitest tests (107 files)
+├── tests/                      # Playwright E2E (100 spec files, 10 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -548,12 +549,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (952 across 104 files) |
+| `npm t` | Run Vitest tests (975 across 107 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (100 files: 99 specs + auth setup, 454 tests) |
+| `npx playwright test` | Run all E2E tests (101 files: 100 specs + auth setup, 461 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -577,8 +578,8 @@ CI jobs run in parallel when triggered; if any fails, fix and repeat until every
 ### Testing Summary
 - **Backend tests**: 209 test files across the multi-module reactor — common (41) + icu-chart (87) + medication-sheet (23) + prosthesis-manufacturing (57) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 351 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 952 tests (104 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 100 files (454 tests: 99 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Frontend Vitest tests**: 975 tests (107 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 101 files (461 tests: 100 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
