@@ -345,10 +345,19 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
   });
 
   test('delete ibuprofen unmounts the banner and clears the marks', async ({ request, page }) => {
-    const itemsRes = await request.get(`${API}/prescriptions/${listId}/items`, {
-      headers: { Authorization: `Bearer ${doctorToken}` },
-    });
-    const ibuprofen = (await itemsRes.json()).find((i: any) => i?.medicineName === 'IT304-Ibuprofen');
+    // The list is shared with parallel doctor specs: refetch until the row
+    // is readable (a concurrent mutation can briefly return an error shape).
+    let ibuprofen: any = null;
+    for (let attempt = 0; attempt < 5 && !ibuprofen; attempt++) {
+      const itemsRes = await request.get(`${API}/prescriptions/${listId}/items`, {
+        headers: { Authorization: `Bearer ${doctorToken}` },
+      });
+      expect(itemsRes.ok()).toBeTruthy();
+      const body = await itemsRes.json();
+      expect(Array.isArray(body)).toBeTruthy();
+      ibuprofen = body.find((i: any) => i?.medicineName === 'IT304-Ibuprofen');
+      if (!ibuprofen && attempt < 4) await new Promise((r) => setTimeout(r, 1000));
+    }
     expect(ibuprofen).toBeTruthy();
     const delRes = await request.delete(`${API}/prescriptions/items/${ibuprofen.id}`, {
       headers: { Authorization: `Bearer ${doctorToken}` },
