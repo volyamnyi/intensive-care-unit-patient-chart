@@ -62,7 +62,10 @@ export function deriveInteractionAlertModel(
     for (const p of w.interactions ?? []) {
       const [idA, idB] = [w.itemId, p.otherItemId].sort();
       const key = `${idA}‖${idB}|${p.overlapStart}|${p.overlapEnd}`;
-      const names: [string, string] = w.itemId === idA ? [w.nameUk, p.otherNameUk] : [p.otherNameUk, w.nameUk];
+      // Display order is first-seen (warning owner first), NOT UUID-sorted:
+      // item ids are freshly generated per list, so UUID order would flip
+      // titles/announcements/screenshots randomly between runs.
+      const names: [string, string] = [w.nameUk, p.otherNameUk];
       const slot = byKey.get(key);
       if (slot) {
         // Keep the first row's severity (same rule as the backend aggregation).

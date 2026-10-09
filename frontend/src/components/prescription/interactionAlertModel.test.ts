@@ -51,6 +51,21 @@ describe('interactionAlertModel', () => {
     expect(p.priority).toBe(3);
   });
 
+  it('keeps first-seen name order regardless of UUID sort', () => {
+    // Item ids are freshly generated per list: UUID-alphabetical order would
+    // flip titles randomly between runs (E2E screenshots). Owner first wins.
+    const m = deriveInteractionAlertModel(responseWith([
+      { itemId: 'item-9', nameUk: 'Zed', interactions: [wirePair({ otherItemId: 'item-1', otherNameUk: 'Aye' })] },
+      {
+        itemId: 'item-1', nameUk: 'Aye',
+        interactions: [wirePair({ otherItemId: 'item-9', otherNameUk: 'Zed', interactionText: 'другий текст', interactionIds: ['DI-0002'] })],
+      },
+    ]));
+    expect(m.totalPairs).toBe(1);
+    expect(m.pairs[0].title).toBe('Zed + Aye');
+    expect(m.pairs[0].description).toBe('текст взаємодії / другий текст');
+  });
+
   it('maps priorities with critical folded into HIGH', () => {
     expect(priorityOf('critical')).toEqual({ bucket: 'HIGH', priority: 3 });
     expect(priorityOf('high')).toEqual({ bucket: 'HIGH', priority: 3 });

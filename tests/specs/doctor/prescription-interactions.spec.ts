@@ -267,12 +267,18 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     const alert = page.getByTestId('interaction-alert');
     await expect(alert).toBeVisible({ timeout: 10000 });
     await expect(alert).toHaveAttribute('role', 'alert');
-    await expect(alert).toHaveAttribute(
-      'aria-label',
-      /Увага\. Виявлено взаємодію високого рівня: IT304-Paracetamol та IT304-Ibuprofen\./,
-    );
+    // Partner name comes from the dataset `ukrainian_raw` ('Ібупрофен 200 мг'),
+    // and the A/B order follows the random UUID sort — assert order-agnostically.
+    const label = await alert.getAttribute('aria-label');
+    expect(label).toContain('Увага. Виявлено взаємодію високого рівня:');
+    expect(label).toContain('IT304-Paracetamol');
+    expect(label).toContain('Ібупрофен 200 мг');
+    expect(label).toContain('Збільшення ризику шлунково-кишкової кровотечі');
+    expect(label).toContain('Період перетину:');
     await expect(alert.getByText('високо', { exact: true })).toBeVisible();
-    await expect(alert.getByText(/IT304-Paracetamol \+ IT304-Ibuprofen/)).toBeVisible();
+    const text = await alert.textContent();
+    expect(text).toContain('IT304-Paracetamol');
+    expect(text).toContain('Ібупрофен 200 мг');
   });
 
   test('screenshots: HIGH banner at desktop and narrow widths', async ({ page }) => {
