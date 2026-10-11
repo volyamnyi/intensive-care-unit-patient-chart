@@ -29,4 +29,17 @@ describe('Interaction alert motion contract', () => {
     const hit = gates.some((block) => block.includes('.interaction-alert-enter') && block.includes('animation: none'));
     expect(hit).toBe(true);
   });
+
+  it('defines the centered overlay slide-in from the left with its gate', () => {
+    const src = readIndexCss();
+    expect(src).toContain('.interaction-alert-overlay');
+    expect(src).toContain('position: fixed');
+    expect(src).toContain('@keyframes interactionAlertCenterIn');
+    expect(src).toContain('.interaction-alert-center-enter');
+    expect(src).toContain('translateX(-64px)');
+    expect(src).toContain('animation: interactionAlertCenterIn 0.35s');
+    const gates = src.split('@media (prefers-reduced-motion: reduce)');
+    const hit = gates.some((block) => block.includes('.interaction-alert-center-enter') && block.includes('animation: none'));
+    expect(hit).toBe(true);
+  });
 });

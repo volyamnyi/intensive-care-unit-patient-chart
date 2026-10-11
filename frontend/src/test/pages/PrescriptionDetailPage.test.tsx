@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeModeProvider } from '../../styles/ThemeContext';
 
@@ -451,7 +451,9 @@ describe('PrescriptionDetailPage — drug interaction warnings (#304)', () => {
     expect(label).toContain('Увага. Виявлено взаємодію високого рівня: Dopamine та Warfarin.');
     expect(label).toContain('Повернення підвищує ризик кровотечі');
     expect(label).toContain('Період перетину:');
-    expect(screen.getByText('Dopamine + Warfarin')).toBeInTheDocument();
+    // The overlay shows the same pair title: scope to the in-flow banner.
+    expect(within(screen.getByTestId('interaction-alert')).getByText('Dopamine + Warfarin')).toBeInTheDocument();
+    expect(screen.getByTestId('interaction-alert-overlay')).toBeInTheDocument();
   });
 
   it('removing the warned item clears the banner and announces resolution (#355)', async () => {

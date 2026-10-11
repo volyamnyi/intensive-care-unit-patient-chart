@@ -13,8 +13,9 @@ import {
 // and self-contained: it imports a 2-drug dataset (N02BE01 ↔ M01AE01,
 // matching the MIS-stub `itemKindATC` fixtures), adds + plans both drugs on
 // overlapping periods and verifies the read endpoint, the UI surfaces, the
-// RBAC, the alert banner (announcement + severity), the medium downgrade,
-// the banner unmount on delete, and the screenshot baselines.
+// RBAC, the alert banner (announcement + severity), the centered overlay
+// announcement (scroll-independent visibility, dismissal), the medium
+// downgrade, the banner unmount on delete, and the screenshot baselines.
 
 const API = 'http://localhost:8085/api';
 
@@ -84,15 +85,46 @@ function mediumDataset() {
 
 test.describe.serial('Drug interaction warnings (#304)', () => {
   let doctorToken: string;
-  let listId: string;
+  let listIdRef: string | undefined;
   const addedItemIds: string[] = [];
+  // Set by the last test: the afterAll cleanup may only run when the whole
+  // serial block completed in THIS worker. Playwright tears down (and runs
+  // afterAll of) a failed worker before retrying in a fresh one — an ungated
+  // cleanup deleted the IT304 items mid-run and every subsequent test/retry
+  // found an empty list (no warnings, no banner).
+  let suiteCompleted = false;
+
+  // Playwright restarts the worker after a failed test (serial + retries): the
+  // fresh module instance loses describe-level state, and a stale `listId`
+  // produced literal `/prescriptions/doctor/undefined` navigations. Every test
+  // resolves the list through this memoized helper — on a fresh worker it
+  // re-ensures the same always-open list of the deterministic stub patient.
+  async function currentListId(request: APIRequestContext): Promise<string> {
+    if (!listIdRef) {
+      const patient = await firstMedicationPatient(request, doctorToken);
+      listIdRef = await ensureMedicationList(request, doctorToken, patient.id);
+    }
+    return listIdRef;
+  }
+
+  // The centered overlay paints over the middle of the viewport and would
+  // leak into element screenshots of the in-flow banner — close it first
+  // (the committed banner baselines pre-date the overlay).
+  async function dismissOverlay(pg: Page) {
+    const ov = pg.getByTestId('interaction-alert-overlay');
+    const btn = ov.getByRole('button', { name: 'Закрити сповіщення' });
+    if (await btn.isVisible().catch(() => false)) await btn.click();
+    await expect(ov).toHaveCount(0);
+  }
 
   test.beforeAll(async ({ request }) => {
     doctorToken = await getToken(request, 1);
   });
 
   test.afterAll(async ({ request }) => {
-    // Keep the shared stub-patient list clean for the parallel doctor specs.
+    // Keep the shared stub-patient list clean for the parallel doctor specs —
+    // but only after the block actually finished (see suiteCompleted above).
+    if (!suiteCompleted) return;
     for (const id of addedItemIds) {
       await request.delete(`${API}/prescriptions/items/${id}`, {
         headers: { Authorization: `Bearer ${doctorToken}` },
@@ -114,8 +146,7 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
   });
 
   test('reads: no warning before items exist, warnings after both drugs are planned', async ({ request }) => {
-    const patient = await firstMedicationPatient(request, doctorToken);
-    listId = await ensureMedicationList(request, doctorToken, patient.id);
+    const listId = await currentListId(request);
 
     const empty = await request.get(`${API}/prescriptions/${listId}/interactions`, {
       headers: { Authorization: `Bearer ${doctorToken}` },
@@ -203,7 +234,7 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
 
   test('nurse may read the warnings (PATIENT_VIEW), may not import', async ({ request }) => {
     const nurseToken = await loginToken(request, 3);
-    const read = await request.get(`${API}/prescriptions/${listId}/interactions`, {
+    const read = await request.get(`${API}/prescriptions/${await currentListId(request)}/interactions`, {
       headers: { Authorization: `Bearer ${nurseToken}` },
     });
     expect(read.ok()).toBeTruthy();
@@ -249,7 +280,7 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
   });
 
   test('UI: item name carries the severity mark and the planned day cell carries the red border', async ({ request, page }) => {
-    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/prescriptions/doctor/${await currentListId(request)}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
 
     await expect(page.locator('td[data-interaction-severity="high"]').first()).toBeVisible({ timeout: 10000 });
@@ -260,8 +291,8 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     expect(await warnedCells.count()).toBeGreaterThanOrEqual(2);
   });
 
-  test('alert: HIGH banner appears after planning with the exact announcement (#355)', async ({ page }) => {
-    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+  test('alert: HIGH banner appears after planning with the exact announcement (#355)', async ({ request, page }) => {
+    await page.goto(`/prescriptions/doctor/${await currentListId(request)}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
 
     const alert = page.getByTestId('interaction-alert');
@@ -281,18 +312,81 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     expect(text).toContain('Ібупрофен 200 мг');
   });
 
-  test('screenshots: HIGH banner at desktop and narrow widths', async ({ page }) => {
-    await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+  test('screenshots: HIGH banner at desktop and narrow widths', async ({ request, page }) => {
+    await page.goto(`/prescriptions/doctor/${await currentListId(request)}`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
     const alert = page.getByTestId('interaction-alert');
     await expect(alert).toBeVisible({ timeout: 10000 });
+    await dismissOverlay(page);
 
     await expect(alert).toHaveScreenshot('interaction-alert-high-1280.png', { maxDiffPixels: 200 });
     await page.setViewportSize({ width: 360, height: 800 });
     await expect(alert).toHaveScreenshot('interaction-alert-high-360.png', { maxDiffPixels: 200 });
   });
 
+  test('overlay: centered announcement is visible even when scrolled to the bottom', async ({ request, page }) => {
+    await page.goto(`/prescriptions/doctor/${await currentListId(request)}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+
+    // A short viewport guarantees the page scrolls (the grid alone may fit a
+    // full-height window): the in-flow banner must leave the viewport while
+    // the centered overlay stays visible (the original complaint).
+    await page.setViewportSize({ width: 1280, height: 400 });
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(page.getByTestId('interaction-alert')).not.toBeInViewport();
+
+    const overlay = page.getByTestId('interaction-alert-overlay');
+    await expect(overlay).toBeVisible({ timeout: 10000 });
+    // Class and role live on the inner card (the outer div is the fixed wrapper).
+    const card = overlay.locator('.interaction-alert-center-enter');
+    await expect(card).toBeVisible();
+    // The banner owns the single assertive announcement; the overlay is visual only.
+    await expect(card).toHaveAttribute('role', 'group');
+    const center = await overlay.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      return {
+        x: box.x + box.width / 2, y: box.y + box.height / 2,
+        vw: window.innerWidth, vh: window.innerHeight,
+      };
+    });
+    expect(Math.abs(center.x - center.vw / 2)).toBeLessThan(center.vw * 0.1);
+    expect(Math.abs(center.y - center.vh / 2)).toBeLessThan(center.vh * 0.15);
+    await expect(overlay.getByText('високо', { exact: true })).toBeVisible();
+  });
+
+  test('overlay: X dismisses it while the in-flow banner stays', async ({ request, page }) => {
+    await page.goto(`/prescriptions/doctor/${await currentListId(request)}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+    const overlay = page.getByTestId('interaction-alert-overlay');
+    await expect(overlay).toBeVisible({ timeout: 10000 });
+
+    await overlay.getByRole('button', { name: 'Закрити сповіщення' }).click();
+    await expect(overlay).toHaveCount(0);
+    // Persistent context survives: the banner is untouched by the dismissal.
+    await expect(page.getByTestId('interaction-alert')).toBeVisible();
+  });
+
+  test('overlay screenshots at desktop and narrow widths', async ({ request, page }) => {
+    const listId = await currentListId(request);
+    async function freshOverlay(width: number) {
+      // A reload remounts the card and restarts its 10s auto-dismiss timer.
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+      const overlay = page.getByTestId('interaction-alert-overlay');
+      await expect(overlay).toBeVisible({ timeout: 10000 });
+      return overlay;
+    }
+
+    const wide = await freshOverlay(1280);
+    await expect(wide).toHaveScreenshot('interaction-alert-overlay-1280.png', { maxDiffPixels: 200 });
+    const narrow = await freshOverlay(360);
+    await expect(narrow).toHaveScreenshot('interaction-alert-overlay-360.png', { maxDiffPixels: 200 });
+  });
+
   test('medium-only dataset downgrades the banner, then the high set is restored', async ({ request, page }) => {
+    const listId = await currentListId(request);
     const adminRes = await importDataset(request, await loginToken(request, 6), mediumDataset());
     expect(adminRes.ok()).toBeTruthy();
 
@@ -302,6 +396,7 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     await expect(alert).toBeVisible({ timeout: 10000 });
     await expect(alert.getByText('помірно', { exact: true })).toBeVisible();
     await expect(alert.getByText('високо', { exact: true })).toHaveCount(0);
+    await dismissOverlay(page);
 
     await page.setViewportSize({ width: 768, height: 800 });
     await expect(alert).toHaveScreenshot('interaction-alert-medium-768.png', { maxDiffPixels: 200 });
@@ -313,16 +408,23 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     await expect(page.getByTestId('interaction-alert').getByText('високо', { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
-  test('screenshots: reduced-motion, forced-colors and 200% zoom on HIGH', async ({ browser }) => {
-    // HIGH dataset is active again (restored by the previous test).
+  test('screenshots: reduced-motion, forced-colors and 200% zoom on HIGH', async ({ request, browser }) => {
+    // The baselines are HIGH-content: if the previous test failed between its
+    // medium import and the restore, the DB still holds the medium dataset —
+    // re-import HIGH instead of trusting the previous test's cleanup.
+    const listId = await currentListId(request);
+    const reImport = await importDataset(request, await loginToken(request, 6));
+    expect(reImport.ok()).toBeTruthy();
     async function openList(contextOpts: object): Promise<{ ctx: BrowserContext; pg: Page }> {
       const ctx = await browser.newContext({ storageState: '.auth/doctor.json', ...contextOpts });
       const pg = await ctx.newPage();
       await pg.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
       await expect(pg.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
       await expect(pg.getByTestId('interaction-alert')).toBeVisible({ timeout: 10000 });
+      await dismissOverlay(pg);
       return { ctx, pg };
     }
+
 
     const reduced = await openList({ reducedMotion: 'reduce' });
     await expect(reduced.pg.getByTestId('interaction-alert')).toHaveScreenshot(
@@ -345,7 +447,7 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
   });
 
   test('delete ibuprofen unmounts the banner and clears the marks', async ({ request, page }) => {
-    // The list is shared with parallel doctor specs: refetch until the row
+    const listId = await currentListId(request);    // The list is shared with parallel doctor specs: refetch until the row
     // is readable (a concurrent mutation can briefly return an error shape).
     let ibuprofen: any = null;
     for (let attempt = 0; attempt < 5 && !ibuprofen; attempt++) {
@@ -371,5 +473,6 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     await expect(page.getByTestId('interaction-alert')).toHaveCount(0);
     await expect(page.locator('td[data-interaction-warn="true"]')).toHaveCount(0);
     await expect(page.locator('td[data-interaction-severity]')).toHaveCount(0);
+    suiteCompleted = true;
   });
 });

@@ -6,43 +6,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { PrescriptionInteractionsResponse } from '../../types/medication';
 import { deriveInteractionAlertModel } from './interactionAlertModel';
+import { clearActivePair, setActivePair, showPairInGrid } from './interactionPairFocus';
 import { INTERACTION_SEVERITY } from './interactionSeverity';
 import { useInteractionAlertSignal } from './useInteractionAlertSignal';
 
 function formatShortDate(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function pairCells(itemIdA: string, itemIdB: string): Element[] {
-  const cells: Element[] = [];
-  for (const id of [itemIdA, itemIdB]) {
-    const nameCell = document.querySelector(`[data-item-id="${CSS.escape(id)}"]`);
-    if (!nameCell) continue;
-    cells.push(nameCell);
-    const row = nameCell.closest('tr');
-    if (row) cells.push(...row.querySelectorAll('td[data-interaction-warn="true"]'));
-  }
-  return cells;
-}
-
-function setActivePair(itemIdA: string, itemIdB: string, on: boolean): void {
-  for (const el of pairCells(itemIdA, itemIdB)) {
-    if (on) el.setAttribute('data-active-pair', 'true');
-    else el.removeAttribute('data-active-pair');
-  }
-}
-
-function clearActivePair(): void {
-  for (const el of document.querySelectorAll('[data-active-pair="true"]')) {
-    el.removeAttribute('data-active-pair');
-  }
-}
-
-function showPairInGrid(itemIdA: string, itemIdB: string): void {
-  setActivePair(itemIdA, itemIdB, true);
-  const first = pairCells(itemIdA, itemIdB)[0];
-  if (first) first.scrollIntoView({ block: 'nearest' });
 }
 
 function readStoredExpanded(storageKey: string | null): boolean | null {

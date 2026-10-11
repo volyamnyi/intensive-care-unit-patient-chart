@@ -10,6 +10,7 @@ import { prescriptionApi, vitalSignApi } from '../../api/medication';
 import { printPdfBlob } from '../../lib/printPdf'
 import { useAuth } from '../../services/AuthContext'
 import InteractionAlert from '../../components/prescription/InteractionAlert'
+import InteractionAlertOverlay from '../../components/prescription/InteractionAlertOverlay'
 import PrescriptionGrid, { type GridProps } from '../../components/prescription/PrescriptionGrid'
 import VitalSignGrid from '../../components/prescription/VitalSignGrid'
 import ClosePrescriptionDialog from '../../components/prescription/ClosePrescriptionDialog'
@@ -307,6 +308,8 @@ export default function PrescriptionDetailPage() {
       )}
 
       <InteractionAlert interactions={interactions} listId={id} />
+
+      <InteractionAlertOverlay interactions={interactions} />
 
       <PrescriptionGrid
         items={items}
