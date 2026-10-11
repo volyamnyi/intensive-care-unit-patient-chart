@@ -1,4 +1,4 @@
-import { type APIRequestContext, type Browser, type BrowserContext, type Page } from '@playwright/test';
+﻿import { type APIRequestContext, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/index';
 import { testUser } from '../../helpers/test-users';
 import {
@@ -116,6 +116,11 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     if (await btn.isVisible().catch(() => false)) await btn.click();
     await expect(ov).toHaveCount(0);
   }
+
+  // The overlap period («Період перетину: 09.10–09.10») is anchored to the
+  // run date — every CI day renders different digits and the baselines drift
+  // (caught live: a deterministic 221px diff, threshold 200). Mask the line.
+  const periodMask = (scope: Locator) => scope.locator('p.text-xs').first();
 
   test.beforeAll(async ({ request }) => {
     doctorToken = await getToken(request, 1);
@@ -319,9 +324,9 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     await expect(alert).toBeVisible({ timeout: 10000 });
     await dismissOverlay(page);
 
-    await expect(alert).toHaveScreenshot('interaction-alert-high-1280.png', { maxDiffPixels: 200 });
+    await expect(alert).toHaveScreenshot('interaction-alert-high-1280.png', { maxDiffPixels: 200, mask: [periodMask(alert)] });
     await page.setViewportSize({ width: 360, height: 800 });
-    await expect(alert).toHaveScreenshot('interaction-alert-high-360.png', { maxDiffPixels: 200 });
+    await expect(alert).toHaveScreenshot('interaction-alert-high-360.png', { maxDiffPixels: 200, mask: [periodMask(alert)] });
   });
 
   test('overlay: centered announcement is visible even when scrolled to the bottom', async ({ request, page }) => {
@@ -380,9 +385,9 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     }
 
     const wide = await freshOverlay(1280);
-    await expect(wide).toHaveScreenshot('interaction-alert-overlay-1280.png', { maxDiffPixels: 200 });
+    await expect(wide).toHaveScreenshot('interaction-alert-overlay-1280.png', { maxDiffPixels: 200, mask: [periodMask(wide)] });
     const narrow = await freshOverlay(360);
-    await expect(narrow).toHaveScreenshot('interaction-alert-overlay-360.png', { maxDiffPixels: 200 });
+    await expect(narrow).toHaveScreenshot('interaction-alert-overlay-360.png', { maxDiffPixels: 200, mask: [periodMask(narrow)] });
   });
 
   test('medium-only dataset downgrades the banner, then the high set is restored', async ({ request, page }) => {
@@ -399,7 +404,7 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     await dismissOverlay(page);
 
     await page.setViewportSize({ width: 768, height: 800 });
-    await expect(alert).toHaveScreenshot('interaction-alert-medium-768.png', { maxDiffPixels: 200 });
+    await expect(alert).toHaveScreenshot('interaction-alert-medium-768.png', { maxDiffPixels: 200, mask: [periodMask(alert)] });
 
     // Restore the high set for the tests below (and the shared DB afterwards).
     const restoreRes = await importDataset(request, await loginToken(request, 6));
@@ -428,20 +433,20 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
 
     const reduced = await openList({ reducedMotion: 'reduce' });
     await expect(reduced.pg.getByTestId('interaction-alert')).toHaveScreenshot(
-      'interaction-alert-reduced-motion.png', { maxDiffPixels: 200 },
+      'interaction-alert-reduced-motion.png', { maxDiffPixels: 200, mask: [periodMask(reduced.pg.getByTestId('interaction-alert'))] },
     );
     await reduced.ctx.close();
 
     const forced = await openList({ forcedColors: 'active' });
     await expect(forced.pg.getByTestId('interaction-alert')).toHaveScreenshot(
-      'interaction-alert-forced-colors.png', { maxDiffPixels: 200 },
+      'interaction-alert-forced-colors.png', { maxDiffPixels: 200, mask: [periodMask(forced.pg.getByTestId('interaction-alert'))] },
     );
     await forced.ctx.close();
 
     const zoomed = await openList({});
     await zoomed.pg.evaluate(() => { document.body.style.zoom = '200%'; });
     await expect(zoomed.pg.getByTestId('interaction-alert')).toHaveScreenshot(
-      'interaction-alert-zoom200.png', { maxDiffPixels: 200 },
+      'interaction-alert-zoom200.png', { maxDiffPixels: 200, mask: [periodMask(zoomed.pg.getByTestId('interaction-alert'))] },
     );
     await zoomed.ctx.close();
   });
