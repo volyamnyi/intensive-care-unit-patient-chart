@@ -15,8 +15,10 @@ import {
   type SignalSnapshot,
 } from './useInteractionAlertSignal';
 
-/** Auto-dismiss delay for the centered announcement overlay (exported for tests). */
-export const INTERACTION_OVERLAY_AUTODISMISS_MS = 10_000;
+/* Auto-dismiss delay for the centered announcement overlay (exported for
+ * tests). Owner review-round decision: 6s — long enough to read the pair text,
+ * short enough not to cover the grid. */
+export const INTERACTION_OVERLAY_AUTODISMISS_MS = 6_000;
 
 function formatShortDate(iso: string): string {
   const d = new Date(iso);
