@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { InteractionAlertViewModel } from './interactionAlertModel';
+import { formatShortDate, type InteractionAlertViewModel } from './interactionAlertModel';
 import { INTERACTION_SEVERITY } from './interactionSeverity';
 
 export type InteractionSignal = 'initial' | 'escalated' | 'updated-polite' | 'resolved' | 'stable';
@@ -62,11 +62,6 @@ export function classifyInteractionSignal(
 
 const GENITIVE: Record<string, string> = { critical: 'критичного', high: 'високого', medium: 'помірного', low: 'низького' };
 const NOMINATIVE: Record<string, string> = { critical: 'критичний', high: 'високий', medium: 'помірний', low: 'низький' };
-
-function formatShortDate(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
 
 /** Exact Ukrainian announcement strings for assertive transitions (#355). */
 export function buildAnnounce(vm: InteractionAlertViewModel, signal: InteractionSignal): string | null {

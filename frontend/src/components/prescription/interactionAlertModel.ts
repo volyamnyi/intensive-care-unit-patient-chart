@@ -40,6 +40,12 @@ export function priorityOf(severity: string): { bucket: InteractionBucket; prior
   return { bucket, priority: BUCKET_PRIORITY[bucket] };
 }
 
+/** ISO date → compact `dd.MM` (no year) for the banner/overlay overlap line. */
+export function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 /**
  * Pure derivation: wire response → alert view-model (#350).
  * Dedupes the bidirectional wire (A→B and B→A collapse into one pair,

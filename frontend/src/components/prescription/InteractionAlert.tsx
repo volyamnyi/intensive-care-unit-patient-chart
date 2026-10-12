@@ -5,15 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { PrescriptionInteractionsResponse } from '../../types/medication';
-import { deriveInteractionAlertModel } from './interactionAlertModel';
+import { deriveInteractionAlertModel, formatShortDate } from './interactionAlertModel';
 import { clearActivePair, setActivePair, showPairInGrid } from './interactionPairFocus';
 import { INTERACTION_SEVERITY } from './interactionSeverity';
 import { useInteractionAlertSignal } from './useInteractionAlertSignal';
-
-function formatShortDate(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
 
 function readStoredExpanded(storageKey: string | null): boolean | null {
   if (!storageKey) return null;

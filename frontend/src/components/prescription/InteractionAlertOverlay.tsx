@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { PrescriptionInteractionsResponse } from '../../types/medication';
-import { deriveInteractionAlertModel } from './interactionAlertModel';
+import { deriveInteractionAlertModel, formatShortDate } from './interactionAlertModel';
 import { showPairInGrid } from './interactionPairFocus';
 import { INTERACTION_SEVERITY } from './interactionSeverity';
 import {
@@ -19,11 +19,6 @@ import {
  * tests). Owner review-round decision: 6s — long enough to read the pair text,
  * short enough not to cover the grid. */
 export const INTERACTION_OVERLAY_AUTODISMISS_MS = 6_000;
-
-function formatShortDate(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
 
 /**
  * Centered announcement overlay for detected drug interactions (#350–#355 fix).
