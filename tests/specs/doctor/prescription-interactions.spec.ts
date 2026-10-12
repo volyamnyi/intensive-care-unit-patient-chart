@@ -376,9 +376,15 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
   });
 
   test('overlay screenshots at desktop and narrow widths', async ({ request, page }) => {
+    // Freeze page time before any navigation: the 6s auto-dismiss timer must
+    // never fire between the overlay appearing and the screenshot capture —
+    // deterministic on slow CI (review-round R8). The overlap dates come from
+    // the dataset ISO strings, so frozen `Date` does not alter the content.
+    await page.clock.install({ time: new Date() });
     const listId = await currentListId(request);
     async function freshOverlay(width: number) {
-      // A reload remounts the card and restarts its 10s auto-dismiss timer.
+      // A reload remounts the card and re-shows the same signature — the
+      // dismissed set is in-memory only (owner-accepted design).
       await page.setViewportSize({ width, height: 800 });
       await page.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
       await expect(page.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
