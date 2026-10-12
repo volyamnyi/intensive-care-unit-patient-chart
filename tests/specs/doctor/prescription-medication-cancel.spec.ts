@@ -116,8 +116,17 @@ async function openMenuOnCell(page: Page, row: ReturnType<Page['locator']>, text
   // Cells are 68x32; a first-column cell's center can sit under the sticky
   // «Препарат/Метод» column (z-10), so the contextmenu would hit the sticky
   // overlay instead of the td. Click near the cell's right edge instead.
-  await cell.click({ button: 'right', position: { x: 50, y: 16 } });
+  // A re-render (background refetch) can swallow the right-click — retry the
+  // menu opening a bounded number of times before failing (same pattern as
+  // the wizard helper: Escape closes any stray dialog between attempts).
   const menu = page.getByRole('menu', { name: MENU_LABEL });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await cell.click({ button: 'right', position: { x: 50, y: 16 } });
+    if (await menu.isVisible({ timeout: 1500 }).catch(() => false)) {
+      return { cell, menu };
+    }
+    await page.keyboard.press('Escape').catch(() => {});
+  }
   await expect(menu).toBeVisible();
   return { cell, menu };
 }
