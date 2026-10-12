@@ -112,6 +112,9 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
   // (the committed banner baselines pre-date the overlay).
   async function dismissOverlay(pg: Page) {
     const ov = pg.getByTestId('interaction-alert-overlay');
+    // The overlay renders when the interactions fetch resolves — it may not be
+    // there yet when the banner (fed by the same response) already is.
+    await ov.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
     const btn = ov.getByRole('button', { name: 'Закрити сповіщення' });
     if (await btn.isVisible().catch(() => false)) await btn.click();
     await expect(ov).toHaveCount(0);
@@ -413,37 +416,52 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
     await expect(page.getByTestId('interaction-alert').getByText('високо', { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
-  test('screenshots: reduced-motion, forced-colors and 200% zoom on HIGH', async ({ request, browser }) => {
-    // The baselines are HIGH-content: if the previous test failed between its
-    // medium import and the restore, the DB still holds the medium dataset —
-    // re-import HIGH instead of trusting the previous test's cleanup.
+  // Opens the list in a fresh context with the given context options, waits
+  // for the banner and dismisses the overlay (it would leak into screenshots).
+  async function openList(
+    request: APIRequestContext,
+    browser: Browser,
+    contextOpts: object,
+  ): Promise<{ ctx: BrowserContext; pg: Page }> {
     const listId = await currentListId(request);
+    const ctx = await browser.newContext({ storageState: '.auth/doctor.json', ...contextOpts });
+    const pg = await ctx.newPage();
+    await pg.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
+    await expect(pg.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
+    await expect(pg.getByTestId('interaction-alert')).toBeVisible({ timeout: 10000 });
+    await dismissOverlay(pg);
+    return { ctx, pg };
+  }
+
+  // The baselines are HIGH-content: if the medium-downgrade test failed between
+  // its medium import and the restore, the DB still holds the medium dataset —
+  // re-import HIGH instead of trusting the previous test's cleanup.
+  async function ensureHighDataset(request: APIRequestContext) {
     const reImport = await importDataset(request, await loginToken(request, 6));
     expect(reImport.ok()).toBeTruthy();
-    async function openList(contextOpts: object): Promise<{ ctx: BrowserContext; pg: Page }> {
-      const ctx = await browser.newContext({ storageState: '.auth/doctor.json', ...contextOpts });
-      const pg = await ctx.newPage();
-      await pg.goto(`/prescriptions/doctor/${listId}`, { waitUntil: 'domcontentloaded' });
-      await expect(pg.getByText('Статус: Відкрито')).toBeVisible({ timeout: 15000 });
-      await expect(pg.getByTestId('interaction-alert')).toBeVisible({ timeout: 10000 });
-      await dismissOverlay(pg);
-      return { ctx, pg };
-    }
+  }
 
-
-    const reduced = await openList({ reducedMotion: 'reduce' });
+  test('screenshots: reduced-motion on HIGH', async ({ request, browser }) => {
+    await ensureHighDataset(request);
+    const reduced = await openList(request, browser, { reducedMotion: 'reduce' });
     await expect(reduced.pg.getByTestId('interaction-alert')).toHaveScreenshot(
       'interaction-alert-reduced-motion.png', { maxDiffPixels: 200, mask: [periodMask(reduced.pg.getByTestId('interaction-alert'))] },
     );
     await reduced.ctx.close();
+  });
 
-    const forced = await openList({ forcedColors: 'active' });
+  test('screenshots: forced-colors on HIGH', async ({ request, browser }) => {
+    await ensureHighDataset(request);
+    const forced = await openList(request, browser, { forcedColors: 'active' });
     await expect(forced.pg.getByTestId('interaction-alert')).toHaveScreenshot(
       'interaction-alert-forced-colors.png', { maxDiffPixels: 200, mask: [periodMask(forced.pg.getByTestId('interaction-alert'))] },
     );
     await forced.ctx.close();
+  });
 
-    const zoomed = await openList({});
+  test('screenshots: 200% zoom on HIGH', async ({ request, browser }) => {
+    await ensureHighDataset(request);
+    const zoomed = await openList(request, browser, {});
     await zoomed.pg.evaluate(() => { document.body.style.zoom = '200%'; });
     await expect(zoomed.pg.getByTestId('interaction-alert')).toHaveScreenshot(
       'interaction-alert-zoom200.png', { maxDiffPixels: 200, mask: [periodMask(zoomed.pg.getByTestId('interaction-alert'))] },
@@ -452,7 +470,8 @@ test.describe.serial('Drug interaction warnings (#304)', () => {
   });
 
   test('delete ibuprofen unmounts the banner and clears the marks', async ({ request, page }) => {
-    const listId = await currentListId(request);    // The list is shared with parallel doctor specs: refetch until the row
+    const listId = await currentListId(request);
+    // The list is shared with parallel doctor specs: refetch until the row
     // is readable (a concurrent mutation can briefly return an error shape).
     let ibuprofen: any = null;
     for (let attempt = 0; attempt < 5 && !ibuprofen; attempt++) {
