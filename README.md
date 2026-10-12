@@ -554,7 +554,7 @@ icu-patient-chart/
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (101 files: 100 specs + auth setup, 464 tests) |
+| `npx playwright test` | Run all E2E tests (101 files: 100 specs + auth setup, 466 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -579,7 +579,7 @@ CI jobs run in parallel when triggered; if any fails, fix and repeat until every
 - **Backend tests**: 209 test files across the multi-module reactor — common (41) + icu-chart (87) + medication-sheet (23) + prosthesis-manufacturing (57) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 351 tests — `mvn test -Pintegration-test`
 - **Frontend Vitest tests**: 985 tests (108 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 101 files (464 tests: 100 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **E2E Playwright tests**: 101 files (466 tests: 100 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
