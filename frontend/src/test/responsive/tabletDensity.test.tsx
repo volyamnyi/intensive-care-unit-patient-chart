@@ -24,9 +24,17 @@ describe('Tablet density classes — Phase 1 contract', () => {
 
   it('PrescriptionSpreadsheet has md density + sticky shadow', async () => {
     const src = await import('../../components/prescription/PrescriptionSpreadsheet?raw');
-    expect((src as { default: string }).default).toContain('md:min-w-[140px]');
+    expect((src as { default: string }).default).toContain('min-w-[180px] lg:min-w-[220px]');
     expect((src as { default: string }).default).toContain('shadow-[2px_0_4px_rgba(0,0,0,0.05)]');
     expect((src as { default: string }).default).toContain('md:table-fixed');
+  });
+
+  it('PrescriptionSpreadsheet name cell has wrap guards and full-text title', async () => {
+    const src = await import('../../components/prescription/PrescriptionSpreadsheet?raw');
+    const s = (src as { default: string }).default;
+    expect(s).toContain('title={item.medicineName}');
+    expect(s).toContain('[overflow-wrap:anywhere]');
+    expect(s).toContain('[hyphens:auto]');
   });
 
   it('VitalSignGrid has md density + sticky shadow', async () => {
