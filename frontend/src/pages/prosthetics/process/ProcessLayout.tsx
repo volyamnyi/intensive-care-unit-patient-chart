@@ -38,19 +38,19 @@ export default function ProcessLayout() {
             </NavLink>
           ))}
         </nav>
-        <main className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4">
           <p className="mb-2 text-xs text-muted-foreground">Процес #{id}</p>
           <Outlet />
-        </main>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex h-screen w-full">
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <Outlet />
-      </main>
+      </div>
       {/* Tablet band (640–1023px) shows a collapsed icon rail; labels return ≥1024px */}
       <nav className="flex w-14 shrink-0 flex-col gap-1 overflow-y-auto border-l bg-muted/30 p-2 lg:w-56 lg:p-3">
         <div className="mb-4 hidden text-sm text-muted-foreground lg:block">

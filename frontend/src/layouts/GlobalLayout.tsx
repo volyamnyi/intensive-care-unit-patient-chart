@@ -17,6 +17,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 
 import AppSidebar, { AppNavList } from '../components/navigation/AppSidebar';
 import Breadcrumbs from '../components/navigation/Breadcrumbs';
+import { PageContainer } from './PageContainer';
+import type { PageContainerProps } from './PageContainer';
 
 function roleLabel(role?: string) {
   if (role === 'HEAD_OF_DEPARTMENT') return 'Завідувач відділення';
@@ -96,63 +98,75 @@ export default function GlobalLayout() {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
+  const contentWidth: PageContainerProps['width'] = pathname.startsWith('/prosthetics/process')
+    ? 'full'       /* ProcessLayout renders its own rail + padding */
+    : pathname.startsWith('/icu/doctor/create-card') || pathname.startsWith('/select')
+      ? 'narrow'
+      : 'wide';    /* робочі сторінки проекту — wide (120rem cap, не розтягування) */
+
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
+        {/* Header: повна ширина, але вміст — в межах PageContainer (R3) */}
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex h-16 items-center gap-2 px-[max(1rem,env(safe-area-inset-left))] sm:px-6">
-            {isMobile && (
-              <Button
-                variant="ghost"
-                className="size-11 shrink-0"
-                aria-label="Відкрити навігацію"
-                onClick={() => setNavSheetOpen(true)}
-              >
-                <Menu className="size-5" />
-              </Button>
-            )}
-            <RouterLink to={app.homePath} className="flex min-w-0 flex-1 items-center gap-1.5 no-underline">
-              <img
-                src={mode === 'dark' ? '/superhumans-white.svg' : '/superhumans.svg'}
-                alt="Superhumans"
-                className="h-9 w-auto shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="font-rubik text-lg font-extrabold leading-tight tracking-tight text-foreground truncate">
-                  {app.title}
+          <PageContainer width={contentWidth} className="px-[max(1rem,env(safe-area-inset-left))] sm:px-6">
+            <div className="flex h-16 items-center gap-2">
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  className="size-11 shrink-0"
+                  aria-label="Відкрити навігацію"
+                  onClick={() => setNavSheetOpen(true)}
+                >
+                  <Menu className="size-5" />
+                </Button>
+              )}
+              <RouterLink to={app.homePath} className="flex min-w-0 flex-1 items-center gap-1.5 no-underline">
+                <img
+                  src={mode === 'dark' ? '/superhumans-white.svg' : '/superhumans.svg'}
+                  alt="Superhumans"
+                  className="h-9 w-auto shrink-0"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="font-rubik text-lg font-extrabold leading-tight tracking-tight text-foreground truncate">
+                    {app.title}
+                  </div>
+                  <div className="font-mulish text-[10px] leading-none tracking-wide text-muted-foreground uppercase truncate">
+                    {app.subtitle}
+                  </div>
                 </div>
-                <div className="font-mulish text-[10px] leading-none tracking-wide text-muted-foreground uppercase truncate">
-                  {app.subtitle}
-                </div>
-              </div>
-            </RouterLink>
+              </RouterLink>
 
-            <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label="Меню користувача"
-                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none hover:text-primary hover:bg-primary/8 focus-visible:ring-2 focus-visible:ring-ring sm:size-auto sm:p-2"
-              >
-                <UserCircle className="size-5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled className="font-rubik">{user?.fullName}</DropdownMenuItem>
-                <DropdownMenuItem disabled className="font-rubik text-muted-foreground">{roleLabel(user?.role)}</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>Вийти</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              <ThemeToggle />
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label="Меню користувача"
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none hover:text-primary hover:bg-primary/8 focus-visible:ring-2 focus-visible:ring-ring sm:size-auto sm:p-2"
+                >
+                  <UserCircle className="size-5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled className="font-rubik">{user?.fullName}</DropdownMenuItem>
+                  <DropdownMenuItem disabled className="font-rubik text-muted-foreground">{roleLabel(user?.role)}</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>Вийти</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </PageContainer>
         </header>
 
         {isMobile && <MobileNavSheet open={navSheetOpen} onOpenChange={setNavSheetOpen} />}
 
-        <main className="flex-1">
-          <div className="mx-auto w-full max-w-7xl px-4 mt-3 mb-4 fade-in-up sm:px-6">
-            <Breadcrumbs />
-            <Outlet />
+        <main className="flex-1 min-w-0">
+          {/* 'fade-in-up' — на wrapper, не на самому контейнері (R1) */}
+          <div className="fade-in-up">
+            <PageContainer width={contentWidth} className="mt-3 mb-4">
+              <Breadcrumbs />
+              <Outlet />
+            </PageContainer>
           </div>
         </main>
       </div>
