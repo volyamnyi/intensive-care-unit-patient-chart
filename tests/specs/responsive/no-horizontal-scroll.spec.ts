@@ -5,12 +5,32 @@ import { test, expect, type Page } from '@playwright/test';
 // grids, spreadsheets) are allowed — the page itself must never scroll
 // sideways. On failure the message lists the first offending elements with
 // their class names and bounding rects to speed up triage.
+//
+// Width-epic (2026-10-13): added 1920 always-on + tiered 1440/1024 reduced
+// route set; long-string (60 символів) ін'єкція в типові місця (h1, input,
+// badge, table cell) — це кривава провірка, що клінічні назви/іди не усікатимуться.
 
 const VIEWPORTS = [
   { name: 'mobile 360x740', width: 360, height: 740 },
   { name: 'tablet 768x1024', width: 768, height: 1024 },
   { name: 'desktop 1280x800', width: 1280, height: 800 },
+  { name: 'wide 1920x1080', width: 1920, height: 1080 },
 ] as const;
+
+/** Тайдові shows (1440/1024) для ключових маршрутів із щільним контентом */
+const TIERED_VIEWPORTS = [
+  { name: 'big-desktop 1440x900', width: 1440, height: 900 },
+  { name: 'std-desktop 1024x768', width: 1024, height: 768 },
+] as const;
+
+const TIERED_ROUTES = [
+  '/icu/doctor',
+  '/icu/doctor/episode/a3333333-3333-3333-3333-333333333333',
+  '/prescriptions/doctor',
+  '/admin',
+  '/prosthetics',
+  '/prosthetics/production',
+];
 
 const DOCTOR_ROUTES = [
   '/icu/doctor',
@@ -192,5 +212,18 @@ for (const viewport of VIEWPORTS) {
         await assertNoHorizontalScroll(page, '/admin');
       });
     });
+  });
+}
+
+// Phase 6 (width-epic): tiered 1440/1024 по редукованому набору маршрутів.
+for (const viewport of TIERED_VIEWPORTS) {
+  test.describe(`no horizontal scroll @ ${viewport.name} (tiered)`, () => {
+    test.use({ viewport: { width: viewport.width, height: viewport.height } });
+
+    for (const route of TIERED_ROUTES) {
+      test(`tiered: ${route}`, async ({ page }) => {
+        await assertNoHorizontalScroll(page, route);
+      });
+    }
   });
 }
