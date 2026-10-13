@@ -94,7 +94,7 @@ export default function TemplateSelectPage() {
 
   if (!draft.orderId) {
     return (
-      <div className="container mx-auto max-w-2xl py-8">
+      <div className="max-w-page-narrow mx-auto py-8">
         <div className="mb-6 flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate('/prosthetics/new/select-order')}>
             <ChevronLeft className="size-4" />
@@ -112,7 +112,7 @@ export default function TemplateSelectPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl py-8">
+    <div className="max-w-page-narrow mx-auto py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold">Вибір технологічного маршруту</h1>

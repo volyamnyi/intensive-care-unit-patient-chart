@@ -55,7 +55,7 @@ export default function ProcessOverview() {
 
   if (loading) {
     return (
-      <div className="container mx-auto max-w-[1400px] px-6 py-8">
+      <div className="max-w-page-wide mx-auto px-6 py-8">
         <div className="space-y-6">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-8 w-48" />
@@ -71,7 +71,7 @@ export default function ProcessOverview() {
 
   if (error || !instance || !template) {
     return (
-      <div className="container mx-auto max-w-[1400px] px-6 py-16 text-center">
+      <div className="max-w-page-wide mx-auto px-6 py-16 text-center">
         <h1 className="font-display text-xl font-semibold">Процес не знайдено</h1>
         <Button className="mt-4" onClick={() => navigate('/prosthetics')}>
           До панелі управління
@@ -83,7 +83,7 @@ export default function ProcessOverview() {
   const patientName = instance.patientPib ?? instance.patientId;
 
   return (
-    <div className="container mx-auto max-w-[1400px] px-6 py-8">
+    <div className="max-w-page-wide mx-auto px-6 py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">Огляд технологічної карти</h1>

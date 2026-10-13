@@ -124,7 +124,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="max-w-page-wide mx-auto w-full px-4 py-6 sm:px-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <Wrench className="size-8 text-mint" />

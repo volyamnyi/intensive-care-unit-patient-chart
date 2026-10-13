@@ -99,7 +99,7 @@ export default function OrderSelectPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-2xl py-8">
+    <div className="max-w-page-narrow mx-auto py-8">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/prosthetics/new/select-patient')}>
           <ChevronLeft className="size-4" />
