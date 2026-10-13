@@ -70,8 +70,8 @@ export default function DocumentHeader({
             <b>Вік пацієнта:</b> {patientAge}
           </span>
         )}
-        <span className={cn('ml-auto max-w-[320px] truncate')}>
-          <b>Пацієнт:</b> {patientName || '\u2014'}
+        <span className={cn('ml-auto max-w-[320px] truncate')} title={patientName || undefined}>
+          <b>Пацієнт:</b> {patientName || '—'}
         </span>
       </div>
     </div>
