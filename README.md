@@ -1,4 +1,4 @@
-﻿# Карта інтенсивної терапії (ICU Patient Chart)
+# Карта інтенсивної терапії (ICU Patient Chart)
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk)](https://jdk.java.net/25/)
@@ -578,8 +578,8 @@ CI jobs run in parallel when triggered; if any fails, fix and repeat until every
 ### Testing Summary
 - **Backend tests**: 209 test files across the multi-module reactor — common (41) + icu-chart (87) + medication-sheet (23) + prosthesis-manufacturing (57) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
 - **Backend integration tests**: 351 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 985 tests (108 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 101 files (466 tests: 100 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Frontend Vitest tests**: 990 tests (108 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 101 files (493 tests: 100 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
