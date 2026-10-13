@@ -59,6 +59,11 @@
   --breakpoint-md: 48rem;
   --breakpoint-lg: 64rem;
   --breakpoint-xl: 80rem;
+
+  /* Width tokens (width epic, 2026-10-13): max-w-page{-narrow,-wide} */
+  --container-page: 80rem;        /* 1280px — page default (design baseline) */
+  --container-page-wide: 120rem;  /* 1920px — wide (working routes) */
+  --container-page-narrow: 42rem; /*  672px — narrow (small forms/settlements) */
 }
 
 /* Chart palette (brand-derived, epic #271): created / completed / failed. */
