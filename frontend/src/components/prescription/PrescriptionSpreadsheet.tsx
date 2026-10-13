@@ -450,14 +450,14 @@ export default function PrescriptionSpreadsheet({
           </p>
         </div>
       ) : (
-        <div className="relative rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-auto">
+        <div className="relative rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-auto [scrollbar-gutter:stable]">
           {/* Tablet scroll affordance: right-edge gradient fade */}
           <div aria-hidden className="pointer-events-none sticky right-0 top-0 z-[5] float-right h-full w-8 bg-gradient-to-l from-border/40 to-transparent" />
           <table className="w-full border-collapse md:table-fixed" style={{ minWidth: 200 + visibleDates.length * 300 }}>
             <thead>
               <tr>
                 <th
-                  className="sticky left-0 bg-card z-20 min-w-[180px] md:min-w-[140px] p-1.5 md:p-1 border border-border text-left shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
+                  className="sticky left-0 bg-card z-20 min-w-[180px] lg:min-w-[220px] p-1.5 md:p-1 border border-border text-left shadow-[2px_0_4px_rgba(0,0,0,0.05)]"
                   style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
                 >
                   <span className="text-[10px] font-bold">Препарат / Метод</span>
@@ -534,7 +534,7 @@ export default function PrescriptionSpreadsheet({
                 <tr key={item.id}>
                   <td
                     data-item-id={item.id}
-                    className={`sticky left-0 bg-card z-10 p-1 min-w-[180px] md:min-w-[140px] border border-border shadow-[2px_0_4px_rgba(0,0,0,0.05)]${itemSev ? ` ${NAME_ACCENT[itemSev] ?? ''}` : ''}`}
+                    className={`sticky left-0 bg-card z-10 p-1 min-w-[180px] lg:min-w-[220px] border border-border shadow-[2px_0_4px_rgba(0,0,0,0.05)]${itemSev ? ` ${NAME_ACCENT[itemSev] ?? ''}` : ''}`}
                     style={{ borderRightWidth: 2, borderRightColor: '#94a3b8' }}
                   >
                     <div className="flex items-start gap-0.5">
@@ -550,7 +550,12 @@ export default function PrescriptionSpreadsheet({
                         </Button>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className={itemSev ? 'text-sm font-semibold text-[#7F1D1D] dark:text-[#FCA5A5]' : 'text-sm font-semibold'}>
+                        <p
+                          title={item.medicineName}
+                          className={itemSev
+                            ? 'text-sm font-semibold text-[#7F1D1D] dark:text-[#FCA5A5] [overflow-wrap:anywhere] [hyphens:auto]'
+                            : 'text-sm font-semibold [overflow-wrap:anywhere] [hyphens:auto]'}
+                        >
                           {ItemIcon && <ItemIcon aria-hidden className="mr-1 inline size-3.5 align-[-2px]" />}
                           {item.medicineName}
                         </p>
