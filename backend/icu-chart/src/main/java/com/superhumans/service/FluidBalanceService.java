@@ -9,6 +9,7 @@ import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.icu.entity.*;
+import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.mapper.FluidBalanceMapper;
 import com.superhumans.icu.repository.ClinicalDayRepository;
 import com.superhumans.icu.repository.FluidBalanceRepository;
@@ -53,6 +54,7 @@ public class FluidBalanceService {
     public List<FluidBalanceResponse> recalculate(UUID clinicalDayId, Long userId) {
         ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
                 .orElseThrow(() -> new RuntimeException("Clinical day not found: " + clinicalDayId));
+        assertNotLocked(day);
 
         fluidBalanceRepository.deleteByClinicalDayId(clinicalDayId);
 
@@ -134,6 +136,15 @@ public class FluidBalanceService {
                 .map(fluidBalanceMapper::toResponse).collect(Collectors.toList());
         enrichWithCategoryBreakdowns(clinicalDayId, responses);
         return responses;
+    }
+
+    /** Signed/closed days are immutable — same rule as every other ICU child service. */
+    private void assertNotLocked(ClinicalDay day) {
+        if (day.getStatus() == ClinicalDayStatus.NURSE_SIGNED
+                || day.getStatus() == ClinicalDayStatus.DOCTOR_SIGNED
+                || day.getStatus() == ClinicalDayStatus.CLOSED) {
+            throw new DocumentLockedException("Clinical day is signed and cannot be modified");
+        }
     }
 
     private void enrichWithCategoryBreakdowns(UUID clinicalDayId, List<FluidBalanceResponse> responses) {

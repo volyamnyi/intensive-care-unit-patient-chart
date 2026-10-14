@@ -372,16 +372,18 @@ public class ClinicalDayService {
             UUID rootId = UUID.randomUUID();
             try (var correlation = installJobCorrelationScope();
                  var operation = auditEmitter.beginOperation(rootId)) {
-                day.setStatus(ClinicalDayStatus.CLOSED);
-                day.setClosedAt(LocalDateTime.now());
-                day.setUpdatedBy(0L);
-                clinicalDayRepository.save(day);
+                // Recalculate while the day is still OPEN: recalculate() enforces
+                // the day lock, and the auto-close flow owns the closing write.
                 try {
                     fluidBalanceService.recalculate(day.getId(), 0L);
                 } catch (Exception e) {
                     log.warn("Failed to recalculate fluid balance for auto-closed day {}: {}",
                             day.getId(), e.getMessage());
                 }
+                day.setStatus(ClinicalDayStatus.CLOSED);
+                day.setClosedAt(LocalDateTime.now());
+                day.setUpdatedBy(0L);
+                clinicalDayRepository.save(day);
                 try {
                     pdfGeneratorService.generatePdf(day.getId(), 0L);
                     log.info("Auto-generated PDF for auto-closed clinical day {}", day.getId());

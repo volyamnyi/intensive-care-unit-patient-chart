@@ -2,6 +2,7 @@ package com.superhumans.service;
 
 import com.superhumans.dto.FluidBalanceResponse;
 import com.superhumans.icu.entity.*;
+import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.mapper.FluidBalanceMapper;
 import com.superhumans.icu.repository.ClinicalDayRepository;
@@ -209,5 +210,18 @@ class FluidBalanceServiceTest {
 
         assertThatThrownBy(() -> fluidBalanceService.recalculate(clinicalDayId, userId))
                 .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void recalculate_whenDaySigned_throwsDocumentLocked() {
+        clinicalDay.setStatus(ClinicalDayStatus.DOCTOR_SIGNED);
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+
+        assertThatThrownBy(() -> fluidBalanceService.recalculate(clinicalDayId, userId))
+                .isInstanceOf(DocumentLockedException.class)
+                .hasMessageContaining("signed");
+
+        verify(fluidBalanceRepository, never()).deleteByClinicalDayId(any());
+        verify(fluidBalanceRepository, never()).saveAll(anyList());
     }
 }
