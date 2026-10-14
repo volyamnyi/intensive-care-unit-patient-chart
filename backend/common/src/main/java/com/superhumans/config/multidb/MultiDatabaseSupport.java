@@ -62,6 +62,18 @@ final class MultiDatabaseSupport {
         }
     }
 
+    /**
+     * SQL echo for local debugging, enabled only via {@code APP_JPA_LOG_SQL}.
+     * {@code hibernate.show_sql} writes straight to {@code System.out} — it
+     * bypasses the logging system entirely, so the prod profile's
+     * {@code org.hibernate.SQL: WARN} override cannot silence it. It must
+     * therefore never default to on.
+     */
+    static boolean resolveLogSql(java.util.function.Function<String, String> env) {
+        String raw = env.apply("APP_JPA_LOG_SQL");
+        return raw != null && Boolean.parseBoolean(raw.trim());
+    }
+
     static SpringLiquibase liquibase(DataSource dataSource, String changeLog) {
         SpringLiquibase liquibase = new SpringLiquibase();
         liquibase.setDataSource(dataSource);
@@ -76,7 +88,7 @@ final class MultiDatabaseSupport {
         entityManagerFactory.setPackagesToScan(packagesToScan);
         entityManagerFactory.setPersistenceProviderClass(HibernatePersistenceProvider.class);
         entityManagerFactory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        entityManagerFactory.setJpaProperties(jpaProperties());
+        entityManagerFactory.setJpaProperties(jpaProperties(resolveLogSql(System::getenv)));
         return entityManagerFactory;
     }
 
@@ -84,7 +96,7 @@ final class MultiDatabaseSupport {
         return new JpaTransactionManager(entityManagerFactory);
     }
 
-    private static Properties jpaProperties() {
+    static Properties jpaProperties(boolean logSql) {
         Properties properties = new Properties();
         properties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         properties.setProperty("hibernate.hbm2ddl.auto", "none");
@@ -92,10 +104,11 @@ final class MultiDatabaseSupport {
                 "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
         properties.setProperty("hibernate.implicit_naming_strategy",
                 "org.springframework.boot.hibernate.SpringImplicitNamingStrategy");
-        properties.setProperty("hibernate.show_sql", "true");
-        properties.setProperty("hibernate.format_sql", "true");
-        properties.setProperty("hibernate.use_sql_comments", "true");
-        properties.setProperty("hibernate.generate_statistics", "true");
+        if (logSql) {
+            properties.setProperty("hibernate.show_sql", "true");
+            properties.setProperty("hibernate.format_sql", "true");
+            properties.setProperty("hibernate.use_sql_comments", "true");
+        }
         return properties;
     }
 }

@@ -1,8 +1,12 @@
 package com.superhumans.config.multidb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
+import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
 
@@ -38,5 +42,38 @@ class MultiDatabaseSupportTest {
     void resolvePoolMax_honoursOverride() {
         Map<String, String> env = Map.of("APP_DATASOURCE_POOL_MAX", " 2 ");
         assertEquals(2, MultiDatabaseSupport.resolvePoolMax(env::get));
+    }
+
+    @Test
+    void resolveLogSql_defaultsWhenUnset() {
+        assertFalse(MultiDatabaseSupport.resolveLogSql(key -> null));
+    }
+
+    @Test
+    void resolveLogSql_defaultsWhenBlank() {
+        assertFalse(MultiDatabaseSupport.resolveLogSql(key -> "   "));
+    }
+
+    @Test
+    void resolveLogSql_enabledByEnv() {
+        assertTrue(MultiDatabaseSupport.resolveLogSql(key -> " true "));
+    }
+
+    @Test
+    void jpaProperties_sqlEchoOffByDefault() {
+        Properties properties = MultiDatabaseSupport.jpaProperties(false);
+        assertNull(properties.getProperty("hibernate.show_sql"));
+        assertNull(properties.getProperty("hibernate.format_sql"));
+        assertNull(properties.getProperty("hibernate.use_sql_comments"));
+        assertNull(properties.getProperty("hibernate.generate_statistics"));
+    }
+
+    @Test
+    void jpaProperties_sqlEchoOnlyWhenAsked() {
+        Properties properties = MultiDatabaseSupport.jpaProperties(true);
+        assertEquals("true", properties.getProperty("hibernate.show_sql"));
+        assertEquals("true", properties.getProperty("hibernate.format_sql"));
+        assertEquals("true", properties.getProperty("hibernate.use_sql_comments"));
+        assertNull(properties.getProperty("hibernate.generate_statistics"));
     }
 }
