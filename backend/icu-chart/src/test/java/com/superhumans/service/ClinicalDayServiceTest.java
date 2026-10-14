@@ -66,6 +66,9 @@ class ClinicalDayServiceTest {
     @Mock
     private FluidBalanceService fluidBalanceService;
 
+    @Mock
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     @InjectMocks
     private ClinicalDayService clinicalDayService;
 
@@ -328,10 +331,12 @@ class ClinicalDayServiceTest {
         ClinicalDay day2 = new ClinicalDay();
         day2.setId(day2Id);
         day2.setEpisode(ep2);
-        day2.setStatus(ClinicalDayStatus.NURSE_SIGNED);
+        day2.setStatus(ClinicalDayStatus.REOPENED);
         day2.setVersion(0);
 
         when(clinicalDayRepository.findDaysToAutoClose(any())).thenReturn(List.of(day1, day2));
+        when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(day1));
+        when(clinicalDayRepository.findById(day2Id)).thenReturn(Optional.of(day2));
         when(clinicalDayRepository.save(any(ClinicalDay.class))).thenAnswer(i -> i.getArgument(0));
         when(auditEmitter.beginOperation(any())).thenAnswer(
                 invocation -> com.superhumans.audit.AuditOperationContext.begin(
@@ -343,6 +348,60 @@ class ClinicalDayServiceTest {
         verify(auditService, times(2)).logAction(eq("ClinicalDay"), any(), eq("AUTO_CLOSE"), eq(0L));
         verify(pdfGeneratorService, times(2)).generatePdf(any(UUID.class), eq(0L));
         verify(auditEmitter, times(2)).emit(eq("icu"), any());
+    }
+
+    @Test
+    void autoCloseExpiredDays_failureOfOneDayIsIsolatedAndAudited() {
+        ClinicalDay day1 = new ClinicalDay();
+        day1.setId(dayId);
+        day1.setEpisode(testEpisode);
+        day1.setStatus(ClinicalDayStatus.OPEN);
+        day1.setVersion(0);
+
+        UUID day2Id = UUID.randomUUID();
+        Episode ep2 = new Episode();
+        ep2.setId(UUID.randomUUID());
+        ClinicalDay day2 = new ClinicalDay();
+        day2.setId(day2Id);
+        day2.setEpisode(ep2);
+        day2.setStatus(ClinicalDayStatus.OPEN);
+        day2.setVersion(0);
+
+        when(clinicalDayRepository.findDaysToAutoClose(any())).thenReturn(List.of(day1, day2));
+        // Day 1 blows up when its unit of work re-loads it.
+        when(clinicalDayRepository.findById(dayId)).thenThrow(new RuntimeException("day 1 vanished"));
+        when(clinicalDayRepository.findById(day2Id)).thenReturn(Optional.of(day2));
+        when(clinicalDayRepository.save(any(ClinicalDay.class))).thenAnswer(i -> i.getArgument(0));
+        when(auditEmitter.beginOperation(any())).thenAnswer(
+                invocation -> com.superhumans.audit.AuditOperationContext.begin(
+                        invocation.getArgument(0)));
+
+        clinicalDayService.autoCloseExpiredDays();
+
+        // Day 2 is fully processed despite day 1's failure…
+        verify(clinicalDayRepository, times(1)).save(any(ClinicalDay.class));
+        verify(auditService, times(1)).logAction(eq("ClinicalDay"), eq(day2Id), eq("AUTO_CLOSE"), eq(0L));
+        verify(pdfGeneratorService, times(1)).generatePdf(day2Id, 0L);
+        // …and day 1 gets exactly one FAILURE audit event (in its own surviving tx).
+        verify(auditEmitter, times(2)).emit(eq("icu"), any());
+    }
+
+    @Test
+    void escalateUnsignedDays_escalatesEndedUnsignedDays() {
+        ClinicalDay day = new ClinicalDay();
+        day.setId(dayId);
+        day.setEpisode(testEpisode);
+        day.setStatus(ClinicalDayStatus.NURSE_SIGNED);
+        day.setVersion(0);
+
+        when(clinicalDayRepository.findDaysToEscalate(any(), any())).thenReturn(List.of(day));
+        when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(day));
+
+        clinicalDayService.escalateUnsignedDays();
+
+        verify(auditService).logAction("ClinicalDay", dayId, "ESCALATE", 0L);
+        verify(auditEmitter).emit(eq("icu"), any());
+        verify(emailService).sendEscalationIfUnsigned(day);
     }
 
     @Test

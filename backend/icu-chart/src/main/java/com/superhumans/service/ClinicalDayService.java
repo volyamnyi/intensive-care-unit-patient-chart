@@ -17,7 +17,10 @@ import com.superhumans.icu.repository.EpisodeRepository;
 import com.superhumans.icu.repository.HourlyRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,6 +47,20 @@ public class ClinicalDayService {
     private final FluidBalanceService fluidBalanceService;
     private final PdfGeneratorService pdfGeneratorService;
     private final DomainAuditEmitter auditEmitter;
+    /** The @Primary chained transaction manager — one unit of work per scheduled job item. */
+    private final PlatformTransactionManager transactionManager;
+
+    private TransactionTemplate jobTransactionTemplate;
+
+    /** Per-item REQUIRES_NEW transaction: one bad day can no longer poison the whole run. */
+    private TransactionTemplate jobTransactionTemplate() {
+        if (jobTransactionTemplate == null) {
+            TransactionTemplate template = new TransactionTemplate(transactionManager);
+            template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            jobTransactionTemplate = template;
+        }
+        return jobTransactionTemplate;
+    }
 
     @Value("${app.scheduling.signing-window-start:7}")
     private int signingWindowStartHour;
@@ -365,101 +382,161 @@ public class ClinicalDayService {
     }
 
     @Scheduled(cron = "0 0 ${app.scheduling.day-close-hour:7} * * *")
-    @Transactional
     public void autoCloseExpiredDays() {
-        List<ClinicalDay> daysToClose = clinicalDayRepository.findDaysToAutoClose(LocalDateTime.now());
-        for (ClinicalDay day : daysToClose) {
-            UUID rootId = UUID.randomUUID();
-            try (var correlation = installJobCorrelationScope();
-                 var operation = auditEmitter.beginOperation(rootId)) {
-                // Recalculate while the day is still OPEN: recalculate() enforces
-                // the day lock, and the auto-close flow owns the closing write.
-                try {
-                    fluidBalanceService.recalculate(day.getId(), 0L);
-                } catch (Exception e) {
-                    log.warn("Failed to recalculate fluid balance for auto-closed day {}: {}",
-                            day.getId(), e.getMessage());
-                }
-                day.setStatus(ClinicalDayStatus.CLOSED);
-                day.setClosedAt(LocalDateTime.now());
-                day.setUpdatedBy(0L);
-                clinicalDayRepository.save(day);
-                try {
-                    pdfGeneratorService.generatePdf(day.getId(), 0L);
-                    log.info("Auto-generated PDF for auto-closed clinical day {}", day.getId());
-                } catch (Exception e) {
-                    log.error("Failed to auto-generate PDF for auto-closed clinical day {}: {}",
-                            day.getId(), e.getMessage());
-                }
-                log.info("Auto-closed clinical day {} for episode {}", day.getId(), day.getEpisode().getId());
-                auditService.logAction("ClinicalDay", day.getId(), "AUTO_CLOSE", 0L);
-                final UUID autoClosedDayId = day.getId();
-                final UUID autoClosedEpisodeId = day.getEpisode().getId();
-                auditEmitter.emit("icu", () -> AuditEvent.builder()
-                        .auditId(rootId)
-                        .actor(AuditActorResolver.system("clinical-day-job"))
-                        .eventClass(EventClass.BUSINESS)
-                        .module("icu")
-                        .functionalArea("clinical-day")
-                        .action("icu.clinical_day.auto_close")
-                        .actionType(ActionType.AUTO_CLOSE)
-                        .target(new AuditEvent.AuditTarget(
-                                "ClinicalDay", autoClosedDayId.toString(), null))
-                        .parentTarget(new AuditEvent.AuditTarget(
-                                "Episode", autoClosedEpisodeId.toString(), null))
-                        .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                        .changes(List.of(AuditChanges.statusChanged(null, "CLOSED")))
-                        .source(AuditEvent.AuditSource.SCHEDULED_JOB)
-                        .build());
-                emailService.sendEscalationIfUnsigned(day);
+        List<ClinicalDay> expiredDays = clinicalDayRepository.findDaysToAutoClose(LocalDateTime.now());
+        for (ClinicalDay expired : expiredDays) {
+            final UUID dayId = expired.getId();
+            try {
+                jobTransactionTemplate().executeWithoutResult(status -> autoCloseSingleDay(dayId));
             } catch (RuntimeException e) {
-                final UUID failedDayId = day.getId();
-                auditEmitter.emit("icu", () -> AuditEvent.builder()
-                        .actor(AuditActorResolver.system("clinical-day-job"))
-                        .eventClass(EventClass.BUSINESS)
-                        .module("icu")
-                        .functionalArea("clinical-day")
-                        .action("icu.clinical_day.auto_close")
-                        .actionType(ActionType.AUTO_CLOSE)
-                        .target(new AuditEvent.AuditTarget(
-                                "ClinicalDay", failedDayId.toString(), null))
-                        .outcome(AuditEvent.AuditOutcome.FAILURE)
-                        .errorCode("ICU_AUTO_CLOSE_FAILED")
-                        .source(AuditEvent.AuditSource.SCHEDULED_JOB)
-                        .build());
-                throw e;
+                log.error("Auto-close failed for clinical day {}: {}", dayId, e.getMessage());
+                recordAutoCloseFailure(dayId);
+            }
+            // Emails are external effects: send them only after the day's
+            // transaction committed, so a rolled-back close can never have
+            // sent an email claiming otherwise.
+            try {
+                clinicalDayRepository.findById(dayId).ifPresent(emailService::sendEscalationIfUnsigned);
+            } catch (RuntimeException e) {
+                log.error("Post-close escalation email failed for clinical day {}: {}",
+                        dayId, e.getMessage());
             }
         }
     }
 
-    @Scheduled(cron = "0 0 ${app.scheduling.escalation-hour:9} * * *")
-    @Transactional
-    public void escalateUnsignedDays() {
-        List<ClinicalDay> unsignedDays = clinicalDayRepository.findByStatusIn(
-                List.of(ClinicalDayStatus.NURSE_SIGNED, ClinicalDayStatus.OPEN, ClinicalDayStatus.REOPENED));
-        for (ClinicalDay day : unsignedDays) {
-            log.warn("ESCALATION: Clinical day {} (episode {}) still unsigned at 09:00",
-                    day.getId(), day.getEpisode().getId());
-            auditService.logAction("ClinicalDay", day.getId(), "ESCALATE", 0L);
-            final UUID escalatedDayId = day.getId();
-            final UUID escalatedEpisodeId = day.getEpisode().getId();
-            try (var ignored = installJobCorrelationScope()) {
-                auditEmitter.emit("icu", () -> AuditEvent.builder()
-                        .actor(AuditActorResolver.system("clinical-day-job"))
-                        .eventClass(EventClass.BUSINESS)
-                        .module("icu")
-                        .functionalArea("clinical-day")
-                        .action("icu.clinical_day.escalate")
-                        .actionType(ActionType.ESCALATE)
-                        .target(new AuditEvent.AuditTarget(
-                                "ClinicalDay", escalatedDayId.toString(), null))
-                        .parentTarget(new AuditEvent.AuditTarget(
-                                "Episode", escalatedEpisodeId.toString(), null))
-                        .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                        .source(AuditEvent.AuditSource.SCHEDULED_JOB)
-                        .build());
-                emailService.sendEscalationIfUnsigned(day);
+    private void autoCloseSingleDay(UUID dayId) {
+        UUID rootId = UUID.randomUUID();
+        try (var correlation = installJobCorrelationScope();
+                var operation = auditEmitter.beginOperation(rootId)) {
+            ClinicalDay day = clinicalDayRepository.findById(dayId)
+                    .orElseThrow(() -> new NotFoundException("Clinical day not found: " + dayId));
+            if (day.getStatus() != ClinicalDayStatus.OPEN && day.getStatus() != ClinicalDayStatus.REOPENED) {
+                // Signed or closed between the scan and this unit of work — not ours to close.
+                return;
             }
+            // Recalculate while the day is still OPEN: recalculate() enforces
+            // the day lock, and this unit owns the closing write.
+            try {
+                fluidBalanceService.recalculate(day.getId(), 0L);
+            } catch (Exception e) {
+                log.warn("Failed to recalculate fluid balance for auto-closed day {}: {}",
+                        day.getId(), e.getMessage());
+            }
+            day.setStatus(ClinicalDayStatus.CLOSED);
+            day.setClosedAt(LocalDateTime.now());
+            day.setUpdatedBy(0L);
+            clinicalDayRepository.save(day);
+            try {
+                pdfGeneratorService.generatePdf(day.getId(), 0L);
+                log.info("Auto-generated PDF for auto-closed clinical day {}", day.getId());
+            } catch (Exception e) {
+                log.error("Failed to auto-generate PDF for auto-closed clinical day {}: {}",
+                        day.getId(), e.getMessage());
+            }
+            log.info("Auto-closed clinical day {} for episode {}", day.getId(), day.getEpisode().getId());
+            auditService.logAction("ClinicalDay", day.getId(), "AUTO_CLOSE", 0L);
+            final UUID autoClosedDayId = day.getId();
+            final UUID autoClosedEpisodeId = day.getEpisode().getId();
+            auditEmitter.emit("icu", () -> AuditEvent.builder()
+                    .auditId(rootId)
+                    .actor(AuditActorResolver.system("clinical-day-job"))
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("clinical-day")
+                    .action("icu.clinical_day.auto_close")
+                    .actionType(ActionType.AUTO_CLOSE)
+                    .target(new AuditEvent.AuditTarget(
+                            "ClinicalDay", autoClosedDayId.toString(), null))
+                    .parentTarget(new AuditEvent.AuditTarget(
+                            "Episode", autoClosedEpisodeId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .changes(List.of(AuditChanges.statusChanged(null, "CLOSED")))
+                    .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                    .build());
+        }
+    }
+
+    /** Survives the failed day's rollback: its own REQUIRES_NEW transaction. */
+    private void recordAutoCloseFailure(UUID dayId) {
+        try {
+            jobTransactionTemplate().executeWithoutResult(status -> {
+                try (var ignored = installJobCorrelationScope()) {
+                    auditEmitter.emit("icu", () -> AuditEvent.builder()
+                            .actor(AuditActorResolver.system("clinical-day-job"))
+                            .eventClass(EventClass.BUSINESS)
+                            .module("icu")
+                            .functionalArea("clinical-day")
+                            .action("icu.clinical_day.auto_close")
+                            .actionType(ActionType.AUTO_CLOSE)
+                            .target(new AuditEvent.AuditTarget(
+                                    "ClinicalDay", dayId.toString(), null))
+                            .outcome(AuditEvent.AuditOutcome.FAILURE)
+                            .errorCode("ICU_AUTO_CLOSE_FAILED")
+                            .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                            .build());
+                }
+            });
+        } catch (RuntimeException auditError) {
+            log.error("Failed to record auto-close FAILURE audit for day {}: {}",
+                    dayId, auditError.getMessage());
+        }
+    }
+
+    @Scheduled(cron = "0 0 ${app.scheduling.escalation-hour:9} * * *")
+    public void escalateUnsignedDays() {
+        // Only days that have ENDED: a day opened minutes before the run is
+        // not "still unsigned" yet (age filter, CR-02 #377).
+        List<ClinicalDay> escalationCandidates = clinicalDayRepository.findDaysToEscalate(
+                List.of(ClinicalDayStatus.NURSE_SIGNED, ClinicalDayStatus.OPEN, ClinicalDayStatus.REOPENED),
+                LocalDateTime.now());
+        for (ClinicalDay candidate : escalationCandidates) {
+            final UUID dayId = candidate.getId();
+            try {
+                jobTransactionTemplate().executeWithoutResult(status -> escalateSingleDay(dayId));
+            } catch (RuntimeException e) {
+                log.error("Escalation failed for clinical day {}: {}", dayId, e.getMessage());
+                continue;
+            }
+            // Email after the audit transaction committed — one bad row can
+            // no longer stop the remaining days.
+            try {
+                clinicalDayRepository.findById(dayId).ifPresent(emailService::sendEscalationIfUnsigned);
+            } catch (RuntimeException e) {
+                log.error("Escalation email failed for clinical day {}: {}", dayId, e.getMessage());
+            }
+        }
+    }
+
+    private void escalateSingleDay(UUID dayId) {
+        ClinicalDay day = clinicalDayRepository.findById(dayId).orElse(null);
+        if (day == null) {
+            return;
+        }
+        if (day.getStatus() != ClinicalDayStatus.NURSE_SIGNED
+                && day.getStatus() != ClinicalDayStatus.OPEN
+                && day.getStatus() != ClinicalDayStatus.REOPENED) {
+            return;
+        }
+        log.warn("ESCALATION: Clinical day {} (episode {}) still unsigned",
+                day.getId(), day.getEpisode().getId());
+        auditService.logAction("ClinicalDay", day.getId(), "ESCALATE", 0L);
+        final UUID escalatedDayId = day.getId();
+        final UUID escalatedEpisodeId = day.getEpisode().getId();
+        try (var ignored = installJobCorrelationScope()) {
+            auditEmitter.emit("icu", () -> AuditEvent.builder()
+                    .actor(AuditActorResolver.system("clinical-day-job"))
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("clinical-day")
+                    .action("icu.clinical_day.escalate")
+                    .actionType(ActionType.ESCALATE)
+                    .target(new AuditEvent.AuditTarget(
+                            "ClinicalDay", escalatedDayId.toString(), null))
+                    .parentTarget(new AuditEvent.AuditTarget(
+                            "Episode", escalatedEpisodeId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                    .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                    .build());
         }
     }
 

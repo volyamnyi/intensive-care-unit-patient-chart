@@ -24,4 +24,9 @@ public interface ClinicalDayRepository extends JpaRepository<ClinicalDay, UUID> 
 
     @Query("SELECT cd FROM ClinicalDay cd WHERE cd.endDateTime <= :now AND (cd.status = 'OPEN' OR cd.status = 'REOPENED')")
     List<ClinicalDay> findDaysToAutoClose(@Param("now") LocalDateTime now);
+
+    /** Days that have ENDED and are still unsigned — the 09:00 escalation age filter. */
+    @Query("SELECT cd FROM ClinicalDay cd WHERE cd.status IN :statuses AND cd.endDateTime <= :asOf")
+    List<ClinicalDay> findDaysToEscalate(@Param("statuses") List<ClinicalDayStatus> statuses,
+            @Param("asOf") LocalDateTime asOf);
 }
