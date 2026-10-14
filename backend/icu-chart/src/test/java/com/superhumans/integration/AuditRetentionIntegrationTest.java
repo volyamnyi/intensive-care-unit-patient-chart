@@ -62,9 +62,12 @@ class AuditRetentionIntegrationTest extends AbstractIntegrationTest {
     @Qualifier("coreTransactionManager")
     PlatformTransactionManager coreTransactionManager;
 
+    @Autowired
+    com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
     private AuditRetentionService enabledService() {
         return new AuditRetentionService(coreDataSource, icuDataSource, medDataSource,
-                prosthDataSource, meterRegistry, true, 30);
+                prosthDataSource, meterRegistry, auditEventRecorder, true, 30);
     }
 
     private UUID persistExpiredCanonicalEvent() {
@@ -172,6 +175,22 @@ class AuditRetentionIntegrationTest extends AbstractIntegrationTest {
         assertThat(icu.queryForObject(
                 "SELECT COUNT(*) FROM audit_outbox WHERE audit_id = ?", Integer.class, deadId))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void retention_run_emitsCanonicalAuditEvent() {
+        enabledService().runOnce(Instant.now());
+
+        JdbcTemplate core = new JdbcTemplate(coreDataSource);
+        Integer emitted = core.queryForObject(
+                "SELECT COUNT(*) FROM audit_events WHERE action = 'platform.audit.retention.run'",
+                Integer.class);
+        assertThat(emitted).isGreaterThanOrEqualTo(1);
+        Integer metadataPresent = core.queryForObject(
+                "SELECT COUNT(*) FROM audit_events WHERE action = 'platform.audit.retention.run' "
+                        + "AND event_payload::text LIKE '%\"archivedEvents\"%'",
+                Integer.class);
+        assertThat(metadataPresent).isGreaterThanOrEqualTo(1);
     }
 
     @Test

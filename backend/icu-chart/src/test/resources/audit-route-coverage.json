@@ -8,7 +8,7 @@
     { "method": "DELETE", "path": "/api/admin/users/{id}", "actions": ["platform.user.disable"] },
     { "method": "PUT", "path": "/api/admin/permissions", "actions": ["platform.rbac.permission.grant", "platform.rbac.permission.revoke"] },
     { "method": "POST", "path": "/api/admin/audit/backfill", "excluded": "Migration/ops endpoint without a catalog code; the run is recorded as a legacy AuditBackfill/BACKFILL row plus the returned counts/checksum report." },
-    { "method": "POST", "path": "/api/admin/audit/retention/run", "excluded": "Migration/ops endpoint without a catalog code; the run is recorded as a legacy AuditRetention/RETENTION_RUN row plus the returned archive report." },
+    { "method": "POST", "path": "/api/admin/audit/retention/run", "actions": ["platform.audit.retention.run"] },
     { "method": "POST", "path": "/api/episodes", "actions": ["icu.episode.create"] },
     { "method": "PATCH", "path": "/api/episodes/{id}", "actions": ["icu.episode.update"] },
     { "method": "POST", "path": "/api/episodes/{id}/close", "actions": ["icu.episode.close"] },

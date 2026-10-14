@@ -62,7 +62,8 @@ public record AuditEvent(
     private static final Set<String> SAFE_METADATA_KEYS = Set.of(
             "sourceHash", "durationMs", "affectedRecords", "templateVersion", "pageCount",
             "fileSizeBytes", "recipientCount", "attempt", "deliveryKind", "outcomeCode",
-            "resultCount", "httpStatus", "externalOperation");
+            "resultCount", "httpStatus", "externalOperation",
+            "archivedEvents", "archivedTargets", "archivedLegacy", "deletedOutbox", "cutoff");
     private static final Pattern SECRET_FIELD = Pattern.compile(
             "(?i).*(password|token|secret|credential|authorization|cookie|filedata|pdfbytes).*");
     private static final Pattern SAFE_CODE_VALUE = Pattern.compile("^[A-Za-z0-9_.:-]{1,120}$");
@@ -232,7 +233,8 @@ public record AuditEvent(
             }
             return;
         }
-        if (key.equals("deliveryKind") || key.equals("outcomeCode") || key.equals("externalOperation")) {
+        if (key.equals("deliveryKind") || key.equals("outcomeCode") || key.equals("externalOperation")
+                || key.equals("cutoff")) {
             if (!(value instanceof String text) || !SAFE_CODE_VALUE.matcher(text).matches()) {
                 throw new IllegalArgumentException("Audit metadata must use a bounded code: " + key);
             }

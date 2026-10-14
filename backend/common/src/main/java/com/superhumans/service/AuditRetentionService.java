@@ -1,5 +1,9 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.AuditEventRecorder;
 import com.superhumans.dto.AuditRetentionReportResponse;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -23,6 +27,10 @@ import org.springframework.stereotype.Service;
  * prunes delivered transport copies from the module outboxes (DEAD rows are
  * kept for operator review). Disabled by default; the scheduled cycle and
  * the admin trigger share {@link #runOnce(Instant)}.
+ *
+ * <p>Every enabled run emits one {@code platform.audit.retention.run} event
+ * (actor: the admin on the manual endpoint, {@code retention-job} on the cron)
+ * — audit-data lifecycle operations must not be unauditable (#393).
  */
 @Service
 @Slf4j
@@ -34,6 +42,7 @@ public class AuditRetentionService {
     DataSource medDataSource;
     DataSource prosthDataSource;
     MeterRegistry meterRegistry;
+    AuditEventRecorder auditEventRecorder;
     boolean retentionEnabled;
     int outboxDeliveredDays;
 
@@ -43,6 +52,7 @@ public class AuditRetentionService {
             @Qualifier("medDataSource") DataSource medDataSource,
             @Qualifier("prosthDataSource") DataSource prosthDataSource,
             MeterRegistry meterRegistry,
+            AuditEventRecorder auditEventRecorder,
             @Value("${app.audit.retention.enabled:false}") boolean retentionEnabled,
             @Value("${app.audit.retention.outbox-delivered-days:30}") int outboxDeliveredDays) {
         this.coreDataSource = coreDataSource;
@@ -50,6 +60,7 @@ public class AuditRetentionService {
         this.medDataSource = medDataSource;
         this.prosthDataSource = prosthDataSource;
         this.meterRegistry = meterRegistry;
+        this.auditEventRecorder = auditEventRecorder;
         this.retentionEnabled = retentionEnabled;
         this.outboxDeliveredDays = outboxDeliveredDays;
     }
@@ -140,7 +151,7 @@ public class AuditRetentionService {
                     deletedTargets, archivedTargets, deletedEvents, archivedEvents,
                     deletedLegacy, archivedLegacy);
         }
-        return AuditRetentionReportResponse.builder()
+        AuditRetentionReportResponse report = AuditRetentionReportResponse.builder()
                 .enabled(true)
                 .cutoff(now.toString())
                 .archivedEvents(archivedEvents)
@@ -148,6 +159,37 @@ public class AuditRetentionService {
                 .archivedLegacy(archivedLegacy)
                 .deletedOutboxByModule(deletedOutbox)
                 .build();
+        emitRetentionRun(now, report);
+        return report;
+    }
+
+    /** One event per enabled run — actor is the admin on the manual endpoint, retention-job on the cron. */
+    private void emitRetentionRun(Instant now, AuditRetentionReportResponse report) {
+        AuditEvent.AuditActor actor = AuditActorResolver.fromCurrentContextOrSystem("retention-job");
+        int deletedOutboxTotal = report.getDeletedOutboxByModule().values()
+                .stream().mapToInt(Integer::intValue).sum();
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("cutoff", now.toString());
+        metadata.put("archivedEvents", report.getArchivedEvents());
+        metadata.put("archivedTargets", report.getArchivedTargets());
+        metadata.put("archivedLegacy", report.getArchivedLegacy());
+        metadata.put("deletedOutbox", deletedOutboxTotal);
+        auditEventRecorder.record(AuditEvent.builder()
+                .actor(actor)
+                .eventClass(com.superhumans.audit.AuditActionDefinition.EventClass.SECURITY)
+                .module("platform")
+                .functionalArea("audit")
+                .action("platform.audit.retention.run")
+                .actionType(ActionType.DELETE)
+                .target(new AuditEvent.AuditTarget("AuditStore", "retention", null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .affectedRecords(report.getArchivedEvents() + report.getArchivedTargets()
+                        + report.getArchivedLegacy() + deletedOutboxTotal)
+                .metadata(metadata)
+                .source(actor.type() == AuditEvent.ActorType.USER
+                        ? AuditEvent.AuditSource.ADMIN_TOOL
+                        : AuditEvent.AuditSource.SCHEDULED_JOB)
+                .build());
     }
 
     private Map<String, Integer> pruneOutboxes(Instant now) {
