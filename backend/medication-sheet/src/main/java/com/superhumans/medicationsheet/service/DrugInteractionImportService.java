@@ -84,7 +84,7 @@ public class DrugInteractionImportService {
     public record Parsed(List<DrugInteractionDrug> drugs, List<DrugInteractionPair> pairs,
                          List<String> skipped) { }
 
-    @Transactional("medTransactionManager")
+    @Transactional
     public DrugInteractionImportReport importDataset(byte[] content, Long adminId) {
         long startedAt = System.currentTimeMillis();
         String sourceHash = sha256Hex(content);
