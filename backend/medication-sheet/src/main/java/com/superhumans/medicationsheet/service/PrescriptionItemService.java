@@ -14,6 +14,7 @@ import com.superhumans.medicationsheet.entity.PrescriptionItem;
 import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
 import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.exception.BusinessException;
+import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.service.AuditService;
@@ -51,6 +52,7 @@ public class PrescriptionItemService {
     public PrescriptionItem addItem(UUID listId, String medicineName, String atcCode, String method, String regime) {
         PrescriptionList list = listRepository.findById(listId)
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
+        requireNotFinished(list);
 
         int sortOrder = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId).size();
 
@@ -127,6 +129,7 @@ public class PrescriptionItemService {
         if (Boolean.TRUE.equals(item.getDeleted())) {
             throw new NotFoundException("Item not found: " + itemId);
         }
+        requireNotFinished(item.getList());
 
         List<PrescriptionItemDay> existingDays = dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
         LocalDate nextDate = existingDays.stream()
@@ -165,6 +168,7 @@ public class PrescriptionItemService {
         if (day.getItem() == null || !itemId.equals(day.getItem().getId())) {
             throw new NotFoundException("Day not found: " + dayId);
         }
+        requireNotFinished(day.getItem().getList());
 
         boolean hasExecuted = day.getDayParts() != null && day.getDayParts().stream()
                 .anyMatch(p -> Boolean.TRUE.equals(p.getIsCompleted()) || Boolean.TRUE.equals(p.getIsCompletedFinished()));
@@ -232,6 +236,7 @@ public class PrescriptionItemService {
     public void removeItem(UUID itemId) {
         PrescriptionItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
+        requireNotFinished(item.getList());
         item.setDeleted(true);
         item.setUpdatedBy(0L);
         itemRepository.save(item);
@@ -261,6 +266,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionDayPart planDose(UUID dayPartId, String dose, UUID doctorId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
+        requireNotFinished(part);
         part.setDose(dose);
         part.setIsPlanned(true);
         // Re-planning a cancelled dose («Відмінити препарат») returns it to Scheduled:
@@ -278,6 +284,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionDayPart markCompleted(UUID dayPartId, UUID nurseId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
+        requireNotFinished(part);
         part.setIsCompleted(true);
         part.setNurseName(nurseId.toString());
         part.setUpdatedBy(0L);
@@ -290,6 +297,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionDayPart markCompletedFinished(UUID dayPartId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
+        requireNotFinished(part);
         part.setIsCompletedFinished(true);
         part.setUpdatedBy(0L);
         PrescriptionDayPart saved = partRepository.save(part);
@@ -301,6 +309,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionDayPart markPlannedFinished(UUID dayPartId, UUID doctorId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
+        requireNotFinished(part);
         if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
                     "Виконане призначення не може бути відмінене");
@@ -326,6 +335,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionDayPart restoreToPlanned(UUID dayPartId, UUID doctorId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
+        requireNotFinished(part);
         if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
                     "Виконане призначення не може бути повернене у заплановані");
@@ -348,6 +358,7 @@ public class PrescriptionItemService {
     @Transactional
     public PrescriptionDayPart cancelAssignment(UUID dayPartId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
+        requireNotFinished(part);
         if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,
                     "Виконане призначення не може бути відмінене");
@@ -368,6 +379,21 @@ public class PrescriptionItemService {
         emitDayPart(saved.getId(), "medication.dose.unassign", ActionType.UNASSIGN,
                 List.of(AuditChanges.statusChanged("PLANNED", "UNPLANNED")));
         return saved;
+    }
+
+    /** A closed ("Finished") medication sheet is immutable — mirrors the ICU day lock. */
+    private static void requireNotFinished(PrescriptionList list) {
+        if (list != null && list.isFinished()) {
+            throw new DocumentLockedException("Листок завершено — зміни заборонені");
+        }
+    }
+
+    private static void requireNotFinished(PrescriptionDayPart part) {
+        PrescriptionItemDay day = part.getDay();
+        if (day == null || day.getItem() == null) {
+            return;
+        }
+        requireNotFinished(day.getItem().getList());
     }
 
     private void emitDayPart(UUID dayPartId, String action, ActionType type,

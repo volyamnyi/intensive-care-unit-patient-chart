@@ -2,6 +2,7 @@ package com.superhumans.medicationsheet.service;
 
 import com.superhumans.medicationsheet.entity.*;
 import com.superhumans.exception.BusinessException;
+import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.*;
 import com.superhumans.service.AuditService;
@@ -79,6 +80,36 @@ class PrescriptionItemServiceTest {
         when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)).thenReturn(List.of());
 
         assertThat(service.getByList(listId)).isEmpty();
+    }
+
+    @Test
+    void addItem_throws_whenListFinished() {
+        PrescriptionList finished = PrescriptionList.builder().patientId(1001L).status("Finished").build();
+        finished.setId(listId);
+        when(listRepository.findById(listId)).thenReturn(Optional.of(finished));
+
+        assertThatThrownBy(() -> service.addItem(listId, "Dopamine", null, "IV", "stat"))
+                .isInstanceOf(DocumentLockedException.class)
+                .hasMessageContaining("Листок завершено");
+
+        verify(itemRepository, never()).save(any());
+    }
+
+    @Test
+    void planDose_throws_whenListFinished() {
+        PrescriptionList finished = PrescriptionList.builder().patientId(1001L).status("Finished").build();
+        PrescriptionItem item = PrescriptionItem.builder().list(finished).build();
+        PrescriptionItemDay day = PrescriptionItemDay.builder().item(item).build();
+        PrescriptionDayPart part = PrescriptionDayPart.builder().day(day).period("morning").build();
+        UUID partId = UUID.randomUUID();
+        part.setId(partId);
+        when(partRepository.findById(partId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.planDose(partId, "50mg", UUID.randomUUID(), 1L))
+                .isInstanceOf(DocumentLockedException.class)
+                .hasMessageContaining("Листок завершено");
+
+        verify(partRepository, never()).save(any());
     }
 
     // --- addItem ---

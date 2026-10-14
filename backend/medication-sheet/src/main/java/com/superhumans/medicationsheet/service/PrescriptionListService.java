@@ -85,6 +85,9 @@ public class PrescriptionListService {
     @Transactional
     public PrescriptionList update(UUID id, String documentName) {
         PrescriptionList list = getById(id);
+        if (list.isFinished()) {
+            throw new DocumentLockedException("Листок завершено — зміни заборонені");
+        }
         if (documentName != null) {
             list.setDocumentName(documentName);
         }
