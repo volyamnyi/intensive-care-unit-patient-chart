@@ -190,6 +190,7 @@ public class FlowInstanceService {
     public FlowInstanceResponse start(UUID instanceId, Long userId) {
         FlowInstance instance = instanceRepository.findByIdForUpdate(instanceId)
                 .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
+        requireOwner(instance, userId);
         if (instance.getStatus() != FlowInstanceStatus.NEW) {
             if (instance.getStatus() == FlowInstanceStatus.IN_PROGRESS) {
                 // Idempotent start: a concurrent request already started the instance
@@ -893,7 +894,17 @@ public class FlowInstanceService {
     }
 
     FlowInstance requireOwner(UUID instanceId, Long userId) {
-        return requireOwner(instanceId, userId, false);
+        FlowInstance instance = instanceRepository.findById(instanceId)
+                .orElseThrow(() -> new NotFoundException("Instance not found: " + instanceId));
+        return requireOwner(instance, userId);
+    }
+
+    /** Ownership check on an already-loaded instance (for pessimistically fetched rows). */
+    FlowInstance requireOwner(FlowInstance instance, Long userId) {
+        if (instance.getAssignedUserId().equals(userId)) {
+            return instance;
+        }
+        throw new NotFoundException("Instance not found: " + instance.getId());
     }
 
     FlowInstance requireOwner(UUID instanceId, Long userId, boolean allowAll) {

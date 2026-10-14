@@ -2,6 +2,7 @@ package com.superhumans.prosthesismanufacturing.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
+import com.superhumans.exception.NotFoundException;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
@@ -228,17 +229,16 @@ class FlowInstanceServiceTest {
     }
 
     @Test
-    void startByAnotherProsthetistIsAllowed() {
+    void startByAnotherProsthetistIsRejected() {
         FlowInstance instance = newInstance(FlowInstanceStatus.NEW, snapshotJson());
         instance.setAssignedUserId(99L);
         when(instanceRepository.findByIdForUpdate(instance.getId())).thenReturn(Optional.of(instance));
-        when(executionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.start(instance.getId(), 1L);
+        assertThatThrownBy(() -> service.start(instance.getId(), 1L))
+                .isInstanceOf(NotFoundException.class);
 
-        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.IN_PROGRESS);
-        assertThat(instance.getCurrentStepId()).isEqualTo(stepOneId);
-        verify(executionRepository).save(any());
+        assertThat(instance.getStatus()).isEqualTo(FlowInstanceStatus.NEW);
+        verify(executionRepository, never()).save(any());
     }
 
     @Test
