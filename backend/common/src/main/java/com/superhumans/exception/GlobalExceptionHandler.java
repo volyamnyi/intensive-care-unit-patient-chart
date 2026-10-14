@@ -11,6 +11,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
+@Order(2)
 @ControllerAdvice
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class GlobalExceptionHandler {
@@ -53,6 +55,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDocumentLocked(DocumentLockedException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
                 new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+    }
+
+    /**
+     * Malformed JSON, missing body or an invalid enum value in the body is a
+     * client error — without this handler Spring's wrapper falls through to
+     * the RuntimeException catch-all and returns a misleading 500.
+     */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        log.warn("Unreadable request body: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR,
+                        "Request body is not readable or contains invalid values",
+                        UUID.randomUUID().toString()));
     }
 
     @ExceptionHandler(SecurityException.class)

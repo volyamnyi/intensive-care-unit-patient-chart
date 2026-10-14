@@ -151,9 +151,10 @@ class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
                 OPEN_DAY_HOURLY_WRITES);
 
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        // DuplicateHourlyRecordException (extends BusinessException) carries the
-        // DUPLICATE_HOURLY_RECORD code; the advice layer surfaces it as 422.
-        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        // DuplicateHourlyRecordException carries the DUPLICATE_HOURLY_RECORD
+        // code; the feature advice (ordered before the platform one) maps it
+        // to the designed 409 conflict.
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(second.getBody()).contains("DUPLICATE_HOURLY_RECORD");
     }
 

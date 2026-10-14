@@ -14,7 +14,8 @@ import com.superhumans.entity.base.BaseEntity;
 
 @Entity
 @Table(name = "hourly_records", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"clinical_day_id", "record_hour"})
+    @UniqueConstraint(name = "uk_hourly_records_clinical_day_record_hour",
+            columnNames = {"clinical_day_id", "record_hour"})
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
