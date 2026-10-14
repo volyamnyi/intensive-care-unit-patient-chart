@@ -765,19 +765,21 @@ A: Ні, і їх більше не існує: `MockMisServiceImpl`/`WireMockMis
 SPRING_PROFILES_ACTIVE=prod
 
 # --- Datasources (4 БД) ---
-APP_DATASOURCE_CORE_URL=jdbc:postgresql://db.internal:5432/my_fullstack_core?stringtype=unspecified&sslmode=require
+# socketTimeout=60 (сек) обриває зависший socket-читання; без нього зависший
+# запит тримає з'єднання пулу нескінченно (з'єднання chain-транзакції ×4).
+APP_DATASOURCE_CORE_URL=jdbc:postgresql://db.internal:5432/my_fullstack_core?stringtype=unspecified&sslmode=require&socketTimeout=60
 APP_DATASOURCE_CORE_USERNAME=ictc_app
 APP_DATASOURCE_CORE_PASSWORD=<з vault>
 
-APP_DATASOURCE_ICU_URL=jdbc:postgresql://db.internal:5432/my_fullstack_icu?stringtype=unspecified&sslmode=require
+APP_DATASOURCE_ICU_URL=jdbc:postgresql://db.internal:5432/my_fullstack_icu?stringtype=unspecified&sslmode=require&socketTimeout=60
 APP_DATASOURCE_ICU_USERNAME=ictc_app
 APP_DATASOURCE_ICU_PASSWORD=<з vault>
 
-APP_DATASOURCE_MED_URL=jdbc:postgresql://db.internal:5432/my_fullstack_med?stringtype=unspecified&sslmode=require
+APP_DATASOURCE_MED_URL=jdbc:postgresql://db.internal:5432/my_fullstack_med?stringtype=unspecified&sslmode=require&socketTimeout=60
 APP_DATASOURCE_MED_USERNAME=ictc_app
 APP_DATASOURCE_MED_PASSWORD=<з vault>
 
-APP_DATASOURCE_PROSTH_URL=jdbc:postgresql://db.internal:5432/my_fullstack_prosth?stringtype=unspecified&sslmode=require
+APP_DATASOURCE_PROSTH_URL=jdbc:postgresql://db.internal:5432/my_fullstack_prosth?stringtype=unspecified&sslmode=require&socketTimeout=60
 APP_DATASOURCE_PROSTH_USERNAME=ictc_app
 APP_DATASOURCE_PROSTH_PASSWORD=<з vault>
 
@@ -787,9 +789,13 @@ APP_JWT_SECRET=<64-byte base64>
 APP_JWT_EXPIRATION_MS=86400000
 
 # --- Datasource pool (Hikari) ---
-SPRING_DATASOURCE_HIKARI_MAXIMUM-POOL-SIZE=20
-SPRING_DATASOURCE_HIKARI_MINIMUM-IDIKE-CONNECTIONS=5
-SPRING_DATASOURCE_HIKARI_CONNECTION-TIMEOUT=30000
+# Four module pools are built programmatically (MultiDatabaseSupport) —
+# spring.datasource.hikari.* does NOT apply to them. The only supported knob:
+APP_DATASOURCE_POOL_MAX=20
+# Capacity note: the chained transaction manager opens ONE connection per pool
+# per @Transactional request, so max concurrent requests ≈ APP_DATASOURCE_POOL_MAX
+# (4 pools × 20 = 80 connections; Postgres max_connections must cover them).
+# CI integration runs use APP_DATASOURCE_POOL_MAX=2.
 
 # --- Seed-data (КРИТИЧНО: false в проді) ---
 APP_SEED_DATA_ENABLED=false
@@ -832,6 +838,12 @@ SPRING_MAIL_USERNAME=<user>
 SPRING_MAIL_PASSWORD=<pass>
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
 SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+# SMTP timeouts (defaults in application.yml: 5s connect / 10s read+write) —
+# without them one hung send blocks the scheduler thread that also drains
+# the audit outbox.
+SPRING_MAIL_CONNECTIONTIMEOUT_MS=5000
+SPRING_MAIL_READTIMEOUT_MS=10000
+SPRING_MAIL_WRITETIMEOUT_MS=10000
 
 # --- Brak email notification (stage 6, TP-LL-02; issues #309-#319) ---
 # After a confirmed training-prosthesis brak the backend mails every user with
