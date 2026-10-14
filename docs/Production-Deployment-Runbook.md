@@ -784,7 +784,7 @@ APP_DATASOURCE_PROSTH_PASSWORD=<з vault>
 # --- JWT ---
 # openssl rand -base64 64
 APP_JWT_SECRET=<64-byte base64>
-APP_JWT_EXPIRATION-MS=86400000
+APP_JWT_EXPIRATION_MS=86400000
 
 # --- Datasource pool (Hikari) ---
 SPRING_DATASOURCE_HIKARI_MAXIMUM-POOL-SIZE=20
@@ -957,6 +957,10 @@ Group=ictc
 
 # Secrets / config — не у command line (видно в `ps`)
 EnvironmentFile=/etc/environment-file-ictc
+
+# Timezone — scheduled jobs (07:00 auto-close, 09:00 escalation) fire in the
+# JVM default timezone; pin it or the hours shift on non-Kyiv hosts.
+Environment=TZ=Europe/Kyiv
 
 # JVM
 ExecStart=/usr/bin/java \

@@ -83,8 +83,8 @@
 | Spring Security | — | JWT-based authentication |
 | PostgreSQL | 16 | Relational database |
 | Hibernate | — | JPA implementation |
-| jjwt | 0.12.5 | JWT token handling |
-| iText 7 | 8.0.4 | PDF generation |
+| jjwt | 0.13.0 | JWT token handling |
+| iText 8 | 8.0.5 | PDF generation |
 | Lombok | — | Boilerplate reduction |
 | Maven | — | Build tool |
 
