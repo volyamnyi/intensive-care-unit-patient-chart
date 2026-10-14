@@ -87,13 +87,12 @@ class ModuleBoundaryTest {
     };
 
     /**
-     * Platform controllers that are intentionally ceiling-gated or public (auth login /
-     * admin console) and therefore excluded from rule #2 — they are not clinical feature
-     * endpoints.
+     * Platform controllers that are public by design (auth login/logout) and
+     * therefore excluded from rule #2. AdminController stays under the rule:
+     * all of its mutating endpoints carry @PreAuthorize.
      */
     private static final String[] PLATFORM_CONTROLLER_EXCLUSIONS = {
-        "AuthController",
-        "AdminController"
+        "AuthController"
     };
 
     @ArchTest
