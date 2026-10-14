@@ -311,6 +311,32 @@ class ClinicalRbacIntegrationTest extends AbstractIntegrationTest {
         return jwtTokenProvider.generateToken(login, role.name(), saved.getId());
     }
 
+    // ---- Cross-module read ceilings (CR-01 #358): department roster and
+    // settings are NOT reachable through the generic clinical ceiling. ----
+
+    @Test
+    void departmentReads_asProsthetist_returnForbidden() {
+        String token = tokenForRole("prosthetist-dept-rbac", UserRole.PROSTHETIST);
+
+        var patients = restTemplate.exchange("/api/department/patients", HttpMethod.GET,
+                authGet(token), String.class);
+        var stats = restTemplate.exchange("/api/department/stats", HttpMethod.GET,
+                authGet(token), String.class);
+
+        assertThat(patients.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(stats.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void settingsRead_asProsthetist_returnForbidden() {
+        String token = tokenForRole("prosthetist-settings-rbac", UserRole.PROSTHETIST);
+
+        var res = restTemplate.exchange("/api/settings/institution_name", HttpMethod.GET,
+                authGet(token), String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
     private void setRolePermission(String role, String code, boolean granted) {
         var body = new RolePermissionUpdateRequest();
         body.setRole(role);

@@ -86,6 +86,14 @@ public class ClinicalSecurityRules implements SecurityRuleContributor, Applicati
                 .requestMatchers(HttpMethod.GET, "/api/users/**").access(spEl(USERS_READ_SPEL))
                 .requestMatchers(HttpMethod.GET, "/api/prescriptions/**").access(spEl(MEDICATION_READ_SPEL))
                 .requestMatchers(HttpMethod.GET, "/api/vital-signs/**").access(spEl(ICU_READ_SPEL))
+                // Department roster/stats are ICU data: clinical core or the ICU
+                // module checkbox — NOT the generic clinical ceiling, which
+                // would admit the prosthetics roles.
+                .requestMatchers(HttpMethod.GET, "/api/department/**").access(spEl(ICU_READ_SPEL))
+                // Settings reads: the ICU day page loads institution_name/edrpou
+                // for the PDF header and the admin tab reads import metadata —
+                // clinical core or the admin module checkbox.
+                .requestMatchers(HttpMethod.GET, "/api/settings/**").access(spEl(USERS_READ_SPEL))
                 // Episode management. URL rules act as a ceiling only; the precise
                 // matrix (which roles may actually create) is enforced dynamically
                 // by @PreAuthorize("@permissionService.has('...')") so that admin
