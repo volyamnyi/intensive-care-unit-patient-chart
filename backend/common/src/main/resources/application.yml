@@ -24,6 +24,13 @@ spring:
   liquibase:
     enabled: false
 
+  task:
+    scheduling:
+      # One thread per scheduled job: the 1s audit-relay poll must not be
+      # starved by retention / auto-close / brak-sweep batch runs.
+      pool:
+        size: 3
+
   servlet:
     multipart:
       # Full drug-interactions dataset is ~32 MB; Tomcat default (1 MB file / 10 MB request)
@@ -42,6 +49,9 @@ spring:
           auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:false}
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:false}
+          connectiontimeout: ${SPRING_MAIL_CONNECTIONTIMEOUT_MS:5000}
+          timeout: ${SPRING_MAIL_READTIMEOUT_MS:10000}
+          writetimeout: ${SPRING_MAIL_WRITETIMEOUT_MS:10000}
 
   jackson:
     serialization:

@@ -66,6 +66,7 @@ class MultiDatabaseSupportTest {
         assertNull(properties.getProperty("hibernate.format_sql"));
         assertNull(properties.getProperty("hibernate.use_sql_comments"));
         assertNull(properties.getProperty("hibernate.generate_statistics"));
+        assertEquals("30000", properties.getProperty("jakarta.persistence.query.timeout"));
     }
 
     @Test

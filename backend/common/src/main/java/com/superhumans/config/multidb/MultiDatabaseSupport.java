@@ -104,6 +104,10 @@ final class MultiDatabaseSupport {
                 "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
         properties.setProperty("hibernate.implicit_naming_strategy",
                 "org.springframework.boot.hibernate.SpringImplicitNamingStrategy");
+        // Upper bound for JPA-issued queries so a stuck statement can no longer
+        // hold a pooled (chained-transaction) connection forever. JdbcTemplate
+        // paths (audit retention/backfill) are intentionally unaffected.
+        properties.setProperty("jakarta.persistence.query.timeout", "30000");
         if (logSql) {
             properties.setProperty("hibernate.show_sql", "true");
             properties.setProperty("hibernate.format_sql", "true");
