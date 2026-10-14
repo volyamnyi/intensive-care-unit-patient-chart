@@ -364,7 +364,7 @@ public class ClinicalDayService {
         }
     }
 
-    @Scheduled(cron = "0 0 7 * * *")
+    @Scheduled(cron = "0 0 ${app.scheduling.day-close-hour:7} * * *")
     @Transactional
     public void autoCloseExpiredDays() {
         List<ClinicalDay> daysToClose = clinicalDayRepository.findDaysToAutoClose(LocalDateTime.now());
@@ -430,7 +430,7 @@ public class ClinicalDayService {
         }
     }
 
-    @Scheduled(cron = "0 0 9 * * *")
+    @Scheduled(cron = "0 0 ${app.scheduling.escalation-hour:9} * * *")
     @Transactional
     public void escalateUnsignedDays() {
         List<ClinicalDay> unsignedDays = clinicalDayRepository.findByStatusIn(
