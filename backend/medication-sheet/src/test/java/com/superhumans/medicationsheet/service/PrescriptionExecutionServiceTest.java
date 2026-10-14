@@ -4,6 +4,11 @@ import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionExecution;
+import com.superhumans.medicationsheet.entity.PrescriptionItem;
+import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
+import com.superhumans.medicationsheet.entity.PrescriptionList;
+import com.superhumans.exception.BusinessException;
+import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionExecutionRepository;
@@ -120,6 +125,39 @@ class PrescriptionExecutionServiceTest {
                 TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Day part not found");
+    }
+
+    @Test
+    void execute_throws_whenPartAlreadyCompleted() {
+        testPart.setIsCompleted(true);
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+
+        assertThatThrownBy(() -> service.execute(
+                dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("виконано");
+
+        verifyNoInteractions(userRepository);
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void execute_throws_whenListFinished() {
+        PrescriptionList finished = PrescriptionList.builder().patientId(1001L).status("Finished").build();
+        PrescriptionItem item = PrescriptionItem.builder().list(finished).build();
+        PrescriptionItemDay day = PrescriptionItemDay.builder().item(item).build();
+        testPart.setDay(day);
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+
+        assertThatThrownBy(() -> service.execute(
+                dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                .isInstanceOf(DocumentLockedException.class)
+                .hasMessageContaining("Листок завершено");
+
+        verifyNoInteractions(userRepository);
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
     }
 
     @Test

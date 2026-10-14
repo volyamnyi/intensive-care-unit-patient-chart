@@ -13,6 +13,12 @@ import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionExecution;
+import com.superhumans.medicationsheet.entity.PrescriptionItem;
+import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
+import com.superhumans.medicationsheet.entity.PrescriptionList;
+import com.superhumans.exception.BusinessException;
+import com.superhumans.exception.DocumentLockedException;
+import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionExecutionRepository;
@@ -42,6 +48,12 @@ public class PrescriptionExecutionService {
     public PrescriptionExecution execute(UUID dayPartId, Long currentUserId, String currentUserLogin, String actualDose, String secondPersonLogin, String secondPersonPassword) {
         PrescriptionDayPart part = partRepository.findById(dayPartId)
                 .orElseThrow(() -> new NotFoundException("Day part not found: " + dayPartId));
+
+        if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Дозу вже виконано");
+        }
+        requireNotFinished(part);
 
         UUID firstPersonUuid = UUID.nameUUIDFromBytes(currentUserLogin.getBytes());
         String nurseName = currentUserLogin;
@@ -118,5 +130,18 @@ public class PrescriptionExecutionService {
                 .source(AuditEvent.AuditSource.API)
                 .build());
         return exec;
+    }
+
+    /** A closed ("Finished") medication sheet is immutable — mirrors the ICU day lock. */
+    private static void requireNotFinished(PrescriptionDayPart part) {
+        PrescriptionItemDay day = part.getDay();
+        if (day == null || day.getItem() == null) {
+            return;
+        }
+        PrescriptionItem item = day.getItem();
+        PrescriptionList list = item.getList();
+        if (list != null && list.isFinished()) {
+            throw new DocumentLockedException("Листок завершено — зміни заборонені");
+        }
     }
 }
