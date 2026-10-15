@@ -128,6 +128,22 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
         }
     }
 
+    @Test
+    void vitalSigns_withoutAuthentication_requiresAuthentication() {
+        var res = restTemplate.getForEntity("/api/vital-signs/grid?prescriptionListId="
+                + UUID.randomUUID(), String.class);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void vitalSigns_asNurse_passesRuleAndReturnsNotFound() {
+        var res = restTemplate.exchange("/api/vital-signs?prescriptionListId={id}",
+                HttpMethod.GET, authGet(getNurseToken()), String.class, UUID.randomUUID());
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     private void setRolePermission(String role, String code, boolean granted) {
         var body = new RolePermissionUpdateRequest();
         body.setRole(role);

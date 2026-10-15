@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(VitalSignController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@com.superhumans.config.EnableTestExceptionHandler
 @Import({
     VitalSignDayMapperImpl.class,
     VitalSignEntryMapperImpl.class
@@ -135,15 +136,16 @@ class VitalSignControllerTest {
                 .andExpect(jsonPath("$.pulse").value(80));
     }
 
-    // TODO: Re-enable when GlobalExceptionHandler is accessible
-    // @Test
-    // void create_withNullPrescriptionListId_returnsBadRequest() throws Exception { ... }
+    @Test
+    void create_withNullPrescriptionListId_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/vital-signs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"prescriptionListId\":null,\"temperature\":37.0}")
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
 
-    // TODO: Re-enable when SecurityConfig is moved to common module
-    // @Test
-    // void getDays_withoutAuth_returnsUnauthorized() throws Exception { ... }
-
-    // TODO: Re-enable when SecurityConfig is moved to common module
-    // @Test
-    // void getEntries_withNurseRole_returnsOk() throws Exception { ... }
+    // Security tests (401/403/nurse-role) live in SecurityRulesIntegrationTest —
+    // the slice runs with addFilters=false, which bypasses the real filter chain.
 }

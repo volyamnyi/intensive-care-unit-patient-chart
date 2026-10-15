@@ -103,6 +103,8 @@ class ClinicalDayServiceTest {
 
         ReflectionTestUtils.setField(clinicalDayService, "signingWindowStartHour", 7);
         ReflectionTestUtils.setField(clinicalDayService, "signingWindowEndHour", 9);
+        // signingWindowEnabled stays false (Java default) — @InjectMocks does
+        // NOT process @Value. Individual window tests set it to true explicitly.
     }
 
     @Test
@@ -291,6 +293,77 @@ class ClinicalDayServiceTest {
 
             assertThatThrownBy(() -> clinicalDayService.signDoctor(dayId, req, userId))
                     .isInstanceOf(BusinessException.class);
+        }
+    }
+
+    // ---- Signing-window gate (CR-06 #425): the rule is configurable and
+    // MUST be tested with signingWindowEnabled=true — a regression that
+    // deletes or inverts the check passes the entire suite otherwise.
+
+    @Test
+    void signNurse_outsideSigningWindow_throws() {
+        ReflectionTestUtils.setField(clinicalDayService, "signingWindowEnabled", true);
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            // 06:00 is before the 07:00 start
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(6, 0));
+            SignRequest req = new SignRequest(userId, "hash");
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+
+            assertThatThrownBy(() -> clinicalDayService.signNurse(dayId, req, userId))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Підпис можливий");
+            verify(clinicalDayRepository, never()).save(any(ClinicalDay.class));
+        }
+    }
+
+    @Test
+    void signNurse_afterSigningWindowEnd_throws() {
+        ReflectionTestUtils.setField(clinicalDayService, "signingWindowEnabled", true);
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            // 10:00 is after the 09:00 end
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(10, 0));
+            SignRequest req = new SignRequest(userId, "hash");
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+
+            assertThatThrownBy(() -> clinicalDayService.signNurse(dayId, req, userId))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Підпис можливий");
+        }
+    }
+
+    @Test
+    void signNurse_insideSigningWindow_succeeds() {
+        ReflectionTestUtils.setField(clinicalDayService, "signingWindowEnabled", true);
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            // 08:00 is inside the 07:00–09:00 window
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(8, 0));
+            SignRequest req = new SignRequest(userId, "hash");
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+            when(signatureService.createNurseSignature(dayId, userId, req.getHash()))
+                    .thenReturn(Signature.builder().clinicalDay(testDay).userId(userId)
+                            .role("NURSE").status("ACTIVE").signedAt(LocalDateTime.now()).build());
+
+            clinicalDayService.signNurse(dayId, req, userId);
+
+            verify(clinicalDayRepository).save(any(ClinicalDay.class));
+        }
+    }
+
+    @Test
+    void signNurse_windowDisabled_bypasses() {
+        // signingWindowEnabled defaults to false in @InjectMocks (no @Value
+        // processing) — the window must not interfere.
+        try (MockedStatic<ClinicalDayService> svcMock = mockStatic(ClinicalDayService.class)) {
+            svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(3, 0));
+            SignRequest req = new SignRequest(userId, "hash");
+            when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
+            when(signatureService.createNurseSignature(dayId, userId, req.getHash()))
+                    .thenReturn(Signature.builder().clinicalDay(testDay).userId(userId)
+                            .role("NURSE").status("ACTIVE").signedAt(LocalDateTime.now()).build());
+
+            clinicalDayService.signNurse(dayId, req, userId);
+
+            verify(clinicalDayRepository).save(any(ClinicalDay.class));
         }
     }
 

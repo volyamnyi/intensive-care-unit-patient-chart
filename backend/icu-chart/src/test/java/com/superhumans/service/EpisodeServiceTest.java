@@ -235,5 +235,39 @@ class EpisodeServiceTest {
         assertThat(episodeCaptor.getValue().getDischargeDate()).isEqualTo(req.getDischargeDate());
         verify(auditService).logAction("Episode", episodeId, "CLOSE", userId);
     }
+
+    // ---- Archive tests (CR-06 #425): pins CURRENT lifecycle behavior so the
+    // tracked state-guard gap (#391) is at least test-visible.
+
+    @Test
+    void archiveEpisode_setsStatusArchived() {
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+        when(episodeRepository.save(any(Episode.class))).thenReturn(testEpisode);
+
+        episodeService.archiveEpisode(episodeId);
+
+        verify(episodeRepository).save(episodeCaptor.capture());
+        assertThat(episodeCaptor.getValue().getStatus()).isEqualTo(EpisodeStatus.ARCHIVED);
+    }
+
+    @Test
+    void archiveEpisode_unknownId_throws() {
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> episodeService.archiveEpisode(episodeId))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void archiveEpisode_idempotentReArchive_staysArchived() {
+        testEpisode.setStatus(EpisodeStatus.ARCHIVED);
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+        when(episodeRepository.save(any(Episode.class))).thenReturn(testEpisode);
+
+        episodeService.archiveEpisode(episodeId);
+
+        verify(episodeRepository).save(episodeCaptor.capture());
+        assertThat(episodeCaptor.getValue().getStatus()).isEqualTo(EpisodeStatus.ARCHIVED);
+    }
 }
 
