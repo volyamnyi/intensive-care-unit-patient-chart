@@ -135,6 +135,18 @@ class ModuleBoundaryTest {
         .and().areDeclaredInClassesThat(isEnforcedController())
         .should().beAnnotatedWith(PreAuthorize.class);
 
+    /**
+     * Rule #3 (#424): controllers never touch repositories — user lifecycle,
+     * settings and stats business rules live in the service layer
+     * ({@code UserService}, {@code SystemSettingsService}, ...).
+     */
+    @ArchTest
+    static final ArchRule controllersDoNotDependOnRepositories = noClasses()
+        .that().resideInAnyPackage(CONTROLLER_PACKAGES)
+        .should().dependOnClassesThat().resideInAnyPackage("com.superhumans.repository..",
+            "com.superhumans.medicationsheet.repository..",
+            "com.superhumans.prosthesismanufacturing.repository..");
+
     private static DescribedPredicate<JavaClass> isEnforcedController() {
         DescribedPredicate<JavaClass> predicate = resideInAnyPackage(CONTROLLER_PACKAGES);
         for (String excluded : PLATFORM_CONTROLLER_EXCLUSIONS) {

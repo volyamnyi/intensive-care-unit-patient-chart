@@ -11,14 +11,15 @@ import com.superhumans.dto.LegacyBackfillReportResponse;
 import com.superhumans.service.AuditRetentionService;
 import com.superhumans.dto.PermissionMatrixResponse;import com.superhumans.dto.PermissionResponse;
 import com.superhumans.dto.RolePermissionUpdateRequest;
-import com.superhumans.entity.core.User;
+import com.superhumans.dto.UserResponse;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.exception.BadRequestException;
-import com.superhumans.repository.core.UserRepository;
+import com.superhumans.mapper.UserMapper;
 import com.superhumans.service.AuditService;
 import com.superhumans.service.LegacyAuditBackfillService;
 import com.superhumans.service.PermissionCatalog;
 import com.superhumans.service.PermissionService;
+import com.superhumans.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.AccessLevel;
@@ -39,7 +40,8 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AdminController {
 
-    UserRepository userRepository;
+    UserService userService;
+    UserMapper userMapper;
     AuditService auditService;
     AuditEventRecorder auditEventRecorder;
     PermissionService permissionService;
@@ -47,9 +49,10 @@ public class AdminController {
     AuditRetentionService retentionService;
 
     @GetMapping("/users")
-    @org.springframework.transaction.annotation.Transactional
-    public List<User> getAllUsers() {
-        List<User> users = userRepository.findAllByOrderByIdAsc();
+    public List<UserResponse> getAllUsers() {
+        final List<UserResponse> users = userService.findAllOrdered().stream()
+                .map(userMapper::toResponse)
+                .toList();
         final int resultCount = users.size();
         auditEventRecorder.record(AuditEvent.builder()
                 .actor(AuditActorResolver.fromCurrentContext())
@@ -66,9 +69,8 @@ public class AdminController {
     }
 
     @GetMapping("/users/{id}")
-    @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<User> getUser(@PathVariable Long id) {
-        return userRepository.findById(id)
+    public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
+        return userService.findById(id)
                 .map(user -> {
                     auditEventRecorder.record(AuditEvent.builder()
                             .actor(AuditActorResolver.fromCurrentContext())
@@ -81,67 +83,58 @@ public class AdminController {
                             .outcome(AuditEvent.AuditOutcome.SUCCESS)
                             .source(AuditEvent.AuditSource.ADMIN_TOOL)
                             .build());
-                    return ResponseEntity.ok(user);
+                    return ResponseEntity.ok(userMapper.toResponse(user));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/users/{id}/role")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public ResponseEntity<User> updateRole(@PathVariable Long id, @RequestBody Map<String, String> body,
+    public ResponseEntity<UserResponse> updateRole(@PathVariable Long id, @RequestBody Map<String, String> body,
                                             Authentication auth) {
-        UserRole newRole = parseRole(body == null ? null : body.get("role"));
-        return userRepository.findById(id).map(user -> {
-            UserRole previousRole = user.getRole();
-            user.setRole(newRole);
-            user.setUpdatedBy(getUserId(auth));
-            userRepository.save(user);
-            auditService.logAction("User", null, "ADMIN_UPDATE_ROLE:" + newRole.name(), getUserId(auth));
-            auditEventRecorder.record(AuditEvent.builder()
-                    .actor(AuditActorResolver.fromAuthentication(auth))
-                    .eventClass(EventClass.SECURITY)
-                    .module("platform")
-                    .functionalArea("users")
-                    .action("platform.user.role.change")
-                    .actionType(ActionType.ROLE_CHANGE)
-                    .target(new AuditEvent.AuditTarget("User", id.toString(), null))
-                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                    .changes(List.of(new AuditEvent.AuditChange(
-                            "role", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER,
-                            previousRole == null ? null : previousRole.name(), newRole.name())))
-                    .source(AuditEvent.AuditSource.ADMIN_TOOL)
-                    .build());
-            return ResponseEntity.ok(user);
-        }).orElse(ResponseEntity.notFound().build());
+        return userService.updateRole(id, body == null ? null : body.get("role"), getUserId(auth))
+                .map(change -> {
+                    auditEventRecorder.record(AuditEvent.builder()
+                            .actor(AuditActorResolver.fromAuthentication(auth))
+                            .eventClass(EventClass.SECURITY)
+                            .module("platform")
+                            .functionalArea("users")
+                            .action("platform.user.role.change")
+                            .actionType(ActionType.ROLE_CHANGE)
+                            .target(new AuditEvent.AuditTarget("User", id.toString(), null))
+                            .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                            .changes(List.of(new AuditEvent.AuditChange(
+                                    "role", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER,
+                                    change.previousRole() == null ? null : change.previousRole().name(),
+                                    change.user().getRole().name())))
+                            .source(AuditEvent.AuditSource.ADMIN_TOOL)
+                            .build());
+                    return ResponseEntity.ok(userMapper.toResponse(change.user()));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication auth) {
-        Long currentUserId = getUserId(auth);
-        if (currentUserId.equals(id)) {
-            throw new BadRequestException("Неможливо видалити власний обліковий запис");
-        }
-        return userRepository.findById(id).map(user -> {
-            user.setDeleted(true);
-            user.setUpdatedBy(currentUserId);
-            userRepository.save(user);
-            auditService.logAction("User", null, "ADMIN_DELETE_USER:soft-deleted", currentUserId);
-            auditEventRecorder.record(AuditEvent.builder()
-                    .actor(AuditActorResolver.fromAuthentication(auth))
-                    .eventClass(EventClass.SECURITY)
-                    .module("platform")
-                    .functionalArea("users")
-                    .action("platform.user.disable")
-                    .actionType(ActionType.DISABLE)
-                    .target(new AuditEvent.AuditTarget("User", id.toString(), null))
-                    .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                    .changes(List.of(new AuditEvent.AuditChange(
-                            "isDeleted", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER, false, true)))
-                    .source(AuditEvent.AuditSource.ADMIN_TOOL)
-                    .build());
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).<Void>build();
-        }).orElse(ResponseEntity.notFound().build());
+        return userService.softDelete(id, getUserId(auth))
+                .map(user -> {
+                    auditEventRecorder.record(AuditEvent.builder()
+                            .actor(AuditActorResolver.fromAuthentication(auth))
+                            .eventClass(EventClass.SECURITY)
+                            .module("platform")
+                            .functionalArea("users")
+                            .action("platform.user.disable")
+                            .actionType(ActionType.DISABLE)
+                            .target(new AuditEvent.AuditTarget("User", id.toString(), null))
+                            .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                            .changes(List.of(new AuditEvent.AuditChange(
+                                    "isDeleted", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER, false, true)))
+                            .source(AuditEvent.AuditSource.ADMIN_TOOL)
+                            .build());
+                    return ResponseEntity.status(HttpStatus.NO_CONTENT).<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     /** Full role-permission matrix for the admin RBAC interface. */
@@ -177,7 +170,7 @@ public class AdminController {
     public PermissionMatrixResponse updatePermissionMatrix(
             @Valid @RequestBody RolePermissionUpdateRequest request,
             Authentication auth) {
-        UserRole role = parseRole(request.getRole());
+        UserRole role = userService.parseRole(request.getRole());
         if (!PermissionCatalog.allCodes().contains(request.getPermissionCode())) {
             throw new BadRequestException("Невідомий код права: " + request.getPermissionCode());
         }
@@ -220,18 +213,8 @@ public class AdminController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getStats() {        List<User> all = userRepository.findAll();
-        long doctors = all.stream().filter(u -> u.getRole() == UserRole.DOCTOR).count();
-        long nurses = all.stream().filter(u -> u.getRole() == UserRole.NURSE).count();
-        long hods = all.stream().filter(u -> u.getRole() == UserRole.HEAD_OF_DEPARTMENT).count();
-        long admins = all.stream().filter(u -> u.getRole() == UserRole.ADMINISTRATOR).count();
-        return ResponseEntity.ok(Map.of(
-                "totalUsers", all.size(),
-                "doctors", doctors,
-                "nurses", nurses,
-                "headsOfDepartment", hods,
-                "administrators", admins
-        ));
+    public ResponseEntity<Map<String, Object>> getStats() {
+        return ResponseEntity.ok(userService.stats());
     }
 
     private Long getUserId(Authentication auth) {
@@ -239,16 +222,5 @@ public class AdminController {
             return uid;
         }
         return 0L;
-    }
-
-    private UserRole parseRole(String value) {
-        if (value == null || value.isBlank()) {
-            throw new BadRequestException("Роль обов'язкова");
-        }
-        try {
-            return UserRole.valueOf(value);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Невідома роль: " + value);
-        }
     }
 }

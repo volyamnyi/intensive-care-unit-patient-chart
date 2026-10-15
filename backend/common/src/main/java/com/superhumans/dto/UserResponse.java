@@ -15,4 +15,5 @@ public class UserResponse {
     String specialityCode;
     String specialityName;
     String phone;
+    boolean deleted;
 }

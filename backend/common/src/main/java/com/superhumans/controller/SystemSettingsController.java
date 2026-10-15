@@ -1,6 +1,6 @@
 package com.superhumans.controller;
 
-import com.superhumans.repository.core.SystemSettingsRepository;
+import com.superhumans.service.SystemSettingsService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -18,11 +18,11 @@ import java.util.Map;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SystemSettingsController {
 
-    SystemSettingsRepository systemSettingsRepository;
+    SystemSettingsService systemSettingsService;
 
     @GetMapping("/{key}")
     public ResponseEntity<Map<String, String>> getByKey(@PathVariable String key) {
-        return systemSettingsRepository.findByKey(key)
+        return systemSettingsService.findByKey(key)
                 .map(s -> ResponseEntity.ok()
                         .cacheControl(CacheControl.noStore())
                         .body(Map.of("key", s.getKey(), "value", s.getValue())))
