@@ -1424,6 +1424,8 @@ CI pipeline (`.github/workflows/playwright.yml`) — **не** деплоює. Ц
 2. У low-traffic вікно: `POST /api/admin/audit/backfill` (ADMINISTRATOR).
    Очікувано: `verified: true`, `checksumMismatches: []`.
    Якщо `verified: false` — дивитись `checksumMismatches` (до 100 записів), НЕ йти далі.
+   Орієнтовна тривалість: `rows / 171` сек (виміряно F8.7) + ~1 SELECT/рядок
+   на verify-прохід; блокуючий HTTP-запит тримає весь цикл — планувати вікно.
 3. Повторити backfill (ідемпотентно) до `inserted: 0` + `verified: true`.
 4. Перемкнути консоль: основна — «Події (Audit v2)» (`/api/audit/events`);
    legacy-таблиця лишається для звірки на період сумісності.
