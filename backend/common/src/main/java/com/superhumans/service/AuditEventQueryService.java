@@ -350,7 +350,11 @@ public class AuditEventQueryService {
     }
 
     private static Pageable stablePageable(Pageable pageable) {
-        Sort stable = Sort.by(Sort.Order.desc("occurredAt"), Sort.Order.desc("auditId"));
+        // (occurred_at DESC, audit_id ASC) matches idx_audit_events_occurred_at
+        // exactly: the planner walks the index forward with no Sort node on
+        // every page (CR-07 #420). auditId stays a total tiebreaker, so
+        // pagination order is unchanged for distinct timestamps.
+        Sort stable = Sort.by(Sort.Order.desc("occurredAt"), Sort.Order.asc("auditId"));
         if (pageable == null || pageable.isUnpaged()) {
             return PageRequest.of(0, 20, stable);
         }

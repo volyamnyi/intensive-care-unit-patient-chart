@@ -38,3 +38,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/013-audit-retention-archive.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/014-audit-events-parent-index.sql
