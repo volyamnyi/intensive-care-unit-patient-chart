@@ -1432,7 +1432,13 @@ CI pipeline (`.github/workflows/playwright.yml`) — **не** деплоює. Ц
 5. Зупинити legacy-записи: `APP_AUDIT_LEGACY_WRITE_ENABLED=false` (env, рестарт).
    Властивість: `app.audit.legacy-write-enabled` (default `true`).
    Відкат: повернути `true` — нові legacy-рядки знову пишуться, backfill їх підбере.
-6. Історію при rollout НЕ видаляти (`audit_logs` лишається недоторканим).
+5a. **Фінальний backfill ПІСЛЯ фліпу (КРИТИЧНО, AC#1 #394):** покриває рядки,
+    записані між останнім pre-flip backfill (крок 2-3) та фліпом (крок 5).
+    Без цього кроку майбутній `DROP TABLE audit_logs` (E3, пізніше окремим PR)
+    втратить історію вікна фліпу. Повторювати до `inserted: 0 && verified: true`
+    і записати evidence (звіт + кількість рядків) в issue #394.
+6. Історію при rollout НЕ видаляти (`audit_logs` лишається недоторканим)
+   до виконання кроку 5a + окремого рішення про дроп (E3).
 
 ### F.2 Least-privilege ролі (застосувати DBA до cutover)
 
