@@ -339,8 +339,9 @@ class ClinicalDayServiceTest {
             svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(8, 0));
             SignRequest req = new SignRequest(userId, "hash");
             when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
-            when(signatureService.createNurseSignature(dayId, userId, req.getHash()))
-                    .thenReturn(Signature.builder().clinicalDay(testDay).userId(userId)
+            when(signatureService.createSignature(any(), eq(userId), eq("NURSE"), eq(req.getHash()),
+                    any(), any(), any(), any(), any())).thenReturn(
+                    Signature.builder().clinicalDay(testDay).userId(userId)
                             .role("NURSE").status("ACTIVE").signedAt(LocalDateTime.now()).build());
 
             clinicalDayService.signNurse(dayId, req, userId);
@@ -357,8 +358,9 @@ class ClinicalDayServiceTest {
             svcMock.when(ClinicalDayService::signingWindowNow).thenReturn(LocalTime.of(3, 0));
             SignRequest req = new SignRequest(userId, "hash");
             when(clinicalDayRepository.findById(dayId)).thenReturn(Optional.of(testDay));
-            when(signatureService.createNurseSignature(dayId, userId, req.getHash()))
-                    .thenReturn(Signature.builder().clinicalDay(testDay).userId(userId)
+            when(signatureService.createSignature(any(), eq(userId), eq("NURSE"), eq(req.getHash()),
+                    any(), any(), any(), any(), any())).thenReturn(
+                    Signature.builder().clinicalDay(testDay).userId(userId)
                             .role("NURSE").status("ACTIVE").signedAt(LocalDateTime.now()).build());
 
             clinicalDayService.signNurse(dayId, req, userId);
