@@ -268,7 +268,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
   |---|---|---|
   | `my_fullstack_core` | COMMON (single-deployment core) | Users & authentication, dynamic RBAC (`permissions` + `role_permissions` matrix), audit log (`audit_logs`), system settings and reference values |
   | `my_fullstack_icu` | ICU Chart | Episodes, clinical days, hourly records, medical orders & executions, notes, clinical scale results, signatures, generated PDFs, labs, ventilation, patient state, fluid balance |
-  | `my_fullstack_med` | Medication Sheet | Prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/allergy/drug-interaction caches, telegram subscriptions |
+  | `my_fullstack_med` | Medication Sheet | Prescription lists/items/days/parts/executions/signatures, vital sign lists, medicine/drug-interaction caches |
   | `my_fullstack_prosth` | Prosthetics Manufacturing | Patients, orders, flow templates, flow instances & step executions, failure snapshots, evidence files, defect (brak) events & branches |
   | `my_fullstack_db` | — (bootstrap only, **not used by the app**) | Default database auto-created by the PostgreSQL Docker service container in CI (`POSTGRES_DB` env var, required by the image); the application never connects to it — all CI DB-using jobs create the 4 real databases above inside that container (`CREATE DATABASE` ×4) |
 
@@ -724,13 +724,12 @@ All endpoints prefixed with `/api`.
 | `PdfGeneratorService` | Generate PDF (iText) with all clinical day sections |
 | `VentilationSettingsService`, `LabResultService`, `PatientStateAssessmentService`, `DepartmentService`, `EmailService` | Ventilation settings, lab results, patient state, department data, e-mail notifications |
 
-### Medication sheet (`medication-sheet`, 10)
+### Medication sheet (`medication-sheet`, 7)
 | Service | Responsibility |
 |---|---|
 | `PrescriptionListService`, `PrescriptionItemService`, `PrescriptionExecutionService` | Prescription lists/items/day-part executions (21-day grid) |
 | `VitalSignService` | Vital sign days/entries |
-| `MedicineCatalogService`, `DrugInteractionService` | Medicine catalog + allergy/drug-interaction checks |
-| `NotificationService`, `LogNotificationService`, `LogEmailService`, `EmailService` | Telegram/e-mail notifications (logging fallbacks in tests) |
+| `DrugInteractionCatalogService`, `DrugInteractionImportService`, `DrugInteractionWarningService` | Drug-interaction catalog browse, admin dataset import, planned-overlap warnings |
 
 ### Prosthetics manufacturing (`prosthesis-manufacturing`, 12)
 | Service | Responsibility |
