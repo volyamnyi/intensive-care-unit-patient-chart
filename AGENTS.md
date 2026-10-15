@@ -355,7 +355,7 @@ Local suites green = done; start the next issue at Phase 1. When CI was explicit
 | `mvn compile` | Compile only |
 | `mvn test` | Run unit tests (excludes integration) |
 | `mvn test -Pintegration-test` | Run 79 integration tests (requires Docker/PostgreSQL) |
-| `mvn verify` | Run all + JaCoCo coverage check + Checkstyle |
+| `mvn verify` | Run unit tests + JaCoCo coverage floor (0.50 instruction / 0.40 branch, per module — CI backend-test runs this) |
 
 ### Frontend (`cd frontend`)
 | Command | Action |
@@ -375,7 +375,7 @@ Local suites green = done; start the next issue at Phase 1. When CI was explicit
 
 ## Testing
 
-- **Backend**: 428 main sources / 209 test files across the multi-module reactor (common 172/41, icu-chart 83/87, medication-sheet 73/23, prosthesis-manufacturing 100/57, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo 60% instruction / 50% branch minimum. Checkstyle Google checks.
+- **Backend**: 428 main sources / 209 test files across the multi-module reactor (common 172/41, icu-chart 83/87, medication-sheet 73/23, prosthesis-manufacturing 100/57, app 0/1 — the app test is the ArchUnit `ModuleBoundaryTest`). JaCoCo coverage floor on every module (parent-POM plugin): 0.50 instruction / 0.40 branch minimum, enforced by `mvn verify` in the CI `backend-test` job (#426 — ratchet toward the §88 target 60/50 as coverage improves). Checkstyle Google checks.
 - **Frontend**: 991 Vitest tests across 109 test files (158 TS/TSX sources). Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
 - **E2E**: 494 Playwright tests in 102 files (100 specs + auth setup) in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet).
 
@@ -758,7 +758,7 @@ All endpoints prefixed with `/api`.
 | §84 | AUDITOR role | Added to `UserRole` enum |
 | §86 | Integration tests in CI | New `integration-tests` job with PostgreSQL 16 service |
 | §87 | ~~Mock MIS error scenarios~~ (removed Phase 11, #264) | `/api/mis/error-mode` deleted — no mock error simulation exists |
-| §88 | JaCoCo coverage | 60% instruction / 50% branch minimums |
+| §88 | JaCoCo coverage | Parent-POM plugin on every module; floor 0.50 instruction / 0.40 branch enforced by `mvn verify` in the CI backend-test job (ratchet toward 60/50) |
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer to MIS banned (#269) | `TransferStatus` + `GeneratedPdf.transferStatus/transferError/transferredAt` removed (Liquibase `icu/007-drop-pdf-transfer.sql`); PDFs stay local — `GET /clinical-days/{id}/pdf/file` serves bytes, in-module print via `lib/printPdf.ts` |
 | §98 | MIS calls audited | `MisServiceImpl` methods call `auditService.logAction()`; `sendPdf()` removed in #269 (guarded by `MisWriteBanTripwireTest`) |

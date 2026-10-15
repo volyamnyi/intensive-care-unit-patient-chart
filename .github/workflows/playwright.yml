@@ -92,7 +92,9 @@ jobs:
           done
       
       - name: Run unit tests with coverage
-        run: mvn clean test
+        # `verify` (not `test`) so the JaCoCo coverage floor actually gates
+        # the build (#426) — it is bound to the verify phase in the parent POM.
+        run: mvn clean verify
         working-directory: backend
         env:
           APP_DATASOURCE_CORE_URL: jdbc:postgresql://localhost:5432/my_fullstack_core
@@ -117,7 +119,8 @@ jobs:
         if: always()
         with:
           name: jacoco-report
-          path: backend/common/target/site/jacoco/
+          # All 4 modules generate site/jacoco (parent-POM plugin, #426).
+          path: backend/*/target/site/jacoco/
           retention-days: 7
       
       - name: Upload test results

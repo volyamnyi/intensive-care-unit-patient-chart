@@ -540,6 +540,7 @@ icu-patient-chart/
 | `mvn clean package -DskipTests` | Build JAR |
 | `mvn compile` | Compile only |
 | `mvn test` | Run unit tests (167 test files) |
+| `mvn verify` | Unit tests + JaCoCo coverage floor (0.50 instruction / 0.40 branch per module) — the CI backend-test gate |
 | `mvn test -Pintegration-test` | Run integration tests (233) — requires Docker/PostgreSQL |
 
 #### Frontend
