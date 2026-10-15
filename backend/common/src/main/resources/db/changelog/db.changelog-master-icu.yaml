@@ -23,3 +23,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: icu/079-audit-outbox.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/080-clinical-indexes.sql
