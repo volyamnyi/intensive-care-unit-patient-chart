@@ -186,6 +186,52 @@ class PdfGeneratorServiceTest {
     }
 
     @Test
+    void generatePdf_therapyTruncationMarker_whenMoreThanNineOrders() throws Exception {
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+        when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
+                .thenReturn(Optional.empty());
+        GeneratedPdf saved = new GeneratedPdf();
+        saved.setId(UUID.randomUUID());
+        saved.setClinicalDay(clinicalDay);
+        saved.setFileName("test.pdf");
+        saved.setFileVersion(1);
+        when(generatedPdfRepository.save(any(GeneratedPdf.class))).thenReturn(saved);
+
+        List<MedicalOrder> manyOrders = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            MedicalOrder order = new MedicalOrder();
+            order.setId(UUID.randomUUID());
+            order.setDrugName("Drug" + i);
+            order.setDose("10mg");
+            order.setUnit("ml");
+            order.setStartTime(LocalDateTime.now().withHour(i % 24));
+            manyOrders.add(order);
+        }
+        when(medicalOrderRepository.findByClinicalDayIdOrderByStartTimeAsc(clinicalDayId))
+                .thenReturn(manyOrders);
+
+        pdfGeneratorService.generatePdf(clinicalDayId, userId);
+
+        verify(generatedPdfRepository).save(pdfCaptor.capture());
+        byte[] pdfBytes = pdfCaptor.getValue().getFileData();
+        assertThat(pdfBytes).isNotNull().isNotEmpty();
+
+        // Extract text and assert the truncation marker is visible
+        try (var reader = new com.itextpdf.kernel.pdf.PdfReader(
+                new java.io.ByteArrayInputStream(pdfBytes));
+             var pdfDoc = new com.itextpdf.kernel.pdf.PdfDocument(reader)) {
+            StringBuilder text = new StringBuilder();
+            for (int page = 1; page <= pdfDoc.getNumberOfPages(); page++) {
+                text.append(com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
+                        .getTextFromPage(pdfDoc.getPage(page)));
+            }
+            assertThat(text.toString())
+                    .as("the PDF must carry a visible truncation marker when orders > 9")
+                    .contains("Відображено 9 з 12");
+        }
+    }
+
+    @Test
     void generatePdf_whenDayIsOpen_throws() {
         clinicalDay.setStatus(ClinicalDayStatus.OPEN);
         when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));

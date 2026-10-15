@@ -204,10 +204,20 @@ public class PdfGeneratorService {
             List<MedicalOrder> orders = medicalOrderRepository
                     .findByClinicalDayIdOrderByStartTimeAsc(day.getId());
             PatientDTO patient = null;
+            boolean patientMissing = false;
             if (episode != null && episode.getPatientId() != null) {
                 try {
                     patient = misService.getPatient(episode.getPatientId()).orElse(null);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("MIS patient fetch failed for PDF generation (day {}): {}",
+                            day.getId(), e.getMessage());
+                }
+                patientMissing = patient == null;
+            }
+            if (patientMissing) {
+                log.warn("Patient data missing for clinical day {} (patientId={}) — PDF will "
+                        + "carry a visible degradation marker",
+                        day.getId(), episode != null ? episode.getPatientId() : null);
             }
 
             int[] displayHours = buildDisplayHours();
@@ -256,6 +266,13 @@ public class PdfGeneratorService {
             Cell leftCell = new Cell().setPadding(0).setBorder(Border.NO_BORDER);
             leftCell.add(createStatsTable(font, boldFont, day, patient, hourMap, displayHours));
             leftCell.add(createTherapyTable(font, boldFont, orders, orderExecHours, displayHours));
+            // Therapy truncation marker (#409): the paper form has 9 therapy
+            // rows; orders beyond that are silently dropped unless noted.
+            if (orders.size() > 9) {
+                leftCell.add(new com.itextpdf.layout.element.Paragraph(
+                        "Відображено 9 з " + orders.size() + " призначень")
+                        .setFont(font).setFontSize(6f).setMarginTop(1f));
+            }
             leftCell.add(createLossesTable(font, boldFont, hourMap, displayHours, urineByHour, drainByHour));
             master.addCell(leftCell);
 
@@ -548,8 +565,11 @@ public class PdfGeneratorService {
         Table sb = new Table(1);
         sb.setWidth(UnitValue.createPercentValue(100));
 
-        // Patient name
-        String name = patient != null ? patient.getFullName() : "Пацієнт (ПІП)";
+        // Patient name — a visible degradation marker when MIS data is missing
+        // (#409): the old silent placeholder «Пацієнт (ПІП)» made a patient-less
+        // legal document indistinguishable from a correct one in the archive.
+        String name = patient != null ? patient.getFullName()
+                : "ПАЦІЄНТ НЕ ІДЕНТИФІКОВАНО\n(дані MIS недоступні)";
         sb.addCell(sideCell(name, font, cellSize).setMinHeight(40));
 
         // Diagnosis
