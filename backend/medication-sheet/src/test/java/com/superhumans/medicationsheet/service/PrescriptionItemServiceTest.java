@@ -144,7 +144,7 @@ class PrescriptionItemServiceTest {
 
     @Test
     void addItem_setsSortOrderFromExistingCount() {
-        PrescriptionItem existing = PrescriptionItem.builder().medicineName("Existing").build();
+        PrescriptionItem existing = PrescriptionItem.builder().medicineName("Existing").sortOrder(0).build();
         existing.setId(UUID.randomUUID());
         when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
         when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)).thenReturn(List.of(existing));
@@ -415,6 +415,30 @@ class PrescriptionItemServiceTest {
                 .hasMessageContaining("Незаплановане");
 
         verify(partRepository, never()).save(any());
+    }
+
+    @Test
+    void addItem_assignsMaxSortOrderPlusOne_afterDeletion() {
+        // Items with sortOrders [0, 2] — item 1 was deleted; count() would give 2
+        // (a collision with item 2), max+1 gives 3 (correct gap-fill).
+        PrescriptionItem item0 = PrescriptionItem.builder().list(testList).sortOrder(0).build();
+        PrescriptionItem item2 = PrescriptionItem.builder().list(testList).sortOrder(2).build();
+        when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
+        when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId))
+                .thenReturn(List.of(item0, item2));
+        when(itemRepository.save(any())).thenAnswer(inv -> {
+            PrescriptionItem saved = inv.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        when(dayRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        PrescriptionItem result = service.addItem(listId, "NewDrug", null, "IV", "stat");
+
+        assertThat(result.getSortOrder())
+                .as("sortOrder must be max+1, not count() — avoids collision after deletion")
+                .isEqualTo(3);
     }
 
     @Test

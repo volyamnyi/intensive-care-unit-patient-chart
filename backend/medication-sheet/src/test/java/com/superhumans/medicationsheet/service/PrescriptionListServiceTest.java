@@ -1,6 +1,7 @@
 package com.superhumans.medicationsheet.service;
 
 import com.superhumans.medicationsheet.entity.PrescriptionList;
+import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionListRepository;
@@ -236,6 +237,32 @@ class PrescriptionListServiceTest {
                 .isInstanceOf(DocumentLockedException.class)
                 .hasMessageContaining("already closed");
         verify(listRepository, never()).save(any());
+    }
+
+    @Test
+    void create_throws_whenPatientHasOpenList() {
+        when(listRepository.findByPatientIdAndDeletedFalse(1001L)).thenReturn(List.of(testList));
+
+        assertThatThrownBy(() -> service.create(1001L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("активний листок");
+        verify(listRepository, never()).save(any());
+    }
+
+    @Test
+    void create_succeeds_whenOnlyFinishedListExists() {
+        testList.setStatus("Finished");
+        when(listRepository.findByPatientIdAndDeletedFalse(1001L)).thenReturn(List.of(testList));
+        when(listRepository.save(any())).thenAnswer(inv -> {
+            PrescriptionList l = inv.getArgument(0);
+            l.setId(UUID.randomUUID());
+            return l;
+        });
+
+        var result = service.create(1001L);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("Saved");
     }
 
     @Test

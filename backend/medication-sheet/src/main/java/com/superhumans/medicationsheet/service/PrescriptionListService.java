@@ -10,7 +10,9 @@ import com.superhumans.audit.AuditChanges;
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.entity.PrescriptionList;
+import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.DocumentLockedException;
+import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.medicationsheet.repository.PrescriptionListRepository;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +61,12 @@ public class PrescriptionListService {
 
     @Transactional
     public PrescriptionList create(Long patientId) {
+        List<PrescriptionList> existing = listRepository.findByPatientIdAndDeletedFalse(patientId);
+        boolean hasOpen = existing.stream().anyMatch(list -> !list.isFinished());
+        if (hasOpen) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Пацієнт вже має активний листок призначень");
+        }
         PrescriptionList list = PrescriptionList.builder()
                 .patientId(patientId)
                 .documentName("\u041B\u0438\u0441\u0442\u043E\u043A \u043B\u0456\u043A\u0430\u0440\u0441\u044C\u043A\u0438\u0445 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u044C")

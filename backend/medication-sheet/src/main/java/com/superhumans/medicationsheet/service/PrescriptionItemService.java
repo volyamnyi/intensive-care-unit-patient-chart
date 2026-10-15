@@ -54,7 +54,8 @@ public class PrescriptionItemService {
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
         requireNotFinished(list);
 
-        int sortOrder = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId).size();
+        int sortOrder = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)
+                .stream().mapToInt(PrescriptionItem::getSortOrder).max().orElse(-1) + 1;
 
         PrescriptionItem item = PrescriptionItem.builder()
                 .list(list)
