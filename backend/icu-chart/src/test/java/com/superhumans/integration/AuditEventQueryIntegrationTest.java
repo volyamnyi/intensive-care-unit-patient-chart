@@ -166,6 +166,26 @@ class AuditEventQueryIntegrationTest extends AbstractIntegrationTest {
                 getAdminToken(), "platform", "platform.user.view", "User", "16");
         assertThat(search.get("totalElements").asLong()).isGreaterThanOrEqualTo(1);
 
+        // The v2 search itself is self-audited (P12, cutover #395)
+        JsonNode searchSelfAudit = getJson("/api/audit/events?action={action}",
+                getAdminToken(), "platform.audit.search");
+        assertThat(searchSelfAudit.get("totalElements").asLong())
+                .as("v2 console search must emit platform.audit.search")
+                .isGreaterThanOrEqualTo(1);
+
+        // The v2 detail read is self-audited (P13, cutover #395) — target type
+        // AuditEvent distinguishes v2-sourced events from legacy P13 (AuditLog)
+        String firstAuditId = search.get("content").get(0).get("auditId").asText();
+        restTemplate.exchange("/api/audit/events/{id}", HttpMethod.GET,
+                authGet(getAdminToken()), String.class, firstAuditId);
+        JsonNode detailSelfAudit = getJson(
+                "/api/audit/events?action={action}&targetType={type}",
+                getAdminToken(), "platform.audit.detail.view", "AuditEvent");
+        assertThat(detailSelfAudit.get("totalElements").asLong())
+                .as("v2 console detail must emit platform.audit.detail.view "
+                        + "with target_type=AuditEvent")
+                .isGreaterThanOrEqualTo(1);
+
         var denied = restTemplate.exchange("/api/audit/events", HttpMethod.GET,
                 authGet(getNurseToken()), String.class);
         assertThat(denied.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
