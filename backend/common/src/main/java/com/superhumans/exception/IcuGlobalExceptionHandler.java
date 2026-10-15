@@ -20,16 +20,27 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class IcuGlobalExceptionHandler {
 
+    /**
+     * Matches the X-Correlation-Id response header (RequestCorrelationFilter);
+     * falls back to a fresh UUID for non-request callers (#403).
+     */
+    static String correlationId() {
+        com.superhumans.audit.AuditRequestContext.Context context =
+                com.superhumans.audit.AuditRequestContext.current();
+        return context == null ? java.util.UUID.randomUUID().toString()
+                : context.correlationId().toString();
+    }
+
     @ExceptionHandler(ClinicalDayAlreadyOpenException.class)
     public ResponseEntity<ErrorResponse> handleClinicalDayAlreadyOpen(ClinicalDayAlreadyOpenException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
-                new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ex.getCode(), ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(DuplicateHourlyRecordException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateHourlyRecord(DuplicateHourlyRecordException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ex.getCode(), ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -37,9 +48,9 @@ public class IcuGlobalExceptionHandler {
         String message = ex.getMostSpecificCause().getMessage();
         if (message != null && message.contains("uk_hourly_records_clinical_day_record_hour")) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                    new ErrorResponse(ErrorCode.DUPLICATE_HOURLY_RECORD, "Hourly record already exists for this hour", UUID.randomUUID().toString()));
+                    new ErrorResponse(ErrorCode.DUPLICATE_HOURLY_RECORD, "Hourly record already exists for this hour", correlationId()));
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                new ErrorResponse(ErrorCode.VERSION_CONFLICT, "Data integrity violation", UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.VERSION_CONFLICT, "Data integrity violation", correlationId()));
     }
 }

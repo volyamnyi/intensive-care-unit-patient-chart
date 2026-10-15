@@ -45,16 +45,29 @@ public class GlobalExceptionHandler {
     private static final java.util.regex.Pattern ID_SEGMENT = java.util.regex.Pattern.compile(
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|\\d+");
 
+    /**
+     * The error body's correlationId must match the X-Correlation-Id response
+     * header (set by RequestCorrelationFilter) so a reported ID finds its
+     * log line. Falls back to a fresh UUID for non-request callers (tests,
+     * schedulers) where no context is installed (#403).
+     */
+    static String correlationId() {
+        com.superhumans.audit.AuditRequestContext.Context context =
+                com.superhumans.audit.AuditRequestContext.current();
+        return context == null ? UUID.randomUUID().toString()
+                : context.correlationId().toString();
+    }
+
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ex.getCode(), ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(DocumentLockedException.class)
     public ResponseEntity<ErrorResponse> handleDocumentLocked(DocumentLockedException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
-                new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ex.getCode(), ex.getMessage(), correlationId()));
     }
 
     /**
@@ -69,13 +82,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(
                 new ErrorResponse(ErrorCode.VALIDATION_ERROR,
                         "Request body is not readable or contains invalid values",
-                        UUID.randomUUID().toString()));
+                        correlationId()));
     }
 
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<ErrorResponse> handleSecurity(SecurityException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                new ErrorResponse(ErrorCode.FORBIDDEN, ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.FORBIDDEN, ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(org.springframework.security.authorization.AuthorizationDeniedException.class)
@@ -101,7 +114,7 @@ public class GlobalExceptionHandler {
                     .build());
         }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                new ErrorResponse(ErrorCode.FORBIDDEN, "Access denied", UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.FORBIDDEN, "Access denied", correlationId()));
     }
 
     /**
@@ -119,19 +132,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(VersionConflictException.class)
     public ResponseEntity<ErrorResponse> handleVersionConflict(VersionConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ex.getCode(), ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(OptimisticLockException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                new ErrorResponse(ErrorCode.VERSION_CONFLICT, "Concurrent modification detected.", UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.VERSION_CONFLICT, "Concurrent modification detected.", correlationId()));
     }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
-                new ErrorResponse(ex.getCode(), ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ex.getCode(), ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -140,13 +153,13 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return ResponseEntity.badRequest().body(
-                new ErrorResponse(ErrorCode.VALIDATION_ERROR, message, UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR, message, correlationId()));
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex) {
         return ResponseEntity.badRequest().body(
-                new ErrorResponse(ErrorCode.BAD_REQUEST, ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.BAD_REQUEST, ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -155,7 +168,7 @@ public class GlobalExceptionHandler {
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
                 .collect(Collectors.joining("; "));
         return ResponseEntity.badRequest().body(
-                new ErrorResponse(ErrorCode.VALIDATION_ERROR, message, UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR, message, correlationId()));
     }
 
     @ExceptionHandler(InvalidDataAccessApiUsageException.class)
@@ -165,26 +178,55 @@ public class GlobalExceptionHandler {
         }
         log.error("Unexpected data access error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.", UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.", correlationId()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(
-                new ErrorResponse(ErrorCode.VALIDATION_ERROR, ex.getMessage(), UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR, ex.getMessage(), correlationId()));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
         String message = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "': " + ex.getMessage();
         return ResponseEntity.badRequest().body(
-                new ErrorResponse(ErrorCode.BAD_REQUEST, message, UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.BAD_REQUEST, message, correlationId()));
+    }
+
+    /**
+     * Param-level validation on {@code @Validated} controllers throws this
+     * since Spring Framework 6.1 (not {@code ConstraintViolationException} —
+     * that handler no longer fires for controllers). Without this handler
+     * the documented {@code @Pattern} validation returns a misleading 500 (#401).
+     */
+    @ExceptionHandler(org.springframework.web.method.annotation.HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleHandlerMethodValidation(
+            org.springframework.web.method.annotation.HandlerMethodValidationException ex) {
+        log.warn("Parameter validation failed: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR,
+                        "Request parameters failed validation", correlationId()));
+    }
+
+    /**
+     * Uploads exceeding the multipart limit are a client error — without this
+     * handler Spring's wrapper falls through to the RuntimeException catch-all
+     * and returns a misleading 500 (#401).
+     */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        log.warn("Upload size exceeded: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR,
+                        "Uploaded file exceeds the size limit", correlationId()));
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntime(RuntimeException ex) {
         log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.", UUID.randomUUID().toString()));
+                new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.", correlationId()));
     }
 }
