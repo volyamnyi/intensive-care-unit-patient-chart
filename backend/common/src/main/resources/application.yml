@@ -158,6 +158,22 @@ springdoc:
     operationsSorter: method
     tagsSorter: alpha
 
+# Lean by default: any mis-deployed environment (missing
+# SPRING_PROFILES_ACTIVE=prod) boots THIS document — TRACE/DEBUG must never
+# be the default (CR-08 #422). Full diagnostics live in the dev profile below.
+logging:
+  level:
+    root: INFO
+    com.superhumans: INFO
+    org.hibernate: WARN
+
+---
+# Development diagnostics: activate explicitly with SPRING_PROFILES_ACTIVE=dev.
+spring:
+  config:
+    activate:
+      on-profile: dev
+
 logging:
   level:
     root: DEBUG
@@ -221,6 +237,10 @@ spring:
   config:
     activate:
       on-profile: prod
+  output:
+    # No ANSI escapes in journald/redirected prod logs.
+    ansi:
+      enabled: never
 
 springdoc:
   api-docs:
@@ -241,13 +261,12 @@ app:
   seed-data:
     enabled: false
 
+# The base document is already lean; these keep prod explicit even if the
+# base ever grows a verbose key again.
 logging:
   level:
     root: INFO
     com.superhumans: INFO
-    org.springframework: INFO
-    org.springframework.web: INFO
-    org.springframework.security: INFO
     org.hibernate: WARN
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: OFF
