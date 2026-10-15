@@ -213,17 +213,22 @@ public class PdfGeneratorService {
             int[] displayHours = buildDisplayHours();
             Map<Integer, HourlyRecord> hourMap = buildHourMap(hourlyRecords);
 
-            // Execution hours per order for therapy chart
+            // Execution hours per order for therapy chart — one batch query
+            // instead of a per-order round trip (CR-07 #429).
             Map<UUID, Set<Integer>> orderExecHours = new HashMap<>();
             for (MedicalOrder order : orders) {
-                Set<Integer> hours = new HashSet<>();
-                List<OrderExecution> execs = orderExecutionRepository.findByOrderId(order.getId());
-                for (OrderExecution exec : execs) {
-                    if (exec.getExecutedAt() != null) {
-                        hours.add(exec.getExecutedAt().getHour());
+                orderExecHours.put(order.getId(), new HashSet<>());
+            }
+            if (!orders.isEmpty()) {
+                List<UUID> orderIds = orders.stream().map(MedicalOrder::getId).toList();
+                for (OrderExecution exec : orderExecutionRepository.findByOrderIdIn(orderIds)) {
+                    if (exec.getExecutedAt() != null && exec.getOrder() != null) {
+                        Set<Integer> hours = orderExecHours.get(exec.getOrder().getId());
+                        if (hours != null) {
+                            hours.add(exec.getExecutedAt().getHour());
+                        }
                     }
                 }
-                orderExecHours.put(order.getId(), hours);
             }
 
             // Loss data by display hour index
