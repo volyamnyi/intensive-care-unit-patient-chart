@@ -236,6 +236,9 @@ public class PrescriptionItemService {
     public void removeItem(UUID itemId) {
         PrescriptionItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
+        if (Boolean.TRUE.equals(item.getDeleted())) {
+            throw new NotFoundException("Item not found: " + itemId);
+        }
         requireNotFinished(item.getList());
         item.setDeleted(true);
         item.setUpdatedBy(0L);
@@ -267,6 +270,10 @@ public class PrescriptionItemService {
     public PrescriptionDayPart planDose(UUID dayPartId, String dose, UUID doctorId, Long userId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         requireNotFinished(part);
+        if (Boolean.TRUE.equals(part.getIsCompleted()) || Boolean.TRUE.equals(part.getIsCompletedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Виконане призначення не може бути переплановане");
+        }
         part.setDose(dose);
         part.setIsPlanned(true);
         // Re-planning a cancelled dose («Відмінити препарат») returns it to Scheduled:
@@ -285,6 +292,10 @@ public class PrescriptionItemService {
     public PrescriptionDayPart markCompleted(UUID dayPartId, UUID nurseId) {
         PrescriptionDayPart part = getDayPart(dayPartId);
         requireNotFinished(part);
+        if (!Boolean.TRUE.equals(part.getIsPlanned())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Незаплановане призначення не може бути виконане");
+        }
         part.setIsCompleted(true);
         part.setNurseName(nurseId.toString());
         part.setUpdatedBy(0L);

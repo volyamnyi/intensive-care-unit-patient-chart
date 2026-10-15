@@ -358,7 +358,47 @@ class PrescriptionItemServiceTest {
                 .isInstanceOf(NotFoundException.class);
     }
 
+    @Test
+    void removeItem_throws_whenAlreadyDeleted() {
+        testItem.setDeleted(true);
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(testItem));
+
+        assertThatThrownBy(() -> service.removeItem(itemId))
+                .isInstanceOf(NotFoundException.class);
+        verify(itemRepository, never()).save(any());
+    }
+
     // --- planDose ---
+
+    @Test
+    void planDose_throws_whenPartCompleted() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").isPlanned(true).isCompleted(true).build();
+        part.setId(dayPartId);
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.planDose(dayPartId, "50mg", UUID.randomUUID(), 1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("переплановане");
+
+        verify(partRepository, never()).save(any());
+    }
+
+    @Test
+    void markCompleted_throws_whenPartUnplanned() {
+        UUID dayPartId = UUID.randomUUID();
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").isPlanned(false).isCompleted(false).build();
+        part.setId(dayPartId);
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
+
+        assertThatThrownBy(() -> service.markCompleted(dayPartId, UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Незаплановане");
+
+        verify(partRepository, never()).save(any());
+    }
 
     @Test
     void planDose_setsDoseAndDoctorName() {

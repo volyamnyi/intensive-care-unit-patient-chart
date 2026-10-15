@@ -39,6 +39,9 @@ public class PrescriptionListService {
     public PrescriptionList getById(UUID id) {
         PrescriptionList list = listRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Prescription list not found: " + id));
+        if (Boolean.TRUE.equals(list.getDeleted())) {
+            throw new NotFoundException("Prescription list not found: " + id);
+        }
         auditEmitter.emit("medication", () -> AuditEvent.builder()
                 .actor(AuditActorResolver.fromCurrentContext())
                 .eventClass(EventClass.USER_ACTIVITY)
@@ -123,6 +126,9 @@ public class PrescriptionListService {
     @Transactional
     public void close(UUID id) {
         PrescriptionList list = getById(id);
+        if (list.isFinished()) {
+            throw new DocumentLockedException("Document is already closed");
+        }
         String previousStatus = list.getStatus();
         list.setStatus("Finished");
         list.setEditingUserId(null);

@@ -227,6 +227,26 @@ class PrescriptionListServiceTest {
         assertThat(listCaptor.getValue().getEditingStartedAt()).isNull();
     }
 
+    @Test
+    void close_whenAlreadyFinished_throwsDocumentLocked() {
+        testList.setStatus("Finished");
+        when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
+
+        assertThatThrownBy(() -> service.close(listId))
+                .isInstanceOf(DocumentLockedException.class)
+                .hasMessageContaining("already closed");
+        verify(listRepository, never()).save(any());
+    }
+
+    @Test
+    void getById_whenDeleted_throwsNotFoundException() {
+        testList.setDeleted(true);
+        when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
+
+        assertThatThrownBy(() -> service.getById(listId))
+                .isInstanceOf(NotFoundException.class);
+    }
+
     // --- delete ---
 
     @Test
