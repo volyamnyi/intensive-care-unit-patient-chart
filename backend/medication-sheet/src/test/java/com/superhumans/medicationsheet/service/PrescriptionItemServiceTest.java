@@ -228,9 +228,26 @@ class PrescriptionItemServiceTest {
         when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
         when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        PrescriptionItemDay result = service.addDay(itemId);
-
+        var result = service.addDay(itemId);
         assertThat(result.getDayDate()).isEqualTo(LocalDate.now());
+    }
+
+    @Test
+    void addDay_throws_whenMaxDaysReached() {
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(testItem));
+        List<PrescriptionItemDay> manyDays = new java.util.ArrayList<>();
+        LocalDate start = LocalDate.of(2026, 1, 1);
+        for (int i = 0; i < service.MAX_DAYS_PER_ITEM; i++) {
+            manyDays.add(dayWithDate(start.plusDays(i)));
+        }
+        when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId))
+                .thenReturn(manyDays);
+
+        assertThatThrownBy(() -> service.addDay(itemId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("максимальну");
+
+        verify(dayRepository, never()).save(any());
     }
 
     @Test

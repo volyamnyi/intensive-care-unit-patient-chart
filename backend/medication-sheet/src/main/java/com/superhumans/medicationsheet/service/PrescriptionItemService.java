@@ -122,6 +122,9 @@ public class PrescriptionItemService {
         return value.isEmpty() ? null : value;
     }
 
+    /** Hard cap on the day grid — the 21-day design baseline plus expansion headroom. */
+    static final int MAX_DAYS_PER_ITEM = 42;
+
     @Transactional
     public PrescriptionItemDay addDay(UUID itemId) {
         PrescriptionItem item = itemRepository.findByIdForUpdate(itemId)
@@ -132,6 +135,10 @@ public class PrescriptionItemService {
         requireNotFinished(item.getList());
 
         List<PrescriptionItemDay> existingDays = dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
+        if (existingDays.size() >= MAX_DAYS_PER_ITEM) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Досягнуто максимальну кількість днів призначення (" + MAX_DAYS_PER_ITEM + ")");
+        }
         LocalDate nextDate = existingDays.stream()
                 .map(PrescriptionItemDay::getDayDate)
                 .max(java.util.Comparator.naturalOrder())

@@ -19,4 +19,7 @@ databaseChangeLog:
       file: med/007-drop-telegram-subscriptions.sql
   - include:
       relativeToChangelogFile: true
+      file: med/008-item-day-unique.sql
+  - include:
+      relativeToChangelogFile: true
       file: med/027-audit-outbox.sql
