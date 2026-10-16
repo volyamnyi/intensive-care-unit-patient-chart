@@ -7,6 +7,8 @@ import com.superhumans.dto.LoginResponse;
 import com.superhumans.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.NonFinal;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,12 @@ public class AuthController {
     JwtTokenProvider jwtTokenProvider;
     TokenRevocationService tokenRevocationService;
 
+    // Cookie lifetime follows the token TTL (#371): a TTL reconfiguration
+    // must not silently diverge cookie and token lifetimes.
+    @Value("${app.jwt.expiration-ms:86400000}")
+    @NonFinal
+    long jwtExpirationMs = 86400000L;
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req, HttpServletRequest request) {
         ResponseEntity<LoginResponse> response = authService.login(req, request.getRemoteAddr());
@@ -41,7 +49,7 @@ public class AuthController {
                 .secure(request.isSecure())
                 .sameSite("Lax")
                 .path("/")
-                .maxAge(86400)
+                .maxAge(jwtExpirationMs / 1000)
                 .build();
         LoginResponse loginResponse = response.getBody();
         loginResponse.setToken(token);

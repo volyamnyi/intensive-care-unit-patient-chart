@@ -84,6 +84,39 @@ class UserServiceTest {
     }
 
     @Test
+    void updateRole_selfChange_throwsBadRequest() {
+        User admin = user(1L, UserRole.ADMINISTRATOR);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> userService.updateRole(1L, "DOCTOR", 1L))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void updateRole_lastAdminDemotion_throwsBadRequest() {
+        User admin = user(1L, UserRole.ADMINISTRATOR);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.findByRole(UserRole.ADMINISTRATOR)).thenReturn(List.of(admin));
+
+        assertThatThrownBy(() -> userService.updateRole(1L, "DOCTOR", 2L))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void updateRole_demotionWithPeerAdmin_succeeds() {
+        User admin = user(1L, UserRole.ADMINISTRATOR);
+        User peer = user(2L, UserRole.ADMINISTRATOR);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.findByRole(UserRole.ADMINISTRATOR)).thenReturn(List.of(admin, peer));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Optional<UserService.RoleChange> result = userService.updateRole(1L, "DOCTOR", 3L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().user().getRole()).isEqualTo(UserRole.DOCTOR);
+    }
+
+    @Test
     void softDelete_marksDeletedAndAudits() {
         User user = user(8L, UserRole.NURSE);
         when(userRepository.findById(8L)).thenReturn(Optional.of(user));

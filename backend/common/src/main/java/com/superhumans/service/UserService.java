@@ -62,6 +62,16 @@ public class UserService {
     public Optional<RoleChange> updateRole(Long id, String roleValue, Long actingUserId) {
         UserRole newRole = parseRole(roleValue);
         return userRepository.findById(id).map(user -> {
+            // Admin self-service guards (#371 item 6): no self-demotion and no
+            // lockout by demoting the last active administrator (recovery
+            // would be direct DB access).
+            if (actingUserId != null && actingUserId.equals(id)) {
+                throw new BadRequestException("Неможливо змінити власну роль");
+            }
+            if (user.getRole() == UserRole.ADMINISTRATOR && newRole != UserRole.ADMINISTRATOR
+                    && isLastActiveAdmin(id)) {
+                throw new BadRequestException("Неможливо понизити останнього активного адміністратора");
+            }
             UserRole previousRole = user.getRole();
             user.setRole(newRole);
             user.setUpdatedBy(actingUserId);
@@ -69,6 +79,11 @@ public class UserService {
             auditService.logAction("User", null, "ADMIN_UPDATE_ROLE:" + newRole.name(), actingUserId);
             return new RoleChange(user, previousRole);
         });
+    }
+
+    private boolean isLastActiveAdmin(Long excludedId) {
+        return userRepository.findByRole(UserRole.ADMINISTRATOR).stream()
+                .noneMatch(u -> !u.getId().equals(excludedId) && !Boolean.TRUE.equals(u.getDeleted()));
     }
 
     /**

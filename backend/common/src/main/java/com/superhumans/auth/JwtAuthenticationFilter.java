@@ -43,12 +43,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
         TokenRevocationService tokenRevocationService = tokenRevocationServiceProvider.getIfAvailable();
-        if (token != null && jwtTokenProvider.validateToken(token)
+        // Single parse per request (#371 item 4): the per-getter re-parses
+        // cost up to 5 HMAC verifications on the hot path.
+        io.jsonwebtoken.Claims claims = null;
+        if (token != null) {
+            try {
+                claims = jwtTokenProvider.getClaims(token);
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+                claims = null;
+            }
+        }
+        if (claims != null
                 && (tokenRevocationService == null
-                || !tokenRevocationService.isRevoked(jwtTokenProvider.getJtiFromToken(token)))) {
-            String login = jwtTokenProvider.getLoginFromToken(token);
-            String role = jwtTokenProvider.getRoleFromToken(token);
-            Long userId = jwtTokenProvider.getUserIdFromToken(token);
+                || !tokenRevocationService.isRevoked(claims.getId()))) {
+            String login = claims.getSubject();
+            String role = claims.get("role", String.class);
+            String userIdRaw = claims.get("userId", String.class);
+            Long userId = userIdRaw != null ? Long.valueOf(userIdRaw) : null;
             UserRepository userRepository = userRepositoryProvider.getIfAvailable();
             if (userRepository != null) {
                 var currentUser = userId == null ? null : userRepository.findById(userId).orElse(null);

@@ -69,6 +69,15 @@ public class JwtTokenProvider {
         }
     }
 
+    /**
+     * Single-parse entry point (#371 item 4): parse and HMAC-verify once,
+     * then read all fields from the returned claims instead of re-parsing
+     * per getter. Throws on invalid tokens, like the individual getters.
+     */
+    public Claims getClaims(String token) {
+        return parseClaims(token);
+    }
+
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(key)
