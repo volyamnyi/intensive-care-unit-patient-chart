@@ -92,7 +92,8 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<UserResponse> updateRole(@PathVariable Long id, @RequestBody Map<String, String> body,
                                             Authentication auth) {
-        return userService.updateRole(id, body == null ? null : body.get("role"), getUserId(auth))
+        return userService.updateRole(id, body == null ? null : body.get("role"),
+                        com.superhumans.util.AuthUsers.idOrSystem(auth))
                 .map(change -> {
                     auditEventRecorder.record(AuditEvent.builder()
                             .actor(AuditActorResolver.fromAuthentication(auth))
@@ -117,7 +118,7 @@ public class AdminController {
     @DeleteMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication auth) {
-        return userService.softDelete(id, getUserId(auth))
+        return userService.softDelete(id, com.superhumans.util.AuthUsers.idOrSystem(auth))
                 .map(user -> {
                     auditEventRecorder.record(AuditEvent.builder()
                             .actor(AuditActorResolver.fromAuthentication(auth))
@@ -190,7 +191,8 @@ public class AdminController {
     public ResponseEntity<LegacyBackfillReportResponse> backfillAudit(
             Authentication auth) {
         LegacyBackfillReportResponse report = backfillService.backfill();
-        auditService.logEvent("AuditBackfill", null, "BACKFILL", getUserId(auth),
+        auditService.logEvent("AuditBackfill", null, "BACKFILL",
+                com.superhumans.util.AuthUsers.idOrSystem(auth),
                 null, "inserted=" + report.getInserted() + " verified=" + report.isVerified());
         return ResponseEntity.ok(report);
     }
@@ -206,7 +208,8 @@ public class AdminController {
             Authentication auth) {
         AuditRetentionReportResponse report =
                 retentionService.runOnce(java.time.Instant.now());
-        auditService.logEvent("AuditRetention", null, "RETENTION_RUN", getUserId(auth),
+        auditService.logEvent("AuditRetention", null, "RETENTION_RUN",
+                com.superhumans.util.AuthUsers.idOrSystem(auth),
                 null, "archivedEvents=" + report.getArchivedEvents()
                         + " archivedLegacy=" + report.getArchivedLegacy());
         return ResponseEntity.ok(report);
@@ -217,10 +220,4 @@ public class AdminController {
         return ResponseEntity.ok(userService.stats());
     }
 
-    private Long getUserId(Authentication auth) {
-        if (auth != null && auth.getCredentials() instanceof Long uid) {
-            return uid;
-        }
-        return 0L;
-    }
 }

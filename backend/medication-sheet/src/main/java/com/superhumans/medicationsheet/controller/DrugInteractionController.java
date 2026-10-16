@@ -1,5 +1,6 @@
 package com.superhumans.medicationsheet.controller;
 
+
 import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.ErrorCode;
 import com.superhumans.medicationsheet.dto.DrugInteractionCatalogResponse;
@@ -7,7 +8,6 @@ import com.superhumans.medicationsheet.dto.DrugInteractionImportReport;
 import com.superhumans.medicationsheet.dto.PrescriptionInteractionsResponse;
 import com.superhumans.medicationsheet.service.DrugInteractionCatalogService;
 import com.superhumans.medicationsheet.service.DrugInteractionImportService;
-import com.superhumans.medicationsheet.service.DrugInteractionImportService.ImportError;
 import com.superhumans.medicationsheet.service.DrugInteractionWarningService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
-import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -99,21 +98,29 @@ public class DrugInteractionController {
             @ApiResponse(responseCode = "422", description = "Dataset rejected (no valid rows)")
     })
     public DrugInteractionImportReport importDataset(
-            @RequestParam("file") MultipartFile file, Authentication auth) throws IOException {
+            @RequestParam("file") MultipartFile file, Authentication auth) {
         if (file == null || file.isEmpty()) {
             throw new com.superhumans.exception.BadRequestException("Файл обов'язковий");
         }
         if (file.getSize() > MAX_IMPORT_BYTES) {
             throw new com.superhumans.exception.BadRequestException("Файл більший за 40 МБ");
         }
-        byte[] content = file.getBytes();
-        Long adminId = (auth != null && auth.getCredentials() instanceof Long uid) ? uid : 0L;
+        final byte[] content;
+        try {
+            content = file.getBytes();
+        } catch (IOException e) {
+            // Aborted/trashed upload stream: client-side failure, not a 500.
+            throw new com.superhumans.exception.BadRequestException(
+                    "Не вдалося прочитати завантажений файл");
+        }
+        Long adminId = com.superhumans.util.AuthUsers.idOrSystem(auth);
         try {
             return importService.importDataset(content, adminId);
-        } catch (ImportError e) {
-            String details = e.getSkippedDetails().stream().limit(5).collect(Collectors.joining("; "));
-            throw new BusinessException(ErrorCode.BUSINESS_RULE,
-                    "Імпорт відхилено: 0 коректних рядків. Приклади: " + details);
+        } catch (DrugInteractionImportService.ImportError e) {
+            // Thin translation only (#427 item 11): the 422 message is
+            // assembled in the service. (A platform-advice mapping would
+            // violate the ArchUnit platform-must-not-depend-on-features rule.)
+            throw new BusinessException(ErrorCode.BUSINESS_RULE, e.getMessage());
         }
     }
 }

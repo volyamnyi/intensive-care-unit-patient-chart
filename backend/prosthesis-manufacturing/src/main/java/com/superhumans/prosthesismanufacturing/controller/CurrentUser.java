@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component;
 public class CurrentUser {
 
     public Long userId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Object credentials = auth == null ? null : auth.getCredentials();
-        return credentials instanceof Long id ? id : null;
+        return com.superhumans.util.AuthUsers.idOrNull(
+                SecurityContextHolder.getContext().getAuthentication());
     }
 
     public boolean hasRole(String role) {

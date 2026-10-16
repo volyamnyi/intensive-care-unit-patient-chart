@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -70,13 +71,18 @@ public class DrugInteractionImportService {
     AuditService auditService;
     DomainAuditEmitter auditEmitter;
 
-    /** Thrown when the document parses to zero rows; carries the skip detail list. */
+    /**
+     * Thrown when the document parses to zero rows; carries the skip detail
+     * list and the ready-made 422 message (#427 item 11 — message assembly
+     * belongs to the service, not the controller).
+     */
     @Getter
     public static class ImportError extends RuntimeException {
         final List<String> skippedDetails;
 
         public ImportError(List<String> skippedDetails) {
-            super("Drug-interactions import rejected");
+            super("Імпорт відхилено: 0 коректних рядків. Приклади: "
+                    + skippedDetails.stream().limit(5).collect(Collectors.joining("; ")));
             this.skippedDetails = skippedDetails;
         }
     }

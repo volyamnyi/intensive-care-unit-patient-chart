@@ -1,5 +1,6 @@
 package com.superhumans.medicationsheet.dto;
 
+import com.superhumans.util.ClinicalConstants;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import lombok.AccessLevel;
@@ -16,11 +17,19 @@ import lombok.experimental.FieldDefaults;
 public class VitalSignEntryRequest {
     @NotBlank String dayId;
     @NotBlank String period;
-    @DecimalMin("34.0") @DecimalMax("42.0") Double temperature;
-    @Min(50) @Max(250) Integer systolicBp;
-    @Min(30) @Max(150) Integer diastolicBp;
-    @Min(50) @Max(100) Integer spo2;
-    @Min(0) @Max(300) Integer pulse;
+    // Ranges from ClinicalConstants (#427 item 7) — same source as
+    // HourlyRecord, so patient-safety-adjacent bounds cannot drift.
+    @DecimalMin(ClinicalConstants.TEMPERATURE_MIN_STR) @DecimalMax(ClinicalConstants.TEMPERATURE_MAX_STR)
+    Double temperature;
+    @Min(ClinicalConstants.SYSTOLIC_BP_MIN) @Max(ClinicalConstants.SYSTOLIC_BP_MAX)
+    Integer systolicBp;
+    @Min(ClinicalConstants.DIASTOLIC_BP_MIN) @Max(ClinicalConstants.DIASTOLIC_BP_MAX)
+    Integer diastolicBp;
+    @DecimalMin(ClinicalConstants.SPO2_MIN_STR) @DecimalMax(ClinicalConstants.SPO2_MAX_STR)
+    Integer spo2;
+    @Min(ClinicalConstants.HEART_RATE_MIN) @Max(ClinicalConstants.HEART_RATE_MAX)
+    Integer pulse;
     String stool;
-    @Min(0) @Max(10) Integer painScore;
+    @Min(ClinicalConstants.PAIN_SCORE_MIN) @Max(ClinicalConstants.PAIN_SCORE_MAX)
+    Integer painScore;
 }

@@ -1,6 +1,7 @@
 package com.superhumans.medicationsheet.entity;
 
 import com.superhumans.entity.base.BaseEntity;
+import com.superhumans.util.ClinicalConstants;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
@@ -24,29 +25,31 @@ public class VitalSignEntry extends BaseEntity {
     @Column(nullable = false, length = 8)
     String period;
 
-    @DecimalMin("34.0") @DecimalMax("42.0")
+    @DecimalMin(ClinicalConstants.TEMPERATURE_MIN_STR)
+    @DecimalMax(ClinicalConstants.TEMPERATURE_MAX_STR)
     Double temperature;
 
     // Clinical ranges mirror VitalSignEntryRequest (#390, HourlyRecord
-    // two-layer pattern: DTO range + entity range).
-    @Min(50) @Max(250)
+    // two-layer pattern: DTO range + entity range) from ClinicalConstants
+    // (#427 item 7).
+    @Min(ClinicalConstants.SYSTOLIC_BP_MIN) @Max(ClinicalConstants.SYSTOLIC_BP_MAX)
     @Column(name = "systolic_bp")
     Integer systolicBp;
 
-    @Min(30) @Max(150)
+    @Min(ClinicalConstants.DIASTOLIC_BP_MIN) @Max(ClinicalConstants.DIASTOLIC_BP_MAX)
     @Column(name = "diastolic_bp")
     Integer diastolicBp;
 
-    @Min(50) @Max(100)
+    @DecimalMin(ClinicalConstants.SPO2_MIN_STR) @DecimalMax(ClinicalConstants.SPO2_MAX_STR)
     Integer spo2;
 
-    @Min(0) @Max(300)
+    @Min(ClinicalConstants.HEART_RATE_MIN) @Max(ClinicalConstants.HEART_RATE_MAX)
     Integer pulse;
 
     @Column(length = 50)
     String stool;
 
-    @Min(0) @Max(10)
+    @Min(ClinicalConstants.PAIN_SCORE_MIN) @Max(ClinicalConstants.PAIN_SCORE_MAX)
     @Column(name = "pain_score")
     Integer painScore;
 }

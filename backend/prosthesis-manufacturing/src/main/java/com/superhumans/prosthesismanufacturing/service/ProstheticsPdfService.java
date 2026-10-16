@@ -210,60 +210,14 @@ public class ProstheticsPdfService {
         return hours + " год " + minutes + " хв " + secs + " с";
     }
 
+    // Single bundled-font source (#427 item 6, #412 item 1): the old
+    // per-renderer fallback chains (OS paths, Helvetica) are gone — a missing
+    // bundle fails fast instead of rendering blank Ukrainian text.
     private PdfFont loadFont() {
-        PdfFont bundled = loadClasspathFont("fonts/DejaVuSans.ttf");
-        if (bundled != null) {
-            return bundled;
-        }
-        String[] fontPaths = {
-                "C:/Windows/Fonts/arial.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        };
-        for (String path : fontPaths) {
-            try {
-                return PdfFontFactory.createFont(path);
-            } catch (Exception ignored) {
-            }
-        }
-        try {
-            return PdfFontFactory.createFont("Helvetica");
-        } catch (Exception e) {
-            return null;
-        }
+        return com.superhumans.util.PdfFonts.regular();
     }
 
     private PdfFont loadBoldFont(PdfFont regular) {
-        if (regular == null) {
-            return null;
-        }
-        PdfFont bundled = loadClasspathFont("fonts/DejaVuSans-Bold.ttf");
-        if (bundled != null) {
-            return bundled;
-        }
-        String[] boldPaths = {
-                "C:/Windows/Fonts/arialbd.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/truetype/msttcorefonts/Arial-Bold.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        };
-        for (String path : boldPaths) {
-            try {
-                return PdfFontFactory.createFont(path);
-            } catch (Exception ignored) {
-            }
-        }
-        return regular;
-    }
-
-    private PdfFont loadClasspathFont(String resourcePath) {
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
-            if (is != null) {
-                return PdfFontFactory.createFont(is.readAllBytes(), PdfEncodings.IDENTITY_H);
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
+        return com.superhumans.util.PdfFonts.bold();
     }
 }

@@ -342,11 +342,9 @@ public class MisServiceImpl implements MisService {
 
     private Long getUserId() {
         try {
-            var auth = org.springframework.security.core.context.SecurityContextHolder
-                    .getContext().getAuthentication();
-            if (auth != null && auth.getCredentials() instanceof Long id) {
-                return id;
-            }
+            return com.superhumans.util.AuthUsers.idOrNull(
+                    org.springframework.security.core.context.SecurityContextHolder
+                            .getContext().getAuthentication());
         } catch (Exception ignored) {}
         return null;
     }

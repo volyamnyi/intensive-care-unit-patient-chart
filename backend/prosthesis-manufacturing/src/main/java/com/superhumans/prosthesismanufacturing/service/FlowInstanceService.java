@@ -86,6 +86,7 @@ public class FlowInstanceService {
     FlowInstanceRepository instanceRepository;
     FlowTemplateRepository templateRepository;
     ProstheticsOrderRepository orderRepository;
+    ProstheticsPatientService patientService;
     StepExecutionRepository executionRepository;
     ResourceUsageRepository resourceUsageRepository;
     FlowInstanceMapper instanceMapper;
@@ -1003,9 +1004,11 @@ public class FlowInstanceService {
         }
         String localPib = order.getPatient().getPib();
         try {
-            var patientService = com.superhumans.config.SpringContext
-                    .getBean(ProstheticsPatientService.class);
-            return patientService.get(order.getPatient().getId()).getPib();
+            // Direct injection (#427 item 5): the old SpringContext.getBean
+            // lookup hid the dependency (renames failed at runtime) and ran
+            // once per listed row (the N+1 itself is tracked in #383).
+            var response = patientService.get(order.getPatient().getId());
+            return response == null ? localPib : response.getPib();
         } catch (Exception e) {
             return localPib;
         }

@@ -181,15 +181,14 @@ public class ProductionController {
     }
 
     /**
-     * Permission codes for this controller. Values mirror
-     * {@code PermissionCatalog} but are inlined as literals: the catalog class
-     * itself is outside the feature-module dependency allowlist
-     * (see {@code ModuleBoundaryTest}), so feature code must not import it.
-     * Drift is guarded by {@code ProductionControllerTest.codes_matchCatalog}.
+     * Permission codes for this controller, imported from the allowlisted
+     * {@code PermissionCodes} SPI (#427 item 2) — no literals, no drift.
      */
     static final class Codes {
-        static final String VIEW_ALL = "PROSTHETICS_PRODUCTION_VIEW_ALL";
-        static final String PATIENT_VIEW = "PROSTHETICS_PRODUCTION_PATIENT_VIEW";
+        static final String VIEW_ALL =
+                com.superhumans.entity.core.PermissionCodes.PROSTHETICS_PRODUCTION_VIEW_ALL;
+        static final String PATIENT_VIEW =
+                com.superhumans.entity.core.PermissionCodes.PROSTHETICS_PRODUCTION_PATIENT_VIEW;
 
         private Codes() {
         }

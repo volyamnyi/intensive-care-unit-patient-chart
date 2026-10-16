@@ -152,11 +152,7 @@ public class PermissionService {
     }
 
     private Long currentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getCredentials() instanceof Long userId) {
-            return userId;
-        }
-        return 0L;
+        return com.superhumans.util.AuthUsers.currentIdOrSystem();
     }
 
     private Map<UserRole, Set<String>> grants() {

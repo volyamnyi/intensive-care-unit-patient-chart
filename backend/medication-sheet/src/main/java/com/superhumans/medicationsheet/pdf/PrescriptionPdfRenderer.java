@@ -38,9 +38,6 @@ public class PrescriptionPdfRenderer {
     static final float FONT_CELL = 6f;
     static final float ROW_MIN_HEIGHT = 12f;
 
-    private static final byte[] REGULAR_BYTES = readClasspathBytes("fonts/DejaVuSans.ttf");
-    private static final byte[] BOLD_BYTES = readClasspathBytes("fonts/DejaVuSans-Bold.ttf");
-
     public PrescriptionPdfRenderer() {
     }
 
@@ -252,66 +249,14 @@ public class PrescriptionPdfRenderer {
         return cell;
     }
 
+    // Single bundled-font source (#427 item 6, #412 item 1): the old
+    // per-renderer fallback chains (OS paths, Helvetica) are gone — a missing
+    // bundle fails fast instead of rendering blank Ukrainian text.
     private static PdfFont newFont() {
-        if (REGULAR_BYTES != null) {
-            try {
-                return PdfFontFactory.createFont(REGULAR_BYTES, PdfEncodings.IDENTITY_H);
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to create prescription PDF font", e);
-            }
-        }
-        return loadFont();
+        return com.superhumans.util.PdfFonts.regular();
     }
 
     private static PdfFont newBoldFont(PdfFont regular) {
-        if (BOLD_BYTES != null) {
-            try {
-                return PdfFontFactory.createFont(BOLD_BYTES, PdfEncodings.IDENTITY_H);
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to create prescription PDF bold font", e);
-            }
-        }
-        return regular;
-    }
-
-    static PdfFont loadFont() {
-        PdfFont bundled = loadClasspathFont("fonts/DejaVuSans.ttf");
-        if (bundled != null) {
-            return bundled;
-        }
-        try {
-            return PdfFontFactory.createFont("C:/Windows/Fonts/arial.ttf");
-        } catch (Exception ignored) {
-            // fall through to Helvetica below
-        }
-        try {
-            return PdfFontFactory.createFont("Helvetica");
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static byte[] readClasspathBytes(String resourcePath) {
-        try (InputStream is = PrescriptionPdfRenderer.class.getClassLoader()
-                .getResourceAsStream(resourcePath)) {
-            if (is != null) {
-                return is.readAllBytes();
-            }
-        } catch (Exception ignored) {
-            // fall through to file-system fallbacks at render time
-        }
-        return null;
-    }
-
-    private static PdfFont loadClasspathFont(String resourcePath) {
-        byte[] bytes = readClasspathBytes(resourcePath);
-        if (bytes == null) {
-            return null;
-        }
-        try {
-            return PdfFontFactory.createFont(bytes, PdfEncodings.IDENTITY_H);
-        } catch (Exception ignored) {
-            return null;
-        }
+        return com.superhumans.util.PdfFonts.bold();
     }
 }

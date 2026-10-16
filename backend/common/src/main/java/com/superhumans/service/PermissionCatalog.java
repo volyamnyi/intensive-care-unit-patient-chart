@@ -1,5 +1,6 @@
 package com.superhumans.service;
 
+import com.superhumans.entity.core.PermissionCodes;
 import com.superhumans.entity.core.UserRole;
 import java.util.List;
 import java.util.Map;
@@ -20,44 +21,47 @@ public final class PermissionCatalog {
     }
 
     // Clinical operations
-    public static final String EPISODE_CREATE = "EPISODE_CREATE";
-    public static final String CLINICAL_DAY_CREATE = "CLINICAL_DAY_CREATE";
-    public static final String SIGN_NURSE = "SIGN_NURSE";
-    public static final String SIGN_DOCTOR = "SIGN_DOCTOR";
-    public static final String REOPEN_DAY = "REOPEN_DAY";
-    public static final String PRESCRIPTION_CREATE = "PRESCRIPTION_CREATE";
-
-    public static final String PRESCRIPTION_LIST_CREATE = "PRESCRIPTION_LIST_CREATE";
-    public static final String PRESCRIPTION_EXECUTE = "PRESCRIPTION_EXECUTE";
-    public static final String VITALS_ENTER = "VITALS_ENTER";
-    public static final String PATIENT_VIEW = "PATIENT_VIEW";
-    public static final String SCALE_APACHE_SOFA = "SCALE_APACHE_SOFA";
-    public static final String SCALE_CAMICU_BRADEN_RASS = "SCALE_CAMICU_BRADEN_RASS";
+    // Canonical values live in PermissionCodes (#427 item 2); these stay as
+    // aliases so existing PermissionCatalog.X references keep compiling.
+    public static final String EPISODE_CREATE = PermissionCodes.EPISODE_CREATE;
+    public static final String CLINICAL_DAY_CREATE = PermissionCodes.CLINICAL_DAY_CREATE;
+    public static final String SIGN_NURSE = PermissionCodes.SIGN_NURSE;
+    public static final String SIGN_DOCTOR = PermissionCodes.SIGN_DOCTOR;
+    public static final String REOPEN_DAY = PermissionCodes.REOPEN_DAY;
+    public static final String PRESCRIPTION_CREATE = PermissionCodes.PRESCRIPTION_CREATE;
+    public static final String PRESCRIPTION_LIST_CREATE = PermissionCodes.PRESCRIPTION_LIST_CREATE;
+    public static final String PRESCRIPTION_EXECUTE = PermissionCodes.PRESCRIPTION_EXECUTE;
+    public static final String VITALS_ENTER = PermissionCodes.VITALS_ENTER;
+    public static final String PATIENT_VIEW = PermissionCodes.PATIENT_VIEW;
+    public static final String SCALE_APACHE_SOFA = PermissionCodes.SCALE_APACHE_SOFA;
+    public static final String SCALE_CAMICU_BRADEN_RASS = PermissionCodes.SCALE_CAMICU_BRADEN_RASS;
 
     // Administration
-    public static final String AUDIT_ACCESS = "AUDIT_ACCESS";
-    public static final String AUDIT_SECURITY_ACCESS = "AUDIT_SECURITY_ACCESS";
-    public static final String AUDITOR_VIEW = "AUDITOR_VIEW";
+    public static final String AUDIT_ACCESS = PermissionCodes.AUDIT_ACCESS;
+    public static final String AUDIT_SECURITY_ACCESS = PermissionCodes.AUDIT_SECURITY_ACCESS;
+    public static final String AUDITOR_VIEW = PermissionCodes.AUDITOR_VIEW;
 
     // Prosthetics manufacturing
-    public static final String PROSTHETICS_DASHBOARD = "PROSTHETICS_DASHBOARD";
-    public static final String PROSTHETICS_INSTANCE_CREATE = "PROSTHETICS_INSTANCE_CREATE";
-    public static final String PROSTHETICS_STEP_COMPLETE = "PROSTHETICS_STEP_COMPLETE";
-    public static final String PROSTHETICS_PAUSE_RESUME = "PROSTHETICS_PAUSE_RESUME";
-    public static final String PROSTHETICS_TEMPLATE_MANAGE = "PROSTHETICS_TEMPLATE_MANAGE";
-    public static final String PROSTHETICS_ORDER_MANAGE = "PROSTHETICS_ORDER_MANAGE";
+    public static final String PROSTHETICS_DASHBOARD = PermissionCodes.PROSTHETICS_DASHBOARD;
+    public static final String PROSTHETICS_INSTANCE_CREATE = PermissionCodes.PROSTHETICS_INSTANCE_CREATE;
+    public static final String PROSTHETICS_STEP_COMPLETE = PermissionCodes.PROSTHETICS_STEP_COMPLETE;
+    public static final String PROSTHETICS_PAUSE_RESUME = PermissionCodes.PROSTHETICS_PAUSE_RESUME;
+    public static final String PROSTHETICS_TEMPLATE_MANAGE = PermissionCodes.PROSTHETICS_TEMPLATE_MANAGE;
+    public static final String PROSTHETICS_ORDER_MANAGE = PermissionCodes.PROSTHETICS_ORDER_MANAGE;
 
     // Production monitoring (read-scoped dashboard codes, epic #271)
-    public static final String PROSTHETICS_PRODUCTION_VIEW = "PROSTHETICS_PRODUCTION_VIEW";
-    public static final String PROSTHETICS_PRODUCTION_VIEW_ALL = "PROSTHETICS_PRODUCTION_VIEW_ALL";
-    public static final String PROSTHETICS_PRODUCTION_PATIENT_VIEW = "PROSTHETICS_PRODUCTION_PATIENT_VIEW";
-    public static final String PROSTHETICS_PRODUCTION_QUALITY_VIEW = "PROSTHETICS_PRODUCTION_QUALITY_VIEW";
+    public static final String PROSTHETICS_PRODUCTION_VIEW = PermissionCodes.PROSTHETICS_PRODUCTION_VIEW;
+    public static final String PROSTHETICS_PRODUCTION_VIEW_ALL = PermissionCodes.PROSTHETICS_PRODUCTION_VIEW_ALL;
+    public static final String PROSTHETICS_PRODUCTION_PATIENT_VIEW =
+            PermissionCodes.PROSTHETICS_PRODUCTION_PATIENT_VIEW;
+    public static final String PROSTHETICS_PRODUCTION_QUALITY_VIEW =
+            PermissionCodes.PROSTHETICS_PRODUCTION_QUALITY_VIEW;
 
     // Module navigation (routing between sub-applications)
-    public static final String MODULE_ICU_ACCESS = "MODULE_ICU_ACCESS";
-    public static final String MODULE_MEDICATION_ACCESS = "MODULE_MEDICATION_ACCESS";
-    public static final String MODULE_PROSTHETICS_ACCESS = "MODULE_PROSTHETICS_ACCESS";
-    public static final String MODULE_ADMIN_ACCESS = "MODULE_ADMIN_ACCESS";
+    public static final String MODULE_ICU_ACCESS = PermissionCodes.MODULE_ICU_ACCESS;
+    public static final String MODULE_MEDICATION_ACCESS = PermissionCodes.MODULE_MEDICATION_ACCESS;
+    public static final String MODULE_PROSTHETICS_ACCESS = PermissionCodes.MODULE_PROSTHETICS_ACCESS;
+    public static final String MODULE_ADMIN_ACCESS = PermissionCodes.MODULE_ADMIN_ACCESS;
 
     /** A single permission definition shown in the admin matrix UI. */
     public record Def(String code, String label, String description, String category) {
