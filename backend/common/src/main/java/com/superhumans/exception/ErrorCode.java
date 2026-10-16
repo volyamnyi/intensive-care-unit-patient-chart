@@ -18,6 +18,7 @@ public final class ErrorCode {
     public static String DUPLICATE_HOURLY_RECORD = "DUPLICATE_HOURLY_RECORD";
     public static String BUSINESS_RULE = "BUSINESS_RULE";
     public static String FORBIDDEN = "FORBIDDEN";
+    public static String UNAUTHORIZED = "UNAUTHORIZED";
     public static String PAST_HOUR_ORDER = "PAST_HOUR_ORDER";
     public static String MIS_TIMEOUT = "MIS_TIMEOUT";
     public static String MIS_UPSTREAM_ERROR = "MIS_UPSTREAM_ERROR";

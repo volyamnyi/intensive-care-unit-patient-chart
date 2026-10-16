@@ -54,6 +54,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .exceptionHandling(ex -> ex
+                    // Filter-chain 401/403 render the ErrorResponse shape
+                    // (#410 item 3) so clients never see a second body
+                    // contract next to the advice DTO.
                     .authenticationEntryPoint((request, response, authException) -> {
                         if (!isSafeMethod(request.getMethod())) {
                             recordSecurityEvent(request, "platform.auth.token.rejected",
@@ -62,7 +65,9 @@ public class SecurityConfig {
                         }
                         response.setContentType("application/json");
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                        response.getWriter().write("{\"error\":\"Unauthorized\"}");
+                        response.getWriter().write(errorBody(
+                                com.superhumans.exception.ErrorCode.UNAUTHORIZED,
+                                "Authentication required."));
                     })
                     .accessDeniedHandler((request, response, accessDeniedException) -> {
                         recordSecurityEvent(request, "platform.auth.access.denied",
@@ -73,7 +78,9 @@ public class SecurityConfig {
                                 AuditEvent.AuditOutcome.DENIED, "AUTH_FORBIDDEN");
                         response.setContentType("application/json");
                         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        response.getWriter().write("{\"error\":\"Forbidden\"}");
+                        response.getWriter().write(errorBody(
+                                com.superhumans.exception.ErrorCode.FORBIDDEN,
+                                "Access denied."));
                     }))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
@@ -119,6 +126,15 @@ public class SecurityConfig {
 
     private static boolean isSafeMethod(String method) {
         return "GET".equals(method) || "HEAD".equals(method) || "OPTIONS".equals(method);
+    }
+
+    private static String errorBody(String code, String message) {
+        com.superhumans.audit.AuditRequestContext.Context context =
+                com.superhumans.audit.AuditRequestContext.current();
+        String correlationId = context == null ? java.util.UUID.randomUUID().toString()
+                : context.correlationId().toString();
+        return "{\"code\":\"" + code + "\",\"message\":\"" + message
+                + "\",\"correlationId\":\"" + correlationId + "\"}";
     }
 
     @Bean

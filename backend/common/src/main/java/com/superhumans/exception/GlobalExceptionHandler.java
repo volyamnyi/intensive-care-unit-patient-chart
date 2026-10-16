@@ -85,10 +85,15 @@ public class GlobalExceptionHandler {
                         correlationId()));
     }
 
+    /**
+     * Fixed template (#410 item 1): JDK-origin SecurityExceptions would echo
+     * internals; the raw message goes to the server log only.
+     */
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<ErrorResponse> handleSecurity(SecurityException ex) {
+        log.warn("Security violation: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                new ErrorResponse(ErrorCode.FORBIDDEN, ex.getMessage(), correlationId()));
+                new ErrorResponse(ErrorCode.FORBIDDEN, "Access denied.", correlationId()));
     }
 
     @ExceptionHandler(org.springframework.security.authorization.AuthorizationDeniedException.class)
@@ -181,10 +186,16 @@ public class GlobalExceptionHandler {
                 new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.", correlationId()));
     }
 
+    /**
+     * Fixed template (#410 item 1): argument messages reflect client input
+     * (e.g. a 1000-char string inside "Invalid UUID string: ...") and
+     * deep-code IAEs read as client-blaming 400s. Raw goes to the log only.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Invalid argument: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(
-                new ErrorResponse(ErrorCode.VALIDATION_ERROR, ex.getMessage(), correlationId()));
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR, "Invalid request value.", correlationId()));
     }
 
     /**
@@ -212,11 +223,16 @@ public class GlobalExceptionHandler {
                 new ErrorResponse(ErrorCode.MIS_UPSTREAM_ERROR, "MIS returned an error.", correlationId()));
     }
 
+    /**
+     * Fixed template (#410 item 1): the old message echoed the raw value plus
+     * converter internals with java.* class names.
+     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        String message = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "': " + ex.getMessage();
+        log.warn("Type mismatch on parameter '{}': {}", ex.getName(), ex.getMessage());
         return ResponseEntity.badRequest().body(
-                new ErrorResponse(ErrorCode.BAD_REQUEST, message, correlationId()));
+                new ErrorResponse(ErrorCode.BAD_REQUEST,
+                        "Invalid value for parameter '" + ex.getName() + "'.", correlationId()));
     }
 
     /**
@@ -246,6 +262,68 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
                 new ErrorResponse(ErrorCode.VALIDATION_ERROR,
                         "Uploaded file exceeds the size limit", correlationId()));
+    }
+
+    /**
+     * Framework request-shape failures without a dedicated contract (#410
+     * item 2): they previously fell through to Boot-shape bodies with no
+     * {@code code}/{@code correlationId}. Parameter/part names are our API
+     * contract (safe to name); values are never echoed.
+     */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(
+            org.springframework.web.bind.MissingServletRequestParameterException ex) {
+        return ResponseEntity.badRequest().body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR,
+                        "Required parameter '" + ex.getParameterName() + "' is missing.",
+                        correlationId()));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.support.MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(
+            org.springframework.web.multipart.support.MissingServletRequestPartException ex) {
+        return ResponseEntity.badRequest().body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR,
+                        "Required part '" + ex.getRequestPartName() + "' is missing.",
+                        correlationId()));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR,
+                        "Request method '" + ex.getMethod() + "' is not supported.",
+                        correlationId()));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(
+            org.springframework.web.HttpMediaTypeNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
+                new ErrorResponse(ErrorCode.VALIDATION_ERROR,
+                        "Request media type is not supported.", correlationId()));
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ErrorResponse(ErrorCode.NOT_FOUND, "Unknown path.", correlationId()));
+    }
+
+    /**
+     * Checked IO failures (e.g. multipart {@code getBytes()}) previously
+     * rendered Boot-shape 500s (#410 item 2). JVM {@code Error}s are
+     * deliberately NOT caught: rendering JSON during an OOM risks a second
+     * failure; Boot's default stands.
+     */
+    @ExceptionHandler(java.io.IOException.class)
+    public ResponseEntity<ErrorResponse> handleIOException(java.io.IOException ex) {
+        log.error("IO failure handling request", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new ErrorResponse(ErrorCode.INTERNAL_ERROR, "An internal error occurred.",
+                        correlationId()));
     }
 
     @ExceptionHandler(RuntimeException.class)

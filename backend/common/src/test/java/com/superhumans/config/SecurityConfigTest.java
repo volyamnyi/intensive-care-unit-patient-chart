@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.superhumans.auth.JwtAuthenticationFilter;
@@ -142,6 +143,23 @@ class SecurityConfigTest {
     void securedEndpoint_withoutAuthentication_returnsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/private"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unauthorizedBody_usesErrorResponseContract() throws Exception {
+        mockMvc.perform(get("/api/private"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("Authentication required."))
+                .andExpect(jsonPath("$.correlationId").exists());
+    }
+
+    @Test
+    void forbiddenBody_usesErrorResponseContract() throws Exception {
+        mockMvc.perform(get("/api/admin-only").with(TestSecurityHelper.doctor()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("Access denied."));
     }
 
     @Test
