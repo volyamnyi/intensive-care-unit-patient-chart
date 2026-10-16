@@ -29,7 +29,10 @@ import java.util.UUID;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class BrakNotificationOutbox extends BaseEntity {
 
-    @Column(name = "brak_event_id", nullable = false, unique = true)
+    // No single-column unique here by design (#390): prosth/012 enforces the
+    // composite UNIQUE(brak_event_id, kind) — a stale unique=true would fail
+    // a future hibernate.hbm2ddl.auto=validate.
+    @Column(name = "brak_event_id", nullable = false)
     UUID brakEventId;
 
     @Enumerated(EnumType.STRING)

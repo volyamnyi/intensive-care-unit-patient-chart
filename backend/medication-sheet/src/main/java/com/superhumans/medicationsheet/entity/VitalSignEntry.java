@@ -27,13 +27,20 @@ public class VitalSignEntry extends BaseEntity {
     @DecimalMin("34.0") @DecimalMax("42.0")
     Double temperature;
 
+    // Clinical ranges mirror VitalSignEntryRequest (#390, HourlyRecord
+    // two-layer pattern: DTO range + entity range).
+    @Min(50) @Max(250)
     @Column(name = "systolic_bp")
     Integer systolicBp;
 
+    @Min(30) @Max(150)
     @Column(name = "diastolic_bp")
     Integer diastolicBp;
 
+    @Min(50) @Max(100)
     Integer spo2;
+
+    @Min(0) @Max(300)
     Integer pulse;
 
     @Column(length = 50)

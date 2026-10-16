@@ -1,3 +1,4 @@
+--liquibase formatted sql
 --changeset split-med:17
 --comment: Drop allergy_cache and medicine_catalog_cache (#258). The allergy
 --flow is removed entirely (MIS does not expose a usable endpoint in this

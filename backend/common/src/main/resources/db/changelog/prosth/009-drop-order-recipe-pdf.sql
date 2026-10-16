@@ -1,3 +1,4 @@
+--liquibase formatted sql
 --changeset split-prosth:24
 --comment: Drop legacy order-recipe PDF columns. The order document is owned
 --by MIS (see spiDocumentProsthesCheck.documentUrl surfaced via

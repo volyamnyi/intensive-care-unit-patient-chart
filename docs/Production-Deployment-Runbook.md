@@ -404,6 +404,12 @@ CREATE INDEX IF NOT EXISTS idx_permissions_group_code ON permissions (group_code
 
 **Продакшн-ролбек = `pg_restore` + старий JAR.** Ніяких `liquibase:rollback` у продакшні.
 
+> **Відомо небезпечні rollback-скрипти (#390, item 5)** — навіть у dev ганяти тільки через `rollback-count-sql` dry-run на scratch-БД, ніколи напряму:
+> - `core/004` (`audit_logs.entity` shrink 255→100): впаде, якщо хоч один збережений URI довший за 100 — саме та умова, що мотивувала розширення;
+> - `prosth/005:48`: перестворює `uq_flow_instances_active_order` БЕЗ BRANCHED-виключення — впаде на будь-якій БД після #208;
+> - `prosth/003:38-40`: конверсія UUID через `USING NULL` — затирає всі patient-прив'язки (деструктивно за дизайном).
+> SQL-файли свідомо НЕ чіпаємо (checksum applied-changeset'ів); guard-pattern (`DO $$ ... RAISE EXCEPTION`, як у `core/007`) — тільки для нових changeset'ів.
+
 ### 2.6 Приклад: повний workflow (конкретний кейс)
 
 > **Задача:** додати колонку `assigned_to_login` у `prescription_items` (med-БД) і прив'язати до користувача, який додав предмет.

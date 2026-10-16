@@ -24,7 +24,8 @@ public class AuditLog {
     @Column(name = "user_id")
     Long userId;
 
-    @Column(nullable = false, length = 100)
+    // VARCHAR(255) per core/004-audit-entity-length.sql (#390).
+    @Column(nullable = false, length = 255)
     String entity;
 
     @Column(name = "entity_id")

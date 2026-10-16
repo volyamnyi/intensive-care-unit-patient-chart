@@ -19,7 +19,7 @@ public class ProstheticsPatient {
     /**
      * Patient ID is a digits-only string (e.g. "1234") — no letters,
      * separators or spaces. Enforced by @Pattern and a DB CHECK constraint
-     * (see changesets/013-patient-id-digits.sql).
+     * (see prosth/003-patient-id-digits.sql).
      */
     @Id
     @Column(name = "id", length = 32, updatable = false, nullable = false)
