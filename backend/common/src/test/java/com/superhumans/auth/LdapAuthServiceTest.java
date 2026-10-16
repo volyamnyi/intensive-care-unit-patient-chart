@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -78,6 +79,29 @@ class LdapAuthServiceTest {
         Optional<LdapUserProfile> result = service.authenticate("jdoe", "secret");
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void directoryOutage_internalError_warnsAndReturnsEmpty() {
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(LdapAuthService.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            when(provider.authenticate(any())).thenThrow(
+                    new InternalAuthenticationServiceException("directory unreachable"));
+
+            Optional<LdapUserProfile> result = service.authenticate("jdoe", "secret");
+
+            assertThat(result).isEmpty();
+            assertThat(appender.list)
+                    .anyMatch(e -> e.getLevel() == ch.qos.logback.classic.Level.WARN
+                            && e.getFormattedMessage().contains("LDAP directory unavailable"));
+        } finally {
+            logger.detachAppender(appender);
+        }
     }
 
     @Test

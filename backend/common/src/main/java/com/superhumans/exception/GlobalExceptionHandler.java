@@ -187,6 +187,31 @@ public class GlobalExceptionHandler {
                 new ErrorResponse(ErrorCode.VALIDATION_ERROR, ex.getMessage(), correlationId()));
     }
 
+    /**
+     * MIS timeouts are a downstream outage, not an internal error (#372 item
+     * 2): 503 with a detail-free message so clinical users and alerting see
+     * "MIS unavailable". The raw exception (method name + status only, never
+     * secrets) goes to the server log.
+     */
+    @ExceptionHandler(com.superhumans.mis.MisTimeoutException.class)
+    public ResponseEntity<ErrorResponse> handleMisTimeout(com.superhumans.mis.MisTimeoutException ex) {
+        log.warn("MIS call timed out", ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                new ErrorResponse(ErrorCode.MIS_TIMEOUT, "MIS is temporarily unavailable.", correlationId()));
+    }
+
+    /**
+     * Other MIS failures (auth, bad envelope, transport) map to 502 (#372
+     * item 2). Most-specific-handler rule applies: MisTimeoutException (a
+     * MisApiException subclass) still resolves to the 503 handler above.
+     */
+    @ExceptionHandler(com.superhumans.mis.MisApiException.class)
+    public ResponseEntity<ErrorResponse> handleMisUpstream(com.superhumans.mis.MisApiException ex) {
+        log.error("MIS upstream error", ex);
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(
+                new ErrorResponse(ErrorCode.MIS_UPSTREAM_ERROR, "MIS returned an error.", correlationId()));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
         String message = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "': " + ex.getMessage();

@@ -3,6 +3,7 @@ package com.superhumans.auth;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -64,6 +65,15 @@ public class LdapAuthService {
                     && authentication.getPrincipal() instanceof LdapUserDetails details) {
                 return Optional.of(details.getProfile());
             }
+            return Optional.empty();
+        } catch (InternalAuthenticationServiceException
+                | org.springframework.ldap.CommunicationException e) {
+            // Directory outage, NOT bad credentials (#372 item 3): WARN so the
+            // failure is visible at prod level, with no topology details. The
+            // caller still fails closed with the identical 401. The raw
+            // CommunicationException arm is defense in depth in case a future
+            // provider version lets it escape unwrapped.
+            log.warn("LDAP directory unavailable during authentication (no topology details logged)");
             return Optional.empty();
         } catch (AuthenticationException e) {
             log.debug("LDAP authentication failed for login: {}", login);

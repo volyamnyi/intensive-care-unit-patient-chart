@@ -22,4 +22,29 @@ class GlobalExceptionHandlerTest {
         assertThat(GlobalExceptionHandler.sanitizeRoute(null)).isNull();
         assertThat(GlobalExceptionHandler.sanitizeRoute("  ")).isNull();
     }
+
+    @Test
+    void misTimeout_mapsTo503WithDetailFreeMessage() {
+        var handler = new GlobalExceptionHandler();
+
+        var res = handler.handleMisTimeout(
+                new com.superhumans.mis.MisTimeoutException("spiPatientProsthesCheck timed out"));
+
+        assertThat(res.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(res.getBody().getCode()).isEqualTo(ErrorCode.MIS_TIMEOUT);
+        assertThat(res.getBody().getMessage()).isEqualTo("MIS is temporarily unavailable.");
+        assertThat(res.getBody().getCorrelationId()).isNotNull();
+    }
+
+    @Test
+    void misUpstream_mapsTo502WithDetailFreeMessage() {
+        var handler = new GlobalExceptionHandler();
+
+        var res = handler.handleMisUpstream(
+                new com.superhumans.mis.MisBadResponseException("spiPatientProsthesCheck", 500));
+
+        assertThat(res.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.BAD_GATEWAY);
+        assertThat(res.getBody().getCode()).isEqualTo(ErrorCode.MIS_UPSTREAM_ERROR);
+        assertThat(res.getBody().getMessage()).isEqualTo("MIS returned an error.");
+    }
 }

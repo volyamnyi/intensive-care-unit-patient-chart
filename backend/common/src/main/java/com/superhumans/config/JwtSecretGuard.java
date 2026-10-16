@@ -22,8 +22,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtSecretGuard implements InitializingBean {
 
-    static final String DEFAULT_SECRET =
-            "cGF0aWVudC1jaGFydC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi0yMDI2";
+    // SHA-256 of the retired committed secret (#372 item 5): the plaintext
+    // must not survive in the codebase — if a yml default is ever
+    // reintroduced, the app would sign with a publicly-known key.
+    static final String RETIRED_SECRET_SHA256 =
+            "c6d96e93a8dd8c22d2367ea20eda36f677a12710cbb523a7a2f79e985a30fcaf";
 
     private final String secret;
     private final List<String> activeProfiles;
@@ -35,10 +38,24 @@ public class JwtSecretGuard implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        if (activeProfiles.contains("prod") && DEFAULT_SECRET.equals(secret)) {
-            throw new IllegalStateException("PROD protection: app.jwt.secret is the committed default. "
+        if (activeProfiles.contains("prod") && RETIRED_SECRET_SHA256.equals(sha256Hex(secret))) {
+            throw new IllegalStateException("PROD protection: app.jwt.secret is the retired committed default. "
                     + "Set APP_JWT_SECRET in the prod environment (e.g. openssl rand -base64 64) so "
                     + "tokens cannot be forged with the publicly-committed secret.");
+        }
+    }
+
+    static String sha256Hex(String value) {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
         }
     }
 }
