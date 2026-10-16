@@ -10,11 +10,14 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Fail-fast boot guard: refuses to start under the {@code prod} profile when
- * the JWT signing secret is still the committed default value. Anyone with repo
- * read access could otherwise forge tokens for any role (audit finding A1,
- * CWE-798/321). The production deployment must override it via
- * {@code APP_JWT_SECRET} (e.g. {@code openssl rand -base64 64}).
+ * Fail-fast boot guard for the JWT signing secret (audit finding A1,
+ * CWE-798/321). The secret is env-required: {@code application.yml} declares
+ * a bare {@code ${APP_JWT_SECRET}} placeholder with no default, so a missing
+ * variable fails boot at placeholder resolution before this guard even runs.
+ * This guard is belt-and-braces: under the {@code prod} profile it refuses to
+ * start when the resolved secret still equals the retired committed default
+ * (anyone with repo read access could otherwise forge tokens for any role).
+ * Generate with e.g. {@code openssl rand -base64 64}.
  */
 @Component
 public class JwtSecretGuard implements InitializingBean {

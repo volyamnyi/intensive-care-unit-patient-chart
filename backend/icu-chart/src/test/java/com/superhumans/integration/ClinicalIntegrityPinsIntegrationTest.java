@@ -173,7 +173,8 @@ class ClinicalIntegrityPinsIntegrationTest extends AbstractIntegrationTest {
                 authGet(auditor), String.class);
 
         assertThat(audit.getStatusCode()).isEqualTo(HttpStatus.OK);
-        // Audit rows record the action + IP, not the attempted login string.
+        // The assertion pins the probe volume (row count), not content: the
+        // attempted login IS stored (legacy details + v2 actor.login).
         // Exactly the probes from this class fail login: 25 here, plus up to 6
         // from rateLimiter_locksAfterFiveFailures_sameLogin if it ran first.
         assertThat(audit.getBody()).contains("\"action\":\"LOGIN_FAILED\"");

@@ -399,10 +399,10 @@ java -jar app/target/app-*.jar
 | `GET` | `/api/prosthesis-manufacturing/patients` | PROSTHETIST, PROSTHETICS_ADMIN | Search patients |
 | `GET` | `/api/prosthesis-manufacturing/patients/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get patient by ID |
 | `GET` | `/api/prosthesis-manufacturing/patients/candidates` | PROSTHETIST, PROSTHETICS_ADMIN | Eligible worklist: dept 19/27/37 + 120/121 docs + orders (#259) |
-| `POST` | `/api/prosthesis-manufacturing/patients` | PROSTHETICS_ADMIN | Create patient |
 | `GET` | `/api/prosthesis-manufacturing/orders` | PROSTHETIST, PROSTHETICS_ADMIN | List orders |
 | `GET` | `/api/prosthesis-manufacturing/orders/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get order by ID |
-| `POST` | `/api/prosthesis-manufacturing/orders` | PROSTHETICS_ADMIN | Create order |
+| `POST` | `/api/prosthesis-manufacturing/orders/provision` | PROSTHETIST, PROSTHETICS_ADMIN | Provision order from MIS document |
+| `GET` | `/api/prosthesis-manufacturing/orders/{id}/document-url` | PROSTHETIST, PROSTHETICS_ADMIN | MIS document URL for the order |
 | `GET` | `/api/prosthesis-manufacturing/templates` | PROSTHETIST, PROSTHETICS_ADMIN | List flow templates |
 | `GET` | `/api/prosthesis-manufacturing/templates/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get template by ID |
 | `POST` | `/api/prosthesis-manufacturing/templates` | PROSTHETICS_ADMIN | Create template |
@@ -654,8 +654,8 @@ Access is enforced by a **dynamic role-permission matrix** (28 permission codes 
 - **Authorization**: Spring Security **method + URL-based** enforcement, layered on a **dynamic permission matrix** — precise rules are `@PreAuthorize("@permissionService.has('CODE')")` (so admin edits to role permissions take effect immediately), module-visit gates via `MODULE_*_ACCESS`, and URL ceilings in `ClinicalSecurityRules`
 - **Active Directory (LDAP/LDAPS, read-only bind)**: the directory is used exclusively for authentication, user search, and profile reads — no user/group/attribute/membership writes exist anywhere. First-time directory users become `GUEST` (zero permissions, outside all URL ceilings); roles are assigned locally only. Configuration is environment-only (`APP_LDAP_ENABLED`, `APP_LDAP_URLS`, `APP_LDAP_BASE`, `APP_LDAP_USERNAME`, `APP_LDAP_PASSWORD`, no defaults; TLS via the JVM truststore) and applies to **local/prod only — CI maps zero LDAP secrets** (`APP_LDAP_ENABLED=false` in all test jobs). LDAP test suites run exclusively locally (corporate AD is unreachable from CI, where they report SKIPPED)
 - **MIS API (single-mode)**: `POST {app.mis.api.base-url}{app.mis.api.run-path}` with static integration login; environment-only credentials for the real MIS (`APP_MIS_API_BASE_URL`, `APP_MIS_API_LOGIN`, `APP_MIS_API_PASSWORD`, `APP_MIS_API_INSTALLATION_GUID`, no defaults; path overrides via `APP_MIS_API_RUN_PATH`) apply to **local/prod only — CI points the same client at the sidecar stub** (`tests/mis-stub/`, `127.0.0.1:9099` with `e2e-stub` credentials) and maps zero MIS secrets. The MIS Data Policy (strictly read-only, no exceptions — PDF transfer banned, Phase 16, #269) applies.
-- **CORS**: REST API allows `*` origin patterns (with credentials); the **WebSocket** endpoint (`WebSocketConfig`) is restricted to `http://localhost:5173` and `http://localhost:3000`
-- **CSRF**: Disabled (stateless API)
+- **CORS**: exact origin allowlist (`app.cors.allowed-origins` / `APP_CORS_ALLOWED_ORIGINS`, test-pinned; a `*` origin must never combine with credentials); the **WebSocket** endpoint (`WebSocketConfig`) is restricted to `http://localhost:5173` and `http://localhost:3000`
+- **CSRF**: no CSRF tokens — the defense is the `SameSite=Lax` cookie plus safe-method discipline (stateless API)
 - **Audit**: `AuditService` logs all entity operations (plus non-GET API calls through the `JwtAuthenticationFilter`)
 - **Optimistic Locking**: `@Version` field on all `BaseEntity` subclasses prevents concurrent overwrites
 

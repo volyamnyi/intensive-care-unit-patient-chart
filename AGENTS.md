@@ -602,10 +602,11 @@ All endpoints prefixed with `/api`.
 |---|---|---|---|
 | GET | `/api/prosthesis-manufacturing/patients` | Yes (PROSTHETIST, PROSTHETICS_ADMINISTRATOR) | Search patients |
 | GET | `/api/prosthesis-manufacturing/patients/{id}` | Yes | Get patient by ID |
-| POST | `/api/prosthesis-manufacturing/patients` | Yes (PROSTHETICS_ADMINISTRATOR) | Create patient |
+| GET | `/api/prosthesis-manufacturing/patients/candidates` | Yes (PROSTHETIST, PROSTHETICS_ADMINISTRATOR) | Eligibility candidates (?query=) |
 | GET | `/api/prosthesis-manufacturing/orders` | Yes | List orders |
 | GET | `/api/prosthesis-manufacturing/orders/{id}` | Yes | Get order by ID |
-| POST | `/api/prosthesis-manufacturing/orders` | Yes (PROSTHETICS_ADMINISTRATOR) | Create order |
+| POST | `/api/prosthesis-manufacturing/orders/provision` | Yes (PROSTHETIST, PROSTHETICS_ADMINISTRATOR) | Provision order from MIS document |
+| GET | `/api/prosthesis-manufacturing/orders/{id}/document-url` | Yes (PROSTHETIST, PROSTHETICS_ADMINISTRATOR) | MIS document URL for the order |
 | GET | `/api/prosthesis-manufacturing/templates` | Yes | List flow templates |
 | GET | `/api/prosthesis-manufacturing/templates/{id}` | Yes | Get template by ID |
 | POST | `/api/prosthesis-manufacturing/templates` | Yes (PROSTHETICS_ADMINISTRATOR) | Create template |

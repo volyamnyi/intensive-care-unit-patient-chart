@@ -86,7 +86,7 @@ public class FlowInstanceController {
 
     @GetMapping("/{id}")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
-    @Operation(summary = "Get instance (owner or admin/HOD)")
+    @Operation(summary = "Get instance (owner or prosthetics admin)")
     @org.springframework.transaction.annotation.Transactional
     public FlowInstanceResponse get(@PathVariable UUID id) {
         FlowInstanceResponse instance = instanceService.get(id, currentUser.userId(),
@@ -243,7 +243,7 @@ public class FlowInstanceController {
 
     @GetMapping("/{id}/evidence/{fileId}")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
-    @Operation(summary = "Download evidence file (owner or admin/HOD)")
+    @Operation(summary = "Download evidence file (owner or prosthetics admin)")
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ByteArrayResource> downloadEvidence(@PathVariable UUID id,
                                                               @PathVariable UUID fileId) {
