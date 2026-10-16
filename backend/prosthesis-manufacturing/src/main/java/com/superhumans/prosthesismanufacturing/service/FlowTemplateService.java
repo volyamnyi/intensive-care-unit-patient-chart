@@ -169,6 +169,8 @@ public class FlowTemplateService {
                             for (int ei = 0; ei < stepRequest.getElements().size(); ei++) {
                                 TemplateCreateRequest.TemplateElementRequest elementRequest =
                                         stepRequest.getElements().get(ei);
+                                validateRegexPattern(elementRequest.getRegexPattern(),
+                                        elementRequest.getLabel());
                                 TemplateElement element = TemplateElement.builder()
                                         .step(step)
                                         .orderIndex(ei)
@@ -342,6 +344,47 @@ public class FlowTemplateService {
                 .stages(stages)
                 .build();
     }
+
+    /**
+     * Max regex length accepted on template elements (#410 item 7): bounds
+     * worst-case backtracking at match time, where the pattern is compiled
+     * fresh per step completion.
+     */
+    static final int MAX_REGEX_PATTERN_LENGTH = 200;
+
+    /**
+     * Rejects malformed or oversized element regexes at template-create time
+     * (#410 item 7): a catastrophically-backtracking pattern would otherwise
+     * hang request threads on every step completion, and a malformed one
+     * would surface as a PatternSyntaxException at match time.
+     */
+    static void validateRegexPattern(String regexPattern, String elementLabel) {
+        if (regexPattern == null || regexPattern.isBlank()) {
+            return;
+        }
+        if (regexPattern.length() > MAX_REGEX_PATTERN_LENGTH) {
+            throw new BadRequestException("Regex pattern for element «" + elementLabel
+                    + "» exceeds " + MAX_REGEX_PATTERN_LENGTH + " characters");
+        }
+        try {
+            java.util.regex.Pattern.compile(regexPattern);
+        } catch (java.util.regex.PatternSyntaxException e) {
+            throw new BadRequestException("Invalid regex pattern for element «" + elementLabel + "»");
+        }
+        if (NESTED_QUANTIFIER.matcher(regexPattern).find()) {
+            throw new BadRequestException("Regex pattern for element «" + elementLabel
+                    + "» has a nested quantifier (denial-of-service risk)");
+        }
+    }
+
+    /**
+     * Heuristic for the classic catastrophic shapes {@code (x+)+},
+     * {@code (x*)*}: a group containing an inner {@code +}/{@code *} that is
+     * itself quantified. Catastrophic backtracking is undecidable in general —
+     * this catches the textbook evil patterns; the length cap bounds the rest.
+     */
+    private static final java.util.regex.Pattern NESTED_QUANTIFIER =
+            java.util.regex.Pattern.compile("\\([^()]*[+*][^()]*\\)[+*?]");
 
     private String toJson(List<String> values) {
         if (values == null) {

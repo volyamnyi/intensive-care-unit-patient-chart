@@ -1,5 +1,6 @@
 package com.superhumans.prosthesismanufacturing.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -21,5 +22,5 @@ public class StepCompleteRequest {
     @NotNull
     String values;
 
-    List<ResourceUsageRequest> resources;
+    List<@Valid ResourceUsageRequest> resources;
 }

@@ -694,10 +694,25 @@ All endpoints prefixed with `/api`.
 ## DTOs
 
 ### Request DTOs
-`LoginRequest`, `EpisodeCreateRequest`, `EpisodePatchRequest`, `EpisodeCloseRequest`, `ClinicalDayCreateRequest`, `ClinicalDayPatchRequest`, `HourlyRecordCreateRequest`, `HourlyRecordPatchRequest`, `MedicalOrderCreateRequest`, `MedicalOrderPatchRequest`, `MedicalNoteCreateRequest`, `MedicalNotePatchRequest`, `ScaleResultCreateRequest`, `ScaleResultPatchRequest`, `ScaleResultCalculateRequest`, `OrderExecutionCreateRequest`, `OrderExecutionPatchRequest`, `SignRequest`, `ReopenRequest` (19 total)
+`LoginRequest`, `EpisodeCreateRequest`, `EpisodePatchRequest`, `EpisodeCloseRequest`, `ClinicalDayCreateRequest`, `ClinicalDayPatchRequest`, `CloseEarlyRequest`, `HourlyRecordCreateRequest`, `HourlyRecordPatchRequest`, `MedicalOrderCreateRequest`, `MedicalOrderPatchRequest`, `MedicalNoteCreateRequest`, `MedicalNotePatchRequest`, `LabResultCreateRequest`, `LabResultPatchRequest`, `VentilationCreateRequest`, `VentilationPatchRequest`, `PatientStateCreateRequest`, `PatientStatePatchRequest`, `ScaleResultCreateRequest`, `ScaleResultPatchRequest`, `OrderExecutionCreateRequest`, `OrderExecutionPatchRequest`, `OrderExecutionPlanRequest`, `OrderExecutionFinishRequest`, `SignRequest`, `ReopenRequest`, `RolePermissionUpdateRequest`, `PrescriptionListCreateRequest`, `PrescriptionItemAddRequest`, `PrescriptionDoseRequest`, `PrescriptionExecuteRequest`, `VitalSignEntryRequest`, `VitalSignEntryPatchRequest`, `InstanceCreateRequest`, `FlowTemplateCreateRequest`, `TemplatePatchRequest`, `StepCompleteRequest`, `StepNotePatchRequest`, `PauseRequest`, `FailRequest`, `BrakCreateRequest`, `OrderProvisionRequest`, `ResourceUsageRequest` (44 total; the scale-calculate endpoint takes a raw capped `Map<String,Object>`, no DTO)
 
 ### Response DTOs
 `LoginResponse`, `EpisodeResponse`, `ClinicalDayResponse`, `HourlyRecordResponse`, `MedicalOrderResponse`, `OrderExecutionResponse`, `MedicalNoteResponse`, `ScaleResultResponse`, `FluidBalanceResponse`, `SignResponse`, `PdfResponse`, `UserResponse`, `AuditLogResponse`, `ErrorResponse` (14 total). Prosthetics production DTOs (`ProductionWorkItemDto`, `ProductionSummaryDto`, `ProductionDetailDto`, `ProductionTeamRowDto`, `ProductionNormativeDto`) live in the prosthesis-manufacturing module.
+
+### Error codes (`ErrorResponse.code`, #410 item 4)
+| Code | HTTP | Meaning |
+|---|---|---|
+| `BAD_REQUEST` | 400 | Explicit request-shape rejection |
+| `VALIDATION_ERROR` | 400 | Bean/method validation, unreadable JSON, invalid argument values (fixed template, raw echoed server-side only) |
+| `BUSINESS_RULE` | 422 | Business-rule violation (incl. `EPISODE_ALREADY_ACTIVE`, `CLINICAL_DAY_ALREADY_OPEN`, `DUPLICATE_HOURLY_RECORD`, `SIGNATURE_REQUIRED`, `PAST_HOUR_ORDER` via `BusinessException`) |
+| `DOCUMENT_LOCKED` | 422 | Mutation of a signed/closed/finished document |
+| `VERSION_CONFLICT` | 409 | Optimistic-locking race |
+| `NOT_FOUND` | 404 | Unknown id (incl. soft-deleted rows) |
+| `FORBIDDEN` | 403 | Method-security denial |
+| `PAYLOAD_TOO_LARGE` | 413 | Upload over the cap |
+| `MIS_TIMEOUT` | 503 | MIS call timed out |
+| `MIS_UPSTREAM_ERROR` | 502 | MIS auth/envelope/transport failure |
+| `INTERNAL_ERROR` | 500 | Unexpected failure (detail-free body) |
 
 ## Backend Services (by module)
 

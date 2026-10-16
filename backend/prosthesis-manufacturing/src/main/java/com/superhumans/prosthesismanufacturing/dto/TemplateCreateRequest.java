@@ -5,6 +5,7 @@ import com.superhumans.prosthesismanufacturing.entity.LimbSide;
 import com.superhumans.prosthesismanufacturing.entity.ProductType;
 import com.superhumans.prosthesismanufacturing.entity.StageType;
 import com.superhumans.prosthesismanufacturing.entity.StepType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -40,7 +41,7 @@ public class TemplateCreateRequest {
     @Positive
     Integer estimatedDurationMin;
 
-    List<TemplateStageRequest> stages;
+    List<@Valid TemplateStageRequest> stages;
 
     @Getter
     @Setter
@@ -57,7 +58,7 @@ public class TemplateCreateRequest {
 
         Boolean canSkip;
         Boolean requiresApproval;
-        List<TemplateStepRequest> steps;
+        List<@Valid TemplateStepRequest> steps;
     }
 
     @Getter
@@ -79,7 +80,7 @@ public class TemplateCreateRequest {
         Boolean allowBackward;
         Boolean autoStartTimer;
         Integer normDurationMin;
-        List<TemplateElementRequest> elements;
+        List<@Valid TemplateElementRequest> elements;
     }
 
     @Getter

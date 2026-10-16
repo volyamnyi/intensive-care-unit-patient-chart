@@ -8,8 +8,6 @@ public final class ErrorCode {
 
     public static String EPISODE_ALREADY_ACTIVE = "EPISODE_ALREADY_ACTIVE";
     public static String CLINICAL_DAY_ALREADY_OPEN = "CLINICAL_DAY_ALREADY_OPEN";
-    public static String INVALID_CLINICAL_VALUE = "INVALID_CLINICAL_VALUE";
-    public static String ORDER_ALREADY_COMPLETED = "ORDER_ALREADY_COMPLETED";
     public static String SIGNATURE_REQUIRED = "SIGNATURE_REQUIRED";
     public static String DOCUMENT_LOCKED = "DOCUMENT_LOCKED";
     public static String VERSION_CONFLICT = "VERSION_CONFLICT";

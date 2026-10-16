@@ -37,6 +37,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void documentLocked_mapsTo422WithCode() {
+        var handler = new GlobalExceptionHandler();
+
+        var res = handler.handleDocumentLocked(
+                new com.superhumans.exception.DocumentLockedException("locked"));
+
+        assertThat(res.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(res.getBody().getCode()).isEqualTo(ErrorCode.DOCUMENT_LOCKED);
+    }
+
+    @Test
     void misUpstream_mapsTo502WithDetailFreeMessage() {
         var handler = new GlobalExceptionHandler();
 

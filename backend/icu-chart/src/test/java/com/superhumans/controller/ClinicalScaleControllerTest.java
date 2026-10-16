@@ -126,6 +126,26 @@ class ClinicalScaleControllerTest {
     }
 
     @Test
+    void calculateAndSaveScale_oversizedBody_returnsBadRequest() throws Exception {
+        StringBuilder big = new StringBuilder("{");
+        for (int i = 0; i < 130; i++) {
+            if (i > 0) {
+                big.append(',');
+            }
+            big.append("\"f").append(i).append("\":").append(i);
+        }
+        big.append('}');
+
+        mockMvc.perform(post("/api/episodes/123e4567-e89b-12d3-a456-426614174000/scales/calculate")
+                        .param("scaleId", "123e4567-e89b-12d3-a456-426614174000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(big.toString())
+                        .with(csrf()).with(doctor()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
+    @Test
     void updateScaleResult_returnsNoContent() throws Exception {
         mockMvc.perform(patch("/api/scales/123e4567-e89b-12d3-a456-426614174000")
                         .contentType(MediaType.APPLICATION_JSON)

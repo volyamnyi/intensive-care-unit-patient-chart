@@ -78,4 +78,13 @@ class VentilationSettingsControllerTest {
                         .content("{\"recordHour\":8,\"mode\":\"CMV\",\"fio2\":0.5}").with(csrf()).with(doctor()))
                 .andExpect(status().isCreated());
     }
+
+    @Test
+    void saveVentilationSettings_recordHourOutOfRange_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/ventilation")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"recordHour\":25,\"mode\":\"CMV\"}").with(csrf()).with(doctor()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
 }

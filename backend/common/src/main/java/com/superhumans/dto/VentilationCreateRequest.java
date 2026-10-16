@@ -1,5 +1,7 @@
 package com.superhumans.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -9,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class VentilationCreateRequest {
-    @NotNull
+    @NotNull @Min(0) @Max(23)
     Integer recordHour;
 
     @Size(max = 30)

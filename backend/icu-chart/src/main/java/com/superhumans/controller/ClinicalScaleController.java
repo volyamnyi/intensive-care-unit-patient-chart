@@ -3,6 +3,7 @@ package com.superhumans.controller;
 import com.superhumans.dto.ScaleResultCreateRequest;
 import com.superhumans.dto.ScaleResultPatchRequest;
 import com.superhumans.dto.ScaleResultResponse;
+import com.superhumans.exception.BadRequestException;
 import com.superhumans.icu.entity.ClinicalScale;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.service.ClinicalScaleService;
@@ -82,6 +83,11 @@ public class ClinicalScaleController {
             @RequestParam UUID scaleId,
             @RequestBody Map<String, Object> rawData,
             Authentication auth) {
+        // The calculate body is a raw unbounded map (#410 item 4): cap its
+        // size at the boundary instead of persisting an arbitrary blob.
+        if (rawData != null && rawData.size() > 128) {
+            throw new BadRequestException("Scale input exceeds 128 fields");
+        }
         Long userId = (Long) auth.getCredentials();
         UserRole role = extractRole(auth);
         scaleAuthorizationService.assertCanCreate(scaleId, role);

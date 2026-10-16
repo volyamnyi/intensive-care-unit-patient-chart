@@ -69,6 +69,16 @@ class PatientStateAssessmentControllerTest {
     }
 
     @Test
+    void create_recordHourOutOfRange_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/clinical-days/123e4567-e89b-12d3-a456-426614174000/patient-state")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"recordHour\":99,\"consciousness\":\"CLEAR\"}")
+                        .with(csrf()).with(doctor()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void getByClinicalDay_returnsList() throws Exception {
         when(patientStateService.getByClinicalDay(any())).thenReturn(List.of());
 

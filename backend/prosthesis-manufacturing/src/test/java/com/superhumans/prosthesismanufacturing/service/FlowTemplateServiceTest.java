@@ -125,6 +125,52 @@ class FlowTemplateServiceTest {
     }
 
     @Test
+    void createRejectsCatastrophicRegex() {
+        var request = requestWithRegex("^(a+)+$");
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+    }
+
+    @Test
+    void createRejectsMalformedRegex() {
+        var request = requestWithRegex("([a-z");
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+    }
+
+    @Test
+    void createRejectsOversizedRegex() {
+        var request = requestWithRegex("a".repeat(201));
+
+        assertThatThrownBy(() -> service.create(request, 1L))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+    }
+
+    private TemplateCreateRequest requestWithRegex(String regex) {
+        return TemplateCreateRequest.builder()
+                .name("TP-UL-01")
+                .productType(ProductType.UPPER_LIMB)
+                .estimatedDurationMin(240)
+                .stages(java.util.List.of(TemplateCreateRequest.TemplateStageRequest.builder()
+                        .name("Stage")
+                        .type(StageType.CLINICAL)
+                        .steps(java.util.List.of(TemplateCreateRequest.TemplateStepRequest.builder()
+                                .name("Step")
+                                .stepType(StepType.MEASUREMENT)
+                                .elements(java.util.List.of(TemplateCreateRequest.TemplateElementRequest
+                                        .builder()
+                                        .elementType(ElementType.TEXT_INPUT)
+                                        .label("Code")
+                                        .regexPattern(regex)
+                                        .build()))
+                                .build()))
+                        .build()))
+                .build();
+    }
+
+    @Test
     void createRejectsBlankName() {
         var request = basicRequest();
         request.setName("  ");
