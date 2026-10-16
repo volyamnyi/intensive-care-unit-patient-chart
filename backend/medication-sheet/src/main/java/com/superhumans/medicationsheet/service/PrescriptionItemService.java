@@ -445,6 +445,8 @@ public class PrescriptionItemService {
                 .build());
     }
 
+    // readOnly: pure derived query, no audit emit (#391).
+    @Transactional(readOnly = true)
     public List<PrescriptionItemDay> getDays(UUID itemId) {
         return dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId);
     }

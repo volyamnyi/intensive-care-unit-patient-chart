@@ -112,7 +112,8 @@ public class ProductionReadService {
      * after mapping (volumes are dashboard-scale; revisited with DB paging in
      * the performance pass, issue #281).
      */
-    @Transactional
+    // readOnly: pure read, no audit emit (#391).
+    @Transactional(readOnly = true)
     public Page<ProductionWorkItemDto> list(ProductionQuery query) {
         long started = System.currentTimeMillis();
         if (query.getPage() < 0) {
@@ -174,7 +175,8 @@ public class ProductionReadService {
      *                              {@code PROSTHETICS_PRODUCTION_PATIENT_VIEW})
      * @throws NotFoundException when the instance does not exist or is foreign
      */
-    @Transactional
+    // readOnly: pure read, no audit emit (#391).
+    @Transactional(readOnly = true)
     public ProductionDetailDto detail(UUID instanceId, Long userId,
             boolean viewAll, boolean includePatientDetails) {
         long started = System.currentTimeMillis();
@@ -245,7 +247,8 @@ public class ProductionReadService {
      * KPI summary over the caller's scope. Pass the effective assignee
      * (own id without {@code VIEW_ALL}, {@code null} for the team scope).
      */
-    @Transactional
+    // readOnly: pure read, no audit emit (#391).
+    @Transactional(readOnly = true)
     public ProductionSummaryDto summary(Long assigneeOrNull) {
         long started = System.currentTimeMillis();
         List<FlowInstance> instances = assigneeOrNull == null

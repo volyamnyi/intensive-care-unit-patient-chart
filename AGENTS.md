@@ -262,7 +262,7 @@ After login, user lands on `/select` (AppSelectorPage) and picks a sub-app. Rout
 
 - JWT auth delivered via an **httpOnly `jwt` cookie** (SameSite=Lax) set on login and cleared on logout; axios uses `withCredentials: true` with no Authorization header. `localStorage` holds only a lightweight `auth:session` flag - never the token.
 - Backend port: **8085** (`application.yml`).
-- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (32 SQL files total: core 8, icu 7, med 5, prosth 12 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`; `core/007-ldap-auth-provider.sql` adds `users.auth_provider` and relaxes `password_hash` nullability with a guarded rollback):
+- **Databases (PostgreSQL 16, one per module)** — 4 physical DBs, `ddl-auto: none`, schema per DB managed by its own Liquibase changelog (45 SQL files total: core 14, icu 9, med 8, prosth 14 — all in `common/src/main/resources/db/changelog/{core,icu,med,prosth}/`; `core/007-ldap-auth-provider.sql` adds `users.auth_provider` and relaxes `password_hash` nullability with a guarded rollback):
 
   | Database | Module | Purpose / contents |
   |---|---|---|
@@ -463,7 +463,7 @@ AuditLog (standalone, no BaseEntity)
 
 | Entity | Extends | Key Fields | Constraints |
 |---|---|---|---|
-| `User` | BaseEntity | login(unique), passwordHash, fullName, role(UserRole), email, specialityCode/Name, phone | Role: DOCTOR/NURSE/HEAD_OF_DEPARTMENT/ADMINISTRATOR/AUDITOR |
+| `User` | — (own audit fields + single `@Version`; no BaseEntity) | login(unique), passwordHash, fullName, role(UserRole), email, specialityCode/Name, phone | Role: DOCTOR/NURSE/HEAD_OF_DEPARTMENT/ADMINISTRATOR/AUDITOR |
 | `Episode` | BaseEntity | patientId, hospitalizationId, departmentId, admissionDate, dischargeDate, status(EpisodeStatus) | Status: DRAFT → ACTIVE → COMPLETED/ARCHIVED |
 | `ClinicalDay` | BaseEntity | episode(M→1), dayNumber, startDateTime, endDateTime, status(ClinicalDayStatus), doctorSigned, nurseSigned, closedAt | Status: OPEN → NURSE_SIGNED → DOCTOR_SIGNED → CLOSED/REOPENED |
 | `HourlyRecord` | BaseEntity | clinicalDay(M→1), recordTime, recordHour, consciousness, temperature(34-42), heartRate(0-300), respiratoryRate(0-60), systolicBP(50-250), diastolicBP(30-150), meanArterialPressure, spo2(50-100), glucose(1-30), etco2, fio2, cvp, urineOutput, drainOutput, stool, vomit, painScore, notes | UNIQUE(clinical_day_id, record_hour); ranges validated in @PrePersist/@PreUpdate |
@@ -763,7 +763,7 @@ All endpoints prefixed with `/api`.
 | §89 | Checkstyle analysis | Google checks with console output |
 | §94 | PDF transfer to MIS banned (#269) | `TransferStatus` + `GeneratedPdf.transferStatus/transferError/transferredAt` removed (Liquibase `icu/007-drop-pdf-transfer.sql`); PDFs stay local — `GET /clinical-days/{id}/pdf/file` serves bytes, in-module print via `lib/printPdf.ts` |
 | §98 | MIS calls audited | `MisServiceImpl` methods call `auditService.logAction()`; `sendPdf()` removed in #269 (guarded by `MisWriteBanTripwireTest`) |
-| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (32 SQL files: core 8, icu 7, med 5, prosth 12); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
+| §— | Liquibase schema management | `ddl-auto: none`, schema per DB via `db/changelog/db.changelog-master-{core,icu,med,prosth}.yaml` (45 SQL files: core 14, icu 9, med 8, prosth 14); seed data via `SeedDataInitializer` (`data-{core,icu,med,prosth}.sql`, gated by `app.seed-data.enabled`) |
 
 ## Key Patterns
 
@@ -800,7 +800,7 @@ All endpoints prefixed with `/api`.
 - **TypeScript**: `erasableSyntaxOnly: true` — no enums, no namespaces
 - **Roles**: Gate in backend (Spring Security `@PreAuthorize`) and frontend (`Guard` component)
 - **Routing**: `/icu/doctor/*` for DOCTOR/HOD, `/icu/nurse/*` for NURSE, `/prescriptions/*` for medication sheet, `/prosthetics/*` for prosthetics, `/admin/*` for ADMINISTRATOR
-- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 32 SQL files); never write manual DDL
+- **DB**: `ddl-auto: none` — schema per DB managed by the Liquibase changelogs in `db/changelog/{core,icu,med,prosth}/` (master yamls + 45 SQL files); never write manual DDL
 - **Data seeding**: Only via `SeedDataInitializer` — one script per module: `data-core.sql`, `data-icu.sql`, `data-med.sql`, `data-prosth.sql` (in `backend/common/src/main/resources/`), executed on the matching datasource; gated by `app.seed-data.enabled: true`. Never write manual seed DDL.
 - **Test seed data**: Integration tests use `data-test-core.sql` / `data-test-icu.sql` / `data-test-med.sql` (in `backend/icu-chart/src/test/resources/`) with plain INSERTs, routed per-datasource via `@Sql` + `@SqlConfig(dataSource = ...)` (plus `data-prescription.sql` with `@SqlConfig(dataSource = "medDataSource", separator = "GO")`) on a fresh PostgreSQL database. The production seed files keep `ON CONFLICT (id) DO NOTHING` for local dev resilience (exception: `prescription_lists` uses `ON CONFLICT (id) DO UPDATE SET document_name = EXCLUDED.document_name` to auto-heal Cyrillic encoding corruption). The `users` inserts in `data-core.sql` use `ON CONFLICT (login) DO NOTHING` — a demo password is **never** overwritten on restart (A2, CWE-798). Modified data may persist across restarts. Reset each DB with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` in PostgreSQL before the next run.
 

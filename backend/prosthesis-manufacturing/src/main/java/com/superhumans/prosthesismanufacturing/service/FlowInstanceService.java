@@ -123,7 +123,14 @@ public class FlowInstanceService {
                 .totalIdleSeconds(0L)
                 .templateSnapshot(templateService.createSnapshot(request.getTemplateId()))
                 .build();
-        instanceRepository.save(instance);
+        try {
+            instanceRepository.saveAndFlush(instance);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // TOCTOU with the pre-check above (#391): a concurrent create won
+            // the race and the partial unique fired. Report the friendly
+            // duplicate error instead of a misleading 409.
+            throw new BadRequestException("An active instance already exists for this order");
+        }
         auditService.logAction("FlowInstance", instance.getId(), "CREATE", userId);
         final UUID createdInstanceId = instance.getId();
         auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
@@ -518,7 +525,9 @@ public class FlowInstanceService {
                 .toList();
     }
 
-    @Transactional
+    // readOnly: pure read, no audit emit (the view fires at the controller
+    // boundary — a readOnly tx would silently drop an in-method emit, #391).
+    @Transactional(readOnly = true)
     public FlowInstanceResponse get(UUID instanceId, Long userId, boolean allowAll) {
         FlowInstance instance = requireOwner(instanceId, userId, allowAll);
         // No audit emit here: the instance view fires once per opening at the
@@ -526,7 +535,8 @@ public class FlowInstanceService {
         return toResponse(instance);
     }
 
-    @Transactional
+    // readOnly: pure read, no audit emit (see get() above, #391).
+    @Transactional(readOnly = true)
     public Map<String, Object> getSnapshot(UUID instanceId, Long userId, boolean allowAll) {
         String json = requireOwner(instanceId, userId, allowAll).getTemplateSnapshot();
         // No audit emit here: the snapshot view fires once per opening at the

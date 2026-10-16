@@ -37,13 +37,14 @@ public class PrescriptionListService {
         return listRepository.findByPatientIdAndDeletedFalse(patientId);
     }
 
+    /**
+     * Genuine read path: loads the list and emits {@code medication.list.view}
+     * (#391 — mutations must not log a read event first; they use
+     * {@link #loadById} instead).
+     */
     @Transactional
     public PrescriptionList getById(UUID id) {
-        PrescriptionList list = listRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Prescription list not found: " + id));
-        if (Boolean.TRUE.equals(list.getDeleted())) {
-            throw new NotFoundException("Prescription list not found: " + id);
-        }
+        PrescriptionList list = loadById(id);
         auditEmitter.emit("medication", () -> AuditEvent.builder()
                 .actor(AuditActorResolver.fromCurrentContext())
                 .eventClass(EventClass.USER_ACTIVITY)
@@ -56,6 +57,21 @@ public class PrescriptionListService {
                 .outcome(AuditEvent.AuditOutcome.SUCCESS)
                 .source(AuditEvent.AuditSource.API)
                 .build());
+        return list;
+    }
+
+    /**
+     * Loader without audit emission, for internal mutation paths.
+     * readOnly: pure load — and this is why getById above stays read-write:
+     * the VIEW emit must run in a writable tx (the emitter skips read-only).
+     */
+    @Transactional(readOnly = true)
+    public PrescriptionList loadById(UUID id) {
+        PrescriptionList list = listRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Prescription list not found: " + id));
+        if (Boolean.TRUE.equals(list.getDeleted())) {
+            throw new NotFoundException("Prescription list not found: " + id);
+        }
         return list;
     }
 
@@ -95,7 +111,7 @@ public class PrescriptionListService {
 
     @Transactional
     public PrescriptionList update(UUID id, String documentName) {
-        PrescriptionList list = getById(id);
+        PrescriptionList list = loadById(id);
         if (list.isFinished()) {
             throw new DocumentLockedException("Листок завершено — зміни заборонені");
         }
@@ -121,7 +137,7 @@ public class PrescriptionListService {
 
     @Transactional
     public void releaseLock(UUID id, UUID userId) {
-        PrescriptionList list = getById(id);
+        PrescriptionList list = loadById(id);
         if (userId.equals(list.getEditingUserId())) {
             list.setEditingUserId(null);
             list.setEditingStartedAt(null);
@@ -133,7 +149,7 @@ public class PrescriptionListService {
 
     @Transactional
     public void close(UUID id) {
-        PrescriptionList list = getById(id);
+        PrescriptionList list = loadById(id);
         if (list.isFinished()) {
             throw new DocumentLockedException("Document is already closed");
         }
@@ -160,7 +176,7 @@ public class PrescriptionListService {
 
     @Transactional
     public void delete(UUID id) {
-        PrescriptionList list = getById(id);
+        PrescriptionList list = loadById(id);
         list.setDeleted(true);
         listRepository.save(list);
         log.info("Prescription list deleted (soft): id={}", id);

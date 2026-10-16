@@ -15,7 +15,9 @@ import com.superhumans.icu.entity.ClinicalDay;
 import com.superhumans.icu.entity.ClinicalDayStatus;
 import com.superhumans.icu.entity.Episode;
 import com.superhumans.icu.entity.EpisodeStatus;
+import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.EpisodeAlreadyActiveException;
+import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.EpisodeMapper;
@@ -252,6 +254,16 @@ public class EpisodeService {
     public void archiveEpisode(UUID id) {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
+        // Archiving is terminal: only a COMPLETED episode may be archived
+        // (#391). Re-archiving stays idempotent so retries are safe; concurrent
+        // writers are still serialized by flush-time @Version.
+        if (episode.getStatus() == EpisodeStatus.ARCHIVED) {
+            return;
+        }
+        if (episode.getStatus() != EpisodeStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Only a COMPLETED episode can be archived (status: " + episode.getStatus() + ")");
+        }
         String previousStatus = episode.getStatus() == null ? null : episode.getStatus().name();
         episode.setStatus(EpisodeStatus.ARCHIVED);
         episodeRepository.save(episode);

@@ -6,6 +6,7 @@ import com.superhumans.dto.EpisodePatchRequest;
 import com.superhumans.dto.EpisodeResponse;
 import com.superhumans.icu.entity.Episode;
 import com.superhumans.icu.entity.EpisodeStatus;
+import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.EpisodeAlreadyActiveException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
@@ -241,6 +242,7 @@ class EpisodeServiceTest {
 
     @Test
     void archiveEpisode_setsStatusArchived() {
+        testEpisode.setStatus(EpisodeStatus.COMPLETED);
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
         when(episodeRepository.save(any(Episode.class))).thenReturn(testEpisode);
 
@@ -248,6 +250,26 @@ class EpisodeServiceTest {
 
         verify(episodeRepository).save(episodeCaptor.capture());
         assertThat(episodeCaptor.getValue().getStatus()).isEqualTo(EpisodeStatus.ARCHIVED);
+    }
+
+    @Test
+    void archiveEpisode_activeEpisode_throws() {
+        testEpisode.setStatus(EpisodeStatus.ACTIVE);
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+
+        assertThatThrownBy(() -> episodeService.archiveEpisode(episodeId))
+                .isInstanceOf(BusinessException.class);
+        verify(episodeRepository, never()).save(any(Episode.class));
+    }
+
+    @Test
+    void archiveEpisode_draftEpisode_throws() {
+        testEpisode.setStatus(EpisodeStatus.DRAFT);
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+
+        assertThatThrownBy(() -> episodeService.archiveEpisode(episodeId))
+                .isInstanceOf(BusinessException.class);
+        verify(episodeRepository, never()).save(any(Episode.class));
     }
 
     @Test
@@ -259,15 +281,14 @@ class EpisodeServiceTest {
     }
 
     @Test
-    void archiveEpisode_idempotentReArchive_staysArchived() {
+    void archiveEpisode_idempotentReArchive_skipsSave() {
         testEpisode.setStatus(EpisodeStatus.ARCHIVED);
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
-        when(episodeRepository.save(any(Episode.class))).thenReturn(testEpisode);
 
         episodeService.archiveEpisode(episodeId);
 
-        verify(episodeRepository).save(episodeCaptor.capture());
-        assertThat(episodeCaptor.getValue().getStatus()).isEqualTo(EpisodeStatus.ARCHIVED);
+        verify(episodeRepository, never()).save(any(Episode.class));
+        assertThat(testEpisode.getStatus()).isEqualTo(EpisodeStatus.ARCHIVED);
     }
 }
 

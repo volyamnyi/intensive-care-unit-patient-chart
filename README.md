@@ -494,8 +494,8 @@ icu-patient-chart/
 │   │   │                         security config, multi-DB wiring, platform controllers (auth/user/patient/admin/audit/
 │   │   │                         settings), `entity/base` + `entity/core` (User, Permission, RolePermission,
 │   │   │                         AuditLog, ...), `repository/core`, exception handlers, MIS client, services (Auth,
-│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 26
-│   │   │                         SQL files in `db/changelog/{core (8), icu (7), med (2), prosth (9)}/`)
+│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 45
+│   │   │                         SQL files in `db/changelog/{core (14), icu (9), med (8), prosth (14)}/`)
 │   ├── icu-chart/              ← ICU chart feature: `com.superhumans.icu.*` (entities + repositories) + ICU domain
 │   │                             packages (controller ×13, service ×16, dto, mapper); depends on common
 │   ├── medication-sheet/       ← medication sheet feature (`com.superhumans.medicationsheet.*`); depends on common

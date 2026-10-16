@@ -41,7 +41,8 @@ public class ProstheticsPatientService {
     ProstheticsPatientRepository patientRepository;
     ProstheticsPatientMapper patientMapper;
 
-    @Transactional
+    // readOnly: pure read, no audit emit (#391).
+    @Transactional(readOnly = true)
     public List<ProstheticsPatientResponse> search(String query) {
         List<PatientDTO> misPatients;
         try {
@@ -65,7 +66,8 @@ public class ProstheticsPatientService {
         return result;
     }
 
-    @Transactional
+    // readOnly: pure read, no audit emit (#391).
+    @Transactional(readOnly = true)
     public ProstheticsPatientResponse get(String id) {
         Long misId = parseId(id);
         if (misId != null) {
