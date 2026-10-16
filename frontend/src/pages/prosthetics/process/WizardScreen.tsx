@@ -1703,7 +1703,7 @@ export default function WizardScreen() {
     if (!instance) return;
     setSubmitting(true);
     try {
-      const res = await flowInstanceApi.backward(instance.id);
+      const res = await flowInstanceApi.backward(instance.id, instance.currentStepId ?? undefined);
       setInstance(res.data);
       toast.info('Повернуто до попереднього кроку');
     } catch (err) {

@@ -9,6 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface PrescriptionListRepository extends JpaRepository<PrescriptionList, UUID> {
-    List<PrescriptionList> findByPatientId(Long patientId);
-    List<PrescriptionList> findByPatientIdAndDeletedFalse(Long patientId);
+    // Newest-first with id tiebreaker (#411 items 4-5).
+    List<PrescriptionList> findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(Long patientId);
 }

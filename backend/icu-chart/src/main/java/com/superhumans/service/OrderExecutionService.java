@@ -61,7 +61,7 @@ public class OrderExecutionService {
     }
 
     public List<OrderExecutionResponse> getExecutionsByOrder(UUID orderId) {
-        return orderExecutionRepository.findByOrderId(orderId)
+        return orderExecutionRepository.findByOrderIdOrderByExecutedAtAscIdAsc(orderId)
                 .stream().map(orderExecutionMapper::toResponse).collect(Collectors.toList());
     }
 

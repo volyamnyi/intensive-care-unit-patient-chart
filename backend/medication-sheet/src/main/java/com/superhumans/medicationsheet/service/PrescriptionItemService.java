@@ -45,7 +45,7 @@ public class PrescriptionItemService {
 
     @Transactional(readOnly = true)
     public List<PrescriptionItem> getByList(UUID listId) {
-        return itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId);
+        return itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId);
     }
 
     @Transactional
@@ -54,7 +54,7 @@ public class PrescriptionItemService {
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
         requireNotFinished(list);
 
-        int sortOrder = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId)
+        int sortOrder = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId)
                 .stream().mapToInt(PrescriptionItem::getSortOrder).max().orElse(-1) + 1;
 
         PrescriptionItem item = PrescriptionItem.builder()

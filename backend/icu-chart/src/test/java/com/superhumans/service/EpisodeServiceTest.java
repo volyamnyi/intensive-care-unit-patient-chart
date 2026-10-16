@@ -117,7 +117,7 @@ class EpisodeServiceTest {
 
     @Test
     void searchEpisodes_withPatientIdOnly_filters() {
-        when(episodeRepository.findByPatientId(patientId)).thenReturn(List.of(testEpisode));
+        when(episodeRepository.findByPatientIdOrderByAdmissionDateDescIdDesc(patientId)).thenReturn(List.of(testEpisode));
 
         List<EpisodeResponse> results = episodeService.searchEpisodes(patientId, null);
 
@@ -126,7 +126,7 @@ class EpisodeServiceTest {
 
     @Test
     void searchEpisodes_withStatusOnly_filters() {
-        when(episodeRepository.findByStatus(EpisodeStatus.ACTIVE)).thenReturn(List.of(testEpisode));
+        when(episodeRepository.findByStatusOrderByAdmissionDateDescIdDesc(EpisodeStatus.ACTIVE)).thenReturn(List.of(testEpisode));
 
         List<EpisodeResponse> results = episodeService.searchEpisodes(null, EpisodeStatus.ACTIVE);
 

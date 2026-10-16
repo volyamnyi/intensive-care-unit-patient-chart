@@ -48,7 +48,7 @@ public class PrescriptionPdfDataLoader {
                 .orElseThrow(() -> new NotFoundException("Prescription list not found: " + listId));
 
         List<PrescriptionItem> items =
-                itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId);
+                itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId);
 
         List<UUID> partIds = new ArrayList<>();
         List<PrescriptionPdfSnapshot.Item> snapItems = new ArrayList<>();

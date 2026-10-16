@@ -14,9 +14,8 @@ import java.util.UUID;
 
 @Repository
 public interface PrescriptionItemRepository extends JpaRepository<PrescriptionItem, UUID> {
-    List<PrescriptionItem> findByListId(UUID listId);
-    List<PrescriptionItem> findByListIdOrderBySortOrderAsc(UUID listId);
-    List<PrescriptionItem> findByListIdAndDeletedFalseOrderBySortOrderAsc(UUID listId);
+    // Id tiebreaker for historical sortOrder ties (#411 item 5, see #404).
+    List<PrescriptionItem> findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(UUID listId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from PrescriptionItem i where i.id = :id")

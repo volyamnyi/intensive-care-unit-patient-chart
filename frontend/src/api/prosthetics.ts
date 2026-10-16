@@ -92,7 +92,10 @@ export const flowInstanceApi = {
   start: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/start`),
   completeStep: (id: string, executionId: string, data: StepCompleteRequest) =>
     client.post<FlowInstance>(`${BASE}/instances/${id}/steps/${executionId}/complete`, data),
-  backward: (id: string) => client.post<FlowInstance>(`${BASE}/instances/${id}/backward`),
+  backward: (id: string, expectedStepId?: string) =>
+    client.post<FlowInstance>(
+      `${BASE}/instances/${id}/backward${expectedStepId ? `?expectedStepId=${expectedStepId}` : ''}`,
+    ),
   listExecutions: (id: string) =>
     client.get<StepExecution[]>(`${BASE}/instances/${id}/step-executions`),
   listResources: (id: string) =>

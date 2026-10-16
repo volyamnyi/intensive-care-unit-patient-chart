@@ -113,13 +113,15 @@ class ClinicalScaleServiceTest {
     }
 
     @Test
-    void getAvailableScales_returnsList() {
+    void getAvailableScales_returnsDtos() {
         when(clinicalScaleRepository.findByStatus("ACTIVE")).thenReturn(List.of(clinicalScale));
 
         var result = clinicalScaleService.getAvailableScales();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getName()).isEqualTo("GCS");
+        assertThat(result.get(0).getId()).isEqualTo(clinicalScale.getId());
+        assertThat(result.get(0).getStatus()).isEqualTo("ACTIVE");
     }
 
     @Test

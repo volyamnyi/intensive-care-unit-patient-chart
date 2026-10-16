@@ -144,8 +144,10 @@ public class FlowInstanceController {
     @PostMapping("/{id}/backward")
     @PreAuthorize("@permissionService.has('PROSTHETICS_STEP_COMPLETE')")
     @Operation(summary = "Move back to the previous step of the current stage")
-    public FlowInstanceResponse backward(@PathVariable UUID id) {
-        return instanceService.backward(id, currentUser.userId());
+    public FlowInstanceResponse backward(
+            @PathVariable UUID id,
+            @RequestParam(required = false) UUID expectedStepId) {
+        return instanceService.backward(id, currentUser.userId(), expectedStepId);
     }
 
     @GetMapping("/{id}/step-executions")

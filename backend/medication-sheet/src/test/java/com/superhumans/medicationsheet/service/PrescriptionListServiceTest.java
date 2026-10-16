@@ -57,7 +57,7 @@ class PrescriptionListServiceTest {
 
     @Test
     void getByPatient_returnsLists() {
-        when(listRepository.findByPatientIdAndDeletedFalse(1001L)).thenReturn(List.of(testList));
+        when(listRepository.findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(1001L)).thenReturn(List.of(testList));
 
         var result = service.getByPatient(1001L);
 
@@ -67,7 +67,7 @@ class PrescriptionListServiceTest {
 
     @Test
     void getByPatient_returnsEmpty_whenNoLists() {
-        when(listRepository.findByPatientIdAndDeletedFalse(999L)).thenReturn(List.of());
+        when(listRepository.findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(999L)).thenReturn(List.of());
 
         assertThat(service.getByPatient(999L)).isEmpty();
     }
@@ -241,7 +241,7 @@ class PrescriptionListServiceTest {
 
     @Test
     void create_throws_whenPatientHasOpenList() {
-        when(listRepository.findByPatientIdAndDeletedFalse(1001L)).thenReturn(List.of(testList));
+        when(listRepository.findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(1001L)).thenReturn(List.of(testList));
 
         assertThatThrownBy(() -> service.create(1001L))
                 .isInstanceOf(BusinessException.class)
@@ -252,7 +252,7 @@ class PrescriptionListServiceTest {
     @Test
     void create_succeeds_whenOnlyFinishedListExists() {
         testList.setStatus("Finished");
-        when(listRepository.findByPatientIdAndDeletedFalse(1001L)).thenReturn(List.of(testList));
+        when(listRepository.findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(1001L)).thenReturn(List.of(testList));
         when(listRepository.save(any())).thenAnswer(inv -> {
             PrescriptionList l = inv.getArgument(0);
             l.setId(UUID.randomUUID());

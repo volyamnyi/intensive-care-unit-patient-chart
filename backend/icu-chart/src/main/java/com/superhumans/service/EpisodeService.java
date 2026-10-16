@@ -83,9 +83,9 @@ public class EpisodeService {
         if (patientId != null && status != null) {
             episodes = episodeRepository.findByPatientIdAndStatus(patientId, status).stream().toList();
         } else if (patientId != null) {
-            episodes = episodeRepository.findByPatientId(patientId);
+            episodes = episodeRepository.findByPatientIdOrderByAdmissionDateDescIdDesc(patientId);
         } else if (status != null) {
-            episodes = episodeRepository.findByStatus(status);
+            episodes = episodeRepository.findByStatusOrderByAdmissionDateDescIdDesc(status);
         } else {
             episodes = episodeRepository.findAll();
         }

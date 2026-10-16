@@ -3,6 +3,7 @@ package com.superhumans.prosthesismanufacturing.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.exception.VersionConflictException;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
@@ -607,6 +608,43 @@ class FlowInstanceServiceTest {
         assertThatThrownBy(() -> service.backward(instance.getId(), 1L))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("заборонено");
+    }
+
+    @Test
+    void backward_staleExpectedStep_throwsVersionConflict() {
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+        instance.setCurrentStepId(stepOneId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+
+        assertThatThrownBy(() -> service.backward(instance.getId(), 1L, stepTwoId))
+                .isInstanceOf(VersionConflictException.class);
+        verify(instanceRepository, never()).save(any());
+    }
+
+    @Test
+    void backward_matchingExpectedStep_movesOneStep() {
+        UUID customStageId = stageId;
+        SnapshotTemplate snapshot = SnapshotTemplate.builder()
+                .name("TP-UL-01")
+                .version(1)
+                .stages(List.of(SnapshotStage.builder()
+                        .id(customStageId)
+                        .name("Stage")
+                        .steps(List.of(
+                                SnapshotStep.builder().id(stepOneId).name("Step1").allowBackward(true).elements(List.of()).build(),
+                                SnapshotStep.builder().id(stepTwoId).name("Step2").allowBackward(true).elements(List.of()).build()))
+                        .build()))
+                .build();
+        FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, parser.toJson(snapshot));
+        instance.setCurrentStageId(customStageId);
+        instance.setCurrentStepId(stepTwoId);
+        when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+        when(instanceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(executionRepository.findByInstanceIdAndStepId(any(), any())).thenReturn(List.of());
+
+        service.backward(instance.getId(), 1L, stepTwoId);
+
+        assertThat(instance.getCurrentStepId()).isEqualTo(stepOneId);
     }
 
     @Test

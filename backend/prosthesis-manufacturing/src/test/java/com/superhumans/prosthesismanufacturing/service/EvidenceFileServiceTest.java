@@ -109,6 +109,34 @@ class EvidenceFileServiceTest {
     }
 
     @Test
+    void uploadDuplicateBytesReturnsExistingRow() {
+        UUID instanceId = UUID.randomUUID();
+        UUID executionId = UUID.randomUUID();
+        FlowInstance instance = newInstance(instanceId);
+        StepExecution execution = executionFor(instance, executionId);
+        when(instanceService.requireOwner(instanceId, 1L)).thenReturn(instance);
+        when(executionRepository.findById(executionId)).thenReturn(Optional.of(execution));
+        when(evidenceFileRepository.save(any())).thenAnswer(invocation -> {
+            EvidenceFile saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png", pngBytes());
+
+        var first = service.upload(instanceId, executionId, file, 1L);
+
+        ArgumentCaptor<EvidenceFile> captor = ArgumentCaptor.forClass(EvidenceFile.class);
+        verify(evidenceFileRepository).save(captor.capture());
+        when(evidenceFileRepository.findByStepExecutionId(executionId))
+                .thenReturn(java.util.List.of(captor.getValue()));
+
+        var second = service.upload(instanceId, executionId, file, 1L);
+
+        assertThat(second.getId()).isEqualTo(first.getId());
+        verify(evidenceFileRepository, org.mockito.Mockito.times(1)).save(any());
+    }
+
+    @Test
     void uploadRejectsSvgFiles() {
         UUID instanceId = UUID.randomUUID();
         UUID executionId = UUID.randomUUID();

@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OrderExecutionRepository extends JpaRepository<OrderExecution, UUID> {
-    List<OrderExecution> findByOrderId(UUID orderId);
+    // Deterministic order with id tiebreaker (#411 item 5): feeds the PDF
+    // therapy table and fluid-balance hour mapping.
+    List<OrderExecution> findByOrderIdOrderByExecutedAtAscIdAsc(UUID orderId);
     List<OrderExecution> findByOrderIdIn(List<UUID> orderIds);
     List<OrderExecution> findByOrderIdAndStatus(UUID orderId, OrderExecutionStatus status);
     List<OrderExecution> findByExecutedAtBetween(LocalDateTime start, LocalDateTime end);

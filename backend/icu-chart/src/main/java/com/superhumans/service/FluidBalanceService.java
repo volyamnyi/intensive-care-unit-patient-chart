@@ -66,7 +66,7 @@ public class FluidBalanceService {
         Map<Integer, Double> intakeByHour = new HashMap<>();
         for (MedicalOrder order : orders) {
             UUID orderId = order.getId();
-            List<OrderExecution> executions = orderExecutionRepository.findByOrderId(orderId);
+            List<OrderExecution> executions = orderExecutionRepository.findByOrderIdOrderByExecutedAtAscIdAsc(orderId);
             for (OrderExecution exec : executions) {
                 if (exec.getExecutedAt() == null) continue;
                 int hour = exec.getExecutedAt().getHour();
@@ -164,7 +164,7 @@ public class FluidBalanceService {
 
         for (MedicalOrder order : orders) {
             String category = order.getCategory();
-            List<OrderExecution> executions = orderExecutionRepository.findByOrderId(order.getId());
+            List<OrderExecution> executions = orderExecutionRepository.findByOrderIdOrderByExecutedAtAscIdAsc(order.getId());
             double totalDose = 0.0;
             for (OrderExecution exec : executions) {
                 if (exec.getExecutedAt() == null) continue;

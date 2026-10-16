@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.exception.VersionConflictException;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
@@ -392,9 +393,25 @@ public class FlowInstanceService {
 
     @Transactional
     public FlowInstanceResponse backward(UUID instanceId, Long userId) {
+        return backward(instanceId, userId, null);
+    }
+
+    /**
+     * Step back with an optional expected-step guard (#411 item 1): a
+     * double-click (or a stale UI) resends the same request after the first
+     * call already moved the instance — when the caller states which step it
+     * stands on and the instance has moved on, reject with 409 instead of
+     * stepping back twice.
+     */
+    @Transactional
+    public FlowInstanceResponse backward(UUID instanceId, Long userId, UUID expectedStepId) {
         FlowInstance instance = requireOwner(instanceId, userId);
         if (instance.getStatus() != FlowInstanceStatus.IN_PROGRESS) {
             throw new BadRequestException("Повернення можливе лише під час виконання процесу");
+        }
+        if (expectedStepId != null && !expectedStepId.equals(instance.getCurrentStepId())) {
+            throw new VersionConflictException(
+                    "Step already moved — reload the process and retry");
         }
         if (instance.getCurrentStageId() == null || instance.getCurrentStepId() == null) {
             throw new BadRequestException("Поточний крок не знайдено");
@@ -520,7 +537,10 @@ public class FlowInstanceService {
             instances = instanceRepository.findAll();
         }
         return instances.stream()
-                .sorted(Comparator.comparing(FlowInstance::getCreatedAt).reversed())
+                // Id tiebreaker: identical requests return identical order
+                // (#411 item 3; DB paging stays a follow-up).
+                .sorted(Comparator.comparing(FlowInstance::getCreatedAt).reversed()
+                        .thenComparing(FlowInstance::getId))
                 .map(this::toResponse)
                 .toList();
     }
@@ -623,7 +643,8 @@ public class FlowInstanceService {
         // link the snapshot as a related entity so
         // GET /api/audit/entities/FailureSnapshot/{id} keeps working
         // post-flip (null-tolerant like the legacy row itself).
-        final List<AuditEvent.AuditTarget> relatedSnapshot = snapshot.getId() == null
+        final List<AuditEvent.AuditTarget> relatedSnapshot = snapshot == null
+                || snapshot.getId() == null
                 ? List.of()
                 : List.of(new AuditEvent.AuditTarget(
                         "FailureSnapshot", snapshot.getId().toString(), null));

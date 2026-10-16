@@ -148,7 +148,7 @@ class FluidBalanceServiceTest {
                 .thenReturn(List.of(r1, r2));
         when(medicalOrderRepository.findByClinicalDayIdOrderByStartTimeAsc(clinicalDayId))
                 .thenReturn(List.of(order));
-        when(orderExecutionRepository.findByOrderId(order.getId())).thenReturn(List.of(exec));
+        when(orderExecutionRepository.findByOrderIdOrderByExecutedAtAscIdAsc(order.getId())).thenReturn(List.of(exec));
 
         FluidBalance fb1 = new FluidBalance();
         fb1.setId(UUID.randomUUID());

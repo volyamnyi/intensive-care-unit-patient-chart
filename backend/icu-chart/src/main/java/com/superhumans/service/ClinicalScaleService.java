@@ -69,8 +69,16 @@ public class ClinicalScaleService {
                 .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());
     }
 
-    public List<ClinicalScale> getAvailableScales() {
-        return clinicalScaleRepository.findByStatus("ACTIVE");
+    public List<com.superhumans.dto.ClinicalScaleResponse> getAvailableScales() {
+        return clinicalScaleRepository.findByStatus("ACTIVE").stream()
+                .map(scale -> com.superhumans.dto.ClinicalScaleResponse.builder()
+                        .id(scale.getId())
+                        .name(scale.getName())
+                        .description(scale.getDescription())
+                        .isAutomatic(scale.getIsAutomatic())
+                        .status(scale.getStatus())
+                        .build())
+                .toList();
     }
 
     @Transactional

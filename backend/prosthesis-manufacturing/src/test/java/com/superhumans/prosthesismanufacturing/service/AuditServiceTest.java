@@ -108,7 +108,7 @@ class AuditServiceTest {
             stubOrder();
             stubTemplate();
             when(templateService.createSnapshot(templateId)).thenReturn(snapshotJson());
-            when(instanceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+            when(instanceRepository.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
 
             service.create(InstanceCreateRequest.builder().orderId(orderId).templateId(templateId).build(),
                     prosthetistId);

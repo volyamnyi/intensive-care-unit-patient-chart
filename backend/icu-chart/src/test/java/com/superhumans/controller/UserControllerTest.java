@@ -56,6 +56,13 @@ class UserControllerTest {
         when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
+        // Single-parse filter path (#371 item 4): the filter reads claims once.
+        io.jsonwebtoken.Claims claims = io.jsonwebtoken.Jwts.claims()
+                .subject("doctor1")
+                .add("role", "DOCTOR")
+                .add("userId", "1")
+                .build();
+        when(jwtTokenProvider.getClaims(anyString())).thenReturn(claims);
     }
 
     private User user(Long id, String login, UserRole role) {

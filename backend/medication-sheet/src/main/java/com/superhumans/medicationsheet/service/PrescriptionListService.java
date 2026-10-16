@@ -34,7 +34,7 @@ public class PrescriptionListService {
 
     @Transactional(readOnly = true)
     public List<PrescriptionList> getByPatient(Long patientId) {
-        return listRepository.findByPatientIdAndDeletedFalse(patientId);
+        return listRepository.findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(patientId);
     }
 
     /**
@@ -77,7 +77,7 @@ public class PrescriptionListService {
 
     @Transactional
     public PrescriptionList create(Long patientId) {
-        List<PrescriptionList> existing = listRepository.findByPatientIdAndDeletedFalse(patientId);
+        List<PrescriptionList> existing = listRepository.findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(patientId);
         boolean hasOpen = existing.stream().anyMatch(list -> !list.isFinished());
         if (hasOpen) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE,

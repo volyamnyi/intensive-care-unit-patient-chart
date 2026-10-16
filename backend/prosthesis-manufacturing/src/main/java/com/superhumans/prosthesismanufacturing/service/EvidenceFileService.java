@@ -21,6 +21,7 @@ import com.superhumans.service.AuditService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -72,12 +74,25 @@ public class EvidenceFileService {
         String mimeType = resolveMimeType(file);
         byte[] data = toBytes(file);
         validateContentMatchesType(data, mimeType);
+        // Idempotent upload (#411 item 2): the checksum is already stored —
+        // a double-click must return the existing row, not consume a second
+        // slot of the 10-file cap. No audit emit: nothing mutated.
+        String digest = checksum(data);
+        EvidenceFile duplicate = evidenceFileRepository.findByStepExecutionId(executionId).stream()
+                .filter(e -> digest.equals(e.getChecksum()))
+                .findFirst()
+                .orElse(null);
+        if (duplicate != null) {
+            log.info("Evidence upload deduplicated stepExecutionId={} checksum={}",
+                    executionId, digest);
+            return toResponse(duplicate);
+        }
         EvidenceFile evidence = EvidenceFile.builder()
                 .stepExecution(execution)
                 .fileName(sanitizeFileName(file.getOriginalFilename()))
                 .mimeType(mimeType)
                 .sizeBytes(file.getSize())
-                .checksum(checksum(data))
+                .checksum(digest)
                 .fileData(data)
                 .build();
         evidenceFileRepository.save(evidence);

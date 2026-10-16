@@ -133,7 +133,7 @@ class OrderExecutionServiceTest {
 
     @Test
     void getExecutionsByOrder_returnsList() {
-        when(orderExecutionRepository.findByOrderId(orderId)).thenReturn(List.of());
+        when(orderExecutionRepository.findByOrderIdOrderByExecutedAtAscIdAsc(orderId)).thenReturn(List.of());
 
         var results = orderExecutionService.getExecutionsByOrder(orderId);
 

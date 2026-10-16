@@ -106,7 +106,7 @@ public class DrugInteractionWarningService {
     public PrescriptionInteractionsResponse computeWarnings(UUID listId) {
         listRepository.findById(listId)
                 .orElseThrow(() -> new NotFoundException("List not found: " + listId));
-        List<PrescriptionItem> items = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAsc(listId);
+        List<PrescriptionItem> items = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId);
         if (items.isEmpty()) {
             // A freshly created list has no items yet — that is not an error.
             auditEmitter.emit("medication", () -> AuditEvent.builder()
