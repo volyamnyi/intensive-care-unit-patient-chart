@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockReset;
@@ -39,6 +40,10 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(SecurityFixtureController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
+// Pins the api-docs-ENABLED contract (#370 item 3); the disabled-by-default
+// contract lives in SecuritySwaggerDisabledTest below (separate class: a
+// @Nested variant breaks SpringBootConfiguration lookup).
+@TestPropertySource(properties = "springdoc.api-docs.enabled=true")
 class SecurityConfigTest {
 
     @SpringBootConfiguration
@@ -187,5 +192,75 @@ class SecurityConfigTest {
     @Test
     void passwordEncoder_bean_isBCrypt() {
         assertThat(passwordEncoder).isInstanceOf(BCryptPasswordEncoder.class);
+    }
+
+    @Test
+    void actuatorMetrics_forbiddenForGuest() throws Exception {
+        mockMvc.perform(get("/actuator/metrics").with(guest()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void actuatorMetrics_reachableForAdmin() throws Exception {
+        // No actuator handler exists in the slice: 404 (not 403) proves the
+        // admin passed authorization.
+        mockMvc.perform(get("/actuator/metrics").with(TestSecurityHelper.admin()))
+                .andExpect(status().isNotFound());
+    }
+
+    private static org.springframework.test.web.servlet.request.RequestPostProcessor guest() {
+        var token = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "guest", 9L,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                        "ROLE_GUEST")));
+        return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                .authentication(token);
+    }
+
+}
+
+/**
+ * Disabled-by-default contract (#370 item 3): without the flag, anonymous
+ * catalogue reads are denied.
+ */
+@WebMvcTest(SecurityFixtureController.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
+@TestPropertySource(properties = "springdoc.api-docs.enabled=false")
+class SecuritySwaggerDisabledTest {
+
+    @SpringBootConfiguration
+    static class DisabledTestApplication {
+    }
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private com.superhumans.repository.core.AuditLogRepository auditLogRepository;
+
+    @MockitoBean
+    private com.superhumans.service.AuditService auditService;
+
+    @MockitoBean
+    private com.superhumans.audit.AuditEventRecorder auditEventRecorder;
+
+    @MockitoBean
+    private com.superhumans.audit.AuditClientIpResolver clientIpResolver;
+
+    @MockitoBean
+    private com.superhumans.repository.core.UserRepository userRepository;
+
+    @MockitoBean
+    private com.superhumans.auth.TokenRevocationService tokenRevocationService;
+
+    @Test
+    void apiDocs_anonymouslyDenied_whenDisabled() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api-docs"))
+                .andExpect(status().isUnauthorized());
     }
 }

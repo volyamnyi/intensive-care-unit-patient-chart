@@ -656,6 +656,7 @@ Access is enforced by a **dynamic role-permission matrix** (28 permission codes 
 - **MIS API (single-mode)**: `POST {app.mis.api.base-url}{app.mis.api.run-path}` with static integration login; environment-only credentials for the real MIS (`APP_MIS_API_BASE_URL`, `APP_MIS_API_LOGIN`, `APP_MIS_API_PASSWORD`, `APP_MIS_API_INSTALLATION_GUID`, no defaults; path overrides via `APP_MIS_API_RUN_PATH`) apply to **local/prod only — CI points the same client at the sidecar stub** (`tests/mis-stub/`, `127.0.0.1:9099` with `e2e-stub` credentials) and maps zero MIS secrets. The MIS Data Policy (strictly read-only, no exceptions — PDF transfer banned, Phase 16, #269) applies.
 - **CORS**: exact origin allowlist (`app.cors.allowed-origins` / `APP_CORS_ALLOWED_ORIGINS`, test-pinned; a `*` origin must never combine with credentials); the **WebSocket** endpoint (`WebSocketConfig`) is restricted to `http://localhost:5173` and `http://localhost:3000`
 - **CSRF**: no CSRF tokens — the defense is the `SameSite=Lax` cookie plus safe-method discipline (stateless API)
+- **API docs**: `/v3/api-docs` + Swagger UI are disabled by default (`springdoc.api-docs.enabled=false`; enabled only under the `dev` profile) and doubly blocked in prod (yml + nginx 404); `/actuator/**` requires `ADMINISTRATOR`/`AUDITOR`
 - **Audit**: `AuditService` logs all entity operations (plus non-GET API calls through the `JwtAuthenticationFilter`)
 - **Optimistic Locking**: `@Version` field on all `BaseEntity` subclasses prevents concurrent overwrites
 

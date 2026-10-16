@@ -40,7 +40,9 @@ public class SecurityConfig {
     final AuditClientIpResolver clientIpResolver;
     @Value("${server.ssl.enabled:false}")
     boolean sslEnabled;
-    @Value("${springdoc.api-docs.enabled:true}")
+    // Default OFF (#370 item 3): matches the yml default; the annotation
+    // default is the last line of defense if the property is absent.
+    @Value("${springdoc.api-docs.enabled:false}")
     boolean apiDocsEnabled;
 
     @Bean
@@ -77,8 +79,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/auth/**").permitAll();
                     if (apiDocsEnabled) {
-                        auth.requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll();
+                        // /swagger-ui.html is the custom UI entry path
+                        // (springdoc.swagger-ui.path) — not covered by /**.
+                        auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html",
+                                "/api-docs/**", "/v3/api-docs/**").permitAll();
                     }
+                    // Actuator exposes the route inventory + audit gauges
+                    // (#370 item 4): ops roles only, never zero-grant GUEST.
+                    auth.requestMatchers("/actuator/**").hasAnyRole("ADMINISTRATOR", "AUDITOR");
                     ruleContributors.forEach(contributor -> contributor.contribute(auth));
                     auth.anyRequest().authenticated();
                 })

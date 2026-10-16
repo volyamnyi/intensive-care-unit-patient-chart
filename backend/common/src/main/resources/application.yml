@@ -96,9 +96,6 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
 
-  websocket:
-    allowed-origins: ${APP_WEBSOCKET_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
-
   mis:
     api:
       base-url: ${APP_MIS_API_BASE_URL:}
@@ -152,7 +149,10 @@ app:
 springdoc:
   api-docs:
     path: /api-docs
-    enabled: true
+    # Default OFF (#370 item 3): the full OpenAPI catalogue must not be
+    # anonymously readable in every environment. Enabled per environment
+    # (dev profile below); prod double-disables (yml + nginx 404).
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:false}
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
@@ -173,6 +173,12 @@ spring:
   config:
     activate:
       on-profile: dev
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
 
 logging:
   level:

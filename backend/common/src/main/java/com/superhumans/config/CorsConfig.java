@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -35,6 +34,17 @@ public class CorsConfig {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
+        // Startup guard (#370 item 5): with allowCredentials=true a "*" or
+        // suffix-pattern origin would silently turn the API into
+        // any-origin-credentialed. Fail the boot instead of serving it.
+        for (String origin : origins) {
+            if (origin.contains("*")) {
+                throw new IllegalStateException(
+                        "CORS misconfiguration: origin pattern '" + origin
+                                + "' must never combine with allowCredentials=true. "
+                                + "Set APP_CORS_ALLOWED_ORIGINS to an exact allowlist.");
+            }
+        }
         config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
@@ -44,10 +54,5 @@ public class CorsConfig {
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
-    }
-
-    @Bean
-    public CorsFilter corsFilter() {
-        return new CorsFilter(corsConfigurationSource());
     }
 }

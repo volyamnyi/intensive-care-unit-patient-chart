@@ -137,8 +137,7 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_DATASOURCE_MED_URL/USERNAME/PASSWORD` | … `my_fullstack_med` | |
 | `APP_DATASOURCE_PROSTH_URL/USERNAME/PASSWORD` | … `my_fullstack_prosth` | |
 | `APP_JWT_SECRET` | `openssl rand -base64 64` | Замінити дев-секрет з `application.yml:43`; `JwtSecretGuard` падає на старті в `prod`, якщо стоїть дев-дефолт (A1) |
-| `APP_CORS_ALLOWED_ORIGINS` | `https://supercare.superhumans.com` (кома-список) | Точний allowlist для credentialed CORS (P0 #345; wildcard заборонено); дефолт — лише localhost |
-| `APP_WEBSOCKET_ALLOWED_ORIGINS` | `https://supercare.superhumans.com` (кома-список) | Allowlist хендшейку `/ws` (P0 #345); тримати в синхроні з CORS |
+| `APP_CORS_ALLOWED_ORIGINS` | `https://supercare.superhumans.com` (кома-список) | Точний allowlist для credentialed CORS (P0 #345; wildcard заборонено boot-guard'ом); дефолт — лише localhost |
 | `APP_SEED_DATA_ENABLED` | **`false`** | Критично — інакше демо-дані |
 | `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Єдиний MIS-клієнт (`MisServiceImpl`, див. 1.5); моків/режимів немає |
 | `APP_MIS_API_LOGIN` / `APP_MIS_API_PASSWORD` / `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Інтеграційні credentials MIS, не в yml, не в git, ніколи в логи |
@@ -806,11 +805,11 @@ APP_DATASOURCE_POOL_MAX=20
 # --- Seed-data (КРИТИЧНО: false в проді) ---
 APP_SEED_DATA_ENABLED=false
 
-# --- CORS / WebSocket (same-origin через nginx; allowlist — defence-in-depth) ---
+# --- CORS (same-origin через nginx; allowlist — defence-in-depth) ---
 # Точний allowlist, без wildcard (з credentials wildcard відображав би
-# будь-який origin з jwt-cookie). Прод-значення — домен застосунку.
+# будь-який origin з jwt-cookie; wildcard тепер валить старт). Прод-значення —
+# домен застосунку. WebSocket видалено (#370 item 2): нуль продюсерів/клієнтів.
 APP_CORS_ALLOWED_ORIGINS=https://supercare.superhumans.com
-APP_WEBSOCKET_ALLOWED_ORIGINS=https://supercare.superhumans.com
 
 # --- MIS (єдиний реальний клієнт; моків немає) ---
 APP_MIS_API_BASE_URL=https://mis.internal/api

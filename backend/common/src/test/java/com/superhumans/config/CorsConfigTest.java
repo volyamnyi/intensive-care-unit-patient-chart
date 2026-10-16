@@ -62,7 +62,23 @@ class CorsConfigTest {
     }
 
     @Test
-    void corsFilter_isBoundToConfiguredSource() {
-        assertThat(corsConfig.corsFilter()).isNotNull();
+    void wildcardOrigin_rejectedAtStartup() {
+        ReflectionTestUtils.setField(corsConfig, "allowedOrigins",
+                "https://portal.example,*");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> corsConfig.corsConfigurationSource())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("APP_CORS_ALLOWED_ORIGINS");
+    }
+
+    @Test
+    void suffixPatternOrigin_rejectedAtStartup() {
+        ReflectionTestUtils.setField(corsConfig, "allowedOrigins",
+                "https://*.superhumans.com");
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> corsConfig.corsConfigurationSource())
+                .isInstanceOf(IllegalStateException.class);
     }
 }
