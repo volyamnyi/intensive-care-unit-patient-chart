@@ -34,6 +34,9 @@ class ProstheticsOrderServiceTest {
     private ProstheticsOrderMapper orderMapper;
 
     @Mock
+    private com.superhumans.mis.MisService misService;
+
+    @Mock
     private com.superhumans.audit.DomainAuditEmitter auditEmitter;
 
     @InjectMocks
@@ -136,6 +139,52 @@ class ProstheticsOrderServiceTest {
         when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.get(orderId))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    private com.superhumans.mis.dto.DocumentMisDTO document(Long id, String url) {
+        return com.superhumans.mis.dto.DocumentMisDTO.builder()
+                .documentId(id)
+                .documentUrl(url)
+                .build();
+    }
+
+    @Test
+    void resolveDocumentUrl_picksExactDocumentId() {
+        order.setOrderNumber("MIS-900001-77");
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(misService.getPatientDocuments(900001L)).thenReturn(List.of(
+                document(55L, "https://mis/doc/55"),
+                document(77L, "https://mis/doc/77")));
+
+        var res = orderService.resolveDocumentUrl(orderId);
+
+        assertThat(res.getDocumentId()).isEqualTo(77L);
+        assertThat(res.getDocumentUrl()).isEqualTo("https://mis/doc/77");
+    }
+
+    @Test
+    void resolveDocumentUrl_fallsBackToFirstUrl_whenExactAbsent() {
+        order.setOrderNumber("MIS-900001-99");
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(misService.getPatientDocuments(900001L)).thenReturn(List.of(
+                document(55L, "https://mis/doc/55"),
+                document(77L, "https://mis/doc/77")));
+
+        var res = orderService.resolveDocumentUrl(orderId);
+
+        assertThat(res.getDocumentId()).isEqualTo(55L);
+        assertThat(res.getDocumentUrl()).isEqualTo("https://mis/doc/55");
+    }
+
+    @Test
+    void resolveDocumentUrl_noUrls_throws() {
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(misService.getPatientDocuments(900001L)).thenReturn(List.of(
+                document(55L, null),
+                document(77L, " ")));
+
+        assertThatThrownBy(() -> orderService.resolveDocumentUrl(orderId))
                 .isInstanceOf(NotFoundException.class);
     }
 }

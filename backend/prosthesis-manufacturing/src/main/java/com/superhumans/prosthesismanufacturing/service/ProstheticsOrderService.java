@@ -241,11 +241,11 @@ public class ProstheticsOrderService {
         }
         Long numericPatientId = parsePatientIdAsLong(patientId);
         List<DocumentMisDTO> documents = misService.getPatientDocuments(numericPatientId);
-        DocumentMisDTO match = documents.stream()
-                .filter(d -> d.getDocumentUrl() != null && !d.getDocumentUrl().isBlank())
-                .findFirst()
-                .orElseThrow(() -> new NotFoundException(
-                        "Замовлення на протез не знайдено в MIS для пацієнта " + patientId));
+        DocumentMisDTO match = findOrderDocument(order, documents);
+        if (match == null) {
+            throw new NotFoundException(
+                    "Замовлення на протез не знайдено в MIS для пацієнта " + patientId);
+        }
         // No audit emit here: the document view fires once per opening at the
         // controller boundary (ProstheticsOrderController.getDocumentUrl).
         return com.superhumans.prosthesismanufacturing.dto.OrderDocumentResponse.builder()
@@ -258,5 +258,37 @@ public class ProstheticsOrderService {
     private ProstheticsOrder load(UUID id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found: " + id));
+    }
+
+    /**
+     * Picks the MIS document backing the order (#432): exact match on the
+     * documentId parsed from the {@code MIS-{patientId}-{documentId}} order
+     * number first; falls back to the first document with a URL (legacy
+     * behavior) with a WARN so a wrong-document hand-off stays visible.
+     * Returns null when no document carries a URL.
+     */
+    private DocumentMisDTO findOrderDocument(ProstheticsOrder order, List<DocumentMisDTO> documents) {
+        if (documents != null) {
+            Long documentId = ProductionReadService.parseMisDocumentId(order.getOrderNumber());
+            if (documentId != null) {
+                for (DocumentMisDTO document : documents) {
+                    if (documentId.equals(document.getDocumentId())
+                            && document.getDocumentUrl() != null
+                            && !document.getDocumentUrl().isBlank()) {
+                        return document;
+                    }
+                }
+            }
+            DocumentMisDTO fallback = documents.stream()
+                    .filter(d -> d.getDocumentUrl() != null && !d.getDocumentUrl().isBlank())
+                    .findFirst()
+                    .orElse(null);
+            if (fallback != null && documentId != null) {
+                log.warn("Order {}: no MIS document with id {} — falling back to first document with URL ({})",
+                        order.getId(), documentId, fallback.getDocumentId());
+            }
+            return fallback;
+        }
+        return null;
     }
 }
