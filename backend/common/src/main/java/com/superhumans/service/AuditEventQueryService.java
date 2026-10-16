@@ -19,7 +19,6 @@ import com.superhumans.repository.core.AuditEventRepository;
 import com.superhumans.repository.core.AuditEventTargetRepository;
 import com.superhumans.repository.core.AuditLegacyEventRepository;
 import jakarta.persistence.criteria.Predicate;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -109,6 +108,15 @@ public class AuditEventQueryService {
 
     @Transactional(readOnly = true)
     public AuditObjectHistoryResponse objectHistory(String entityType, String entityId) {
+        var sample = auditMetrics.searchTimer();
+        try {
+            return objectHistoryUntimed(entityType, entityId);
+        } finally {
+            auditMetrics.stopSearch(sample, "objectHistory");
+        }
+    }
+
+    private AuditObjectHistoryResponse objectHistoryUntimed(String entityType, String entityId) {
         List<AuditEventTargetEntity> refs =
                 targetRepository.findByEntityTypeAndEntityIdOrderByOccurredAtDesc(entityType, entityId);
         List<UUID> auditIds = refs.stream().map(AuditEventTargetEntity::getAuditId).distinct().toList();
@@ -144,10 +152,6 @@ public class AuditEventQueryService {
         return legacyEventRepository
                 .findByLegacyEntityAndLegacyEntityIdOrderByOccurredAtAsc(entityType, legacyId)
                 .stream().map(AuditEventQueryService::toLegacySummary).toList();
-    }
-
-    private static Instant occurredAtOfSummary(AuditEventSummaryResponse summary) {
-        return summary.getOccurredAt();
     }
 
     private AuditEventDetailResponse toDetail(AuditEventEntity entity, boolean restricted) {
@@ -349,7 +353,14 @@ public class AuditEventQueryService {
                 .build();
     }
 
-    private static Pageable stablePageable(Pageable pageable) {
+    /**
+     * Max console page size (#397 item 6): {@code @PageableDefault(size=20)}
+     * is a default, not a max — without the clamp {@code ?size=100000} is a
+     * whole-store dump primitive.
+     */
+    static final int MAX_PAGE_SIZE = 500;
+
+    static Pageable stablePageable(Pageable pageable) {
         // (occurred_at DESC, audit_id ASC) matches idx_audit_events_occurred_at
         // exactly: the planner walks the index forward with no Sort node on
         // every page (CR-07 #420). auditId stays a total tiebreaker, so
@@ -358,7 +369,8 @@ public class AuditEventQueryService {
         if (pageable == null || pageable.isUnpaged()) {
             return PageRequest.of(0, 20, stable);
         }
-        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+        int size = Math.min(Math.max(pageable.getPageSize(), 1), MAX_PAGE_SIZE);
+        return PageRequest.of(pageable.getPageNumber(), size,
                 pageable.getSort().isSorted() ? pageable.getSort().and(stable) : stable);
     }
 

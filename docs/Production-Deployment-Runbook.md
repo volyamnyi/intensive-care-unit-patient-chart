@@ -1434,6 +1434,8 @@ CI pipeline (`.github/workflows/playwright.yml`) — **не** деплоює. Ц
    Орієнтовна тривалість: `rows / 171` сек (виміряно F8.7) + ~1 SELECT/рядок
    на verify-прохід; блокуючий HTTP-запит тримає весь цикл — планувати вікно.
 3. Повторити backfill (ідемпотентно) до `inserted: 0` + `verified: true`.
+   (Окремої read-only верифікації нема і не треба (#397 item 7):
+   повторний прогін ідемпотентного backfill IS the verification.)
 4. Перемкнути консоль: основна — «Події (Audit v2)» (`/api/audit/events`);
    legacy-таблиця лишається для звірки на період сумісності.
 5. Зупинити legacy-записи: `APP_AUDIT_LEGACY_WRITE_ENABLED=false` (env, рестарт).
@@ -1513,13 +1515,18 @@ GRANT SELECT ON audit_events, audit_event_targets, audit_legacy_events,
 |---|---|---|---|
 | `audit.outbox.backlog{module}` | gauge | `> 1000` понад 10 хв | Перевірити relay-лог, БД модуля, `audit.outbox.events.dead` |
 | `audit.outbox.oldest_pending_age_seconds{module}` | gauge | `> 900` | Relay stall: `markDead`/retry-ланцюг, місце на диску, конекти |
-| `audit.outbox.events.dead{module}` | counter, rate | `> 0` за 5 хв | Розбір `last_error_code` в outbox; identity/hash-конфлікти = інцидент цілісності |
+| `audit.outbox.events.dead{module}` | counter, rate | `> 0` за 5 хв | Розбір `last_error_code` в outbox; identity/hash-конфлікти = інцидент цілісності. Ручний requeue після усунення причини (#397 item 3, endpoint нема — тільки SQL): `UPDATE audit_outbox SET relay_status='PENDING', next_attempt_at=CURRENT_TIMESTAMP, lease_until=NULL, relay_attempts=0 WHERE audit_id=? AND relay_status='DEAD';` |
 | `audit.integrity.failures{module}` | counter, rate | `> 0` | Інцидент: звірити payload/outbox/canonical sha256 вручну |
 | `audit.events.failed{module,reason}` | counter, rate | `> 0` за 5 хв | Емісія падає (fail-safe гасить) — дивитись `reason` + лог `Domain audit emission failed` |
 | `audit.events.duplicate{module}` | counter, rate | сплеск | Норма для at-least-once (retry); сплеск = перевірити relay-таймінги |
 | `audit.query.duration{operation}` | timer p95 | search `> 2s`, detail `> 1s` | Індекси `audit_events`/`targets` (`\di+`), обсяг таблиць, `EXPLAIN` |
-| `audit.retention.archived.*` | counter | `== 0` 7 днів при увімкненому retention | Архіватор не спрацьовує (cron/флаг) |
+| `audit.retention.archived.events` / `audit.retention.archived.targets` / `audit.retention.archived.legacy` | counter | `== 0` 7 днів при увімкненому retention | Архіватор не спрацьовує (cron/флаг) |
 | `audit.backfill.rows` | counter | — | Інформаційна (backfill-прогони) |
+| `audit.events.skipped{module,reason}` | counter, rate | `> 0` стійко | ЄДИНИЙ сигнал тихого de-audit: read-only-транзакція гасить емісію — розслідувати, який шлях пише в read-only (#397) |
+| `audit.outbox.poll.failure{module}` | counter, rate | `> 0` за 5 хв | Relay не може прочитати outbox (конекти/схема) — дивитись лог relay |
+| `audit.events.emitted{module}` / `audit.events.stored` / `audit.outbox.events.delivered` / `audit.outbox.events.retry` | counter | — | Інформаційні: потік подій emit→store→deliver; retry — норма для at-least-once |
+| `audit.relay.delivery.duration{module}` | timer p95 | `> 30s` | Повільна доставка (БД/мережа між модулем і core) |
+| `audit.retention.outbox.deleted{module}` | counter | сплеск | Масове чищення DELIVERED — звірити з cron-розкладом retention |
 
 Обсяг сховища: `SELECT pg_total_relation_size('audit_events')` (і `_archive`,
 `audit_legacy_events`, `audit_outbox` у кожній БД) — у щотижневий чек.

@@ -126,6 +126,9 @@ app:
     signing-window-end: 23
 
   audit:
+    # Kill-switch for the legacy audit dual-write (F8 cutover, #397 item 8):
+    # false flips to v2-only. Documented here (was @Value-default only).
+    legacy-write-enabled: ${APP_AUDIT_LEGACY_WRITE_ENABLED:true}
     relay:
       poll-ms: ${APP_AUDIT_RELAY_POLL_MS:1000}
       batch-size: ${APP_AUDIT_RELAY_BATCH_SIZE:20}

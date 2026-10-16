@@ -44,7 +44,7 @@ import { SEVERITY_LABELS } from '../../components/prescription/interactionSeveri
 import AuditEventConsole from '../../components/common/AuditEventConsole';
 import { getErrorMessage } from '../../utils/errorMessage';
 import { useAuth } from '../../services/AuthContext';
-import { useAuditAction } from '../../hooks/useAuditAction';
+import { auditActionConfig, createAuditActionId } from '../../lib/auditAction';
 import type { User, AuditLog, PermissionMatrix, PermissionDef } from '../../types/core';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -65,7 +65,6 @@ export default function AdminPage() {
   useEffect(() => { document.title = 'Адмін — Superhumans Lviv'; }, []);
   const { hasPermission, user } = useAuth();
   /** One UI intent for the whole matrix save: all grant/revoke PUTs share the action ID. */
-  const matrixSaveIntent = useAuditAction();
   const isDiAdmin = user?.role === 'ADMINISTRATOR';
   const [tabValue, setTabValue] = useState('users');
   const [users, setUsers] = useState<User[]>([]);
@@ -265,8 +264,11 @@ export default function AdminPage() {
       }
     }
     try {
+      // Fresh intent per save press (#397 item 2): one button press = one
+      // correlation ID across its N requests, never the page-session ID.
+      const saveIntent = auditActionConfig(createAuditActionId());
       for (const c of changes) {
-        await adminApi.updateRolePermission(c.role, c.code, c.granted, matrixSaveIntent.config);
+        await adminApi.updateRolePermission(c.role, c.code, c.granted, saveIntent);
       }
       await loadMatrix();
       setMatrixNotice(changes.length > 0 ? `Збережено змін: ${changes.length}` : 'Змін немає');

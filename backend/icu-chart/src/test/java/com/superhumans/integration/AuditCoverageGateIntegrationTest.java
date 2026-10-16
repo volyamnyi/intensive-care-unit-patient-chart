@@ -62,6 +62,11 @@ class AuditCoverageGateIntegrationTest extends AbstractIntegrationTest {
             String action = entry.get("action").asText();
             assertThat(byAction.put(action, entry)).as("duplicate registry action %s", action).isNull();
         }
+        // Bidirectional gate (#397 item 4): a stale/renamed action left in
+        // the registry must fail too, not just a catalog action without
+        // registry entry.
+        assertThat(byAction.keySet()).as("registry actions without catalog definition")
+                .isEqualTo(AuditActionCatalog.byCode().keySet());
         for (var definition : AuditActionCatalog.definitions()) {
             JsonNode entry = byAction.get(definition.code());
             assertThat(entry).as("catalog action without coverage entry: %s", definition.code()).isNotNull();

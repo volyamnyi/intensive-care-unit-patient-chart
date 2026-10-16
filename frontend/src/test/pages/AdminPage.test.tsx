@@ -13,6 +13,7 @@ const mockGetCatalog = vi.fn();
 const mockImportDataset = vi.fn();
 const mockRunBackfill = vi.fn();
 const mockRunRetention = vi.fn();
+const mockUpdateRolePermission = vi.fn();
 
 const emptyCatalog = {
   summary: { drugs: 0, interactions: 0, bySeverity: { low: 0, medium: 0, high: 0, critical: 0 }, lastImportAt: null },
@@ -30,7 +31,7 @@ vi.mock('../../api/platform', () => ({
     getUsers: (...args: unknown[]) => mockGetUsers(...args),
     getStats: (...args: unknown[]) => mockGetStats(...args),
     getPermissions: (...args: unknown[]) => mockGetPermissions(...args),
-    updateRolePermission: vi.fn(),
+    updateRolePermission: (...args: unknown[]) => mockUpdateRolePermission(...args),
     runLegacyBackfill: (...args: unknown[]) => mockRunBackfill(...args),
     runRetention: (...args: unknown[]) => mockRunRetention(...args),
   },
@@ -189,6 +190,36 @@ describe('AdminPage', () => {
     expect(mockRunBackfill).toHaveBeenCalledTimes(1);
     expect(await screen.findByTestId('backfill-report')).toBeInTheDocument();
     expect(screen.getByText('OK')).toBeInTheDocument();
+  });
+
+  it('mints a fresh intent ID per matrix save (#397)', async () => {
+    mockUpdateRolePermission.mockResolvedValue({ data: {} });
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: 'Доступи та ролі' }));
+    await waitFor(() => {
+      expect(screen.getByText('Матриця доступів')).toBeInTheDocument();
+    });
+
+    const intentOf = (calls: unknown[][]) =>
+      (calls[0][3] as { auditActionId?: string }).auditActionId;
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Створення епізоду — Медсестра' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Зберегти зміни' }));
+    await waitFor(() => {
+      expect(mockUpdateRolePermission).toHaveBeenCalledTimes(1);
+    });
+    const firstId = intentOf(mockUpdateRolePermission.mock.calls);
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Створення епізоду — Медсестра' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Зберегти зміни' }));
+    await waitFor(() => {
+      expect(mockUpdateRolePermission).toHaveBeenCalledTimes(2);
+    });
+    const secondId = intentOf(mockUpdateRolePermission.mock.calls.slice(1));
+
+    expect(firstId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(secondId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(secondId).not.toBe(firstId);
   });
 
   it('runs retention on demand and shows the archive report', async () => {

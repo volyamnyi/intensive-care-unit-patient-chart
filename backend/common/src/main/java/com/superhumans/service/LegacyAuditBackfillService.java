@@ -72,6 +72,11 @@ public class LegacyAuditBackfillService {
     }
 
     @Transactional(transactionManager = "coreTransactionManager", readOnly = true)
+    /**
+     * No read-only verification path is exposed (#397 item 7): re-running the
+     * idempotent backfill IS the verification (see runbook F.1 step 3). This
+     * method stays as the internal verify primitive, not an endpoint.
+     */
     public LegacyBackfillReportResponse verifyOnly() {
         List<LegacyAuditRow> rows = legacyAuditLogReader.findAllOrdered();
         long invalid = rows.stream()

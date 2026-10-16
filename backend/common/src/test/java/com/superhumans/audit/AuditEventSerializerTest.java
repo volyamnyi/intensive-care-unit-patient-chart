@@ -14,6 +14,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AuditEventSerializerTest {
 
     @Test
+    void roundTripIsByteIdentical() {
+        // The relay's sha256(deserialize(payload)) == payloadHash integrity
+        // check depends on byte-identity (#397 item 5).
+        var actor = new AuditEvent.AuditActor(
+                AuditEvent.ActorType.USER, "42", "doctor", null, Set.of("NURSE", "DOCTOR"), null, null);
+        AuditEvent event = event(actor, Map.of("attempt", 2, "deliveryKind", "SINGLE"));
+        var serializer = new AuditEventSerializer(new ObjectMapper());
+
+        String payload = serializer.serialize(event);
+
+        assertThat(serializer.serialize(serializer.deserialize(payload))).isEqualTo(payload);
+        assertThat(serializer.sha256(serializer.deserialize(payload)))
+                .isEqualTo(serializer.sha256(event));
+    }
+
+    @Test
     void serializationAndDigestAreDeterministicForEquivalentEvents() {
         var actor = new AuditEvent.AuditActor(
                 AuditEvent.ActorType.USER, "42", "doctor", null, Set.of("NURSE", "DOCTOR"), null, null);
