@@ -121,15 +121,15 @@ class VitalSignControllerTest {
     }
 
     @Test
-    void create_returnsCreated() throws Exception {
+    void create_returnsEntryForGivenSlot() throws Exception {
         VitalSignEntry saved = VitalSignEntry.builder()
                 .day(vitalDay).period("morning").temperature(37.0).pulse(80).build();
         saved.setId(entryId);
-        when(vitalSignService.saveNextEntry(eq(prescriptionListId), any())).thenReturn(saved);
+        when(vitalSignService.saveEntry(eq(dayId), eq("morning"), any())).thenReturn(saved);
 
         mockMvc.perform(post("/api/vital-signs")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"prescriptionListId\":\"" + prescriptionListId + "\",\"temperature\":37.0,\"pulse\":80}")
+                        .content("{\"dayId\":\"" + dayId + "\",\"period\":\"morning\",\"temperature\":37.0,\"pulse\":80}")
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.temperature").value(37.0))
@@ -137,10 +137,10 @@ class VitalSignControllerTest {
     }
 
     @Test
-    void create_withNullPrescriptionListId_returnsBadRequest() throws Exception {
+    void create_withMissingPeriod_returnsBadRequest() throws Exception {
         mockMvc.perform(post("/api/vital-signs")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"prescriptionListId\":null,\"temperature\":37.0}")
+                        .content("{\"dayId\":\"" + dayId + "\",\"temperature\":37.0}")
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));

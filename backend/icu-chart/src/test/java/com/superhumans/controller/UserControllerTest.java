@@ -3,15 +3,17 @@ package com.superhumans.controller;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
-import com.superhumans.repository.core.UserRepository;
-import com.superhumans.auth.JwtTokenProvider;
+import com.superhumans.mapper.UserMapperImpl;
 import com.superhumans.repository.core.AuditLogRepository;
+import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.service.AuditService;
 import com.superhumans.service.PermissionService;
+import com.superhumans.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,13 +29,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(UserController.class)
 @EnableTestExceptionHandler
+@Import(UserMapperImpl.class)
 class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private UserRepository userRepository;
+    private UserService userService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -53,21 +56,20 @@ class UserControllerTest {
         when(jwtTokenProvider.getLoginFromToken("test-jwt-token")).thenReturn("doctor1");
         when(jwtTokenProvider.getRoleFromToken(anyString())).thenReturn("DOCTOR");
         when(jwtTokenProvider.getUserIdFromToken("test-jwt-token")).thenReturn(1L);
-        User authenticatedUser = User.builder().login("doctor1").fullName("Doctor One")
-                .role(UserRole.DOCTOR).build();
-        authenticatedUser.setId(1L);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(authenticatedUser));
+    }
+
+    private User user(Long id, String login, UserRole role) {
+        User user = new User();
+        user.setId(id);
+        user.setLogin(login);
+        user.setRole(role);
+        return user;
     }
 
     @Test
     void getMe_returnsCurrentUser() throws Exception {
-        User user = new User();
-        user.setId(1L);
-        user.setLogin("doctor1");
-        user.setFullName("Doctor One");
-        user.setRole(UserRole.DOCTOR);
-
-        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.of(user));
+        when(userService.findByLogin("doctor1"))
+                .thenReturn(Optional.of(user(1L, "doctor1", UserRole.DOCTOR)));
 
         mockMvc.perform(get("/api/users/me").with(csrf()).with(doctor()))
                 .andExpect(status().isOk())
@@ -77,7 +79,7 @@ class UserControllerTest {
 
     @Test
     void getMe_notFound_returnsNotFound() throws Exception {
-        when(userRepository.findByLogin("doctor1")).thenReturn(Optional.empty());
+        when(userService.findByLogin("doctor1")).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/users/me").with(csrf()).with(doctor()))
                 .andExpect(status().isNotFound());
@@ -85,12 +87,8 @@ class UserControllerTest {
 
     @Test
     void getDoctors_returnsDoctorList() throws Exception {
-        User user = new User();
-        user.setId(1L);
-        user.setLogin("doctor1");
-        user.setRole(UserRole.DOCTOR);
-
-        when(userRepository.findByRole(UserRole.DOCTOR)).thenReturn(List.of(user));
+        when(userService.findByRole(UserRole.DOCTOR))
+                .thenReturn(List.of(user(1L, "doctor1", UserRole.DOCTOR)));
 
         mockMvc.perform(get("/api/users/doctors").with(doctor()))
                 .andExpect(status().isOk())
@@ -99,7 +97,7 @@ class UserControllerTest {
 
     @Test
     void getDoctors_emptyList_returnsOk() throws Exception {
-        when(userRepository.findByRole(UserRole.DOCTOR)).thenReturn(List.of());
+        when(userService.findByRole(UserRole.DOCTOR)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/users/doctors").with(doctor()))
                 .andExpect(status().isOk())
@@ -109,12 +107,8 @@ class UserControllerTest {
 
     @Test
     void getNurses_returnsNurseList() throws Exception {
-        User user = new User();
-        user.setId(2L);
-        user.setLogin("nurse1");
-        user.setRole(UserRole.NURSE);
-
-        when(userRepository.findByRole(UserRole.NURSE)).thenReturn(List.of(user));
+        when(userService.findByRole(UserRole.NURSE))
+                .thenReturn(List.of(user(2L, "nurse1", UserRole.NURSE)));
 
         mockMvc.perform(get("/api/users/nurses").with(doctor()))
                 .andExpect(status().isOk())

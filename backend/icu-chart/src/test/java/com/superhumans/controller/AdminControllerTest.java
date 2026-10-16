@@ -4,14 +4,16 @@ import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.config.EnableTestExceptionHandler;
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
+import com.superhumans.mapper.UserMapperImpl;
 import com.superhumans.repository.core.AuditLogRepository;
-import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.AuditService;
 import com.superhumans.service.PermissionService;
+import com.superhumans.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static com.superhumans.controller.TestSecurityHelper.doctor;
@@ -27,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AdminController.class)
 @EnableTestExceptionHandler
+@Import(UserMapperImpl.class)
 class AdminControllerTest {
 
     @Autowired
@@ -42,7 +46,7 @@ class AdminControllerTest {
     private com.superhumans.service.AuditRetentionService retentionService;
 
     @MockitoBean
-    private UserRepository userRepository;
+    private UserService userService;
 
     @MockitoBean
     private AuditService auditService;
@@ -69,6 +73,9 @@ class AdminControllerTest {
 
     @Test
     void updateRole_withInvalidRole_returns400Not500() throws Exception {
+        when(userService.updateRole(eq(11L), eq("SUPER_HACKER"), any()))
+                .thenThrow(new com.superhumans.exception.BadRequestException("bad role"));
+
         mockMvc.perform(put("/api/admin/users/{id}/role", 11)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"SUPER_HACKER\"}")
@@ -78,6 +85,9 @@ class AdminControllerTest {
 
     @Test
     void updateRole_withBlankRole_returns400() throws Exception {
+        when(userService.updateRole(eq(11L), eq(""), any()))
+                .thenThrow(new com.superhumans.exception.BadRequestException("bad role"));
+
         mockMvc.perform(put("/api/admin/users/{id}/role", 11)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"\"}")
@@ -90,8 +100,8 @@ class AdminControllerTest {
         User user = User.builder().login("doctor1").fullName("Doctor")
                 .role(UserRole.NURSE).build();
         user.setId(11L);
-        when(userRepository.findById(11L)).thenReturn(Optional.of(user));
-        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userService.updateRole(eq(11L), eq("DOCTOR"), any()))
+                .thenReturn(Optional.of(new UserService.RoleChange(user, UserRole.NURSE)));
 
         mockMvc.perform(put("/api/admin/users/{id}/role", 11)
                         .contentType(MediaType.APPLICATION_JSON)

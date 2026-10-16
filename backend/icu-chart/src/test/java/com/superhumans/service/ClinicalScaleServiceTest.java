@@ -158,7 +158,7 @@ class ClinicalScaleServiceTest {
         sr.setId(resultId);
         sr.setClinicalDay(clinicalDay);
         sr.setScale(clinicalScale);
-        when(scaleResultRepository.findByClinicalDayId(clinicalDayId)).thenReturn(List.of(sr));
+        when(scaleResultRepository.findByClinicalDayIdOrderByCalculatedAtDescIdDesc(clinicalDayId)).thenReturn(List.of(sr));
 
         var results = clinicalScaleService.getScaleResultsByClinicalDay(clinicalDayId);
 
@@ -380,17 +380,17 @@ class ClinicalScaleServiceTest {
         sr.setId(resultId);
         sr.setEpisodeId(episodeId);
         sr.setScale(apacheScale);
-        when(scaleResultRepository.findByEpisodeId(episodeId)).thenReturn(List.of(sr));
+        when(scaleResultRepository.findByEpisodeIdOrderByCalculatedAtDescIdDesc(episodeId)).thenReturn(List.of(sr));
 
         var results = clinicalScaleService.getScaleResultsByEpisode(episodeId);
 
         assertThat(results).hasSize(1);
-        verify(scaleResultRepository).findByEpisodeId(episodeId);
+        verify(scaleResultRepository).findByEpisodeIdOrderByCalculatedAtDescIdDesc(episodeId);
     }
 
     @Test
     void getScaleResultsByEpisode_emptyEpisode_returnsEmptyList() {
-        when(scaleResultRepository.findByEpisodeId(episodeId)).thenReturn(List.of());
+        when(scaleResultRepository.findByEpisodeIdOrderByCalculatedAtDescIdDesc(episodeId)).thenReturn(List.of());
 
         var results = clinicalScaleService.getScaleResultsByEpisode(episodeId);
 

@@ -93,7 +93,8 @@ public class VitalSignController {
     @PostMapping
     public VitalSignEntryResponse create(@Valid @RequestBody VitalSignEntryRequest req) {
         VitalSignEntry entry = vitalSignEntryMapper.toEntity(req);
-        VitalSignEntry saved = vitalSignService.saveNextEntry(UUID.fromString(req.getPrescriptionListId()), entry);
+        VitalSignEntry saved = vitalSignService.saveEntry(
+                UUID.fromString(req.getDayId()), req.getPeriod(), entry);
         return vitalSignEntryMapper.toResponse(saved);
     }
 

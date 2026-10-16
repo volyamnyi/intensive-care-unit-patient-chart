@@ -183,61 +183,57 @@ class VitalSignServiceTest {
                 .isInstanceOf(Exception.class);
     }
 
-    // --- saveNextEntry ---
+    // --- saveEntry (#406 idempotent slot write) ---
 
     @Test
-    void saveNextEntry_fillsFirstEmptySlot() {
-        // Set up: 1 day, 2 entries (morning is filled, evening is empty)
+    void saveEntry_writesIntoGivenSlot() {
+        UUID slotDayId = UUID.randomUUID();
         VitalSignDay day = VitalSignDay.builder().vitalList(vitalList).build();
-        day.setId(UUID.randomUUID());
+        day.setId(slotDayId);
 
-        VitalSignEntry filledEntry = VitalSignEntry.builder()
-                .day(day).period("morning").temperature(36.6).build();
-        filledEntry.setId(UUID.randomUUID());
+        VitalSignEntry existing = VitalSignEntry.builder()
+                .day(day).period("morning").build();
+        existing.setId(UUID.randomUUID());
 
-        VitalSignEntry emptyEntry = VitalSignEntry.builder()
-                .day(day).period("evening").build();
-        emptyEntry.setId(UUID.randomUUID());
-
-        when(vitalListRepository.findByPrescriptionListId(prescriptionListId))
-                .thenReturn(Optional.of(vitalList));
-        when(vitalDayRepository.findByVitalListIdOrderByDayDateAsc(vitalListId))
-                .thenReturn(List.of(day));
-        when(vitalEntryRepository.findByDayId(day.getId()))
-                .thenReturn(List.of(filledEntry, emptyEntry));
-        when(vitalEntryRepository.findById(emptyEntry.getId())).thenReturn(Optional.of(emptyEntry));
-        when(vitalEntryRepository.save(any())).thenReturn(emptyEntry);
+        when(vitalEntryRepository.findByDayIdAndPeriod(slotDayId, "morning"))
+                .thenReturn(Optional.of(existing));
+        when(vitalEntryRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        when(vitalEntryRepository.save(any())).thenReturn(existing);
 
         VitalSignEntry update = new VitalSignEntry();
         update.setTemperature(37.0);
         update.setPulse(75);
 
-        VitalSignEntry result = service.saveNextEntry(prescriptionListId, update);
+        VitalSignEntry result = service.saveEntry(slotDayId, "morning", update);
 
+        assertThat(result).isSameAs(existing);
         verify(vitalEntryRepository).save(entryCaptor.capture());
         assertThat(entryCaptor.getValue().getTemperature()).isEqualTo(37.0);
         assertThat(entryCaptor.getValue().getPulse()).isEqualTo(75);
     }
 
     @Test
-    void saveNextEntry_throws_whenNoEmptySlot() {
+    void saveEntry_createsMissingSlotThenWrites() {
+        UUID slotDayId = UUID.randomUUID();
         VitalSignDay day = VitalSignDay.builder().vitalList(vitalList).build();
-        day.setId(UUID.randomUUID());
+        day.setId(slotDayId);
 
-        // All entries filled
-        VitalSignEntry filled = VitalSignEntry.builder()
-                .day(day).period("morning").temperature(36.6).pulse(70).build();
-        filled.setId(UUID.randomUUID());
+        VitalSignEntry created = VitalSignEntry.builder()
+                .day(day).period("evening").build();
+        created.setId(UUID.randomUUID());
 
-        when(vitalListRepository.findByPrescriptionListId(prescriptionListId))
-                .thenReturn(Optional.of(vitalList));
-        when(vitalDayRepository.findByVitalListIdOrderByDayDateAsc(vitalListId))
-                .thenReturn(List.of(day));
-        when(vitalEntryRepository.findByDayId(day.getId()))
-                .thenReturn(List.of(filled));
+        when(vitalDayRepository.findById(slotDayId)).thenReturn(Optional.of(day));
+        when(vitalEntryRepository.findByDayIdAndPeriod(slotDayId, "evening"))
+                .thenReturn(Optional.empty());
+        when(vitalEntryRepository.save(any())).thenReturn(created);
+        when(vitalEntryRepository.findById(created.getId())).thenReturn(Optional.of(created));
 
-        assertThatThrownBy(() -> service.saveNextEntry(prescriptionListId, new VitalSignEntry()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("No empty vital sign entry slot");
+        VitalSignEntry update = new VitalSignEntry();
+        update.setPulse(60);
+
+        VitalSignEntry result = service.saveEntry(slotDayId, "evening", update);
+
+        assertThat(result).isSameAs(created);
+        verify(vitalEntryRepository, times(2)).save(any());
     }
 }

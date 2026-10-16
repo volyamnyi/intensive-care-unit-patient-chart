@@ -195,9 +195,10 @@ public class PdfGeneratorService {
             List<FluidBalance> balances = fluidBalanceRepository
                     .findByClinicalDayIdOrderByHourAsc(day.getId());
             List<Signature> signatures = signatureRepository.findByClinicalDayId(day.getId());
-            List<ScaleResult> scales = scaleResultRepository.findByClinicalDayId(day.getId());
+            List<ScaleResult> scales = scaleResultRepository
+                    .findByClinicalDayIdOrderByCalculatedAtDescIdDesc(day.getId());
             List<ScaleResult> episodeScales = episode != null
-                    ? scaleResultRepository.findByEpisodeId(episode.getId())
+                    ? scaleResultRepository.findByEpisodeIdOrderByCalculatedAtDescIdDesc(episode.getId())
                     : Collections.emptyList();
             List<MedicalNote> notes = medicalNoteRepository
                     .findByClinicalDayIdOrderByCreatedAtAsc(day.getId());

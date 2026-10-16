@@ -7,9 +7,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ScaleResultRepository extends JpaRepository<ScaleResult, UUID> {
-    List<ScaleResult> findByClinicalDayId(UUID clinicalDayId);
-    Optional<ScaleResult> findByClinicalDayIdAndScaleId(UUID clinicalDayId, UUID scaleId);
-    List<ScaleResult> findByScaleId(UUID scaleId);
-    List<ScaleResult> findByEpisodeId(UUID episodeId);
-    Optional<ScaleResult> findByEpisodeIdAndScaleId(UUID episodeId, UUID scaleId);
+    // Newest-first ordering (#406): PDF Form 003-15/о and the history UIs
+    // pick the first row of these lists — without an explicit ORDER BY the
+    // pick was nondeterministic whenever recalculation left several rows.
+    List<ScaleResult> findByClinicalDayIdOrderByCalculatedAtDescIdDesc(UUID clinicalDayId);
+    List<ScaleResult> findByScaleIdOrderByCalculatedAtDescIdDesc(UUID scaleId);
+    List<ScaleResult> findByEpisodeIdOrderByCalculatedAtDescIdDesc(UUID episodeId);
 }

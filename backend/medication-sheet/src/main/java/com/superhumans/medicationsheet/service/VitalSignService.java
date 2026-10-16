@@ -162,21 +162,14 @@ public class VitalSignService {
                 });
     }
 
+    /**
+     * Idempotent create/update of the (dayId, period) slot (#406): the entry
+     * is created when absent, then the submitted values are written in place.
+     * A double submit lands on the same row instead of the next empty slot.
+     */
     @Transactional
-    public VitalSignEntry saveNextEntry(UUID prescriptionListId, VitalSignEntry update) {
-        VitalSignList list = getOrCreate(prescriptionListId);
-        List<VitalSignDay> days = getDays(list.getId());
-        for (VitalSignDay day : days) {
-            List<VitalSignEntry> entries = getEntries(day.getId());
-            for (VitalSignEntry entry : entries) {
-                if (entry.getTemperature() == null && entry.getSystolicBp() == null
-                        && entry.getDiastolicBp() == null && entry.getSpo2() == null
-                        && entry.getPulse() == null && entry.getStool() == null
-                        && entry.getPainScore() == null) {
-                    return updateEntry(entry.getId(), update);
-                }
-            }
-        }
-        throw new IllegalStateException("No empty vital sign entry slot available");
+    public VitalSignEntry saveEntry(UUID dayId, String period, VitalSignEntry update) {
+        VitalSignEntry entry = getOrCreateEntry(dayId, period);
+        return updateEntry(entry.getId(), update);
     }
 }

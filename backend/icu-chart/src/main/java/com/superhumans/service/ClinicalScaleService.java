@@ -59,13 +59,13 @@ public class ClinicalScaleService {
 
     @Transactional(readOnly = true)
     public List<ScaleResultResponse> getScaleResultsByClinicalDay(UUID clinicalDayId) {
-        return scaleResultRepository.findByClinicalDayId(clinicalDayId)
+        return scaleResultRepository.findByClinicalDayIdOrderByCalculatedAtDescIdDesc(clinicalDayId)
                 .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ScaleResultResponse> getScaleResultsByEpisode(UUID episodeId) {
-        return scaleResultRepository.findByEpisodeId(episodeId)
+        return scaleResultRepository.findByEpisodeIdOrderByCalculatedAtDescIdDesc(episodeId)
                 .stream().map(scaleResultMapper::toResponse).collect(Collectors.toList());
     }
 
@@ -319,7 +319,8 @@ public class ClinicalScaleService {
         if (idx <= 0) return null;
 
         ClinicalDay prevDay = days.get(idx - 1);
-        List<ScaleResult> prevResults = scaleResultRepository.findByClinicalDayId(prevDay.getId());
+        List<ScaleResult> prevResults = scaleResultRepository
+                .findByClinicalDayIdOrderByCalculatedAtDescIdDesc(prevDay.getId());
         for (ScaleResult pr : prevResults) {
             if (pr.getScale() != null && pr.getScale().getName() != null
                     && pr.getScale().getName().equalsIgnoreCase(scale.getName())) {

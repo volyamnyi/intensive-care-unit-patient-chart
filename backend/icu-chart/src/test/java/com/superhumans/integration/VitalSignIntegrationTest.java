@@ -23,8 +23,6 @@ class VitalSignIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID PRESCRIPTION_LIST_ID =
             UUID.fromString("cccc0001-0001-0001-0001-000000000001");
-    private static final UUID FINISHED_LIST_ID =
-            UUID.fromString("cccc0002-0002-0002-0002-000000000002");
     private static final UUID VITAL_LIST_ID =
             UUID.fromString("bbbb0001-0001-0001-0001-000000000001");
     private static final UUID VITAL_DAY_ID =
@@ -61,9 +59,10 @@ class VitalSignIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void createEntry_asNurse_returnsOk() {
+    void createEntry_asNurse_writesGivenSlot() {
         VitalSignEntryRequest req = new VitalSignEntryRequest();
-        req.setPrescriptionListId(PRESCRIPTION_LIST_ID.toString());
+        req.setDayId(VITAL_DAY_ID.toString());
+        req.setPeriod("evening");
         req.setTemperature(37.0);
         req.setSystolicBp(125);
         req.setDiastolicBp(82);
@@ -77,26 +76,45 @@ class VitalSignIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().getPeriod()).isEqualTo("evening");
         assertThat(res.getBody().getTemperature()).isEqualTo(37.0);
     }
 
     @Test
-    void createEntry_fillsEmptyEveningSlot() {
-        VitalSignEntryRequest req = new VitalSignEntryRequest();
-        req.setPrescriptionListId(FINISHED_LIST_ID.toString());
-        req.setTemperature(36.8);
-        req.setSystolicBp(118);
-        req.setDiastolicBp(78);
-        req.setSpo2(99);
-        req.setPulse(68);
+    void createEntry_doubleSubmit_isIdempotent() {
+        VitalSignEntryRequest first = new VitalSignEntryRequest();
+        first.setDayId(VITAL_DAY_ID.toString());
+        first.setPeriod("evening");
+        first.setTemperature(36.8);
+        first.setPulse(68);
 
-        var res = restTemplate.exchange(
+        var res1 = restTemplate.exchange(
                 "/api/vital-signs", HttpMethod.POST,
-                authEntity(req, getNurseToken()),
+                authEntity(first, getNurseToken()),
                 VitalSignEntryResponse.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotNull();
-        assertThat(res.getBody().getTemperature()).isEqualTo(36.8);
+        VitalSignEntryRequest second = new VitalSignEntryRequest();
+        second.setDayId(VITAL_DAY_ID.toString());
+        second.setPeriod("evening");
+        second.setTemperature(37.4);
+        second.setPulse(70);
+
+        var res2 = restTemplate.exchange(
+                "/api/vital-signs", HttpMethod.POST,
+                authEntity(second, getNurseToken()),
+                VitalSignEntryResponse.class);
+
+        assertThat(res1.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res2.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // Same slot — the second submit updated it in place (#406).
+        assertThat(res2.getBody().getId()).isEqualTo(res1.getBody().getId());
+        assertThat(res2.getBody().getTemperature()).isEqualTo(37.4);
+
+        var entries = restTemplate.exchange(
+                "/api/vital-signs/days/{dayId}/entries", HttpMethod.GET,
+                authGet(getNurseToken()),
+                new ParameterizedTypeReference<List<VitalSignEntryResponse>>() {},
+                VITAL_DAY_ID);
+        assertThat(entries.getBody()).hasSize(2);
     }
 }
