@@ -85,6 +85,21 @@ class BrakNotificationDeliveryServiceTest {
     }
 
     @Test
+    void deliver_disabledEmitsCancelledOutcome() {
+        ReflectionTestUtils.setField(service, "enabled", false);
+
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+
+        var event = emittedOutcome();
+        assertThat(event.action()).isEqualTo("prosthetics.notification.delivery.outcome");
+        assertThat(event.outcome())
+                .isEqualTo(com.superhumans.audit.AuditEvent.AuditOutcome.CANCELLED);
+        assertThat(event.errorCode()).isEqualTo("BRAK_NOTIFICATION_SKIPPED_DISABLED");
+        assertThat(event.target().entityType()).isEqualTo("BrakEvent");
+        assertThat(event.target().entityId()).isEqualTo(EVENT_ID.toString());
+    }
+
+    @Test
     void deliver_missingRowReturnsSilently() {
         when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.empty());
@@ -222,6 +237,22 @@ class BrakNotificationDeliveryServiceTest {
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SKIPPED);
         verify(auditService).logEvent("BrakNotification", EVENT_ID,
                 "SKIPPED_INSTANCE_NOT_FOUND", CONFIRMER_ID, null, null);
+
+        var event = emittedOutcome();
+        assertThat(event.action()).isEqualTo("prosthetics.notification.delivery.outcome");
+        assertThat(event.outcome())
+                .isEqualTo(com.superhumans.audit.AuditEvent.AuditOutcome.CANCELLED);
+        assertThat(event.errorCode()).isEqualTo("BRAK_NOTIFICATION_SKIPPED_INSTANCE_NOT_FOUND");
+    }
+
+    private com.superhumans.audit.AuditEvent emittedOutcome() {
+        var captor = org.mockito.ArgumentCaptor
+                .forClass(java.util.function.Supplier.class);
+        verify(auditEmitter, org.mockito.Mockito.atLeastOnce()).emit(
+                org.mockito.ArgumentMatchers.eq("prosthetics"), captor.capture());
+        @SuppressWarnings("unchecked")
+        java.util.function.Supplier<com.superhumans.audit.AuditEvent> supplier = captor.getValue();
+        return supplier.get();
     }
 
     @Test

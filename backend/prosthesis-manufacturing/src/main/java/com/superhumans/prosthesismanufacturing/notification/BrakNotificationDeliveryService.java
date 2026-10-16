@@ -106,6 +106,8 @@ public class BrakNotificationDeliveryService {
                     brakEventId);
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                     ACTION_SKIPPED_DISABLED, actorId, null, null);
+            emitDeliveryOutcome(brakEventId, kind, actorId,
+                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_DISABLED");
             return;
         }
         BrakNotificationOutbox row = outboxRepository
@@ -146,6 +148,8 @@ public class BrakNotificationDeliveryService {
                     brakEventId, brakEvent.getInstanceId());
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                     ACTION_SKIPPED_INSTANCE_NOT_FOUND, actorId, null, null);
+            emitDeliveryOutcome(brakEventId, kind, actorId,
+                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_INSTANCE_NOT_FOUND");
             return;
         }
         List<User> recipients = notificationService.resolveRecipients();

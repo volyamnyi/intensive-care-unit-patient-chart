@@ -616,8 +616,17 @@ public class FlowInstanceService {
         instance.setFailReason(description);
         instance.setEndTime(LocalDateTime.now());
         instanceRepository.save(instance);
-        failureSnapshotService.create(instance, category, description, snapshotJson, userId);
+        com.superhumans.prosthesismanufacturing.entity.FailureSnapshot snapshot =
+                failureSnapshotService.create(instance, category, description, snapshotJson, userId);
         auditService.logAction("FlowInstance", instance.getId(), "FAIL", userId);
+        // The legacy FailureSnapshot CREATE row has no v2 twin (#398 item 4):
+        // link the snapshot as a related entity so
+        // GET /api/audit/entities/FailureSnapshot/{id} keeps working
+        // post-flip (null-tolerant like the legacy row itself).
+        final List<AuditEvent.AuditTarget> relatedSnapshot = snapshot.getId() == null
+                ? List.of()
+                : List.of(new AuditEvent.AuditTarget(
+                        "FailureSnapshot", snapshot.getId().toString(), null));
         auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
                 .actor(AuditActorResolver.fromCurrentContext())
                 .eventClass(EventClass.BUSINESS)
@@ -626,6 +635,7 @@ public class FlowInstanceService {
                 .action("prosthetics.instance.fail")
                 .actionType(ActionType.FAIL)
                 .target(new AuditEvent.AuditTarget("FlowInstance", instanceId.toString(), null))
+                .relatedEntities(relatedSnapshot)
                 .outcome(AuditEvent.AuditOutcome.SUCCESS)
                 .changes(List.of(
                         AuditChanges.statusChanged("IN_PROGRESS", "FAILED"),

@@ -480,6 +480,47 @@ class FlowInstanceServiceTest {
     }
 
     @Test
+    void fail_linksSnapshotAsRelatedEntity() {
+        // The fail event validates its actor against the catalog policy, so
+        // the test installs a request-equivalent USER authentication and
+        // evaluates the emit inside its scope.
+        var auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "prosthetist", 7L,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                        "ROLE_PROSTHETIST")));
+        org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .setAuthentication(auth);
+        com.superhumans.audit.AuditEvent event;
+        UUID snapshotId = UUID.randomUUID();
+        try {
+            FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
+            when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
+            when(instanceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+            var snapshot = new com.superhumans.prosthesismanufacturing.entity.FailureSnapshot();
+            snapshot.setId(snapshotId);
+            when(failureSnapshotService.create(any(), any(), any(), any(), any())).thenReturn(snapshot);
+
+            service.fail(instance.getId(), "materials", "desc", null, 1L);
+
+            var captor = org.mockito.ArgumentCaptor
+                    .forClass(java.util.function.Supplier.class);
+            verify(auditEmitter).emit(
+                    org.mockito.ArgumentMatchers.eq("prosthetics"), captor.capture());
+            @SuppressWarnings("unchecked")
+            java.util.function.Supplier<com.superhumans.audit.AuditEvent> supplier = captor.getValue();
+            event = supplier.get();
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+        assertThat(event.action()).isEqualTo("prosthetics.instance.fail");
+        assertThat(event.relatedEntities()).extracting(
+                com.superhumans.audit.AuditEvent.AuditTarget::entityType,
+                com.superhumans.audit.AuditEvent.AuditTarget::entityId)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(
+                        "FailureSnapshot", snapshotId.toString()));
+    }
+
+    @Test
     void fail_deniedNullCategory() {
         FlowInstance instance = newInstance(FlowInstanceStatus.IN_PROGRESS, snapshotJson());
         when(instanceRepository.findById(instance.getId())).thenReturn(Optional.of(instance));
