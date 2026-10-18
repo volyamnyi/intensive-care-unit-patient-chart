@@ -279,7 +279,7 @@ java -jar app/target/app-*.jar
 ### Authentication
 | Method | URL | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/auth/login` | No | Login, returns JWT + user info |
+| `POST` | `/api/auth/login` | No | Login; sets httpOnly JWT cookie and returns the same JWT in the JSON body for Bearer API clients, plus user info |
 
 ### Episodes (replaces legacy ICU cards)
 | Method | URL | Auth | Description |
@@ -359,7 +359,7 @@ java -jar app/target/app-*.jar
 |---|---|---|---|
 | `GET` | `/api/clinical-days/{id}/pdf` | Yes | Get latest generated PDF |
 | `POST` | `/api/clinical-days/{id}/pdf` | Yes | Generate PDF |
-| `GET` | `/api/clinical-days/{id}/pdf/status` | Yes | Get PDF transfer status |
+| `GET` | `/api/clinical-days/{id}/pdf/file` | Yes | Serve stored PDF bytes (`application/pdf`); the `/pdf/status` transfer endpoint was removed in #269 |
 
 ### Users
 | Method | URL | Auth | Description |
@@ -385,10 +385,12 @@ java -jar app/target/app-*.jar
 | `PUT` | `/api/prescriptions/day-parts/{id}/cancel` | Doctor/HOD | Cancel medication («Відмінити препарат»; 422 if not planned or completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/replan` | Doctor/HOD | Restore cancelled dose to planned, keeping the dose (422 if not cancelled or completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/cancel-assignment` | Doctor/HOD | Reset one period cell to unplanned, siblings untouched (422 if completed) |
-| `PUT` | `/api/prescriptions/day-parts/{id}/complete` | Nurse/HOD | Complete day part |
-| `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (with optional 2P auth) |
-| `GET` | `/api/prescriptions/allergies?patientId=` | Yes | Patient allergies (from MIS) |
+| `PUT` | `/api/prescriptions/day-parts/{id}/complete` | Nurse/HOD | Complete day part — same two-person contract as `execute` (a different nurse's login/password in the body); creates the execution record (#359) |
+| `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (server-owned 2P auth: second NURSE + password, never the executor) |
 | `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
+| `GET` | `/api/prescriptions/{listId}/pdf/info` | `PATIENT_VIEW` | Page count + file name (no PII) |
+| `POST` | `/api/prescriptions/{listId}/pdf/file` | `PATIENT_VIEW` | Generate + download the Form №003-4/о ZIP (renders once, no cached-bytes mutation, #370/#412) |
+| `POST` | `/api/prescriptions/{listId}/pdf/pages/{pageIndex}` | `PATIENT_VIEW` | Render one sheet as PDF for in-module print (#370) |
 | `GET` | `/api/prescriptions/{listId}/interactions` | Yes | Drug-interaction warnings for planned items (non-blocking, #304) |
 | `POST` | `/api/admin/drug-interactions/import` | Administrator | Import the drug-interactions dataset (multipart JSON, ≤40 MB, full sync) |
 | `GET` | `/api/admin/drug-interactions?severity&query&page&size` | Administrator | Browse the interaction dataset: summary + drugs[] + paged pairs (#305) |
@@ -407,7 +409,8 @@ java -jar app/target/app-*.jar
 | `GET` | `/api/prosthesis-manufacturing/templates/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get template by ID |
 | `POST` | `/api/prosthesis-manufacturing/templates` | PROSTHETICS_ADMIN | Create template |
 | `PATCH` | `/api/prosthesis-manufacturing/templates/{id}` | PROSTHETICS_ADMIN | Update template |
-| `GET` | `/api/prosthesis-manufacturing/instances` | PROSTHETIST, PROSTHETICS_ADMIN | List flow instances |
+| `GET` | `/api/prosthesis-manufacturing/instances` | PROSTHETIST, PROSTHETICS_ADMIN | Compatibility list (first bounded page, default 50) |
+| `GET` | `/api/prosthesis-manufacturing/instances/page` | PROSTHETIST, PROSTHETICS_ADMIN | Paged flow instances (`page`, `size` capped at 100) |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}` | PROSTHETIST, PROSTHETICS_ADMIN | Get instance by ID |
 | `POST` | `/api/prosthesis-manufacturing/instances` | PROSTHETIST | Create instance from order + template |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/step-executions` | PROSTHETIST, PROSTHETICS_ADMIN | Get step executions for instance |
@@ -425,7 +428,7 @@ java -jar app/target/app-*.jar
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/pause` | PROSTHETIST | Pause instance (reason: operative intervention, VLC passing, went abroad, reamputation) |
 | `POST` | `/api/prosthesis-manufacturing/instances/{id}/resume` | PROSTHETIST | Resume instance |
 | `GET` | `/api/prosthesis-manufacturing/instances/{id}/failure-snapshot` | PROSTHETIST, PROSTHETICS_ADMIN | Get failure snapshot |
-| `GET` | `/api/prosthesis-manufacturing/instances/{id}/pdf` | PROSTHETIST, PROSTHETICS_ADMIN | Generate PDF report for instance |
+| `POST` | `/api/prosthesis-manufacturing/instances/{id}/pdf` | PROSTHETIST, PROSTHETICS_ADMIN | Generate and download PDF report for instance |
 | `POST` | `/api/prosthesis-manufacturing/evidence-files` | PROSTHETIST | Upload evidence file |
 | `GET` | `/api/prosthesis-manufacturing/production` | `PROSTHETICS_PRODUCTION_VIEW` | Production work items, paged (assignee forced to self without `VIEW_ALL`) |
 | `GET` | `/api/prosthesis-manufacturing/production/summary` | `PROSTHETICS_PRODUCTION_VIEW` | 9 KPI cards for the dashboard |
@@ -438,8 +441,10 @@ java -jar app/target/app-*.jar
 ### Vital Signs
 | Method | URL | Auth | Description |
 |---|---|---|---|
-| `GET` | `/api/vital-signs?prescriptionListId=` | Yes | Get vital sign days |
+| `GET` | `/api/vital-signs?prescriptionListId=` | Yes | Get vital sign days (pure read, empty until the grid is ensured) |
 | `GET` | `/api/vital-signs/days/{dayId}/entries` | Yes | Get entries for day |
+| `GET` | `/api/vital-signs/grid?prescriptionListId=` | Yes | Get the vitals grid (pure read — never provisions, #365) |
+| `POST` | `/api/vital-signs/grid?prescriptionListId=` | `VITALS_ENTER` | Ensure the grid exists (provisions 21 days × 4 periods once, idempotent, audited) |
 | `POST` | `/api/vital-signs` | Yes | Create vital sign entry |
 
 ### Audit
@@ -494,8 +499,8 @@ icu-patient-chart/
 │   │   │                         security config, multi-DB wiring, platform controllers (auth/user/patient/admin/audit/
 │   │   │                         settings), `entity/base` + `entity/core` (User, Permission, RolePermission,
 │   │   │                         AuditLog, ...), `repository/core`, exception handlers, MIS client, services (Auth,
-│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 45
-│   │   │                         SQL files in `db/changelog/{core (14), icu (9), med (8), prosth (14)}/`)
+│   │   │                         Audit, PermissionService/PermissionCatalog), Liquibase changelogs (master yamls + 50
+│   │   │                         SQL files in `db/changelog/{core (15), icu (11), med (10), prosth (14)}/`)
 │   ├── icu-chart/              ← ICU chart feature: `com.superhumans.icu.*` (entities + repositories) + ICU domain
 │   │                             packages (controller ×13, service ×16, dto, mapper); depends on common
 │   ├── medication-sheet/       ← medication sheet feature (`com.superhumans.medicationsheet.*`); depends on common
@@ -550,7 +555,7 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (991 across 109 files) |
+| `npm t` | Run Vitest tests (990 across 108 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
@@ -577,10 +582,10 @@ icu-patient-chart/
 CI jobs run in parallel when triggered; if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend tests**: 209 test files across the multi-module reactor — common (41) + icu-chart (87) + medication-sheet (23) + prosthesis-manufacturing (57) + app (1, ArchUnit `ModuleBoundaryTest`) — `mvn test`
+- **Backend tests**: 237 test files across the multi-module reactor — common (57) + icu-chart (94) + medication-sheet (26) + prosthesis-manufacturing (58) + app (2, ArchUnit `ModuleBoundaryTest` + `MultidbPackageStringsTest`) — `mvn test`
 - **Backend integration tests**: 351 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 991 tests (109 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 101 files (493 tests: 100 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Frontend Vitest tests**: 990 tests (108 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 102 files (494 tests: 101 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
@@ -649,7 +654,7 @@ Access is enforced by a **dynamic role-permission matrix** (28 permission codes 
 
 ## Security
 
-- **Authentication**: JWT stored in an **httpOnly cookie** named `jwt`, issued via a `Set-Cookie` header on login (and cleared on logout). The Axios client is configured with `withCredentials: true`, and the JWT filter also accepts a `Bearer` Authorization header. `localStorage` holds only a lightweight session flag (`auth:session`), never the token. The same `POST /api/auth/login` endpoint serves both local (BCrypt) and directory (Active Directory/LDAP bind) authentication: existing local accounts verify passwords locally, LDAP-bound accounts bind on every login, and a first-time directory user is provisioned locally as a permissionless `GUEST` (see AGENTS.md Active Directory Safety Directive).
+- **Authentication**: JWT is set in an **httpOnly cookie** named `jwt` on login and cleared on logout. The same token is also returned in the login JSON body for supported non-browser Bearer API clients; browser UI auth uses the cookie and never stores the token in `localStorage` (only the lightweight `auth:session` flag is stored). The cookie is `SameSite=Lax`; sibling subdomains are same-site, so only trusted sibling origins may host content that can initiate requests to this app. If an untrusted sibling origin is introduced, add and verify a CSRF defense or change the cookie policy before deployment. The Axios client is configured with `withCredentials: true`, and the JWT filter accepts a `Bearer` Authorization header. The same `POST /api/auth/login` endpoint serves both local (BCrypt) and directory (Active Directory/LDAP bind) authentication: existing local accounts verify passwords locally, LDAP-bound accounts bind on every login, and a first-time directory user is provisioned locally as a permissionless `GUEST` (see AGENTS.md Active Directory Safety Directive).
 - **Password Storage**: BCrypt hashing (local accounts only — directory passwords are verified by bind and never stored; LDAP rows keep a NULL `password_hash`)
 - **Authorization**: Spring Security **method + URL-based** enforcement, layered on a **dynamic permission matrix** — precise rules are `@PreAuthorize("@permissionService.has('CODE')")` (so admin edits to role permissions take effect immediately), module-visit gates via `MODULE_*_ACCESS`, and URL ceilings in `ClinicalSecurityRules`
 - **Active Directory (LDAP/LDAPS, read-only bind)**: the directory is used exclusively for authentication, user search, and profile reads — no user/group/attribute/membership writes exist anywhere. First-time directory users become `GUEST` (zero permissions, outside all URL ceilings); roles are assigned locally only. Configuration is environment-only (`APP_LDAP_ENABLED`, `APP_LDAP_URLS`, `APP_LDAP_BASE`, `APP_LDAP_USERNAME`, `APP_LDAP_PASSWORD`, no defaults; TLS via the JVM truststore) and applies to **local/prod only — CI maps zero LDAP secrets** (`APP_LDAP_ENABLED=false` in all test jobs). LDAP test suites run exclusively locally (corporate AD is unreachable from CI, where they report SKIPPED)

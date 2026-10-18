@@ -295,6 +295,10 @@ class BrakNotificationIntegrationTest {
 
             verify(mailSender, never()).send(any(SimpleMailMessage.class));
             assertThat(auditActions(branch.getBrakEventId())).contains("SKIPPED_DISABLED");
+            // NOTE (#398 item 1): the v2 CANCELLED twin is asserted at unit
+            // level (BrakNotificationDeliveryServiceTest) — v2 emission is
+            // after-commit, so a rollback-style integration test can never
+            // observe it.
             BrakNotificationOutbox pending = outboxRepository
                     .findByBrakEventIdAndKind(branch.getBrakEventId(),
                         BrakNotificationKind.SINGLE)

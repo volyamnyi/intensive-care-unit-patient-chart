@@ -23,3 +23,9 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: med/027-audit-outbox.sql
+  - include:
+      relativeToChangelogFile: true
+      file: med/028-vital-unique-indexes.sql
+  - include:
+      relativeToChangelogFile: true
+      file: med/029-drop-redundant-vital-indexes.sql

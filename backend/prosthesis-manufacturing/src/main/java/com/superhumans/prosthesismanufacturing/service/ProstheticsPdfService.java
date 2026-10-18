@@ -177,9 +177,9 @@ public class ProstheticsPdfService {
         }
         Map<String, Object> values;
         try {
-            values = new com.fasterxml.jackson.databind.ObjectMapper()
+            values = new tools.jackson.databind.ObjectMapper()
                     .readValue(execution.getValues(),
-                            new com.fasterxml.jackson.core.type.TypeReference<LinkedHashMap<String, Object>>() {
+                            new tools.jackson.core.type.TypeReference<LinkedHashMap<String, Object>>() {
                             });
         } catch (Exception e) {
             return Map.of("Значення", execution.getValues());

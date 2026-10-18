@@ -19,14 +19,18 @@ import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.EpisodeAlreadyActiveException;
 import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.mapper.EpisodeMapper;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.icu.repository.ClinicalDayRepository;
 import com.superhumans.icu.repository.EpisodeRepository;
+import com.superhumans.entity.core.UserRole;
+import com.superhumans.repository.core.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -49,8 +53,9 @@ public class EpisodeService {
     DomainAuditEmitter auditEmitter;
     MisService misService;
     EpisodeMapper episodeMapper;
+    UserRepository userRepository;
+    EmailService emailService;
 
-    @Transactional
     public EpisodeResponse getEpisode(UUID id) {
         Episode episode = episodeRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Episode not found: " + id));
@@ -77,8 +82,10 @@ public class EpisodeService {
         return Math.round(weightKg / (heightM * heightM) * 10.0) / 10.0;
     }
 
-    @Transactional
     public List<EpisodeResponse> searchEpisodes(Long patientId, EpisodeStatus status) {
+        if (patientId == null && status == null) {
+            throw new BadRequestException("At least one episode search filter is required");
+        }
         List<Episode> episodes;
         if (patientId != null && status != null) {
             episodes = episodeRepository.findByPatientIdAndStatus(patientId, status).stream().toList();
@@ -87,7 +94,7 @@ public class EpisodeService {
         } else if (status != null) {
             episodes = episodeRepository.findByStatusOrderByAdmissionDateDescIdDesc(status);
         } else {
-            episodes = episodeRepository.findAll();
+            episodes = episodeRepository.findByStatusOrderByAdmissionDateDescIdDesc(status);
         }
         // One roster fetch for the whole list: MisService.getPatient() re-fetches
         // the full roster per id, which turns this endpoint N+1 over real MIS
@@ -175,6 +182,8 @@ public class EpisodeService {
         }
 
         List<AuditEvent.AuditChange> changes = new java.util.ArrayList<>();
+        Long previousAttendingDoctorId = null;
+        String assignedDoctorEmail = null;
         if (request.getHospitalizationId() != null) {
             changes.addAll(AuditChanges.diff("hospitalizationId", episode.getHospitalizationId(),
                     request.getHospitalizationId(), DataClass.IDENTIFIER));
@@ -194,12 +203,27 @@ public class EpisodeService {
             episode.setHeightCm(request.getHeightCm());
         }
         if (request.getAttendingDoctorId() != null) {
+            boolean currentAttending = java.util.Objects.equals(episode.getAttendingDoctorId(), userId);
+            boolean headOfDepartment = userRepository.findById(userId)
+                    .map(user -> user.getRole() == UserRole.HEAD_OF_DEPARTMENT)
+                    .orElse(false);
+            if (!currentAttending && !headOfDepartment) {
+                throw new AuthorizationDeniedException("Only the attending doctor or head of department can reassign attendance");
+            }
             changes.addAll(AuditChanges.diff("attendingDoctorId", episode.getAttendingDoctorId(),
                     request.getAttendingDoctorId(), DataClass.IDENTIFIER));
+            previousAttendingDoctorId = episode.getAttendingDoctorId();
             episode.setAttendingDoctorId(request.getAttendingDoctorId());
+            assignedDoctorEmail = userRepository.findById(request.getAttendingDoctorId())
+                    .map(user -> user.getEmail())
+                    .orElse(null);
         }
         episode.setUpdatedBy(userId);
         episode = episodeRepository.save(episode);
+        if (assignedDoctorEmail != null) {
+            emailService.sendAttendingDoctorChanged(
+                    assignedDoctorEmail, episode.getId(), previousAttendingDoctorId);
+        }
         auditService.logUpdate("Episode", id, userId, null, "Updated episode fields");
         final Long updatedPatientId = episode.getPatientId();
         final List<AuditEvent.AuditChange> recordedChanges = List.copyOf(changes);

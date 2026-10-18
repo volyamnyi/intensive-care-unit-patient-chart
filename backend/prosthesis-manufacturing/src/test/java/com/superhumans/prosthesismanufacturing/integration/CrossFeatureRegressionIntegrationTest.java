@@ -3,7 +3,7 @@ package com.superhumans.prosthesismanufacturing.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.prosthesismanufacturing.dto.BrakCreateRequest;
@@ -393,16 +393,14 @@ class CrossFeatureRegressionIntegrationTest {
     private String buildValuesForStep(TemplateSnapshotParser.SnapshotStep step) {
         if (STEP_E0029.equals(step.getId())) {
             // default ALLOW1 for auto-advance: both visual+tactile true, notRequired false
-            Map<String, Object> map = new LinkedHashMap<>();
-            map.put(ELEM_F214, true);
-            map.put(ELEM_F215, true);
-            map.put(ELEM_F240, false);
-            try {
-                return objectMapper.writeValueAsString(map);
-            } catch (Exception e) {
-                return "{}";
-            }
-        }
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put(ELEM_F214, true);
+        map.put(ELEM_F215, true);
+        map.put(ELEM_F240, false);
+        // #428 item 5: a fixture that cannot be built must fail the test
+        // loudly, never complete the step with empty values.
+        return fixtureJson(map);
+    }
         Map<String, Object> map = new LinkedHashMap<>();
         for (var el : step.getElements()) {
             if ("CHECKBOX".equals(el.getElementType())) {
@@ -415,11 +413,7 @@ class CrossFeatureRegressionIntegrationTest {
                 map.put(el.getId().toString(), "test");
             }
         }
-        try {
-            return objectMapper.writeValueAsString(map);
-        } catch (Exception e) {
-            return "{}";
-        }
+        return fixtureJson(map);
     }
 
     private String softLinerValues(boolean f214, boolean f215, boolean f240) {
@@ -427,11 +421,7 @@ class CrossFeatureRegressionIntegrationTest {
         map.put(ELEM_F214, f214);
         map.put(ELEM_F215, f215);
         map.put(ELEM_F240, f240);
-        try {
-            return objectMapper.writeValueAsString(map);
-        } catch (Exception e) {
-            return "{}";
-        }
+        return fixtureJson(map);
     }
 
     private String singleCheckboxValues(TemplateSnapshotParser.SnapshotStep step) {
@@ -439,10 +429,18 @@ class CrossFeatureRegressionIntegrationTest {
         for (var el : step.getElements()) {
             map.put(el.getId().toString(), true);
         }
+        return fixtureJson(map);
+    }
+
+    /**
+     * #428 item 5: a fixture that cannot be built must fail the test loudly,
+     * never complete the step with empty values.
+     */
+    private String fixtureJson(Map<String, Object> map) {
         try {
             return objectMapper.writeValueAsString(map);
         } catch (Exception e) {
-            return "{}";
+            throw new IllegalStateException("Test fixture serialization failed", e);
         }
     }
 

@@ -12,8 +12,11 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import lombok.experimental.NonFinal;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -24,17 +27,32 @@ public class EmailService {
     JavaMailSender mailSender;
     DomainAuditEmitter auditEmitter;
 
+    @Value("${app.scheduling.day-close-hour:7}")
+    @NonFinal
+    int dayCloseHour = 7;
+
+    @Value("${app.mail.from:noreply@hospital.local}")
+    @NonFinal
+    String from = "noreply@hospital.local";
+
+    @Value("${app.mail.frontend-base-url:}")
+    @NonFinal
+    String frontendBaseUrl = "";
+
     public void sendEscalationIfUnsigned(ClinicalDay day) {
         if (!Boolean.TRUE.equals(day.getNurseSigned()) || !Boolean.TRUE.equals(day.getDoctorSigned())) {
             String episodeId = day.getEpisode().getId().toString();
-            log.warn("ESCALATION: Clinical day {} (episode {}) closed unsigned at 07:00",
-                    day.getId(), episodeId);
+            String closeTime = "%02d:00".formatted(dayCloseHour);
+            log.warn("ESCALATION: Clinical day {} (episode {}) closed unsigned at {}",
+                    day.getId(), episodeId, closeTime);
             try {
                 SimpleMailMessage msg = new SimpleMailMessage();
+                msg.setFrom(from);
                 msg.setTo("hod@hospital.local");
                 msg.setSubject("Необхідна увага: доба не підписана");
                 msg.setText("Клінічна доба " + day.getId()
-                        + " (епізод " + episodeId + ") закрита без підпису о 07:00.");
+                        + " (епізод " + episodeId + ") закрита без підпису о " + closeTime + "."
+                        + systemLink(episodeId));
                 mailSender.send(msg);
                 log.info("Escalation email sent for clinical day {}", day.getId());
                 recordDelivery(day, AuditEvent.AuditOutcome.SUCCESS, null);
@@ -43,6 +61,39 @@ public class EmailService {
                 recordDelivery(day, AuditEvent.AuditOutcome.FAILURE, "ICU_ESCALATION_EMAIL_FAILED");
             }
         }
+    }
+
+    /**
+     * Notifies the newly assigned attending doctor without making the episode
+     * mutation depend on SMTP availability.
+     */
+    public void sendAttendingDoctorChanged(String recipient, UUID episodeId, Long previousDoctorId) {
+        if (recipient == null || recipient.isBlank()) {
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(from);
+            msg.setTo(recipient);
+            msg.setSubject("Вас призначено відповідальним лікарем");
+            msg.setText("Вас призначено відповідальним лікарем епізоду " + episodeId + "."
+                    + (previousDoctorId == null ? "" : " Попередній лікар: " + previousDoctorId + ".")
+                    + systemLink(episodeId.toString()));
+            mailSender.send(msg);
+            log.info("Attending doctor assignment email sent for episode {}", episodeId);
+        } catch (MailException e) {
+            log.warn("Failed to send attending doctor assignment email for episode {}: {}",
+                    episodeId, e.getMessage());
+        }
+    }
+
+    /** Absolute link to the episode page; omitted when no frontend URL is configured. */
+    private String systemLink(String episodeId) {
+        if (frontendBaseUrl == null || frontendBaseUrl.isBlank()) {
+            return "";
+        }
+        return "\n\nВідкрити карту: " + frontendBaseUrl.strip().replaceAll("/+$", "")
+                + "/icu/doctor/episode/" + episodeId;
     }
 
     private void recordDelivery(ClinicalDay day, AuditEvent.AuditOutcome outcome, String errorCode) {

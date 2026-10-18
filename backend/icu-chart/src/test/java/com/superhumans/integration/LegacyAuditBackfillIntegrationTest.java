@@ -107,12 +107,12 @@ class LegacyAuditBackfillIntegrationTest extends AbstractIntegrationTest {
             assertThat(legacy.get("outcome").asText()).isEqualTo("UNKNOWN_LEGACY");
             assertThat(legacy.get("checksum").asText()).hasSize(64);
             if ("UPDATE".equals(legacy.get("legacyAction").asText())) {
-                assertThat(legacy.get("legacyOldValue").asText()).isEqualTo("probe-old");
+                assertThat(legacy.get("legacyOldValue").isNull()).isTrue();
                 assertThat(legacy.get("legacyIsDeleted").asBoolean()).isTrue();
                 hasDeleted = true;
             }
             if ("CREATE".equals(legacy.get("legacyAction").asText())) {
-                assertThat(legacy.get("legacyNewValue").asText()).isEqualTo("probe-new");
+                assertThat(legacy.get("legacyNewValue").isNull()).isTrue();
             }
         }
         assertThat(hasHttpKind).isTrue();

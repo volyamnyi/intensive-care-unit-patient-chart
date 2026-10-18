@@ -45,6 +45,16 @@ class MultiDatabaseSupportTest {
     }
 
     @Test
+    void resolvePoolMinIdle_defaultsToOneAndNeverExceedsMax() {
+        assertEquals(1, MultiDatabaseSupport.resolvePoolMinIdle(key -> null, 10));
+        assertEquals(1, MultiDatabaseSupport.resolvePoolMinIdle(key -> null, 1));
+        assertEquals(1, MultiDatabaseSupport.resolvePoolMinIdle(key -> "invalid", 10));
+        assertEquals(3, MultiDatabaseSupport.resolvePoolMinIdle(key -> "3", 10));
+        assertEquals(5, MultiDatabaseSupport.resolvePoolMinIdle(key -> "8", 5));
+        assertEquals(0, MultiDatabaseSupport.resolvePoolMinIdle(key -> "0", 5));
+    }
+
+    @Test
     void resolveLogSql_defaultsWhenUnset() {
         assertFalse(MultiDatabaseSupport.resolveLogSql(key -> null));
     }

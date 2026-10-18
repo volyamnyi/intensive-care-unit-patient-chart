@@ -40,7 +40,7 @@ test.describe('TP-LL-02 — Failure terminal state (issue #238)', () => {
     expect(snapshot.description).toBe('Гільза тріснула');
 
     // The failure report PDF renders for the FAILED instance.
-    const pdfRes = await request.get(`${PROSTH}/instances/${instance.id}/pdf`, { headers });
+    const pdfRes = await request.post(`${PROSTH}/instances/${instance.id}/pdf`, { headers });
     expect(pdfRes.ok()).toBeTruthy();
     expect(pdfRes.headers()['content-type']).toContain('application/pdf');
     const pdfText = Buffer.from(await pdfRes.body()).toString('latin1');

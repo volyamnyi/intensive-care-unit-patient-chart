@@ -74,7 +74,7 @@ test.describe.serial('Prescription PDF batch (Form 003-4/о)', () => {
     expect(info.pages).toBeGreaterThanOrEqual(1);
     expect(info.fileName).toBe(`prescription-${listId}.zip`);
 
-    const fileRes = await request.get(`${API}/prescriptions/${listId}/pdf/file`, {
+    const fileRes = await request.post(`${API}/prescriptions/${listId}/pdf/file`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(fileRes.ok()).toBeTruthy();
@@ -94,6 +94,9 @@ test.describe.serial('Prescription PDF batch (Form 003-4/о)', () => {
       // Filenames carry no PII: only the list UUID and the page index.
       expect(entries[i].name).not.toContain(String(patient.id));
     }
+    expect((await request.get(`${API}/prescriptions/${listId}/pdf/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })).status()).toBe(405);
   });
 
   test('single sheet endpoint returns one printable PDF', async ({ request }) => {
@@ -102,17 +105,20 @@ test.describe.serial('Prescription PDF batch (Form 003-4/о)', () => {
     const listId = await ensureMedicationList(request, token, patient.id);
     await ensureMedicationItem(request, token, listId, 'Paracetamol 003-4o');
 
-    const pageRes = await request.get(`${API}/prescriptions/${listId}/pdf/pages/0`, {
+    const pageRes = await request.post(`${API}/prescriptions/${listId}/pdf/pages/0`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(pageRes.ok()).toBeTruthy();
     expect(pageRes.headers()['content-type']).toContain('application/pdf');
     expect(Buffer.from(await pageRes.body()).subarray(0, 5).toString('ascii')).toBe('%PDF-');
 
-    const outOfRange = await request.get(`${API}/prescriptions/${listId}/pdf/pages/999`, {
+    const outOfRange = await request.post(`${API}/prescriptions/${listId}/pdf/pages/999`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(outOfRange.status()).toBe(404);
+    expect((await request.get(`${API}/prescriptions/${listId}/pdf/pages/0`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })).status()).toBe(405);
   });
 
   test('unknown list is 404 and nurse read access holds', async ({ request }) => {

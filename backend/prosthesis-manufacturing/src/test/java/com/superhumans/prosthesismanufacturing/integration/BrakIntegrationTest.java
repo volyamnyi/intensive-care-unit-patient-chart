@@ -2,7 +2,7 @@ package com.superhumans.prosthesismanufacturing.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.dto.AuditLogResponse;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
@@ -79,7 +79,7 @@ class BrakIntegrationTest {
     @Autowired private BrakEventRepository brakEventRepository;
     @Autowired private TemplateSnapshotParser snapshotParser;
     @Autowired private com.superhumans.prosthesismanufacturing.repository.FlowTemplateRepository templateRepository;
-    @Autowired @Qualifier("prosthDataSource") private javax.sql.DataSource prosthDataSource;
+    @Autowired @Qualifier("prosthLazyDataSource") private javax.sql.DataSource prosthDataSource;
     @Autowired @Qualifier("prosthEntityManagerFactory") private EntityManagerFactory emf;
 
     /**
@@ -228,12 +228,13 @@ class BrakIntegrationTest {
 
     @Test
     void createBrak_emitsCanonicalRootWithChildrenInOutbox() {
-        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                "prosthetist", PROSTHETIST, java.util.List.of(() -> "ROLE_PROSTHETIST"));
+        var authentication = new org.springframework.security.authentication.TestingAuthenticationToken(
+                "prosthetist", PROSTHETIST, "ROLE_PROSTHETIST");
         org.springframework.security.core.context.SecurityContextHolder.getContext()
                 .setAuthentication(authentication);
         try {
             UUID instanceId = createInstanceAtBrak();
+            UUID beforeBranchId = instanceId;
             var branch = brakService.createBrakAndBranch(
                     instanceId, new BrakCreateRequest(STAGE_D12, true, false, "примітка 1"), PROSTHETIST);
             assertThat(branch.getNewInstanceId()).isNotNull();
@@ -241,10 +242,14 @@ class BrakIntegrationTest {
             var jdbc = new org.springframework.jdbc.core.JdbcTemplate(prosthDataSource);
             List<String> brakActions = jdbc.queryForList(
                     "SELECT payload::jsonb->>'action' AS action FROM audit_outbox "
-                            + "WHERE payload::jsonb->>'action' LIKE 'prosthetics.brak.%' "
-                            + "OR payload::jsonb->>'action' = 'prosthetics.notification.queue'",
-                    String.class);
-
+                            + "WHERE payload::jsonb->>'action' IN "
+                            + "('prosthetics.brak.confirm', 'prosthetics.brak.branch', "
+                            + "'prosthetics.notification.queue') "
+                            + "AND (payload::jsonb->'target'->>'entityId' IN (?, ?, ?) "
+                            + "OR payload::jsonb->'parentTarget'->>'entityId' IN (?, ?, ?))",
+                     String.class, branch.getBrakEventId().toString(), beforeBranchId.toString(),
+                     branch.getNewInstanceId().toString(), branch.getBrakEventId().toString(),
+                     beforeBranchId.toString(), branch.getNewInstanceId().toString());
             assertThat(brakActions).containsExactlyInAnyOrder(
                     "prosthetics.brak.confirm",
                     "prosthetics.brak.branch",

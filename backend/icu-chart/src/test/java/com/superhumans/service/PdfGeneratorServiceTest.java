@@ -25,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,6 +56,9 @@ class PdfGeneratorServiceTest {
 
     @Mock
     private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
+    @Mock
+    private IcuPdfAuditService pdfAuditService;
 
     @Mock
     private MedicalOrderRepository medicalOrderRepository;
@@ -163,7 +167,7 @@ class PdfGeneratorServiceTest {
     }
 
     @Test
-    void generatePdf_createsAndSavesPdfRecord() {
+    void generatePdf_createsAndSavesPdfRecord() throws Exception {
         when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
         when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
                 .thenReturn(Optional.empty());
@@ -182,7 +186,47 @@ class PdfGeneratorServiceTest {
         verify(generatedPdfRepository, times(1)).save(pdfCaptor.capture());
         assertThat(pdfCaptor.getValue().getFileVersion()).isEqualTo(1);
         assertThat(pdfCaptor.getValue().getGeneratedBy()).isEqualTo(userId);
-        verify(auditService).logAction("GeneratedPdf", clinicalDayId, "GENERATE", userId);
+        assertThat(pdfCaptor.getValue().getChecksum()).hasSize(64)
+                .isEqualTo(java.util.HexFormat.of().formatHex(
+                        MessageDigest.getInstance("SHA-256")
+                                .digest(pdfCaptor.getValue().getFileData())));
+        verify(pdfAuditService).recordGenerated(eq(clinicalDayId), any(UUID.class), eq(userId), eq(1));
+    }
+
+    @Test
+    void generatePdf_nullNoteTextAndMissingScaleReference_doNotAbortDocument() {
+        when(clinicalDayRepository.findById(clinicalDayId)).thenReturn(Optional.of(clinicalDay));
+        when(generatedPdfRepository.findFirstByClinicalDayIdOrderByFileVersionDesc(clinicalDayId))
+                .thenReturn(Optional.empty());
+
+        MedicalNote note = new MedicalNote();
+        note.setAuthorId(userId);
+        note.setRole("DOCTOR");
+        note.setText(null);
+        note.setCreatedAt(null);
+        when(medicalNoteRepository.findByClinicalDayIdOrderByCreatedAtAsc(clinicalDayId))
+                .thenReturn(List.of(note));
+
+        ScaleResult scale = new ScaleResult();
+        scale.setScale(null);
+        scale.setResult("7");
+        scale.setCalculatedAt(null);
+        scale.setCalculatedBy(userId);
+        when(scaleResultRepository.findByClinicalDayIdOrderByCalculatedAtDescIdDesc(clinicalDayId))
+                .thenReturn(List.of(scale));
+
+        when(generatedPdfRepository.save(any(GeneratedPdf.class))).thenAnswer(invocation -> {
+            GeneratedPdf pdf = invocation.getArgument(0);
+            pdf.setId(UUID.randomUUID());
+            return pdf;
+        });
+
+        pdfGeneratorService.generatePdf(clinicalDayId, userId);
+
+        verify(generatedPdfRepository).save(pdfCaptor.capture());
+        assertThat(pdfCaptor.getValue().getFileData()).isNotEmpty();
+        assertThat(new String(pdfCaptor.getValue().getFileData(), java.nio.charset.StandardCharsets.ISO_8859_1))
+                .doesNotContain("null");
     }
 
     @Test

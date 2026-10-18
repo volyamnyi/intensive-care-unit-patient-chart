@@ -40,7 +40,7 @@ test.describe('TP-LL-02 — Full Lifecycle (Фаза 5)', () => {
     expect(await instanceStatus(request, headers, instanceId)).toBe('COMPLETED');
 
     // PDF export renders for the finished process.
-    const pdfRes = await request.get(`${PROSTH}/instances/${instanceId}/pdf`, { headers });
+    const pdfRes = await request.post(`${PROSTH}/instances/${instanceId}/pdf`, { headers });
     expect(pdfRes.ok()).toBeTruthy();
     expect(pdfRes.headers()['content-type']).toContain('application/pdf');
     expect((await pdfRes.body()).length).toBeGreaterThan(0);

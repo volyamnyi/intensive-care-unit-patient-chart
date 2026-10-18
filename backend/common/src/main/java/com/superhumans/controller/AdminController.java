@@ -165,20 +165,26 @@ public class AdminController {
                 .build();
     }
 
-    /** Grant or revoke a permission for a role (RBAC matrix editing). */
-    @PutMapping("/permissions")
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public PermissionMatrixResponse updatePermissionMatrix(
-            @Valid @RequestBody RolePermissionUpdateRequest request,
-            Authentication auth) {
-        UserRole role = userService.parseRole(request.getRole());
-        if (!PermissionCatalog.allCodes().contains(request.getPermissionCode())) {
-            throw new BadRequestException("Невідомий код права: " + request.getPermissionCode());
-        }
-        permissionService.setRolePermission(
-                role, request.getPermissionCode(), request.getGranted());
-        return getPermissionMatrix();
-    }
+/** Grant or revoke a permission for a role (RBAC matrix editing). */
+@PutMapping("/permissions")
+@PreAuthorize("hasRole('ADMINISTRATOR')")
+public PermissionMatrixResponse updatePermissionMatrix(
+@Valid @RequestBody RolePermissionUpdateRequest request,
+Authentication auth) {
+UserRole role = userService.parseRole(request.getRole());
+// #364: GUEST is structurally zero-grant - the onboarding state for first-login
+// directory accounts. Accepting it here would let one matrix mistake elevate
+// every future first-login account at once.
+if (role == UserRole.GUEST) {
+throw new BadRequestException("Роль GUEST не може мати прав - це нульовий стан онбордингу");
+}
+if (!PermissionCatalog.allCodes().contains(request.getPermissionCode())) {
+throw new BadRequestException("Невідомий код права: " + request.getPermissionCode());
+}
+permissionService.setRolePermission(
+role, request.getPermissionCode(), request.getGranted());
+return getPermissionMatrix();
+}
 
     /**
      * Idempotent backfill of {@code audit_logs} into {@code audit_legacy_events}

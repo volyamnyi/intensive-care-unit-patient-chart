@@ -74,8 +74,10 @@ class CorsConfigTest {
 
     @Test
     void suffixPatternOrigin_rejectedAtStartup() {
+        // *.example.com: never-dialled fake host (NoRealMisInTestsTripwireTest
+        // allowlist) — the value is only validated, never dialled.
         ReflectionTestUtils.setField(corsConfig, "allowedOrigins",
-                "https://*.superhumans.com");
+                "https://*.example.com");
 
         org.assertj.core.api.Assertions.assertThatThrownBy(
                         () -> corsConfig.corsConfigurationSource())

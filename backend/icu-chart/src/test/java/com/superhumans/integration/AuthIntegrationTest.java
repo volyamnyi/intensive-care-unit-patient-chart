@@ -2,11 +2,16 @@ package com.superhumans.integration;
 
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
+import com.superhumans.repository.core.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Map;
@@ -14,6 +19,11 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AuthIntegrationTest extends AbstractIntegrationTest {
+
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Test
     void login_withValidDoctorCredentials_returnsToken() {
@@ -176,5 +186,59 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         String rawCookie = setCookieHeaders.get(0);
         assertThat(rawCookie).contains("jwt=");
         assertThat(rawCookie).contains("Max-Age=0");
+    }
+
+    /**
+     * #362: a soft-deleted (admin-disabled) account must not authenticate with
+     * its still-valid password, must leave a FAILED (not success) audit row, and
+     * must disappear from the role listings.
+     */
+    @Test
+    void login_softDeletedAccount_isRejected_notAuditedAsSuccess_andHiddenFromListings() {
+        User probe = User.builder()
+                .login("sec-probe-disabled")
+                .passwordHash(passwordEncoder.encode("probe-pass-1"))
+                .fullName("Disabled Probe")
+                .role(UserRole.DOCTOR)
+                .build();
+        probe.setVersion(0);
+        probe = userRepository.save(probe);
+        try {
+            // Sanity: before the disable the same credentials work and the row is listed.
+            assertThat(restTemplate.postForEntity("/api/auth/login",
+                            new LoginRequest("sec-probe-disabled", "probe-pass-1"), LoginResponse.class)
+                    .getStatusCode()).isEqualTo(HttpStatus.OK);
+            var before = restTemplate.exchange("/api/users/doctors", HttpMethod.GET,
+                    authGet(getDoctorToken()), String.class);
+            assertThat(before.getBody()).contains("sec-probe-disabled");
+
+            // Admin disables the account (soft delete).
+            var disable = restTemplate.exchange("/api/admin/users/{id}", HttpMethod.DELETE,
+                    authGet(getAdminToken()), Void.class, probe.getId());
+            assertThat(disable.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+            // Same valid password: 401, no token, no success audit row.
+            ResponseEntity<LoginResponse> res = restTemplate.postForEntity(
+                    "/api/auth/login", new LoginRequest("sec-probe-disabled", "probe-pass-1"),
+                    LoginResponse.class);
+            assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(res.getBody()).isNull();
+            assertThat(res.getHeaders().getFirst(HttpHeaders.SET_COOKIE)).isNull();
+
+            // The audit trail records the refusal as a failure for this user.
+            var audit = restTemplate.exchange(
+                    "/api/audit?action=LOGIN_FAILED&userId={userId}", HttpMethod.GET,
+                    authGet(getAdminToken()), String.class, probe.getId());
+            assertThat(audit.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(audit.getBody()).contains("LOGIN_FAILED");
+
+            // Disabled staff no longer pollute the signing pickers.
+            var after = restTemplate.exchange("/api/users/doctors", HttpMethod.GET,
+                    authGet(getDoctorToken()), String.class);
+            assertThat(after.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(after.getBody()).doesNotContain("sec-probe-disabled");
+        } finally {
+            userRepository.deleteById(probe.getId());
+        }
     }
 }

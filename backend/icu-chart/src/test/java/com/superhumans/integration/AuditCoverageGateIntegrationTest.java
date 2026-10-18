@@ -34,9 +34,9 @@ class AuditCoverageGateIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void catalog_isSelfConsistent_v1_121Codes() {
+    void catalog_isSelfConsistent_v1_120Codes() {
         var definitions = AuditActionCatalog.definitions();
-        assertThat(definitions).hasSize(121);
+        assertThat(definitions).hasSize(120);
         Set<String> codes = new HashSet<>();
         for (var definition : definitions) {
             assertThat(codes.add(definition.code()))
@@ -50,7 +50,7 @@ class AuditCoverageGateIntegrationTest extends AbstractIntegrationTest {
             assertThat(definition.dataClass()).isNotNull();
             assertThat(definition.criticality()).isNotNull();
         }
-        assertThat(AuditActionCatalog.byCode()).hasSize(121);
+        assertThat(AuditActionCatalog.byCode()).hasSize(120);
     }
 
     @Test

@@ -390,18 +390,50 @@ class PrescriptionControllerTest {
     }
 
     @Test
-    void completeDose_generatesDeterministicUuidFromAuthenticatedUser() throws Exception {
+    void completeDose_delegatesToTheTwoPersonExecutePath() throws Exception {
+        // #359: complete used to mark the dose done on its own. It must now go
+        // through PrescriptionExecutionService.execute, the single implementation
+        // of the two-person rule.
         PrescriptionDayPart part = PrescriptionDayPart.builder()
-                .period("morning").dose("50mg").isPlanned(true).build();
+                .period("morning").dose("50mg").isPlanned(true).isCompleted(true).build();
         part.setId(dayPartId);
-        when(itemService.markCompleted(eq(dayPartId), any())).thenReturn(part);
+        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any()))
+                .thenReturn(PrescriptionExecution.builder().dayPart(part).build());
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
-                        .with(TestSecurityHelper.nurse()))
+                        .with(TestSecurityHelper.nurse())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"actualDose":"50mg","secondPersonLogin":"nurse2",
+                                 "secondPersonPassword":"secret"}"""))
                 .andExpect(status().isOk());
 
-        UUID expectedUuid = UUID.nameUUIDFromBytes("2".getBytes());
-        verify(itemService).markCompleted(eq(dayPartId), eq(expectedUuid));
+        verify(executionService).execute(eq(dayPartId), eq(2L), eq("user"),
+                eq("50mg"), eq("nurse2"), eq("secret"));
+    }
+
+    @Test
+    void completeDose_rejectsARequestWithoutSecondPersonCredentials() throws Exception {
+        // The bypass in #359 was "no second person at all" - that must be a 400,
+        // not a silent completion.
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isBadRequest());
+
+        verify(executionService, never()).execute(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void completeDose_rejectsBlankSecondPersonCredentials() throws Exception {
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
+                        .with(TestSecurityHelper.nurse())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"actualDose":"50mg","secondPersonLogin":" ",
+                                 "secondPersonPassword":" "}"""))
+                .andExpect(status().isBadRequest());
+
+        verify(executionService, never()).execute(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -527,26 +559,38 @@ class PrescriptionControllerTest {
     void completeDose_withNurseRole_returnsOk() throws Exception {
         when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("NURSE");
         PrescriptionDayPart part = PrescriptionDayPart.builder()
-                .period("morning").dose("50mg").isPlanned(true).build();
+                .period("morning").dose("50mg").isPlanned(true).isCompleted(true).build();
         part.setId(dayPartId);
-        when(itemService.markCompleted(eq(dayPartId), any())).thenReturn(part);
+        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any()))
+                .thenReturn(PrescriptionExecution.builder().dayPart(part).build());
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
-                        .with(TestSecurityHelper.nurse()))
-                .andExpect(status().isOk());
+                        .with(TestSecurityHelper.nurse())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(twoPersonBody()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isCompleted").value(true));
     }
 
     @Test
     void completeDose_withHodRole_returnsOk() throws Exception {
         when(jwtTokenProvider.getRoleFromToken(any())).thenReturn("HEAD_OF_DEPARTMENT");
         PrescriptionDayPart part = PrescriptionDayPart.builder()
-                .period("morning").dose("50mg").isPlanned(true).build();
+                .period("morning").dose("50mg").isPlanned(true).isCompleted(true).build();
         part.setId(dayPartId);
-        when(itemService.markCompleted(eq(dayPartId), any())).thenReturn(part);
+        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any()))
+                .thenReturn(PrescriptionExecution.builder().dayPart(part).build());
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
-                        .with(TestSecurityHelper.hod()))
+                        .with(TestSecurityHelper.hod())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(twoPersonBody()))
                 .andExpect(status().isOk());
+    }
+
+    private static String twoPersonBody() {
+        return """
+                {"actualDose":"50mg","secondPersonLogin":"nurse2","secondPersonPassword":"secret"}""";
     }
 
     @Test

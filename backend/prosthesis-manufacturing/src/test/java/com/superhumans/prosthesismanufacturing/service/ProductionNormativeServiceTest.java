@@ -127,11 +127,24 @@ class ProductionNormativeServiceTest {
         ProductionNormativeService.Normative normative =
                 new ProductionNormativeService.Normative(1.5, 7);
 
-        assertThat(ProductionNormativeService.isOverdue(5401L, 3600L, normative)).isTrue();
-        assertThat(ProductionNormativeService.isOverdue(5400L, 3600L, normative)).isFalse();
-        assertThat(ProductionNormativeService.isOverdue(999999L, null, normative)).isFalse();
-        assertThat(ProductionNormativeService.isOverdue(null, 3600L, normative)).isFalse();
-        assertThat(ProductionNormativeService.isOverdue(100L, 0L, normative)).isFalse();
+        assertThat(ProductionNormativeService.isOverdue(FlowInstanceStatus.IN_PROGRESS, 5401L, 3600L, normative)).isTrue();
+        assertThat(ProductionNormativeService.isOverdue(FlowInstanceStatus.IN_PROGRESS, 5400L, 3600L, normative)).isFalse();
+        assertThat(ProductionNormativeService.isOverdue(FlowInstanceStatus.IN_PROGRESS, 999999L, null, normative)).isFalse();
+        assertThat(ProductionNormativeService.isOverdue(null, null, 3600L, normative)).isFalse();
+        assertThat(ProductionNormativeService.isOverdue(FlowInstanceStatus.IN_PROGRESS, 100L, 0L, normative)).isFalse();
+    }
+
+    /** #429 item 2: a terminal item cannot be late, which makes the queue SQL-filterable. */
+    @Test
+    void overdue_neverAppliesToTerminalInstances() {
+        var normative = new ProductionNormativeService.Normative(1.5, 7);
+
+        assertThat(ProductionNormativeService.isOverdue(
+                FlowInstanceStatus.COMPLETED, 999_999L, 60L, normative)).isFalse();
+        assertThat(ProductionNormativeService.isOverdue(
+                FlowInstanceStatus.BRANCHED, 999_999L, 60L, normative)).isFalse();
+        assertThat(ProductionNormativeService.isOverdue(
+                FlowInstanceStatus.IN_PROGRESS, 999_999L, 60L, normative)).isTrue();
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.entity.core.AuditLog;
 import com.superhumans.mapper.AuditLogMapper;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
@@ -94,6 +94,7 @@ class AuditServiceTest {
         auditService = new AuditService(auditLogRepository, mock(AuditLogMapper.class),
                 mock(com.superhumans.audit.AuditEventRecorder.class));
         service = new FlowInstanceService(instanceRepository, templateRepository, orderRepository,
+                mock(com.superhumans.prosthesismanufacturing.service.ProstheticsPatientService.class),
                 executionRepository, resourceUsageRepository,
                 mock(FlowInstanceMapper.class), templateService, failureSnapshotService, pdfService,
                 auditService, mock(com.superhumans.audit.DomainAuditEmitter.class), parser, new ObjectMapper());

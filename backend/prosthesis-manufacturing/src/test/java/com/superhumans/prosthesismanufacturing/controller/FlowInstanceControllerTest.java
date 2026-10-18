@@ -1,9 +1,10 @@
 package com.superhumans.prosthesismanufacturing.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
+import com.superhumans.prosthesismanufacturing.dto.FlowInstancePageResponse;
 import com.superhumans.prosthesismanufacturing.entity.EvidenceFile;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.service.EvidenceFileService;
@@ -61,6 +62,9 @@ class FlowInstanceControllerTest {
     AuditLogRepository auditLogRepository;
     @MockitoBean
     AuditService auditService;
+    /** PIB masking on the list endpoints consults PATIENT_VIEW (#411 item 3). */
+    @MockitoBean
+    com.superhumans.service.PermissionService permissionService;
 
     UUID instanceId = UUID.randomUUID();
     UUID executionId = UUID.randomUUID();
@@ -73,7 +77,7 @@ class FlowInstanceControllerTest {
                 new UsernamePasswordAuthenticationToken("prosthetist1", 1L,
                         List.of(new SimpleGrantedAuthority("ROLE_PROSTHETIST"))));
         when(instanceService.create(any(), eq(1L))).thenReturn(response());
-        when(instanceService.list(any(), any())).thenReturn(List.of(response()));
+        when(instanceService.listPage(any(), any(), eq(0), eq(50), any(Boolean.class))).thenReturn(new FlowInstancePageResponse(List.of(response()), 0, 50, 1, 1));
         when(instanceService.get(eq(instanceId), eq(1L), eq(false))).thenReturn(response());
         when(instanceService.getSnapshot(eq(instanceId), eq(1L), eq(false))).thenReturn(Map.of("stage", "check"));
         when(instanceService.start(eq(instanceId), eq(1L))).thenReturn(response());
@@ -100,6 +104,21 @@ class FlowInstanceControllerTest {
     void list_returnsOk() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/instances"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void listPage_returnsBoundedPageMetadata() throws Exception {
+        when(instanceService.listPage(any(), any(), eq(2), eq(1000), any(Boolean.class)))
+                .thenReturn(new FlowInstancePageResponse(List.of(response()), 2, 100, 251, 3));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/prosthesis-manufacturing/instances/page")
+                        .param("page", "2").param("size", "1000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.size").value(100))
+                .andExpect(jsonPath("$.totalElements").value(251))
+                .andExpect(jsonPath("$.totalPages").value(3));
     }
 
     @Test
@@ -203,11 +222,18 @@ class FlowInstanceControllerTest {
 
     @Test
     void generateReport_returnsPdf() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get(
+        mockMvc.perform(MockMvcRequestBuilders.post(
                         "/api/prosthesis-manufacturing/instances/{id}/pdf", instanceId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"report_" + instanceId + ".pdf\""));
+    }
+
+    @Test
+    void generateReport_getIsNotAllowed() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get(
+                        "/api/prosthesis-manufacturing/instances/{id}/pdf", instanceId))
+                .andExpect(status().isMethodNotAllowed());
     }
 
     @Test

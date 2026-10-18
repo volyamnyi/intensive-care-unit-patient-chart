@@ -75,6 +75,17 @@ public class MisAuthService {
         expiresAtMillis = 0;
     }
 
+    /**
+     * Clears only the token rejected by the upstream. Concurrent requests
+     * that have already installed a newer token must not evict it (#412).
+     */
+    public synchronized void invalidateTokenIfCurrent(String rejectedToken) {
+        if (rejectedToken != null && rejectedToken.equals(cachedToken)) {
+            cachedToken = null;
+            expiresAtMillis = 0;
+        }
+    }
+
     private synchronized String fetchToken() {
         properties.ensureConfigured();
         String url = properties.getBaseUrl() + properties.getTokenPath();

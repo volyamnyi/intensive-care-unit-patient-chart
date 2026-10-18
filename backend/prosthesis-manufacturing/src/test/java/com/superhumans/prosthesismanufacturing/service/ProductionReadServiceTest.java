@@ -1,6 +1,6 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.mis.dto.DocumentMisDTO;
@@ -50,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -454,7 +455,7 @@ class ProductionReadServiceTest {
         free.setCreatedAt(NOW);
         free.setUpdatedAt(NOW);
 
-        when(instanceRepository.findAll()).thenReturn(List.of(a1, a2, b1, free));
+        when(instanceRepository.findAttentionCandidates(eq(null), anyCollection())).thenReturn(List.of(a1, a2, b1, free));
         when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of());
         when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
         User user5 = User.builder().login("p1").fullName("Протезист Один")
@@ -630,37 +631,24 @@ class ProductionReadServiceTest {
     }
 
     @Test
-    void summary_aggregatesScope() {
-        FlowInstance open = baseInstance(FlowInstanceStatus.IN_PROGRESS);
-        open.setId(UUID.randomUUID());
-        open.setAssignedUserId(5L);
-        open.setStartTime(NOW.minusHours(2));
-        open.setCreatedAt(NOW.minusHours(2));
-        open.setUpdatedAt(NOW);
-        FlowInstance paused = baseInstance(FlowInstanceStatus.PAUSED);
-        paused.setId(UUID.randomUUID());
-        paused.setAssignedUserId(5L);
-        paused.setCreatedAt(NOW.minusDays(1));
-        paused.setUpdatedAt(NOW);
-        FlowInstance failed = baseInstance(FlowInstanceStatus.FAILED);
-        failed.setId(UUID.randomUUID());
-        failed.setAssignedUserId(6L);
-        failed.setStartTime(NOW.minusHours(4));
-        failed.setEndTime(NOW.minusHours(3));
-        failed.setCreatedAt(NOW.minusHours(4));
-        failed.setUpdatedAt(NOW.minusHours(3));
-
-        when(instanceRepository.findAll()).thenReturn(List.of(open, paused, failed));
-        when(instanceRepository.findByAssignedUserId(5L)).thenReturn(List.of(open, paused));
-        when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of());
-        when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());
-        when(userRepository.findAllById(anyCollection())).thenReturn(List.of());
-        when(executionRepository.sumActiveSecondsByInstanceIds(anyCollection()))
-                .thenReturn(List.<Object[]>of(new Object[]{open.getId(), 3600L}));
-        when(brakEventRepository.countByInstanceIds(anyCollection()))
-                .thenReturn(List.<Object[]>of(new Object[]{failed.getId(), 1L}));
-        when(instanceRepository.countChildrenByParentIds(anyCollection()))
-                .thenReturn(List.<Object[]>of());
+    void summary_aggregatesScopeWithFlatSqlQueries() {
+        when(instanceRepository.countByStatusGrouped(null)).thenReturn(List.<Object[]>of(
+                new Object[]{FlowInstanceStatus.IN_PROGRESS, 1L},
+                new Object[]{FlowInstanceStatus.PAUSED, 1L},
+                new Object[]{FlowInstanceStatus.FAILED, 1L}));
+        when(instanceRepository.countByStatusGrouped(5L)).thenReturn(List.<Object[]>of(
+                new Object[]{FlowInstanceStatus.IN_PROGRESS, 1L},
+                new Object[]{FlowInstanceStatus.PAUSED, 1L}));
+        when(instanceRepository.countByStatusGrouped(99L)).thenReturn(List.of());
+        when(instanceRepository.countInstancesWithBrak(null)).thenReturn(1L);
+        when(instanceRepository.countInstancesWithBrak(5L)).thenReturn(0L);
+        when(instanceRepository.countInstancesWithBrak(99L)).thenReturn(0L);
+        when(instanceRepository.countInstancesWithRework(null)).thenReturn(0L);
+        when(instanceRepository.countInstancesWithRework(5L)).thenReturn(0L);
+        when(instanceRepository.countInstancesWithRework(99L)).thenReturn(0L);
+        // (7200 open + 3600 finished) / 3 items
+        when(instanceRepository.avgElapsedSeconds(any(), any())).thenReturn(3600.0d);
+        when(instanceRepository.avgActiveSeconds(any())).thenReturn(1200.0d);
 
         var all = service.summary(null);
         assertThat(all.getTotalItems()).isEqualTo(3);
@@ -671,18 +659,51 @@ class ProductionReadServiceTest {
         assertThat(all.getFailed()).isEqualTo(1);
         assertThat(all.getBrakItems()).isEqualTo(1);
         assertThat(all.getReworkItems()).isZero();
-        assertThat(all.getAvgElapsedSeconds()).isEqualTo((2 * 3600L + 0L + 3600L) / 3);
-        assertThat(all.getAvgActiveSeconds()).isEqualTo(3600L / 3);
+        assertThat(all.getAvgElapsedSeconds()).isEqualTo(3600L);
+        assertThat(all.getAvgActiveSeconds()).isEqualTo(1200L);
 
         var own = service.summary(5L);
         assertThat(own.getTotalItems()).isEqualTo(2);
         assertThat(own.getFailed()).isZero();
-        assertThat(own.getAvgElapsedSeconds()).isEqualTo((2 * 3600L) / 2);
 
         var empty = service.summary(99L);
         assertThat(empty.getTotalItems()).isZero();
-        assertThat(empty.getAvgElapsedSeconds()).isNull();
-        assertThat(empty.getAvgActiveSeconds()).isNull();
+        assertThat(empty.getAvgElapsedSeconds()).isEqualTo(3600L);
+    }
+
+    /** #429 item 2: the KPI cards must never materialize the whole table. */
+    @Test
+    void summary_neverTouchesTheInstanceTableItself() {
+        when(instanceRepository.countByStatusGrouped(any())).thenReturn(List.<Object[]>of(
+                new Object[]{FlowInstanceStatus.IN_PROGRESS, 3L}));
+        when(instanceRepository.countInstancesWithBrak(any())).thenReturn(0L);
+        when(instanceRepository.countInstancesWithRework(any())).thenReturn(0L);
+        when(instanceRepository.avgElapsedSeconds(any(), any())).thenReturn(60.0d);
+        when(instanceRepository.avgActiveSeconds(any())).thenReturn(30.0d);
+
+        service.summary(null);
+
+        org.mockito.Mockito.verify(instanceRepository, org.mockito.Mockito.never()).findAll();
+        org.mockito.Mockito.verify(instanceRepository, org.mockito.Mockito.never())
+                .findByAssignedUserId(any());
+    }
+
+    @Test
+    void summary_pausedGroupCoversEveryBlockedStatus() {
+        when(instanceRepository.countByStatusGrouped(null)).thenReturn(List.<Object[]>of(
+                new Object[]{FlowInstanceStatus.PAUSED, 2L},
+                new Object[]{FlowInstanceStatus.BLOCKED_PATIENT, 3L},
+                new Object[]{FlowInstanceStatus.BLOCKED_MATERIAL, 1L}));
+        when(instanceRepository.countInstancesWithBrak(any())).thenReturn(0L);
+        when(instanceRepository.countInstancesWithRework(any())).thenReturn(0L);
+        when(instanceRepository.avgElapsedSeconds(any(), any())).thenReturn(null);
+        when(instanceRepository.avgActiveSeconds(any())).thenReturn(null);
+
+        var summary = service.summary(null);
+
+        assertThat(summary.getPaused()).isEqualTo(6);
+        assertThat(summary.getAvgElapsedSeconds()).isNull();
+        assertThat(summary.getAvgActiveSeconds()).isNull();
     }
 
     @Test
@@ -708,7 +729,9 @@ class ProductionReadServiceTest {
         clean.setCreatedAt(NOW.minusHours(1));
         clean.setUpdatedAt(NOW);
 
-        when(instanceRepository.findAll())
+        // The SQL pre-filter returns only the rows that can carry a flag; the
+        // completed-without-history rows never arrive here at all.
+        when(instanceRepository.findAttentionCandidates(eq(null), anyCollection()))
                 .thenReturn(List.of(clean, overdue, failed));
         when(orderRepository.findWithPatientByIds(anyCollection())).thenReturn(List.of());
         when(templateRepository.findAllById(anyCollection())).thenReturn(List.of());

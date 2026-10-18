@@ -1,7 +1,7 @@
 package com.superhumans.medicationsheet.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.audit.AuditActionDefinition.ActionType;
 import com.superhumans.audit.AuditActionDefinition.EventClass;

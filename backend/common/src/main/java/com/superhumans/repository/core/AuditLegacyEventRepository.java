@@ -1,6 +1,7 @@
 package com.superhumans.repository.core;
 
 import com.superhumans.entity.core.AuditLegacyEvent;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,9 +39,19 @@ public interface AuditLegacyEventRepository extends JpaRepository<AuditLegacyEve
         throw new UnsupportedOperationException("Legacy audit events cannot be deleted");
     }
 
-    boolean existsBySourceTableAndSourceId(String sourceTable, UUID sourceId);
-
     Optional<AuditLegacyEvent> findBySourceTableAndSourceId(String sourceTable, UUID sourceId);
+
+    /**
+     * Batched lookup for the backfill's per-page existence and checksum pass.
+     *
+     * <p>Explicit JPQL: the derived name {@code findBySourceTableAndSourceIds}
+     * parses {@code SourceIds} as a property and fails at context startup.
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT e FROM AuditLegacyEvent e "
+            + "WHERE e.sourceTable = :sourceTable AND e.sourceId IN :sourceIds")
+    List<AuditLegacyEvent> findBySourceTableAndSourceIds(
+            @org.springframework.data.repository.query.Param("sourceTable") String sourceTable,
+            @org.springframework.data.repository.query.Param("sourceIds") Collection<UUID> sourceIds);
 
     List<AuditLegacyEvent> findByLegacyEntityAndLegacyEntityIdOrderByOccurredAtAsc(
             String legacyEntity, UUID legacyEntityId);

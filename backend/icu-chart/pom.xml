@@ -71,6 +71,13 @@
             <version>7.0.5</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.superhumans</groupId>
+            <artifactId>common</artifactId>
+            <version>${project.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

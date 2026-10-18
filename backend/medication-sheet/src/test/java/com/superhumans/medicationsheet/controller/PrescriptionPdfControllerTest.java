@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -123,11 +124,12 @@ class PrescriptionPdfControllerTest {
                 zip.closeEntry();
             }
         }
-        when(prescriptionPdfService.info(id))
-                .thenReturn(new PrescriptionPdfService.PdfBatchInfo(2, "prescription-" + id + ".zip"));
-        when(prescriptionPdfService.generateZip(eq(id), any())).thenReturn(out.toByteArray());
+        when(prescriptionPdfService.generateZipBatch(eq(id), any()))
+                .thenReturn(new PrescriptionPdfService.PdfBatchDownload(
+                        new PrescriptionPdfService.PdfBatchInfo(2, "prescription-" + id + ".zip"),
+                        out.toByteArray()));
 
-        MvcResult result = mockMvc.perform(get("/api/prescriptions/{id}/pdf/file", id)
+        MvcResult result = mockMvc.perform(post("/api/prescriptions/{id}/pdf/file", id)
                         .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Total-Pages", "2"))
@@ -136,6 +138,7 @@ class PrescriptionPdfControllerTest {
                 .andReturn();
 
         byte[] body = result.getResponse().getContentAsByteArray();
+        org.mockito.Mockito.verify(prescriptionPdfService, org.mockito.Mockito.never()).info(id);
         assertThat(body[0]).isEqualTo((byte) 'P');
         assertThat(body[1]).isEqualTo((byte) 'K');
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(body))) {
@@ -157,7 +160,7 @@ class PrescriptionPdfControllerTest {
         when(prescriptionPdfService.generatePage(eq(id), eq(1), any())).thenReturn(page);
 
         MvcResult result = mockMvc.perform(
-                        get("/api/prescriptions/{id}/pdf/pages/{pageIndex}", id, 1)
+                        post("/api/prescriptions/{id}/pdf/pages/{pageIndex}", id, 1)
                                 .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isOk())
                 .andExpect(header().string(
@@ -187,8 +190,19 @@ class PrescriptionPdfControllerTest {
         when(prescriptionPdfService.generatePage(eq(id), eq(9), any()))
                 .thenThrow(new NotFoundException("Сторінку PDF не знайдено: 9"));
 
-        mockMvc.perform(get("/api/prescriptions/{id}/pdf/pages/{pageIndex}", id, 9)
-                        .with(TestSecurityHelper.doctor()))
+        mockMvc.perform(post("/api/prescriptions/{id}/pdf/pages/{pageIndex}", id, 9)
+                .with(TestSecurityHelper.doctor()))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void pdfRenderGetRoutes_areMethodNotAllowed() throws Exception {
+        UUID id = UUID.randomUUID();
+        mockMvc.perform(get("/api/prescriptions/{id}/pdf/file", id)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(get("/api/prescriptions/{id}/pdf/pages/{pageIndex}", id, 0)
+                        .with(TestSecurityHelper.doctor()))
+                .andExpect(status().isMethodNotAllowed());
     }
 }

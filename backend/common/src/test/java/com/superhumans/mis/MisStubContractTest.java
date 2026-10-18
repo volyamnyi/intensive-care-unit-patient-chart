@@ -10,6 +10,7 @@ import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.service.AuditService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,7 +42,7 @@ class MisStubContractTest {
     @BeforeEach
     void setUp() {
         client = mock(MisApiClient.class);
-        service = new MisServiceImpl(client, mock(AuditService.class));
+        service = new MisServiceImpl(client, mock(AuditService.class), new SimpleMeterRegistry());
         JsonNode fixtures = loadFixtures();
         when(client.callMethod(MisServiceImpl.SPI_PATIENT_PROCEDURE))
                 .thenReturn(wrap("spiPatientProsthesCheck", fixtures.get("patients")));

@@ -38,7 +38,7 @@ test.describe('Patient API', () => {
   test('search by name fragment filters results', async ({ request }) => {
     const named = patients.find((p) => typeof p.fullName === 'string' && p.fullName.trim().length >= 2);
     if (!named) {
-      test.skip();
+      test.skip(false, 'MIS roster has no patient with a fullName (>= 2 chars) to substring-search');
       return;
     }
     // Use a middle fragment of the full name so the query is a real substring, not the whole name.

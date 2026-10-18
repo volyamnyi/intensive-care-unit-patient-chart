@@ -305,9 +305,11 @@ describe('prescriptionApi', () => {
     expect(mockClient.delete).toHaveBeenCalledWith('/prescriptions/items/item-1/days/day-1');
   });
 
-  it('completeDose puts to /prescriptions/day-parts/:id/complete', () => {
-    prescriptionApi.completeDose('part-1');
-    expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/complete');
+  it('completeDose puts the two-person body to /prescriptions/day-parts/:id/complete', () => {
+    // #359: complete carries the same second-nurse credentials as execute.
+    const body = { actualDose: '5mg', secondPersonLogin: 'nurse2', secondPersonPassword: 'nurse123' };
+    prescriptionApi.completeDose('part-1', body);
+    expect(mockClient.put).toHaveBeenCalledWith('/prescriptions/day-parts/part-1/complete', body);
   });
 
   it('executeDose posts to /prescriptions/day-parts/:id/execute', () => {
@@ -325,14 +327,14 @@ describe('prescriptionApi', () => {
     expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/list-1/pdf/info');
   });
 
-  it('getPdfZip downloads the ZIP batch as blob', () => {
-    prescriptionApi.getPdfZip('list-1');
-    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/list-1/pdf/file', { responseType: 'blob' });
+  it('generatePdfZip POSTs the ZIP render action as blob', () => {
+    prescriptionApi.generatePdfZip('list-1');
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/list-1/pdf/file', undefined, { responseType: 'blob' });
   });
 
-  it('getPdfPage downloads one sheet as blob', () => {
-    prescriptionApi.getPdfPage('list-1', 2);
-    expect(mockClient.get).toHaveBeenCalledWith('/prescriptions/list-1/pdf/pages/2', { responseType: 'blob' });
+  it('generatePdfPage POSTs one sheet render action as blob', () => {
+    prescriptionApi.generatePdfPage('list-1', 2);
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/list-1/pdf/pages/2', undefined, { responseType: 'blob' });
   });
 });
 
@@ -345,5 +347,30 @@ describe('vitalSignApi', () => {
   it('create posts to /vital-signs', () => {
     vitalSignApi.create({ pulse: 80 });
     expect(mockClient.post).toHaveBeenCalledWith('/vital-signs', { pulse: 80 });
+  });
+
+  it('getGrid ensures via POST first - a GET must never provision (#365)', async () => {
+    await vitalSignApi.getGrid('list-1');
+    expect(mockClient.post).toHaveBeenCalledWith('/vital-signs/grid', null,
+      { params: { prescriptionListId: 'list-1' } });
+  });
+
+  it('getGrid falls back to the pure GET when provisioning is forbidden', async () => {
+    mockClient.post.mockRejectedValueOnce({ response: { status: 403 } });
+    mockClient.get.mockResolvedValueOnce({ data: [] });
+
+    await vitalSignApi.getGrid('list-1');
+
+    expect(mockClient.get).toHaveBeenCalledWith('/vital-signs/grid',
+      { params: { prescriptionListId: 'list-1' } });
+  });
+
+  it('getGrid rethrows non-403 failures instead of masking them', async () => {
+    mockClient.post.mockRejectedValueOnce({ response: { status: 500 } });
+
+    await expect(vitalSignApi.getGrid('list-1')).rejects.toMatchObject({
+      response: { status: 500 },
+    });
+    expect(mockClient.get).not.toHaveBeenCalled();
   });
 });

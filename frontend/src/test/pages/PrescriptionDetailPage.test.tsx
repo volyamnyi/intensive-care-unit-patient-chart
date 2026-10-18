@@ -45,9 +45,9 @@ vi.mock('../../api/medication', () => ({
     getByPatient: vi.fn(),
     getInteractions: (...a: unknown[]) => mockGetInteractions(...a),
     getMedicineCatalog: () => Promise.resolve({ data: [] }),
-    getPdfZip: (...a: unknown[]) => mockGetPdfZip(...a),
+    generatePdfZip: (...a: unknown[]) => mockGetPdfZip(...a),
     getPdfInfo: (...a: unknown[]) => mockGetPdfInfo(...a),
-    getPdfPage: (...a: unknown[]) => mockGetPdfPage(...a),
+    generatePdfPage: (...a: unknown[]) => mockGetPdfPage(...a),
   },
   vitalSignApi: {
     getGrid: (...a: unknown[]) => mockGetGrid(...a),
@@ -101,7 +101,6 @@ function makeList() {
     departmentId: null,
     documentName: 'Листок призначень',
     status: 'Active' as const,
-    editingUserId: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   };

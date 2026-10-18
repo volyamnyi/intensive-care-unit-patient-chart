@@ -1,12 +1,13 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
+import com.superhumans.prosthesismanufacturing.dto.FlowInstancePageResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
@@ -15,8 +16,10 @@ import com.superhumans.prosthesismanufacturing.dto.ResourceUsageResponse;
 import com.superhumans.prosthesismanufacturing.dto.StepCompleteRequest;
 import com.superhumans.prosthesismanufacturing.dto.StepExecutionResponse;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstance;
+import com.superhumans.prosthesismanufacturing.entity.FlowTemplate;
 import com.superhumans.prosthesismanufacturing.entity.FlowInstanceStatus;
 import com.superhumans.prosthesismanufacturing.entity.ProstheticsOrder;
+import com.superhumans.prosthesismanufacturing.entity.ProstheticsPatient;
 import com.superhumans.prosthesismanufacturing.entity.ResourceUsage;
 import com.superhumans.prosthesismanufacturing.entity.StepExecution;
 import com.superhumans.prosthesismanufacturing.entity.StepExecutionStatus;
@@ -41,8 +44,13 @@ import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.service.AuditService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -50,6 +58,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,10 +68,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FlowInstanceService {
+
+    static final int DEFAULT_INSTANCE_PAGE_SIZE = 50;
+    static final int MAX_INSTANCE_PAGE_SIZE = 100;
 
     /** Transition rule for MEASUREMENT steps: at least this many filled values to proceed. */
     private static final int MIN_MEASUREMENT_VALUES = 3;
@@ -169,7 +182,16 @@ public class FlowInstanceService {
         orderRepository.findById(instance.getOrderId())
                 .ifPresent(o -> {
                     response.setOrderNumber(o.getOrderNumber());
-                    response.setPatientPib(resolvePatientPib(o));
+                    // Local PIB only — no MIS call here (#383). This mapper runs
+                    // inside the caller's write transaction (create/start/
+                    // advance/pause/resume/fail/completeStep) and inside the
+                    // controller's read transaction on GET /instances/{id}; a
+                    // roster HTTP call there would pin all four chained pool
+                    // connections for the duration of the external call.
+                    // The MIS-resolved name is applied by the batched list paths
+                    // ({@link #toResponses}) and by the eligibility/order
+                    // services, which read MIS outside any transaction.
+                    response.setPatientPib(o.getPatient() == null ? null : o.getPatient().getPib());
                 });
         // Surface values from completed steps so the wizard can render read-only
         // summaries of earlier steps (e.g. the measurement form carried forward
@@ -524,26 +546,160 @@ public class FlowInstanceService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
     public List<FlowInstanceResponse> list(Long assigneeId, String status) {
-        List<FlowInstance> instances;
-        if (assigneeId != null && status != null) {
-            instances = instanceRepository.findByAssignedUserIdAndStatus(assigneeId,
-                    FlowInstanceStatus.valueOf(status));
+        return listPage(assigneeId, status, 0, DEFAULT_INSTANCE_PAGE_SIZE, true).content();
+    }
+
+    public FlowInstancePageResponse listPage(Long assigneeId, String status, int requestedPage,
+            int requestedSize) {
+        return listPage(assigneeId, status, requestedPage, requestedSize, true);
+    }
+
+    /**
+     * Paged, batch-enriched instance list (#411 item 3).
+     *
+     * <p>Enrichment is deliberately batched: one execution query, one template
+     * query and one order query for the whole page instead of three per row,
+     * which is what turned the old unbounded {@code findAll()} into a
+     * super-linear endpoint. PIB is resolved in a single MIS roster fetch per
+     * page and masked entirely unless the caller holds PATIENT_VIEW.
+     *
+     * @param patientView whether the caller may see patient identifiers
+     */
+    public FlowInstancePageResponse listPage(Long assigneeId, String status, int requestedPage,
+            int requestedSize, boolean patientView) {
+        int pageNumber = Math.max(0, requestedPage);
+        int size = Math.min(Math.max(requestedSize, 1), MAX_INSTANCE_PAGE_SIZE);
+        Sort stable = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("id"));
+        Pageable pageable = PageRequest.of(pageNumber, size, stable);
+        FlowInstanceStatus statusFilter = status == null ? null : FlowInstanceStatus.valueOf(status);
+        Page<FlowInstance> page;
+        if (assigneeId != null && statusFilter != null) {
+            page = instanceRepository.findByAssignedUserIdAndStatus(assigneeId, statusFilter, pageable);
         } else if (assigneeId != null) {
-            instances = instanceRepository.findByAssignedUserId(assigneeId);
-        } else if (status != null) {
-            instances = instanceRepository.findByStatus(FlowInstanceStatus.valueOf(status));
+            page = instanceRepository.findByAssignedUserId(assigneeId, pageable);
+        } else if (statusFilter != null) {
+            page = instanceRepository.findByStatus(statusFilter, pageable);
         } else {
-            instances = instanceRepository.findAll();
+            page = instanceRepository.findAll(pageable);
         }
-        return instances.stream()
-                // Id tiebreaker: identical requests return identical order
-                // (#411 item 3; DB paging stays a follow-up).
-                .sorted(Comparator.comparing(FlowInstance::getCreatedAt).reversed()
-                        .thenComparing(FlowInstance::getId))
-                .map(this::toResponse)
-                .toList();
+        List<FlowInstanceResponse> content = toResponses(page.getContent(), patientView);
+        return new FlowInstancePageResponse(content, page.getNumber(), page.getSize(),
+                page.getTotalElements(), page.getTotalPages());
+    }
+
+    /** Batch equivalent of {@link #toResponse(FlowInstance)} for a whole page. */
+    public List<FlowInstanceResponse> toResponses(List<FlowInstance> instances, boolean patientView) {
+        if (instances == null || instances.isEmpty()) {
+            return List.of();
+        }
+        List<FlowInstanceResponse> responses = new ArrayList<>(instances.size());
+        List<UUID> instanceIds = new ArrayList<>(instances.size());
+        for (FlowInstance instance : instances) {
+            FlowInstanceResponse response = instanceMapper.toResponse(instance);
+            responses.add(response);
+            if (instance != null && response != null) {
+                instanceIds.add(instance.getId());
+            }
+        }
+        if (instanceIds.isEmpty()) {
+            return responses;
+        }
+
+        Map<UUID, List<StepExecution>> executionsByInstance = executionRepository
+                .findByInstanceIdIn(instanceIds)
+                .stream()
+                .collect(Collectors.groupingBy(execution -> execution.getInstance().getId()));
+        Map<UUID, FlowTemplate> templates = templateRepository
+                .findAllById(instances.stream()
+                        .filter(Objects::nonNull)
+                        .map(FlowInstance::getTemplateId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList())
+                .stream()
+                .collect(Collectors.toMap(FlowTemplate::getId, t -> t));
+        List<UUID> orderIds = instances.stream()
+                        .filter(Objects::nonNull)
+                        .map(FlowInstance::getOrderId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+        Map<UUID, ProstheticsOrder> orders = orderRepository
+                .findWithPatientByIds(orderIds)
+                .stream()
+                .collect(Collectors.toMap(ProstheticsOrder::getId, o -> o));
+        Map<String, String> pibByPatientId = patientView
+                ? resolvePatientPibs(orders.values())
+                : Map.of();
+
+        for (int index = 0; index < instances.size(); index++) {
+            FlowInstance instance = instances.get(index);
+            FlowInstanceResponse response = responses.get(index);
+            if (instance == null || response == null) {
+                continue;
+            }
+            List<StepExecution> executions = executionsByInstance
+                    .getOrDefault(instance.getId(), List.of());
+            UUID stepId = instance.getCurrentStepId();
+            if (stepId != null) {
+                executions.stream()
+                        .filter(e -> stepId.equals(e.getStepId())
+                                && e.getStatus() == StepExecutionStatus.IN_PROGRESS)
+                        .findFirst()
+                        .ifPresent(e -> response.setCurrentExecutionId(e.getId()));
+            }
+            FlowTemplate template = templates.get(instance.getTemplateId());
+            if (template != null) {
+                response.setTemplateName(template.getName());
+            }
+            ProstheticsOrder order = orders.get(instance.getOrderId());
+            if (order != null) {
+                response.setOrderNumber(order.getOrderNumber());
+                if (patientView) {
+                    response.setPatientPib(resolvePatientPib(order, pibByPatientId));
+                }
+            }
+            Map<UUID, String> priorValues = new LinkedHashMap<>();
+            for (StepExecution e : executions) {
+                if (e.getStatus() == StepExecutionStatus.COMPLETED && StringUtils.hasText(e.getValues())) {
+                    priorValues.put(e.getStepId(), e.getValues());
+                }
+            }
+            if (!priorValues.isEmpty()) {
+                response.setPriorStepValues(priorValues);
+            }
+            if (stepId != null && StringUtils.hasText(instance.getTemplateSnapshot())) {
+                try {
+                    SnapshotTemplate snapshot = snapshotParser.parse(instance.getTemplateSnapshot());
+                    SnapshotStage currentStage = findStage(snapshot, instance.getCurrentStageId());
+                    response.setCurrentStageName(currentStage.getName());
+                    response.setCurrentStepName(findStep(currentStage, stepId).getName());
+                } catch (BadRequestException ignored) {
+                    // stage/step may be absent for NEW / terminal statuses
+                }
+            }
+        }
+        return responses;
+    }
+
+    /** One MIS roster fetch for every distinct external patient on the page. */
+    private Map<String, String> resolvePatientPibs(Collection<ProstheticsOrder> orders) {
+        Set<String> ids = orders.stream()
+                .map(ProstheticsOrder::getPatient)
+                .filter(Objects::nonNull)
+                .map(ProstheticsPatient::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return patientService.getPibs(ids);
+        } catch (Exception e) {
+            log.warn("Batched PIB resolution failed for {} patients: {}", ids.size(), e.getMessage());
+            return Map.of();
+        }
     }
 
     // readOnly: pure read, no audit emit (the view fires at the controller
@@ -568,7 +724,7 @@ public class FlowInstanceService {
         try {
             return objectMapper.readValue(json, new TypeReference<LinkedHashMap<String, Object>>() {
             });
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new BadRequestException("Snapshot could not be parsed");
         }
     }
@@ -897,7 +1053,7 @@ public class FlowInstanceService {
         try {
             return objectMapper.readValue(valuesJson, new TypeReference<LinkedHashMap<String, Object>>() {
             });
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new BadRequestException("Step values are not valid JSON");
         }
     }
@@ -994,23 +1150,15 @@ public class FlowInstanceService {
     }
 
     /**
-     * Resolves patient full name via the MIS Integration Layer (single source of
-     * truth for patient demographics). Falls back to the locally stored name when
-     * the MIS layer is unavailable (e.g. unit tests without Spring context).
+     * PIB from a batched roster fetch, falling back to the locally stored value
+     * when MIS has no entry.
      */
-    private String resolvePatientPib(ProstheticsOrder order) {
+    private String resolvePatientPib(ProstheticsOrder order, Map<String, String> pibByPatientId) {
         if (order.getPatient() == null) {
             return null;
         }
         String localPib = order.getPatient().getPib();
-        try {
-            // Direct injection (#427 item 5): the old SpringContext.getBean
-            // lookup hid the dependency (renames failed at runtime) and ran
-            // once per listed row (the N+1 itself is tracked in #383).
-            var response = patientService.get(order.getPatient().getId());
-            return response == null ? localPib : response.getPib();
-        } catch (Exception e) {
-            return localPib;
-        }
+        String resolved = pibByPatientId.get(order.getPatient().getId());
+        return resolved == null ? localPib : resolved;
     }
 }

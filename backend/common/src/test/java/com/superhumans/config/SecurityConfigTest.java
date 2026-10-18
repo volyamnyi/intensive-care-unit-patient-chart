@@ -20,6 +20,7 @@ import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.TestPropertySource;
@@ -39,6 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * (see {@link SecurityConfigSslTest}) and the {@link SecurityRuleContributor}
  * extension point that the config-move refactoring introduced.
  */
+@ActiveProfiles("security-fixture")
 @WebMvcTest(SecurityFixtureController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
 // Pins the api-docs-ENABLED contract (#370 item 3); the disabled-by-default
@@ -241,6 +243,7 @@ class SecurityConfigTest {
  * Disabled-by-default contract (#370 item 3): without the flag, anonymous
  * catalogue reads are denied.
  */
+@ActiveProfiles("security-fixture")
 @WebMvcTest(SecurityFixtureController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
 @TestPropertySource(properties = "springdoc.api-docs.enabled=false")

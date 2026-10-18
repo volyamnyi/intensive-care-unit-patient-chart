@@ -226,7 +226,9 @@ class ProstheticsEligibilityServiceTest {
                 new ProstheticsEligibilityService(misService, orderService,
                         patientService, patientRepository, clock);
         when(misService.getPatientsUnderTreatment())
-                .thenReturn(List.of(misPatient(900001L, 19L)));
+                .thenReturn(List.of(misPatient(900001L, 19L)),
+                        List.of(misPatient(900001L, 19L)),
+                        List.of(misPatient(900001L, 19L)), List.of());
         when(orderService.list("900001", null)).thenReturn(List.of(order("PR-1")));
         when(misService.getPatientDocuments(900001L))
                 .thenReturn(List.of(misDocument(120L, "u")));
@@ -240,6 +242,10 @@ class ProstheticsEligibilityServiceTest {
         clock.advance(Duration.ofMinutes(2));
         ticking.getCandidates();
         verify(misService, times(2)).getPatientDocuments(900001L);
+
+        clock.advance(Duration.ofMinutes(6));
+        assertThat(ticking.getCandidates()).isEmpty();
+        assertThat(ticking.cachedDocumentCount()).isZero();
     }
 
     @Test

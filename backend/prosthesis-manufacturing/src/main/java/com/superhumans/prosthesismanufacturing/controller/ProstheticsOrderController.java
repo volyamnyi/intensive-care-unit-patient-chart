@@ -81,7 +81,7 @@ public class ProstheticsOrderController {
      * executable.
      */
     @PostMapping("/provision")
-    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
+    @PreAuthorize("@permissionService.has('PROSTHETICS_ORDER_MANAGE')")
     @Operation(summary = "Provision a local order from an MIS order document")
     public com.superhumans.prosthesismanufacturing.dto.ProstheticsOrderResponse provision(
             @jakarta.validation.Valid @RequestBody

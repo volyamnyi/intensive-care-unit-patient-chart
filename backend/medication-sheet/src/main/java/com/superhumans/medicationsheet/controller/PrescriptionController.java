@@ -11,6 +11,7 @@ import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.pdf.PrescriptionPdfService;
 import com.superhumans.mis.MisService;
+import com.superhumans.medicationsheet.entity.PrescriptionExecution;
 import com.superhumans.medicationsheet.service.PrescriptionExecutionService;
 import com.superhumans.medicationsheet.service.PrescriptionItemService;
 import com.superhumans.medicationsheet.service.PrescriptionListService;
@@ -198,17 +199,33 @@ public class PrescriptionController {
         return prescriptionDayPartMapper.toResponse(itemService.planDose(dayPartId, req.getDose(), currentUserUuid, currentUserId));
     }
 
+    /**
+     * Completes a day part through the same two-person path as
+     * {@code POST /day-parts/{id}/execute}.
+     *
+     * <p>This endpoint used to set {@code isCompleted} directly, with no
+     * second-person authentication and no {@code PrescriptionExecution} row, so a
+     * single nurse could bypass the server-owned 2P dose rule by calling this
+     * instead of {@code execute} (issue #359). It now delegates to
+     * {@code PrescriptionExecutionService.execute}, so the rule has exactly one
+     * implementation and no execution record can be skipped.
+     */
     @PreAuthorize("@permissionService.has('PRESCRIPTION_EXECUTE')")
     @PutMapping("/day-parts/{dayPartId}/complete")
-    @Operation(summary = "Complete day part", description = "Marks a day part as completed. Requires NURSE or HEAD_OF_DEPARTMENT role.")
+    @Operation(summary = "Complete day part", description = "Completes a day part. Requires the same two-person authentication as the execute endpoint: a different nurse's login and password. Creates the execution record.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Day part completed successfully")
+            @ApiResponse(responseCode = "200", description = "Day part completed successfully"),
+            @ApiResponse(responseCode = "400", description = "Completion failed - invalid second-person credentials, same person, or non-nurse second person")
     })
-    public PrescriptionDayPartResponse completeDose(@PathVariable UUID dayPartId) {
+    public PrescriptionDayPartResponse completeDose(
+            @PathVariable UUID dayPartId,
+            @Valid @RequestBody PrescriptionExecuteRequest req) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId = (Long) auth.getCredentials();
-        UUID currentUserUuid = UUID.nameUUIDFromBytes(currentUserId.toString().getBytes());
-        return prescriptionDayPartMapper.toResponse(itemService.markCompleted(dayPartId, currentUserUuid));
+        String currentUserLogin = (String) auth.getPrincipal();
+        PrescriptionExecution executed = executionService.execute(dayPartId, currentUserId, currentUserLogin,
+                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword());
+        return prescriptionDayPartMapper.toResponse(executed.getDayPart());
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
@@ -314,7 +331,7 @@ public class PrescriptionController {
         return new PrescriptionPdfInfoResponse(info.pages(), info.fileName());
     }
 
-    @GetMapping(value = "/{id}/pdf/file", produces = "application/zip")
+    @PostMapping(value = "/{id}/pdf/file", produces = "application/zip")
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Download prescription PDF batch (Form 003-4/о)",
             description = "Returns a ZIP with one PDF file per form sheet "
@@ -326,8 +343,15 @@ public class PrescriptionController {
     public ResponseEntity<byte[]> pdfFile(@PathVariable UUID id) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId = (Long) auth.getCredentials();
-        PrescriptionPdfService.PdfBatchInfo info = prescriptionPdfService.info(id);
-        byte[] zip = prescriptionPdfService.generateZip(id, currentUserId);
+        final PrescriptionPdfService.PdfBatchDownload batch;
+        try {
+            batch = prescriptionPdfService.generateZipBatch(id, currentUserId);
+        } catch (IllegalStateException renderFailure) {
+            emitPdfFailure(id, "medication.pdf.generate");
+            throw renderFailure;
+        }
+        PrescriptionPdfService.PdfBatchInfo info = batch.info();
+        byte[] zip = batch.content();
         return ResponseEntity.ok()
                 .header("Cache-Control", "no-store")
                 .header("X-Content-Type-Options", "nosniff")
@@ -338,7 +362,7 @@ public class PrescriptionController {
                 .body(zip);
     }
 
-    @GetMapping(value = "/{id}/pdf/pages/{pageIndex}", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PostMapping(value = "/{id}/pdf/pages/{pageIndex}", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Download one prescription PDF sheet (Form 003-4/о)",
             description = "Returns a single form sheet (0-based pageIndex) for in-module printing. "
@@ -350,7 +374,13 @@ public class PrescriptionController {
     public ResponseEntity<byte[]> pdfPage(@PathVariable UUID id, @PathVariable int pageIndex) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId = (Long) auth.getCredentials();
-        byte[] pdf = prescriptionPdfService.generatePage(id, pageIndex, currentUserId);
+        final byte[] pdf;
+        try {
+            pdf = prescriptionPdfService.generatePage(id, pageIndex, currentUserId);
+        } catch (IllegalStateException renderFailure) {
+            emitPdfFailure(id, "medication.pdf.download");
+            throw renderFailure;
+        }
         return ResponseEntity.ok()
                 .header("Cache-Control", "no-store")
                 .header("X-Content-Type-Options", "nosniff")
@@ -360,5 +390,20 @@ public class PrescriptionController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(pdf.length)
                 .body(pdf);
+    }
+
+    private void emitPdfFailure(UUID listId, String action) {
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("pdf")
+                .action(action)
+                .actionType(ActionType.GENERATE)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.FAILURE)
+                .errorCode("MEDICATION_PDF_RENDER_FAILED")
+                .source(AuditEvent.AuditSource.API)
+                .build());
     }
 }

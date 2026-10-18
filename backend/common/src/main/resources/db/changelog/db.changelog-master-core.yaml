@@ -41,3 +41,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/014-audit-events-parent-index.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/015-users-id-identity.sql

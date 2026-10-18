@@ -63,6 +63,20 @@ async function planPart(request: APIRequestContext, token: string, partId: strin
   expect(res.status()).toBe(200);
 }
 
+// #359: completing a dose requires the second nurse's credentials - the same
+// two-person contract as the execute endpoint.
+async function completePart(request: APIRequestContext, nurseToken: string, partId: string): Promise<number> {
+  const res = await request.put(`${API}/prescriptions/day-parts/${partId}/complete`, {
+    headers: { Authorization: `Bearer ${nurseToken}` },
+    data: {
+      actualDose: '1tab',
+      secondPersonLogin: testUser(4).login,
+      secondPersonPassword: testUser(4).password,
+    },
+  });
+  return res.status();
+}
+
 async function morningPartOfFirstDay(request: APIRequestContext, token: string, listId: string, itemId: string, skipDates: Set<string> = new Set()): Promise<DayPart> {
   const res = await request.get(`${API}/prescriptions/${listId}/items`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -209,10 +223,7 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
     try {
       const part = await morningPartOfFirstDay(request, doctorToken, listId, itemId);
       await planPart(request, doctorToken, part.id, DOSE);
-      const done = await request.put(`${API}/prescriptions/day-parts/${part.id}/complete`, {
-        headers: { Authorization: `Bearer ${nurseToken}` },
-      });
-      expect(done.status()).toBe(200);
+      expect(await completePart(request, nurseToken, part.id)).toBe(200);
 
       await gotoDetail(page, listId);
       const row = page.locator('tbody tr').filter({ hasText: name });
@@ -256,7 +267,7 @@ test.describe('Doctor — «Відмінити препарат» and «Пове
 
       // Restore → 200, then complete → cancel/restore on completed → 422.
       expect((await replan(part.id, auth)).status()).toBe(200);
-      expect((await request.put(`${API}/prescriptions/day-parts/${part.id}/complete`, { headers: nurseAuth })).status()).toBe(200);
+      expect(await completePart(request, nurseToken, part.id)).toBe(200);
       expect((await cancel(part.id, auth)).status()).toBe(422);
       expect((await replan(part.id, auth)).status()).toBe(422);
 

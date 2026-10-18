@@ -2,14 +2,8 @@ package com.superhumans.medicationsheet.pdf;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.exception.NotFoundException;
-import com.superhumans.audit.AuditActionDefinition.ActionType;
-import com.superhumans.audit.AuditActionDefinition.EventClass;
-import com.superhumans.audit.AuditActorResolver;
-import com.superhumans.audit.AuditEvent;
-import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.repository.core.UserRepository;
-import com.superhumans.service.AuditService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Orchestrates Phase 17 PDF generation for one {@code PrescriptionList}:
@@ -42,8 +35,7 @@ public class PrescriptionPdfService {
     PrescriptionPdfPagePlanner pagePlanner;
     PrescriptionPdfRenderer renderer;
     UserRepository userRepository;
-    AuditService auditService;
-    DomainAuditEmitter auditEmitter;
+    PrescriptionPdfAuditService pdfAuditService;
 
     /** Batch metadata for the API/frontend contract (no PII). */
     public record PdfBatchInfo(int pages, String fileName) {
@@ -53,28 +45,24 @@ public class PrescriptionPdfService {
     public record PdfPageFile(String fileName, byte[] content) {
     }
 
-    @Transactional
+    /** Download metadata and bytes derived from the same immutable render plan. */
+    public record PdfBatchDownload(PdfBatchInfo info, byte[] content) {
+    }
+
     public PdfBatchInfo info(UUID listId) {
         List<PrescriptionPdfPagePlan> pages = plan(listId);
         PdfBatchInfo info = new PdfBatchInfo(pages.size(), zipFileName(listId));
-        auditEmitter.emit("medication", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.USER_ACTIVITY)
-                .module("medication")
-                .functionalArea("pdf")
-                .action("medication.pdf.info")
-                .actionType(ActionType.PDF_INFO)
-                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .affectedRecords(info.pages())
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        pdfAuditService.recordInfo(listId, info.pages());
         return info;
     }
 
-    @Transactional
     public byte[] generateZip(UUID listId, Long userId) {
+        return generateZipBatch(listId, userId).content();
+    }
+
+    public PdfBatchDownload generateZipBatch(UUID listId, Long userId) {
         List<PdfPageFile> files = renderAll(listId);
+        PdfBatchInfo info = new PdfBatchInfo(files.size(), zipFileName(listId));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // STORED (uncompressed) entries with upfront sizes: PDFs are already
         // compressed, and explicit headers keep the archive readable by
@@ -93,22 +81,10 @@ public class PrescriptionPdfService {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to build prescription PDF batch for " + listId, e);
         }
-        auditService.logAction("PrescriptionPdf", listId, "GENERATE", userId);
         final int pageCount = files.size();
-        auditEmitter.emit("medication", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.BUSINESS)
-                .module("medication")
-                .functionalArea("pdf")
-                .action("medication.pdf.generate")
-                .actionType(ActionType.GENERATE)
-                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .affectedRecords(pageCount)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        pdfAuditService.recordGenerate(listId, userId, pageCount);
         log.info("Prescription PDF batch generated: listId={}, pages={}", listId, files.size());
-        return out.toByteArray();
+        return new PdfBatchDownload(info, out.toByteArray());
     }
 
     private static long crc32(byte[] content) {
@@ -117,25 +93,13 @@ public class PrescriptionPdfService {
         return crc.getValue();
     }
 
-    @Transactional
     public byte[] generatePage(UUID listId, int pageIndex, Long userId) {
         List<PrescriptionPdfPagePlan> pages = plan(listId);
         if (pageIndex < 0 || pageIndex >= pages.size()) {
             throw new NotFoundException("Сторінку PDF не знайдено: " + pageIndex);
         }
         byte[] content = renderer.render(pages.get(pageIndex));
-        auditService.logAction("PrescriptionPdf", listId, "GENERATE_PAGE", userId);
-        auditEmitter.emit("medication", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.USER_ACTIVITY)
-                .module("medication")
-                .functionalArea("pdf")
-                .action("medication.pdf.download")
-                .actionType(ActionType.DOWNLOAD)
-                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        pdfAuditService.recordPageDownload(listId, userId);
         return content;
     }
 

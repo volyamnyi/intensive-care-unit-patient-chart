@@ -71,7 +71,12 @@ class ModuleBoundaryTest {
         "org.mapstruct..",
         "org.hibernate..",
         "org.slf4j..",
-        "com.fasterxml.jackson..",
+        // Runtime serialization is Jackson 3 (Boot 4.1 default). Jackson 3 keeps
+        // the annotations artifact on the old coordinates, so only that package
+        // is allowed; Jackson 2 databind is banned from feature code (#430 item 3
+        // — it is still on the classpath transitively via springdoc).
+        "tools.jackson..",
+        "com.fasterxml.jackson.annotation..",
         "com.itextpdf..",
         "io.swagger.v3.oas.annotations.."
     };
@@ -84,6 +89,13 @@ class ModuleBoundaryTest {
         "com.superhumans.controller..",
         "com.superhumans.medicationsheet.controller..",
         "com.superhumans.prosthesismanufacturing.controller.."
+    };
+
+    /** Service layer packages (ICU lives in the platform packages by design). */
+    private static final String[] SERVICE_PACKAGES = {
+        "com.superhumans.service..",
+        "com.superhumans.medicationsheet.service..",
+        "com.superhumans.prosthesismanufacturing.service.."
     };
 
     /**
@@ -146,6 +158,25 @@ class ModuleBoundaryTest {
         .should().dependOnClassesThat().resideInAnyPackage("com.superhumans.repository..",
             "com.superhumans.medicationsheet.repository..",
             "com.superhumans.prosthesismanufacturing.repository..");
+
+    /**
+     * Layer rule (#427 item 1): services must not depend on controllers or on the
+     * servlet layer, and repositories must not depend on services. The god-class
+     * extractions these layers enable are only safe while this holds, so it is
+     * enforced rather than documented.
+     */
+    @ArchTest
+    static final ArchRule servicesDoNotDependOnControllers = noClasses()
+        .that().resideInAnyPackage(SERVICE_PACKAGES)
+        .should().dependOnClassesThat().resideInAnyPackage(CONTROLLER_PACKAGES);
+
+    @ArchTest
+    static final ArchRule repositoriesDoNotDependOnServicesOrControllers = noClasses()
+        .that().resideInAnyPackage("com.superhumans.repository..",
+            "com.superhumans.medicationsheet.repository..",
+            "com.superhumans.prosthesismanufacturing.repository..",
+            "com.superhumans.icu.repository..")
+        .should().dependOnClassesThat().resideInAnyPackage(SERVICE_PACKAGES);
 
     private static DescribedPredicate<JavaClass> isEnforcedController() {
         DescribedPredicate<JavaClass> predicate = resideInAnyPackage(CONTROLLER_PACKAGES);

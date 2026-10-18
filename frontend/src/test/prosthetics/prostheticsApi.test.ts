@@ -265,7 +265,7 @@ describe('flowInstanceApi', () => {
   it('generates the pdf report as a blob', async () => {
     clientMock.get.mockReturnValue(ok(new Blob()));
     await flowInstanceApi.generateReport('i1');
-    expect(clientMock.get).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/pdf', {
+    expect(clientMock.post).toHaveBeenCalledWith('/prosthesis-manufacturing/instances/i1/pdf', undefined, {
       responseType: 'blob',
     });
   });

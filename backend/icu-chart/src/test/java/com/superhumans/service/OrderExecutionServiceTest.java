@@ -308,6 +308,22 @@ class OrderExecutionServiceTest {
     }
 
     @Test
+    void execute_whenAlreadyCompleted_throws() {
+        // #428 item 9: the replay path (generic not-planned message today);
+        // sibling of plan_whenAlreadyCompleted/cancel_whenCompleted.
+        when(medicalOrderRepository.findById(orderId)).thenReturn(Optional.of(medicalOrder));
+        OrderExecution existing = plannedExec();
+        existing.setStatus(OrderExecutionStatus.COMPLETED);
+        existing.setCompletedFinished(true);
+        when(orderExecutionRepository.findByOrderIdAndHour(orderId, 10)).thenReturn(Optional.of(existing));
+
+        OrderExecutionCreateRequest req = new OrderExecutionCreateRequest(10, "10", null);
+        assertThatThrownBy(() -> orderExecutionService.execute(orderId, req, userId))
+                .isInstanceOf(BusinessException.class);
+        verify(orderExecutionRepository, never()).save(any(OrderExecution.class));
+    }
+
+    @Test
     void execute_partiallyCompleted_whenActualDoseLessThanPlanned() {
         when(medicalOrderRepository.findById(orderId)).thenReturn(Optional.of(medicalOrder));
         OrderExecution existing = plannedExec();

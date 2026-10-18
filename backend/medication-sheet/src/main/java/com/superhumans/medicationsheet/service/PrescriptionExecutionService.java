@@ -54,6 +54,14 @@ public class PrescriptionExecutionService {
                     "Дозу вже виконано");
         }
         requireNotFinished(part);
+        // Only a planned dose can be executed. This guard used to live in
+        // PrescriptionItemService.markCompleted, which was removed when the
+        // complete endpoint was routed here (#359) - without moving it, the
+        // execute path would have become the weaker of the two.
+        if (!Boolean.TRUE.equals(part.getIsPlanned())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Незаплановане призначення не може бути виконане");
+        }
 
         UUID firstPersonUuid = UUID.nameUUIDFromBytes(currentUserLogin.getBytes());
         String nurseName = currentUserLogin;

@@ -1,6 +1,7 @@
 package com.superhumans.audit;
 
 import com.superhumans.entity.core.User;
+import com.superhumans.util.AuthUsers;
 import java.util.Set;
 import java.util.TreeSet;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -19,7 +20,7 @@ public final class AuditActorResolver {
                 || authentication instanceof AnonymousAuthenticationToken) {
             return unknown();
         }
-        Long id = authentication.getCredentials() instanceof Long userId ? userId : null;
+        Long id = AuthUsers.idOrNull(authentication);
         Set<String> roles = new TreeSet<>();
         for (GrantedAuthority authority : authentication.getAuthorities()) {
             String value = authority.getAuthority();

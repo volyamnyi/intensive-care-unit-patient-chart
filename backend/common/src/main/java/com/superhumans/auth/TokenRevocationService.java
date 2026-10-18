@@ -3,6 +3,7 @@ package com.superhumans.auth;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /** In-memory revocation window for stateless access tokens. */
@@ -24,5 +25,12 @@ public class TokenRevocationService {
         if (expiresAt.isAfter(Instant.now())) return true;
         revokedTokens.remove(tokenId, expiresAt);
         return false;
+    }
+
+    /** Periodic TTL cleanup bounds entries for tokens that are never replayed. */
+    @Scheduled(fixedDelayString = "${app.auth.revocation-cleanup-ms:60000}")
+    void pruneExpired() {
+        Instant now = Instant.now();
+        revokedTokens.entrySet().removeIf(entry -> !entry.getValue().isAfter(now));
     }
 }

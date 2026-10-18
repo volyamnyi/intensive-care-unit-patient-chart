@@ -41,3 +41,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/034-flow-instances-order-index.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/035-brak-notification-processing-lease.sql

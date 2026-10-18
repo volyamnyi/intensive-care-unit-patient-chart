@@ -67,8 +67,8 @@ class ProductionControllerTest {
     AuditService auditService;
 
     UUID instanceId = UUID.randomUUID();
-    com.fasterxml.jackson.databind.ObjectMapper objectMapper =
-            new com.fasterxml.jackson.databind.ObjectMapper();
+    tools.jackson.databind.ObjectMapper objectMapper =
+            new tools.jackson.databind.ObjectMapper();
 
     @BeforeEach
     void setUp() {

@@ -162,7 +162,7 @@ class ClinicalRbacIntegrationTest extends AbstractIntegrationTest {
     void adjacentSpecialist_readsEpisodes_butCannotWriteNotes() {
         String token = tokenForRole("adjacent-spec-rbac", UserRole.ADJACENT_SPECIALIST);
 
-        var read = restTemplate.exchange("/api/episodes", HttpMethod.GET,
+        var read = restTemplate.exchange("/api/episodes?patientId=1001", HttpMethod.GET,
                 authGet(token), String.class);
         var write = restTemplate.exchange("/api/clinical-days/{id}/notes", HttpMethod.POST,
                 authEntity("{\"noteType\":\"exam\",\"text\":\"rbac\"}", token),
@@ -240,8 +240,10 @@ class ClinicalRbacIntegrationTest extends AbstractIntegrationTest {
     void prescriptionListCreateOnly_nurseCreatesList_butCannotAddItems() {
         setRolePermission("NURSE", "PRESCRIPTION_LIST_CREATE", true);
         try {
+            // 1001 already has an OPEN seed list and #404 rejects a second open
+            // list per patient; 1002's seed list is Finished, so creation is legal.
             var create = restTemplate.exchange("/api/prescriptions", HttpMethod.POST,
-                    authEntity("{\"patientId\":\"1001\"}", getNurseToken()), String.class);
+                    authEntity("{\"patientId\":\"1002\"}", getNurseToken()), String.class);
             assertThat(create.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
             var addItem = restTemplate.exchange("/api/prescriptions/{id}/items", HttpMethod.POST,

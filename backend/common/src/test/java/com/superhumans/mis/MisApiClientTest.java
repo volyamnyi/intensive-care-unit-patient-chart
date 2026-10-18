@@ -40,7 +40,8 @@ class MisApiClientTest {
         MisAuthService authService = new StubOAuthService(clientTransport, mapper, properties);
         authStubToken = "test-bearer-token";
 
-        client = new MisApiClient(clientTransport, mapper, authService, properties);
+        client = new MisApiClient(clientTransport, mapper, authService, properties,
+                new MisHealthIndicator(properties));
     }
 
     /** Token is stubbed so the client test never hits a real auth endpoint. */

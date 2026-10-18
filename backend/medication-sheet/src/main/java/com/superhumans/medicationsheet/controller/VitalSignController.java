@@ -42,10 +42,14 @@ public class VitalSignController {
     VitalSignEntryMapper vitalSignEntryMapper;
     DomainAuditEmitter auditEmitter;
 
+    // #365: both GETs are pure reads now - they used to self-provision 107 rows
+    // on first call, which made a safe HTTP method mutate state (a SameSite=Lax
+    // top-level navigation carries the cookie and would force the inserts).
+    // Provisioning lives in the POST /grid ensure below, behind VITALS_ENTER.
     @GetMapping
     public List<VitalSignDayResponse> getDaysByPrescriptionList(@RequestParam UUID prescriptionListId) {
-        VitalSignList list = vitalSignService.getOrCreate(prescriptionListId);
-        return vitalSignService.getDays(list.getId()).stream()
+        return vitalSignService.findList(prescriptionListId).stream()
+                .flatMap(list -> vitalSignService.getDays(list.getId()).stream())
                 .map(vitalSignDayMapper::toResponse)
                 .toList();
     }
@@ -58,9 +62,28 @@ public class VitalSignController {
     }
 
     @GetMapping("/grid")
-    @org.springframework.transaction.annotation.Transactional
     public List<Map<String, Object>> getGrid(@RequestParam UUID prescriptionListId) {
+        return vitalSignService.findList(prescriptionListId)
+                .map(list -> gridFor(prescriptionListId, list))
+                .orElseGet(List::of);
+    }
+
+    /**
+     * Ensures the vitals grid exists (provisioning 21 days x 4 periods on the
+     * first call) and returns it. This is the mutating side the GETs used to
+     * carry (#365): idempotent, audited, behind the VITALS_ENTER gate.
+     * No controller-level @Transactional: provisioning owns its own single
+     * med-leg transaction (#382), so a lost race can still converge by
+     * re-reading outside the aborted transaction.
+     */
+    @PreAuthorize("@permissionService.has('VITALS_ENTER')")
+    @PostMapping("/grid")
+    public List<Map<String, Object>> ensureGrid(@RequestParam UUID prescriptionListId) {
         VitalSignList list = vitalSignService.getOrCreate(prescriptionListId);
+        return gridFor(prescriptionListId, list);
+    }
+
+    private List<Map<String, Object>> gridFor(UUID prescriptionListId, VitalSignList list) {
         List<com.superhumans.medicationsheet.entity.VitalSignDay> days = vitalSignService.getDays(list.getId());
         List<Map<String, Object>> grid = days.stream().map(day -> {
             Map<String, Object> m = new LinkedHashMap<>();

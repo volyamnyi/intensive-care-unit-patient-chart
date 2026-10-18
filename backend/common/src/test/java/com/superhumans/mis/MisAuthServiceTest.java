@@ -78,6 +78,17 @@ class MisAuthServiceTest {
     }
 
     @Test
+    void invalidateTokenIfCurrent_doesNotEvictNewerToken() {
+        ReflectionTestUtils.setField(authService, "cachedToken", "new-token");
+        ReflectionTestUtils.setField(authService, "expiresAtMillis", System.currentTimeMillis() + 60_000);
+
+        authService.invalidateTokenIfCurrent("rejected-old-token");
+
+        assertThat(authService.getAccessToken()).isEqualTo("new-token");
+        server.verify();
+    }
+
+    @Test
     void getAccessToken_invalidateToken_refetches() {
         server.expect(requestTo("https://mis.example.test/token"))
                 .andExpect(method(HttpMethod.POST))

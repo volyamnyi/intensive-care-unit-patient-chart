@@ -54,6 +54,23 @@ public record AuditEvent(
         Instant retentionUntil) {
 
     public static final int CURRENT_SCHEMA_VERSION = 1;
+
+    /**
+     * Upper bound on {@link #changes} per event (#397 item 5).
+     *
+     * <p>Change lists are field-level facts, so real events carry a handful;
+     * a cap far above any legitimate use is pure defence against a runaway
+     * emitter inflating one {@code event_payload} without bound. The bound is
+     * enforced as a validation failure rather than a silent truncation —
+     * truncating would record a partial diff as if it were the whole change,
+     * which is the one failure mode an audit trail must not have.
+     *
+     * <p>Throwing here is safe for callers: {@code DomainAuditEmitter.emit}
+     * is fail-safe, so an over-large event is dropped and counted in
+     * {@code audit.events.failed} rather than breaking the business request.
+     */
+    public static final int MAX_CHANGES = 256;
+
     private static final Set<String> SAFE_VALUE_FIELDS = Set.of(
             "status", "role", "permissionCode", "isDeleted", "reasonCode", "category",
             "severity", "returnStageId", "templateVersion", "version", "branchSequence",
@@ -108,6 +125,10 @@ public record AuditEvent(
         }
         if (affectedRecords != null && affectedRecords < 0) {
             throw new IllegalArgumentException("Affected record count cannot be negative");
+        }
+        if (changes.size() > MAX_CHANGES) {
+            throw new IllegalArgumentException("Audit event carries too many changes: " + changes.size()
+                    + " (max " + MAX_CHANGES + ")");
         }
         if (errorCode != null && !SAFE_ERROR_CODE.matcher(errorCode).matches()) {
             throw new IllegalArgumentException("Audit errorCode must be a sanitized code");

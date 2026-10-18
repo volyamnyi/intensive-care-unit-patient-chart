@@ -1,6 +1,7 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotElement;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStage;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
@@ -21,7 +22,9 @@ class TemplateSnapshotParserTest {
 
     @BeforeEach
     void setUp() {
-        parser = new TemplateSnapshotParser(new ObjectMapper());
+        parser = new TemplateSnapshotParser(JsonMapper.builder()
+                .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+                .build());
     }
 
     @Test

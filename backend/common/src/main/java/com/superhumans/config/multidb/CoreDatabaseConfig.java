@@ -35,10 +35,20 @@ public class CoreDatabaseConfig {
         return MultiDatabaseSupport.moduleDataSource(properties);
     }
 
+    /**
+     * Transaction/JPA view of the core pool: lazily acquires a connection
+     * (#423 item 2) so a request that touches one module DB no longer reserves
+     * a connection in all four pools. Liquibase and seeding keep the raw pool.
+     */
+    @Bean
+    public DataSource coreLazyDataSource(@Qualifier("coreDataSource") DataSource dataSource) {
+        return MultiDatabaseSupport.lazyTransactionDataSource(dataSource);
+    }
+
     @Bean
     @Primary
     public LocalContainerEntityManagerFactoryBean coreEntityManagerFactory(
-            @Qualifier("coreDataSource") DataSource dataSource) {
+            @Qualifier("coreLazyDataSource") DataSource dataSource) {
         return MultiDatabaseSupport.entityManagerFactory(dataSource,
                 "com.superhumans.entity.core", "com.superhumans.entity.base");
     }

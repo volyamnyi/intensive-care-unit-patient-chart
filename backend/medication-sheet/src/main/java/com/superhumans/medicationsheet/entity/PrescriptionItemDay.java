@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.BatchSize;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +24,8 @@ public class PrescriptionItemDay extends BaseEntity {
     @Column(name = "day_date", nullable = false)
     LocalDate dayDate;
 
-    @OneToMany(mappedBy = "day", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "day", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 100)
     @Builder.Default
     List<PrescriptionDayPart> dayParts = new ArrayList<>();
 }

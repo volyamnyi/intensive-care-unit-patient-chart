@@ -37,13 +37,31 @@ public class AuditClientIpResolver {
         if (!isTrustedProxy(peer)) {
             return isIpLiteral(peer) ? peer : null;
         }
+        // #361: walk the chain from the RIGHT. Each proxy APPENDS the address it
+        // received from, so the rightmost entries come from the proxies we trust
+        // and the leftmost entries are client-supplied. Taking the first literal
+        // (the old behaviour) let a client put any IP ahead of the real one and
+        // have the audit store it. The rightmost entry that is NOT itself a
+        // trusted proxy is the best candidate for the true client; if the whole
+        // chain is trusted proxies, fall back to the leftmost literal.
         String forwarded = trimToNull(request.getHeader("X-Forwarded-For"));
         if (forwarded != null) {
-            for (String candidate : forwarded.split(",")) {
-                String ip = trimToNull(candidate);
-                if (isIpLiteral(ip)) {
+            String[] entries = forwarded.split(",");
+            String leftmostLiteral = null;
+            for (int i = entries.length - 1; i >= 0; i--) {
+                String ip = trimToNull(entries[i]);
+                if (!isIpLiteral(ip)) {
+                    continue;
+                }
+                if (!isTrustedProxy(ip)) {
                     return ip;
                 }
+                // Walking right-to-left, the last assignment wins - so this
+                // ends up holding the LEFTMOST literal of the chain.
+                leftmostLiteral = ip;
+            }
+            if (leftmostLiteral != null) {
+                return leftmostLiteral;
             }
         }
         return isIpLiteral(peer) ? peer : null;

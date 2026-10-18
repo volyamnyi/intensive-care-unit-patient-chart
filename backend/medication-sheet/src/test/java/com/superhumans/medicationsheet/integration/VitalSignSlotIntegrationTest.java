@@ -1,5 +1,6 @@
 package com.superhumans.medicationsheet.integration;
 
+import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.medicationsheet.entity.VitalSignDay;
 import com.superhumans.medicationsheet.entity.VitalSignEntry;
 import com.superhumans.medicationsheet.entity.VitalSignList;
@@ -43,7 +44,17 @@ class VitalSignSlotIntegrationTest {
     @BeforeEach
     void setUp() {
         em = new TestEm(EntityManagerFactoryUtils.getTransactionalEntityManager(entityManagerFactory));
-        VitalSignList list = em.persistFlushFind(VitalSignList.builder().build());
+        // vital_sign_lists.prescription_list_id is NOT NULL, so the fixture needs
+        // a real parent list (the test used to persist a bare VitalSignList and
+        // only "passed" because **/integration/** is excluded from `mvn test`).
+        PrescriptionList parent = em.persistFlushFind(PrescriptionList.builder()
+                .patientId(1001L)
+                .documentName("VitalSignSlotIntegrationTest")
+                .status("Saved")
+                .build());
+        VitalSignList list = em.persistFlushFind(VitalSignList.builder()
+                .prescriptionList(parent)
+                .build());
         VitalSignDay day = em.persistFlushFind(VitalSignDay.builder()
                 .vitalList(list)
                 .dayDate(java.time.LocalDate.now())

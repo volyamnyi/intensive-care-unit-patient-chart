@@ -11,6 +11,7 @@ package com.superhumans.prosthesismanufacturing.entity;
  */
 public enum BrakNotificationStatus {
     PENDING,
+    PROCESSING,
     SENT,
     FAILED,
     SKIPPED,

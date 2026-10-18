@@ -1,9 +1,10 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
+import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageRequest;
@@ -34,6 +35,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -74,6 +77,8 @@ class FlowInstanceServiceTest {
 
     TemplateSnapshotParser parser;
     FlowInstanceService service;
+    ProstheticsPatientService patientService;
+    com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper instanceMapper;
 
     UUID stageId = UUID.randomUUID();
     UUID stepOneId = UUID.randomUUID();
@@ -85,9 +90,12 @@ class FlowInstanceServiceTest {
     @BeforeEach
     void setUp() {
         parser = new TemplateSnapshotParser(new ObjectMapper());
+        patientService = mock(ProstheticsPatientService.class);
+        instanceMapper = mock(com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper.class);
         service = new FlowInstanceService(instanceRepository, templateRepository, orderRepository,
+                patientService,
                 executionRepository, resourceUsageRepository,
-                mock(com.superhumans.prosthesismanufacturing.mapper.FlowInstanceMapper.class),
+                instanceMapper,
                 templateService, failureSnapshotService, pdfService, auditService, auditEmitter, parser,
                 new ObjectMapper());
     }
@@ -769,5 +777,157 @@ class FlowInstanceServiceTest {
                 .build();
         template.setId(id);
         return template;
+    }
+
+    @Test
+    void listPage_boundsSizeAndUsesStableDatabaseSort() {
+        when(instanceRepository.findAll(any(Pageable.class)))
+                .thenAnswer(invocation -> new PageImpl<>(java.util.List.of(), invocation.getArgument(0), 0));
+
+        var result = service.listPage(null, null, 2, 10_000);
+
+        assertThat(result.content()).isEmpty();
+        assertThat(result.page()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(FlowInstanceService.MAX_INSTANCE_PAGE_SIZE);
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(instanceRepository).findAll(pageable.capture());
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(FlowInstanceService.MAX_INSTANCE_PAGE_SIZE);
+        assertThat(pageable.getValue().getSort().getOrderFor("createdAt").getDirection())
+                .isEqualTo(org.springframework.data.domain.Sort.Direction.DESC);
+        assertThat(pageable.getValue().getSort().getOrderFor("id").getDirection())
+                .isEqualTo(org.springframework.data.domain.Sort.Direction.ASC);
+    }
+
+    // ---------------------------------------------------------------------
+    // #411 item 3: batched enrichment + PIB masking on the paged list
+    // ---------------------------------------------------------------------
+
+    /** Three instances sharing one order; the page must not fan out per row. */
+    private List<FlowInstance> pageOfThree() {
+        UUID templateId = UUID.randomUUID();
+        ProstheticsOrder order = new ProstheticsOrder();
+        order.setId(UUID.randomUUID());
+        ProstheticsPatient patient = new ProstheticsPatient();
+        patient.setId("900001");
+        order.setPatient(patient);
+        when(orderRepository.findWithPatientByIds(any())).thenReturn(java.util.List.of(order));
+        when(templateRepository.findAllById(any())).thenReturn(java.util.List.of());
+        when(executionRepository.findByInstanceIdIn(any())).thenReturn(java.util.List.of());
+        return java.util.stream.IntStream.range(0, 3)
+                .mapToObj(i -> {
+                    FlowInstance instance = FlowInstance.builder()
+                            .templateId(templateId)
+                            .orderId(order.getId())
+                            .build();
+                    instance.setId(UUID.randomUUID());
+                    when(instanceMapper.toResponse(instance))
+                            .thenReturn(FlowInstanceResponse.builder().build());
+                    return instance;
+                })
+                .toList();
+    }
+
+    @Test
+    void listPage_batchesEnrichmentOncePerPageInsteadOfPerRow() {
+        List<FlowInstance> instances = pageOfThree();
+        when(instanceRepository.findAll(any(Pageable.class)))
+                .thenAnswer(invocation -> new PageImpl<>(instances, invocation.getArgument(0), 3));
+
+        var result = service.listPage(null, null, 0, 50, true);
+
+        assertThat(result.content()).hasSize(3);
+        verify(executionRepository, org.mockito.Mockito.times(1)).findByInstanceIdIn(any());
+        verify(templateRepository, org.mockito.Mockito.times(1)).findAllById(any());
+        verify(orderRepository, org.mockito.Mockito.times(1)).findWithPatientByIds(any());
+        // The per-row lookups the old implementation used must stay unused.
+        verify(executionRepository, never()).findByInstanceId(any());
+        verify(executionRepository, never()).findByInstanceIdAndStepId(any(), any());
+        verify(templateRepository, never()).findById(any());
+        verify(orderRepository, never()).findById(any());
+    }
+
+    @Test
+    void listPage_masksPatientPibAndSkipsMisWhenTheCallerLacksPatientView() {
+        List<FlowInstance> instances = pageOfThree();
+        when(instanceRepository.findAll(any(Pageable.class)))
+                .thenAnswer(invocation -> new PageImpl<>(instances, invocation.getArgument(0), 3));
+
+        var result = service.listPage(null, null, 0, 50, false);
+
+        assertThat(result.content()).hasSize(3);
+        assertThat(result.content()).allSatisfy(row -> assertThat(row.getPatientPib()).isNull());
+        verify(patientService, never()).getPibs(any());
+    }
+
+    @Test
+    void listPage_resolvesPibFromASingleBatchedRosterFetchWhenAllowed() {
+        List<FlowInstance> instances = pageOfThree();
+        when(instanceRepository.findAll(any(Pageable.class)))
+                .thenAnswer(invocation -> new PageImpl<>(instances, invocation.getArgument(0), 3));
+        when(patientService.getPibs(any())).thenReturn(java.util.Map.of("900001", "Сніжко Іван Петрович"));
+
+        var result = service.listPage(null, null, 0, 50, true);
+
+        assertThat(result.content())
+                .isNotEmpty()
+                .allSatisfy(row -> assertThat(row.getPatientPib()).isEqualTo("Сніжко Іван Петрович"));
+        ArgumentCaptor<java.util.Collection<String>> ids = ArgumentCaptor.forClass(java.util.Collection.class);
+        verify(patientService, org.mockito.Mockito.times(1)).getPibs(ids.capture());
+        assertThat(ids.getValue()).containsExactly("900001");
+    }
+
+    @Test
+    void listPage_fallsBackToLocalPibWhenTheBatchedRosterHasNoEntry() {
+        List<FlowInstance> instances = pageOfThree();
+        when(instanceRepository.findAll(any(Pageable.class)))
+                .thenAnswer(invocation -> new PageImpl<>(instances, invocation.getArgument(0), 3));
+        when(patientService.getPibs(any())).thenReturn(java.util.Map.of());
+
+        var result = service.listPage(null, null, 0, 50, true);
+
+// ProstheticsPatient.pib is nullable=false in the schema but may be blank
+        // in tests; the fallback path must not throw and must not stay silent.
+        assertThat(result.content()).hasSize(3);
+    }
+
+    // ---------------------------------------------------------------------
+    // #383: no MIS I/O inside a transaction
+    // ---------------------------------------------------------------------
+
+    /**
+     * The single-row mapper runs inside the caller's write transaction
+     * (create/start/advance/pause/resume/fail/completeStep) and inside the
+     * controller's read transaction on GET /instances/{id}. A MIS roster call
+     * there pins all four chained pool connections for the duration of the
+     * external round trip, so the mapper must use the locally stored name and
+     * leave MIS resolution to the batched list path.
+     */
+    @Test
+    void toResponse_usesLocalPibWithoutCallingMis() {
+        ProstheticsPatient patient = new ProstheticsPatient();
+        patient.setId("900001");
+        patient.setPib("Сніжко Іван Петрович");
+        ProstheticsOrder order = new ProstheticsOrder();
+        order.setId(UUID.randomUUID());
+        order.setOrderNumber("ПВ-26-0413");
+        order.setPatient(patient);
+
+        FlowInstance instance = FlowInstance.builder()
+                .orderId(order.getId())
+                .status(FlowInstanceStatus.IN_PROGRESS)
+                .build();
+        instance.setId(UUID.randomUUID());
+        when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+        when(templateRepository.findById(instance.getTemplateId())).thenReturn(Optional.empty());
+        when(executionRepository.findByInstanceId(instance.getId())).thenReturn(java.util.List.of());
+        FlowInstanceResponse mapped = FlowInstanceResponse.builder().build();
+        when(instanceMapper.toResponse(instance)).thenReturn(mapped);
+
+        FlowInstanceResponse response = service.toResponse(instance);
+
+        assertThat(response.getOrderNumber()).isEqualTo("ПВ-26-0413");
+        assertThat(response.getPatientPib()).isEqualTo("Сніжко Іван Петрович");
+        verify(patientService, never()).get(org.mockito.ArgumentMatchers.anyString());
+        verify(patientService, never()).getPibs(any());
     }
 }

@@ -122,30 +122,13 @@ public class PrescriptionListService {
         return listRepository.save(list);
     }
 
-    @Transactional
-    public void acquireLock(PrescriptionList list, UUID userId) {
-        if (list.isFinished()) {
-            throw new DocumentLockedException("Document is closed and cannot be edited");
-        }
-        if (list.isEditing() && !list.getEditingUserId().equals(userId)) {
-            throw new DocumentLockedException("Document is being edited by another user");
-        }
-        list.setEditingUserId(userId);
-        list.setEditingStartedAt(LocalDateTime.now());
-        list.setStatus(userId.toString());
-    }
-
-    @Transactional
-    public void releaseLock(UUID id, UUID userId) {
-        PrescriptionList list = loadById(id);
-        if (userId.equals(list.getEditingUserId())) {
-            list.setEditingUserId(null);
-            list.setEditingStartedAt(null);
-            list.setStatus("Saved");
-            list.setUpdatedBy(0L);
-            listRepository.save(list);
-        }
-    }
+    // #363: acquireLock/releaseLock were deleted. They had no caller in src/main,
+    // and reviving them would have been worse than dead code: acquireLock stored
+    // the user id in the STATUS column (list.setStatus(userId.toString())),
+    // corrupting the 'Saved'/'Finished' state machine. Concurrent editing is
+    // guarded by @Version optimistic locking (BaseEntity) - a lost update between
+    // two editors surfaces as HTTP 409 VERSION_CONFLICT, pinned by
+    // PrescriptionRepositoryTest.
 
     @Transactional
     public void close(UUID id) {
@@ -155,8 +138,6 @@ public class PrescriptionListService {
         }
         String previousStatus = list.getStatus();
         list.setStatus("Finished");
-        list.setEditingUserId(null);
-        list.setEditingStartedAt(null);
         list.setUpdatedBy(0L);
         listRepository.save(list);
         log.info("Prescription list closed: id={}", id);

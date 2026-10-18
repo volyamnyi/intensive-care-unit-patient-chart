@@ -2,6 +2,7 @@ package com.superhumans.mis;
 
 import com.superhumans.mis.dto.*;
 import com.superhumans.service.AuditService;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -38,6 +39,7 @@ public class MisServiceImpl implements MisService {
 
     private final MisApiClient misApiClient;
     private final AuditService auditService;
+    private final MeterRegistry meterRegistry;
 
     static final String SPI_PATIENT_PROCEDURE = "spiPatientProsthesCheck";
     static final String SPI_DOCUMENT_PROCEDURE = "spiDocumentProsthesCheck";
@@ -265,15 +267,26 @@ public class MisServiceImpl implements MisService {
      * {@code spiPatientProsthesCheck}), while older mock shapes used generic
      * keys.
      */
-    private static JsonNode firstNonEmptyArray(JsonNode response, String... wrapperKeys) {
+    private JsonNode firstNonEmptyArray(JsonNode response, String... wrapperKeys) {
         if (response == null) {
             return null;
         }
+        boolean expectedArrayFound = false;
         for (String key : wrapperKeys) {
             JsonNode node = response.get(key);
-            if (node != null && node.isArray() && node.size() > 0) {
-                return node;
+            if (node != null && node.isArray()) {
+                expectedArrayFound = true;
+                if (node.size() > 0) {
+                    return node;
+                }
             }
+        }
+        if (!expectedArrayFound) {
+            List<String> actualKeys = new ArrayList<>();
+            response.properties().forEach(property -> actualKeys.add(property.getKey()));
+            meterRegistry.counter("mis.response.unrecognized_envelope").increment();
+            log.warn("MIS 200 response had no recognized array envelope; expectedKeys={} actualKeys={}",
+                    List.of(wrapperKeys), actualKeys);
         }
         return null;
     }

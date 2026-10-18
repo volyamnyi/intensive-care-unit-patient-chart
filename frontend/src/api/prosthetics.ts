@@ -127,7 +127,7 @@ export const flowInstanceApi = {
   patchStepNote: (id: string, executionId: string, data: StepNotePatchRequest) =>
     client.patch<StepExecution>(`${BASE}/instances/${id}/step-executions/${executionId}`, data),
   generateReport: (id: string) =>
-    client.get<Blob>(`${BASE}/instances/${id}/pdf`, {
+    client.post<Blob>(`${BASE}/instances/${id}/pdf`, undefined, {
       responseType: 'blob',
     }),
   brak: (id: string, data: BrakCreateRequest) =>

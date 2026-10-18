@@ -1,13 +1,9 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.superhumans.prosthesismanufacturing.entity.BrakNotificationKind;
-import com.superhumans.prosthesismanufacturing.entity.BrakNotificationOutbox;
-import com.superhumans.prosthesismanufacturing.entity.BrakNotificationStatus;
 import com.superhumans.prosthesismanufacturing.repository.BrakEventRepository;
 import com.superhumans.prosthesismanufacturing.repository.BrakNotificationOutboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -57,21 +53,15 @@ public class BrakThresholdService {
             return;
         }
         try {
-            BrakNotificationOutbox outbox = BrakNotificationOutbox.builder()
-                    .brakEventId(brakEventId)
-                    .kind(BrakNotificationKind.THRESHOLD)
-                    .orderId(orderId)
-                    .status(BrakNotificationStatus.PENDING)
-                    .attempts(0)
-                    .build();
-            outbox.setCreatedBy(actorId);
-            outbox.setUpdatedBy(actorId);
-            outboxRepository.save(outbox);
-            log.info("Brak threshold escalation queued orderId={} brakEventId={} brakCount={}",
-                    orderId, brakEventId, brakCount);
-        } catch (DataIntegrityViolationException ex) {
-            log.info("Brak threshold escalation already queued, skipping duplicate "
-                    + "orderId={} brakEventId={}", orderId, brakEventId);
+            int inserted = outboxRepository.insertThresholdIfAbsent(
+                    UUID.randomUUID(), brakEventId, orderId, actorId);
+            if (inserted == 0) {
+                log.info("Brak threshold escalation already queued, skipping duplicate "
+                        + "orderId={} brakEventId={}", orderId, brakEventId);
+            } else {
+                log.info("Brak threshold escalation queued orderId={} brakEventId={} brakCount={}",
+                        orderId, brakEventId, brakCount);
+            }
         } catch (RuntimeException ex) {
             log.error("Brak threshold enqueue failed, skipping escalation "
                     + "orderId={} brakEventId={}: {}", orderId, brakEventId, ex.getMessage());

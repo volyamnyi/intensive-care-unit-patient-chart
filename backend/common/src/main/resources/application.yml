@@ -39,6 +39,8 @@ spring:
       max-request-size: 40MB
 
   mail:
+    from: ${APP_MAIL_FROM:noreply@hospital.local}
+    frontend-base-url: ${APP_MAIL_FRONTEND_BASE_URL:}
     host: ${SPRING_MAIL_HOST:localhost}
     port: ${SPRING_MAIL_PORT:1025}
     username: ${SPRING_MAIL_USERNAME:}
@@ -69,6 +71,10 @@ app:
     expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
 
   datasource:
+    # Custom module pools do not use Boot's spring.datasource.hikari namespace.
+    # These values are applied to all four pools by MultiDatabaseSupport.
+    pool-max: ${APP_DATASOURCE_POOL_MAX:10}
+    pool-min-idle: ${APP_DATASOURCE_POOL_MIN_IDLE:1}
     core:
       url: jdbc:postgresql://localhost:5432/my_fullstack_core
       username: postgres
@@ -104,9 +110,9 @@ app:
       login: ${APP_MIS_API_LOGIN:}
       password: ${APP_MIS_API_PASSWORD:}
       installation-guid: ${APP_MIS_API_INSTALLATION_GUID:}
-      connect-timeout-ms: 5000
-      read-timeout-ms: 15000
-      token-skew-sec: 60
+      connect-timeout-ms: ${APP_MIS_API_CONNECT_TIMEOUT_MS:5000}
+      read-timeout-ms: ${APP_MIS_API_READ_TIMEOUT_MS:15000}
+      token-skew-sec: ${APP_MIS_API_TOKEN_SKEW_SEC:60}
 
   api:
     title: MIS Doctor Eleks API
@@ -120,10 +126,14 @@ app:
     password: ${APP_LDAP_PASSWORD}
 
   scheduling:
-    day-close-hour: 7
-    escalation-hour: 9
-    signing-window-start: 0
-    signing-window-end: 23
+    day-close-hour: ${APP_SCHEDULING_DAY_CLOSE_HOUR:7}
+    escalation-hour: ${APP_SCHEDULING_ESCALATION_HOUR:9}
+    signing-window-start: ${APP_SCHEDULING_SIGNING_WINDOW_START:0}
+    signing-window-end: ${APP_SCHEDULING_SIGNING_WINDOW_END:23}
+    signing-window-enabled: ${APP_SCHEDULING_SIGNING_WINDOW_ENABLED:true}
+
+  auth:
+    revocation-cleanup-ms: ${APP_AUTH_REVOCATION_CLEANUP_MS:60000}
 
   audit:
     # Kill-switch for the legacy audit dual-write (F8 cutover, #397 item 8):
@@ -135,19 +145,24 @@ app:
       lease-seconds: ${APP_AUDIT_RELAY_LEASE_SECONDS:60}
       max-attempts: ${APP_AUDIT_RELAY_MAX_ATTEMPTS:12}
     trusted-proxy-cidrs: ${APP_AUDIT_TRUSTED_PROXY_CIDRS:}
+    retention:
+      enabled: ${APP_AUDIT_RETENTION_ENABLED:false}
+      cron: ${APP_AUDIT_RETENTION_CRON:0 0 3 * * *}
+      outbox-delivered-days: ${APP_AUDIT_RETENTION_OUTBOX_DELIVERED_DAYS:30}
+      chunk-size: ${APP_AUDIT_RETENTION_CHUNK_SIZE:500}
 
   prosthetics:
     brak-notification:
       # Confirmed-brak email to PROSTHETICS_ADMINISTRATOR (stage 6, TP-LL-02).
       # All keys have code defaults via @Value, so this block is documentation
       # plus a single place to flip the switch; SMTP itself stays SPRING_MAIL_*.
-      enabled: true
-      from: noreply@hospital.local
-      frontend-base-url: ""
+      enabled: ${APP_PROSTHETICS_BRAK_NOTIFICATION_ENABLED:true}
+      from: ${APP_PROSTHETICS_BRAK_NOTIFICATION_FROM:noreply@hospital.local}
+      frontend-base-url: ${APP_PROSTHETICS_BRAK_NOTIFICATION_FRONTEND_BASE_URL:}
       # v2 outbox (issue #320): sweep interval, attempts per row, rows per sweep.
-      outbox-poll-ms: 60000
-      outbox-max-attempts: 5
-      outbox-batch-size: 20
+      outbox-poll-ms: ${APP_PROSTHETICS_BRAK_NOTIFICATION_OUTBOX_POLL_MS:60000}
+      outbox-max-attempts: ${APP_PROSTHETICS_BRAK_NOTIFICATION_OUTBOX_MAX_ATTEMPTS:5}
+      outbox-batch-size: ${APP_PROSTHETICS_BRAK_NOTIFICATION_OUTBOX_BATCH_SIZE:20}
 
 springdoc:
   api-docs:
@@ -262,6 +277,11 @@ server:
   # never in the embedded container. The proxy forwards X-Forwarded-Proto/For/Host;
   # the framework strategy makes request.isSecure()/getRemoteAddr see the external
   # https client (jwt Secure cookie in AuthController, audit IP in AuditClientIpResolver).
+  # #361 TRUST ANCHOR: with this strategy the framework rewrites getRemoteAddr() from
+  # the FIRST X-Forwarded-For value, so nginx must OVERWRITE the header
+  # (X-Forwarded-For $remote_addr), never append - see runbook section 1.8.
+  # AuditClientIpResolver/AuthController apply the trusted-proxy CIDR gate on top
+  # and take the rightmost non-trusted chain entry.
   forward-headers-strategy: framework
   ssl:
     enabled: false

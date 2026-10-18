@@ -18,14 +18,14 @@ import { testUser } from '../../helpers/test-users';
  *
  * RBAC facts under test:
  *  - POST /instances/{id}/brak  → PROSTHETICS_STEP_COMPLETE (PROSTHETIST/PROSTHETICS_ADMINISTRATOR)
- *  - GET  /instances/{id}/pdf   → PROSTHETICS_DASHBOARD or MODULE_PROSTHETICS_ACCESS
+ *  - POST /instances/{id}/pdf   → PROSTHETICS_DASHBOARD or MODULE_PROSTHETICS_ACCESS
  *  - GET  /audit                → AUDIT_ACCESS or AUDITOR
  *  - an unauthenticated (invalid-JWT) request is never authorized → 401
  *  - a NURSE lacks every code above → 403 (valid body proves the role passed the security gate)
  *
  * A single brak writes three audit records (BrakEvent/CREATE, FlowInstance/BRANCH on the
  * original, FlowInstance/CREATE_BRANCH on the fresh branch); the branch PDF is generated
- * from its IN_PROGRESS state via the owner-scoped GET /pdf.
+  * from its IN_PROGRESS state via the owner-scoped PDF generation action.
  */
 
 const STEP_E0028 = 'e0000028-0000-0000-0000-000000000028';
@@ -96,8 +96,8 @@ test.describe('TP-LL-02 — Brak audit trail, branch PDF & HTTP security (Issue 
     const branchId = branch.newInstanceId as string;
     expect(branchId).toBeTruthy();
 
-    // The branch is a fresh IN_PROGRESS instance; GET /pdf must produce a report for it.
-    const res = await request.get(`${PROSTH}/instances/${branchId}/pdf`, { headers: p1Headers });
+    // The branch is a fresh IN_PROGRESS instance; POST /pdf generates its report.
+    const res = await request.post(`${PROSTH}/instances/${branchId}/pdf`, { headers: p1Headers });
     expect(res.status()).toBe(200);
     expect((res.headers()['content-type'] ?? '')).toContain('application/pdf');
     expect((await res.body()).length).toBeGreaterThan(0);

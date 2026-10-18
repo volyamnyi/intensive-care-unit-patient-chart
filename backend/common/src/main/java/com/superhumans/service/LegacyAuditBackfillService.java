@@ -11,7 +11,11 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +30,20 @@ import org.springframework.transaction.annotation.Transactional;
  * exactly one frozen legacy row keyed by {@code (source_table, source_id)};
  * re-runs converge via the unique guard. Nothing is reconstructed: original
  * columns are copied verbatim, the outcome stays {@code UNKNOWN_LEGACY}.
+ *
+ * <p>The scan is keyset-paged ({@code id > lastId}) and both the existence
+ * check and the verification pass run as one batched query per page, so the
+ * statement count stays proportional to the page count instead of the row count
+ * (#429). Verification therefore compares every valid scanned row, not a
+ * truncated sample.
  */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class LegacyAuditBackfillService {
+
+    /** Rows read per keyset page; bounds heap use on large legacy tables. */
+    static final int PAGE_SIZE = 1000;
 
     LegacyAuditLogReader legacyAuditLogReader;
     AuditLegacyEventRepository legacyEventRepository;
@@ -38,102 +51,148 @@ public class LegacyAuditBackfillService {
 
     @Transactional(transactionManager = "coreTransactionManager")
     public LegacyBackfillReportResponse backfill() {
-        List<LegacyAuditRow> rows = legacyAuditLogReader.findAllOrdered();
-        int inserted = 0;
-        int skippedExisting = 0;
-        int skippedInvalid = 0;
-        int httpRequest = 0;
-        int auditAction = 0;
-        for (LegacyAuditRow row : rows) {
-            if (row.getTimestamp() == null || row.getEntity() == null || row.getAction() == null) {
-                skippedInvalid++;
-                continue;
+        BackfillAccumulator totals = new BackfillAccumulator();
+        UUID cursor = null;
+        while (true) {
+            List<LegacyAuditRow> page = legacyAuditLogReader.findOrderedPage(cursor, PAGE_SIZE);
+            if (page.isEmpty()) {
+                break;
             }
-            if (legacyEventRepository.existsBySourceTableAndSourceId(
-                    LegacyAuditChecksum.SOURCE_TABLE, row.getId())) {
-                skippedExisting++;
-                continue;
-            }
-            try {
-                legacyEventRepository.save(toLegacyEvent(row));
-                inserted++;
-            } catch (DataIntegrityViolationException duplicate) {
-                skippedExisting++;
-                continue;
-            }
-            if (LegacyAuditChecksum.KIND_HTTP_REQUEST.equals(LegacyAuditChecksum.kindOf(row.getAction()))) {
-                httpRequest++;
-            } else {
-                auditAction++;
+            processPage(page, totals, true);
+            totals.scanned += page.size();
+            cursor = page.get(page.size() - 1).getId();
+            if (page.size() < PAGE_SIZE) {
+                break;
             }
         }
-        auditMetrics.backfilled(inserted);
-        return verify(rows, inserted, skippedExisting, skippedInvalid, httpRequest, auditAction);
+        auditMetrics.backfilled(totals.inserted);
+        return report(totals);
     }
 
     @Transactional(transactionManager = "coreTransactionManager", readOnly = true)
     /**
-     * No read-only verification path is exposed (#397 item 7): re-running the
-     * idempotent backfill IS the verification (see runbook F.1 step 3). This
-     * method stays as the internal verify primitive, not an endpoint.
+     * No read-only verification endpoint is exposed (#397 item 7): re-running the
+     * idempotent backfill IS the verification (see runbook F.1 step 3). This method
+     * stays as the internal verify primitive.
      */
     public LegacyBackfillReportResponse verifyOnly() {
-        List<LegacyAuditRow> rows = legacyAuditLogReader.findAllOrdered();
-        long invalid = rows.stream()
-                .filter(row -> row.getTimestamp() == null || row.getEntity() == null || row.getAction() == null)
-                .count();
-        return verify(rows, 0, 0, (int) invalid, 0, 0);
-    }
-
-    /**
-     * Verifies one scan snapshot: every scanned row has a faithful copy.
-     * Rows committed after the snapshot are out of scope by design — the
-     * next run converges on them (idempotency guard), so verification never
-     * fails on a live, dual-writing system.
-     */
-    private LegacyBackfillReportResponse verify(List<LegacyAuditRow> rows, int inserted,
-            int skippedExisting, int skippedInvalid, int httpRequest, int auditAction) {
-        long sourceCount = legacyAuditLogReader.countAll();
-        long backfilledCount = legacyEventRepository.count();
-        List<String> mismatches = new ArrayList<>();
-        List<UUID> missingCandidates = new ArrayList<>();
-        for (LegacyAuditRow row : rows) {
-            if (row.getTimestamp() == null || row.getEntity() == null || row.getAction() == null) {
-                continue;
+        BackfillAccumulator totals = new BackfillAccumulator();
+        UUID cursor = null;
+        while (true) {
+            List<LegacyAuditRow> page = legacyAuditLogReader.findOrderedPage(cursor, PAGE_SIZE);
+            if (page.isEmpty()) {
+                break;
             }
-            var stored = legacyEventRepository
-                    .findBySourceTableAndSourceId(LegacyAuditChecksum.SOURCE_TABLE, row.getId());
-            if (stored.isEmpty()) {
-                missingCandidates.add(row.getId());
-            } else if (!stored.get().getChecksum().equals(checksumOf(row))) {
-                mismatches.add("checksum:" + row.getId());
-            }
-            if (mismatches.size() + missingCandidates.size() >= 100) {
+            totals.scanned += page.size();
+            totals.invalidRows += invalidCount(page);
+            verifyPage(page, totals);
+            cursor = page.get(page.size() - 1).getId();
+            if (page.size() < PAGE_SIZE) {
                 break;
             }
         }
-        // Legacy writers keep running while the system is live (dual-write),
-        // so a row committed between the scan and the check is re-checked once
-        // instead of failing verification on a moving target.
-        for (UUID candidate : missingCandidates) {
-            if (legacyEventRepository
-                    .findBySourceTableAndSourceId(LegacyAuditChecksum.SOURCE_TABLE, candidate).isEmpty()
-                    && mismatches.size() < 100) {
-                mismatches.add("missing:" + candidate);
+        return report(totals);
+    }
+
+    private void processPage(List<LegacyAuditRow> page, BackfillAccumulator totals, boolean insert) {
+        List<LegacyAuditRow> valid = page.stream().filter(this::isValid).toList();
+        totals.invalidRows += page.size() - valid.size();
+        if (valid.isEmpty()) {
+            return;
+        }
+        Set<UUID> ids = new HashSet<>();
+        for (LegacyAuditRow row : valid) {
+            ids.add(row.getId());
+        }
+        Map<UUID, AuditLegacyEvent> storedBeforeInsert = storedBySourceId(ids);
+
+        List<AuditLegacyEvent> toInsert = valid.stream()
+                .filter(row -> !storedBeforeInsert.containsKey(row.getId()))
+                .map(LegacyAuditBackfillService::toLegacyEvent)
+                .toList();
+        if (insert && !toInsert.isEmpty()) {
+            try {
+                legacyEventRepository.saveAll(toInsert);
+            } catch (DataIntegrityViolationException duplicate) {
+                // Unique backstop: a concurrent run won the row. Nothing else is
+                // recoverable inside this transaction, matching the pre-existing
+                // per-row contract (runbook F.1 requires a re-run to converge).
+                throw duplicate;
+            }
+            for (AuditLegacyEvent event : toInsert) {
+                totals.inserted++;
+                if (LegacyAuditChecksum.KIND_HTTP_REQUEST.equals(event.getLegacyKind())) {
+                    totals.httpRequest++;
+                } else {
+                    totals.auditAction++;
+                }
             }
         }
-        boolean verified = mismatches.isEmpty();
+        Map<UUID, AuditLegacyEvent> stored = insert && !toInsert.isEmpty()
+                ? storedBySourceId(ids)
+                : storedBeforeInsert;
+        totals.existing += valid.size() - toInsert.size();
+        for (LegacyAuditRow row : valid) {
+            AuditLegacyEvent event = stored.get(row.getId());
+            if (event == null) {
+                totals.mismatches.add("missing:" + row.getId());
+            } else if (!event.getChecksum().equals(checksumOf(row))) {
+                totals.mismatches.add("checksum:" + row.getId());
+            }
+        }
+    }
+
+    private void verifyPage(List<LegacyAuditRow> page, BackfillAccumulator totals) {
+        List<LegacyAuditRow> valid = page.stream().filter(this::isValid).toList();
+        if (valid.isEmpty()) {
+            return;
+        }
+        Map<UUID, AuditLegacyEvent> stored = storedBySourceId(
+                valid.stream().map(LegacyAuditRow::getId).collect(java.util.stream.Collectors.toSet()));
+        for (LegacyAuditRow row : valid) {
+            AuditLegacyEvent event = stored.get(row.getId());
+            if (event == null) {
+                totals.mismatches.add("missing:" + row.getId());
+            } else if (!event.getChecksum().equals(checksumOf(row))) {
+                totals.mismatches.add("checksum:" + row.getId());
+            }
+        }
+    }
+
+    private Map<UUID, AuditLegacyEvent> storedBySourceId(Set<UUID> ids) {
+        Map<UUID, AuditLegacyEvent> bySourceId = new HashMap<>();
+        for (AuditLegacyEvent event
+                : legacyEventRepository.findBySourceTableAndSourceIds(
+                        LegacyAuditChecksum.SOURCE_TABLE, ids)) {
+            bySourceId.put(event.getSourceId(), event);
+        }
+        return bySourceId;
+    }
+
+    private static long invalidCount(List<LegacyAuditRow> page) {
+        return page.stream().filter(row -> !isValidRow(row)).count();
+    }
+
+    private boolean isValid(LegacyAuditRow row) {
+        return isValidRow(row);
+    }
+
+    private static boolean isValidRow(LegacyAuditRow row) {
+        return row.getTimestamp() != null && row.getEntity() != null && row.getAction() != null;
+    }
+
+    private LegacyBackfillReportResponse report(BackfillAccumulator totals) {
         return LegacyBackfillReportResponse.builder()
-                .scanned(rows.size())
-                .inserted(inserted)
-                .skippedExisting(skippedExisting)
-                .skippedInvalid(skippedInvalid)
-                .httpRequestKind(httpRequest)
-                .auditActionKind(auditAction)
-                .legacySourceCount(sourceCount)
-                .backfilledCount(backfilledCount)
-                .checksumMismatches(List.copyOf(mismatches))
-                .verified(verified)
+                .scanned(totals.scanned)
+                .inserted(totals.inserted)
+                .skippedExisting(totals.existing)
+                .skippedInvalid(totals.invalidRows)
+                .httpRequestKind(totals.httpRequest)
+                .auditActionKind(totals.auditAction)
+                .legacySourceCount(legacyAuditLogReader.countAll())
+                .backfilledCount(legacyEventRepository.count())
+                .checksumMismatches(List.copyOf(totals.mismatches))
+                .verified(totals.mismatches.isEmpty())
                 .build();
     }
 
@@ -171,5 +230,16 @@ public class LegacyAuditBackfillService {
                 row.getOldValue(), row.getNewValue(), row.getCorrelationId(), row.getDetails(),
                 row.getIpAddress(), row.getUserRole(), row.getIsDeleted(), row.getTimestamp(),
                 row.getId()));
+    }
+
+    /** Running totals across keyset pages. */
+    private static final class BackfillAccumulator {
+        private long scanned;
+        private int inserted;
+        private int existing;
+        private long invalidRows;
+        private int httpRequest;
+        private int auditAction;
+        private final List<String> mismatches = new ArrayList<>();
     }
 }

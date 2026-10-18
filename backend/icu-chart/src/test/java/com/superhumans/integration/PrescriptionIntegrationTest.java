@@ -76,6 +76,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void create_asDoctor_returnsCreated() {
+        closeOpenListsForTestPatient();
         PrescriptionListCreateRequest req = new PrescriptionListCreateRequest();
         req.setPatientId("1003");
 
@@ -103,10 +104,15 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void close_asDoctor_returnsOk() {
+        // Close a list created for this test: SEED_LIST_ID is shared with the
+        // plan/execute/item tests, and finishing it would lock them all out.
+        closeOpenListsForTestPatient();
+        UUID listId = listService.create(1003L).getId();
+
         var res = restTemplate.exchange(
                 "/api/prescriptions/{id}/close", HttpMethod.POST,
                 authEntity(null, getDoctorToken()),
-                PrescriptionListResponse.class, SEED_LIST_ID);
+                PrescriptionListResponse.class, listId);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
@@ -277,7 +283,17 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
     // --- Phase 2–4 flows: HTTP → Service → DB → AuditLog (isolated chains) ---
 
+    private void closeOpenListsForTestPatient() {
+        // #404 rejects a second open list per patient, and this class creates one
+        // per test - close the previous list so each test still gets a fresh one.
+        listRepository.findByPatientIdAndDeletedFalseOrderByCreatedAtDescIdDesc(1003L)
+                .stream().filter(list -> !list.isFinished())
+                .findFirst()
+                .ifPresent(list -> listService.close(list.getId()));
+    }
+
     private UUID newItemId() {
+        closeOpenListsForTestPatient();
         PrescriptionList list = listService.create(1003L);
         return itemService.addItem(list.getId(), "IT-Drug", null, "IV", "test").getId();
     }
@@ -407,7 +423,12 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
         UUID itemId = newItemId();
         PrescriptionDayPart part = morningPartOf(itemId, LocalDate.now());
         itemService.planDose(part.getId(), "50mg", UUID.randomUUID(), 1L);
-        itemService.markCompleted(part.getId(), UUID.randomUUID());
+        // #359: the unauthenticated markCompleted path is gone; this test needs the
+        // completed *state*, so it is set directly - the subject here is the 422 on
+        // cancel-assignment, not how the dose was completed.
+        PrescriptionDayPart target = partRepository.findById(part.getId()).orElseThrow();
+        target.setIsCompleted(true);
+        partRepository.save(target);
 
         var res = restTemplate.exchange(
                 "/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", HttpMethod.PUT,
@@ -436,6 +457,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void removeDay_lastDay_returnsUnprocessableEntity() {
+        closeOpenListsForTestPatient();
         PrescriptionList list = listService.create(1003L);
         UUID itemId = itemService.addItem(list.getId(), "IT-Single", null, "IV", "test").getId();
         List<PrescriptionItemDay> days = itemService.getDays(itemId);

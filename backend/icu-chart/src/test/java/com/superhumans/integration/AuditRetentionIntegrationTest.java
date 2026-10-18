@@ -66,8 +66,13 @@ class AuditRetentionIntegrationTest extends AbstractIntegrationTest {
     com.superhumans.audit.AuditEventRecorder auditEventRecorder;
 
     private AuditRetentionService enabledService() {
+        return enabledService(500);
+    }
+
+    private AuditRetentionService enabledService(int chunkSize) {
         return new AuditRetentionService(coreDataSource, icuDataSource, medDataSource,
-                prosthDataSource, meterRegistry, auditEventRecorder, true, 30);
+                prosthDataSource, meterRegistry, auditEventRecorder, true, 30,
+                coreTransactionManager, chunkSize);
     }
 
     private UUID persistExpiredCanonicalEvent() {
@@ -151,6 +156,30 @@ class AuditRetentionIntegrationTest extends AbstractIntegrationTest {
         assertThat(core.queryForObject(
                 "SELECT COUNT(*) FROM audit_event_targets WHERE audit_id = ?", Integer.class, expiredId))
                 .isZero();
+    }
+
+    @Test
+    void retention_processesCanonicalRowsInBoundedChunksAndConvergesOnRetry() {
+        persistExpiredCanonicalEvent();
+        persistExpiredCanonicalEvent();
+        persistExpiredCanonicalEvent();
+
+        AuditRetentionService service = enabledService(1);
+        double metricBefore = meterRegistry.get("audit.retention.archived.events")
+                .counter().count();
+        var first = service.runOnce(Instant.now());
+        double metricAfterFirstRun = meterRegistry.get("audit.retention.archived.events")
+                .counter().count();
+        var second = service.runOnce(Instant.now());
+        double metricAfterRetry = meterRegistry.get("audit.retention.archived.events")
+                .counter().count();
+
+        assertThat(first.getArchivedEvents()).isGreaterThanOrEqualTo(3);
+        assertThat(second.getArchivedEvents()).isZero();
+        assertThat(second.getArchivedTargets()).isZero();
+        assertThat(second.getArchivedLegacy()).isZero();
+        assertThat(metricAfterFirstRun - metricBefore).isEqualTo(first.getArchivedEvents());
+        assertThat(metricAfterRetry).isEqualTo(metricAfterFirstRun);
     }
 
     @Test

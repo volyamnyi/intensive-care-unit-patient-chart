@@ -85,7 +85,11 @@ public class ClinicalSecurityRules implements SecurityRuleContributor, Applicati
                 .requestMatchers(HttpMethod.GET, "/api/users/me/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/users/**").access(spEl(USERS_READ_SPEL))
                 .requestMatchers(HttpMethod.GET, "/api/prescriptions/**").access(spEl(MEDICATION_READ_SPEL))
-                .requestMatchers(HttpMethod.GET, "/api/vital-signs/**").access(spEl(ICU_READ_SPEL))
+                // #365: vital signs live in the medication module - the ICU SpEL here made a
+                // MODULE_MEDICATION_ACCESS-only role unable to read its own vitals grid
+                // while a MODULE_ICU_ACCESS-only role could. Now the same read rule as
+                // /api/prescriptions.
+                .requestMatchers(HttpMethod.GET, "/api/vital-signs/**").access(spEl(MEDICATION_READ_SPEL))
                 // Department roster/stats are ICU data: clinical core or the ICU
                 // module checkbox — NOT the generic clinical ceiling, which
                 // would admit the prosthetics roles.
@@ -122,8 +126,12 @@ public class ClinicalSecurityRules implements SecurityRuleContributor, Applicati
                 .requestMatchers("/api/orders/**").hasAnyRole(CLINICAL_ROLES)
                 // Order executions (PATCH)
                 .requestMatchers(HttpMethod.PATCH, "/api/executions/**").hasAnyRole(CLINICAL_ROLES)
-                // Audit - admins (matrix: AUDIT_ACCESS) and auditors
-                .requestMatchers("/api/audit/**").hasAnyRole("ADMINISTRATOR", "AUDITOR")
+                // Audit - admins (matrix: AUDIT_ACCESS) and auditors. #364: the ceiling must
+                // let a matrix-granted AUDIT_ACCESS through, otherwise the grant is a lie -
+                // the URL rule 403s before the method-level has('AUDIT_ACCESS') can
+                // evaluate, so the admin UI would show an audit tab whose calls all fail.
+                .requestMatchers("/api/audit/**").access(spEl(
+                        "hasAnyRole('ADMINISTRATOR', 'AUDITOR') or @permissionService.has('AUDIT_ACCESS')"))
                 // Patient search from MIS
                 .requestMatchers("/api/patients/**").hasAnyRole(CLINICAL_ROLES)
                 // Users

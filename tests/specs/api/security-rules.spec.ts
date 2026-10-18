@@ -101,17 +101,31 @@ test.describe('API Security Rules', () => {
   });
 
   test('day-part completion requires the executor role (nurse)', async ({ request }) => {
+    // #359: complete takes the same two-person body as execute. The body must be
+    // valid even for the 403 probe - binding runs before method security.
+    const twoPersonBody = {
+      actualDose: '1tab',
+      secondPersonLogin: testUser(4).login,
+      secondPersonPassword: testUser(4).password,
+    };
+
     const doctor = await getToken(request, testUser(1).login, testUser(1).password);
     const doctorRes = await request.put(
       `${API}/prescriptions/day-parts/${FAKE_DAY_PART_ID}/complete`,
-      { headers: { Authorization: `Bearer ${doctor}` } },
+      {
+        headers: { Authorization: `Bearer ${doctor}` },
+        data: twoPersonBody,
+      },
     );
     expect(doctorRes.status()).toBe(403);
 
     const nurse = await getToken(request, testUser(3).login, testUser(3).password);
     const nurseRes = await request.put(
       `${API}/prescriptions/day-parts/${FAKE_DAY_PART_ID}/complete`,
-      { headers: { Authorization: `Bearer ${nurse}` } },
+      {
+        headers: { Authorization: `Bearer ${nurse}` },
+        data: twoPersonBody,
+      },
     );
     expect(nurseRes.status()).toBe(404);
   });

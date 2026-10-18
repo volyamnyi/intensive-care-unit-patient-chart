@@ -20,6 +20,7 @@ import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.service.AuditService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -275,9 +276,9 @@ class MisRealHttpChainTest {
         RestTemplate restTemplate = new RestTemplate(factory);
         ObjectMapper objectMapper = new ObjectMapper();
         MisAuthService authService = new MisAuthService(restTemplate, objectMapper, props);
-        MisApiClient client = new MisApiClient(restTemplate, objectMapper, authService, props);
+        MisApiClient client = new MisApiClient(restTemplate, objectMapper, authService, props, new com.superhumans.mis.MisHealthIndicator(props));
         audit = mock(AuditService.class);
-        return new MisServiceImpl(client, audit);
+        return new MisServiceImpl(client, audit, new SimpleMeterRegistry());
     }
 
     private void handleToken(HttpExchange exchange) throws IOException {

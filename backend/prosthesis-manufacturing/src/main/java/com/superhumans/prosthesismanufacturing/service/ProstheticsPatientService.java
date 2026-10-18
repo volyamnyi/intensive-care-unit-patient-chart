@@ -42,7 +42,6 @@ public class ProstheticsPatientService {
     ProstheticsPatientMapper patientMapper;
 
     // readOnly: pure read, no audit emit (#391).
-    @Transactional(readOnly = true)
     public List<ProstheticsPatientResponse> search(String query) {
         List<PatientDTO> misPatients;
         try {
@@ -67,7 +66,6 @@ public class ProstheticsPatientService {
     }
 
     // readOnly: pure read, no audit emit (#391).
-    @Transactional(readOnly = true)
     public ProstheticsPatientResponse get(String id) {
         Long misId = parseId(id);
         if (misId != null) {
@@ -83,6 +81,42 @@ public class ProstheticsPatientService {
         ProstheticsPatient local = patientRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Patient not found: " + id));
         return patientMapper.toResponse(local);
+    }
+
+    /**
+     * Batched PIB lookup for list endpoints (#411 item 3).
+     *
+     * <p>One MIS roster fetch for the whole page instead of one
+     * {@code getPatient} call per row. PIB is the MIS full name, so the batch
+     * resolves exactly what the single-row {@link #get(String)} path resolves.
+     * Failures degrade to an empty map so the caller falls back to the locally
+     * stored PIB; ids MIS does not know are simply absent, never an exception.
+     *
+     * @param patientIds local prosthetics patient ids (digits-only strings)
+     * @return patient id to PIB (MIS full name), never null
+     */
+    public java.util.Map<String, String> getPibs(java.util.Collection<String> patientIds) {
+        java.util.Map<String, String> result = new java.util.LinkedHashMap<>();
+        if (patientIds == null || patientIds.isEmpty()) {
+            return result;
+        }
+        java.util.Set<String> wanted = new java.util.LinkedHashSet<>(patientIds);
+        try {
+            for (PatientDTO dto : misService.getAllPatients()) {
+                if (dto == null || dto.getId() == null) {
+                    continue;
+                }
+                String id = String.valueOf(dto.getId());
+                if (wanted.contains(id) && StringUtils.hasText(dto.getFullName())) {
+                    result.put(id, dto.getFullName());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Batched MIS roster lookup failed for {} ids, falling back to local PIB: {}",
+                    wanted.size(), e.getMessage());
+            return java.util.Map.of();
+        }
+        return result;
     }
 
     // ==================== helpers ====================

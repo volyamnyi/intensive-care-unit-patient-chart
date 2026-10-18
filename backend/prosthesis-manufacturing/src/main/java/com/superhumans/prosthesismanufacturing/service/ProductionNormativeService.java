@@ -128,7 +128,21 @@ public class ProductionNormativeService {
                 .build();
     }
 
-    static boolean isOverdue(Long elapsedSeconds, Long expectedActiveSeconds, Normative normative) {
+    /**
+     * Overdue = still running past its normative time.
+     *
+     * <p>Terminal instances (COMPLETED, BRANCHED) are never overdue: a finished
+     * item cannot be late any more, and its history belongs to the brak chain
+     * rather than to the "needs attention now" queue. This also makes the
+     * attention queue pre-filterable in SQL (#429 item 2): a terminal instance
+     * without brak history and without rework children can raise no flag at all,
+     * so it never has to be materialized or snapshot-parsed.
+     */
+    static boolean isOverdue(FlowInstanceStatus status, Long elapsedSeconds,
+            Long expectedActiveSeconds, Normative normative) {
+        if (status == null || !OPEN_STATUSES.contains(status)) {
+            return false;
+        }
         if (elapsedSeconds == null || expectedActiveSeconds == null || expectedActiveSeconds <= 0) {
             return false;
         }

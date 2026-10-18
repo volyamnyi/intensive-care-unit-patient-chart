@@ -8,6 +8,7 @@ import jakarta.persistence.EntityManagerFactory;
 
 import org.hibernate.jpa.HibernatePersistenceProvider;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
+import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
@@ -28,6 +29,7 @@ final class MultiDatabaseSupport {
      * contexts × 4 × poolMax backend connections.
      */
     static final int DEFAULT_POOL_MAX = 10;
+    static final int DEFAULT_POOL_MIN_IDLE = 1;
 
     /**
      * Bounds every module Hikari pool to {@code APP_DATASOURCE_POOL_MAX}
@@ -39,14 +41,55 @@ final class MultiDatabaseSupport {
      * the E2E backend keep the default.
      */
     static DataSource moduleDataSource(DataSourceProperties properties) {
+        int poolMax = resolvePoolMax(System::getenv);
+        return moduleDataSource(properties, poolMax, resolvePoolMinIdle(System::getenv, poolMax));
+    }
+
+    /**
+     * Explicit pool shape, so the {@code APP_DATASOURCE_POOL_MAX} contract can be
+     * asserted for all four pools without touching the process environment
+     * (#423 proposed test). The env-only entry point above is the production one.
+     */
+    static DataSource moduleDataSource(DataSourceProperties properties, int poolMax, int minIdle) {
         DataSource dataSource = properties.initializeDataSourceBuilder().build();
         if (dataSource instanceof HikariDataSource hikari) {
             hikari.setConnectionInitSql("SET client_encoding = 'UTF8'");
-            int poolMax = resolvePoolMax(System::getenv);
             hikari.setMaximumPoolSize(poolMax);
-            hikari.setMinimumIdle(poolMax);
+            hikari.setMinimumIdle(minIdle);
         }
         return dataSource;
+    }
+
+    /**
+     * JPA/tx view of a module pool: a {@link LazyConnectionDataSourceProxy}.
+     *
+     * <p>The chained transaction manager begins a transaction on all four module
+     * transaction managers, and {@code DataSourceTransactionManager} acquires a
+     * physical connection at {@code doBegin} — so a request touching a single
+     * module DB used to reserve one connection in every pool (#423 item 2: the
+     * pools saturated at ~10 concurrent requests). With the proxy, a
+     * participating manager only opens a connection when a statement is really
+     * executed, which removes the ×4 multiplier for every read path that does
+     * not touch all four databases.
+     *
+     * <p>Liquibase and the seed initializer keep the raw pool: they manage DDL
+     * and connection lifecycle themselves and must not go through a proxy.
+     */
+    static DataSource lazyTransactionDataSource(DataSource dataSource) {
+        return new LazyConnectionDataSourceProxy(dataSource);
+    }
+
+    static int resolvePoolMinIdle(java.util.function.Function<String, String> env, int poolMax) {
+        String raw = env.apply("APP_DATASOURCE_POOL_MIN_IDLE");
+        if (raw == null || raw.isBlank()) {
+            return Math.min(DEFAULT_POOL_MIN_IDLE, poolMax);
+        }
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return value < 0 ? Math.min(DEFAULT_POOL_MIN_IDLE, poolMax) : Math.min(value, poolMax);
+        } catch (NumberFormatException e) {
+            return Math.min(DEFAULT_POOL_MIN_IDLE, poolMax);
+        }
     }
 
     static int resolvePoolMax(java.util.function.Function<String, String> env) {

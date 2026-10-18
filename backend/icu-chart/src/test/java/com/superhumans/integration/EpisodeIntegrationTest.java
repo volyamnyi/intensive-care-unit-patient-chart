@@ -58,15 +58,16 @@ class EpisodeIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void searchEpisodes_all_returnsAllSeedData() {
+    void searchEpisodes_withoutFilter_isRejected() {
+        // The unfiltered roster search was removed with the read-audit work: an
+        // empty search is a 400 now, so nobody can trawl the full episode list.
         var entity = authGet(getDoctorToken());
 
         var res = restTemplate.exchange(
-                "/api/episodes", HttpMethod.GET, entity,
-                new ParameterizedTypeReference<List<EpisodeResponse>>() {});
+                "/api/episodes", HttpMethod.GET, entity, String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).isNotEmpty();
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getBody()).contains("At least one episode search filter");
     }
 
     @Test

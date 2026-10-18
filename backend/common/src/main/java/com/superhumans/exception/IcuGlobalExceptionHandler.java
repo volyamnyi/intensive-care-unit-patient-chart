@@ -50,6 +50,20 @@ public class IcuGlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(
                     new ErrorResponse(ErrorCode.DUPLICATE_HOURLY_RECORD, "Hourly record already exists for this hour", correlationId()));
         }
+        // #382: the race loser of a concurrent create hits the backing unique
+        // index. The response must match the sequential duplicate's contract, not
+        // a generic 409 - a user who clicked twice fast gets the same answer as a
+        // user who re-created what already exists.
+        if (message != null && message.contains("uq_episodes_active_patient")) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
+                    new ErrorResponse(ErrorCode.EPISODE_ALREADY_ACTIVE,
+                            "Active episode already exists for this patient", correlationId()));
+        }
+        if (message != null && message.contains("uq_clinical_days_episode_day")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                    new ErrorResponse(ErrorCode.VERSION_CONFLICT,
+                            "Concurrent clinical day creation detected - reload the episode", correlationId()));
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
                 new ErrorResponse(ErrorCode.VERSION_CONFLICT, "Data integrity violation", correlationId()));
     }

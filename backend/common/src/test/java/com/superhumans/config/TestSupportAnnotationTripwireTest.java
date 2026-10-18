@@ -30,7 +30,6 @@ class TestSupportAnnotationTripwireTest {
         List<String> offenders;
         try (Stream<Path> walk = Files.walk(main)) {
             offenders = walk.filter(p -> p.toString().endsWith(".java"))
-                    .filter(p -> !p.getFileName().toString().equals("EnableTestExceptionHandler.java"))
                     .filter(p -> read(p).contains("EnableTestExceptionHandler"))
                     .map(p -> base.relativize(p).toString())
                     .sorted()
@@ -39,6 +38,22 @@ class TestSupportAnnotationTripwireTest {
         assertThat(offenders)
                 .describedAs("test-support annotation must not leak into src/main")
                 .isEmpty();
+    }
+
+    /** The annotation itself must live in a test source root, not in main (#371 item 5). */
+    @Test
+    void annotationIsNotShippedInProductionSources() throws Exception {
+        Path base = Path.of("").toAbsolutePath();
+        Path main = Files.isDirectory(base.resolve("src/main/java"))
+                ? base.resolve("src/main/java")
+                : base.resolve("backend/common/src/main/java");
+
+        assertThat(main.resolve("com/superhumans/config/EnableTestExceptionHandler.java"))
+                .describedAs("annotation must not exist under src/main/java")
+                .doesNotExist();
+        assertThat(Path.of("src/test/java/com/superhumans/config/EnableTestExceptionHandler.java"))
+                .describedAs("annotation must exist under src/test/java")
+                .exists();
     }
 
     private static String read(Path p) {

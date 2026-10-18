@@ -93,8 +93,10 @@ class VitalSignControllerTest {
     }
 
     @Test
-    void getDaysByPrescriptionList_returnsList() throws Exception {
-        when(vitalSignService.getOrCreate(prescriptionListId)).thenReturn(vitalList);
+    void getDaysByPrescriptionList_isAPureRead() throws Exception {
+        // #365: the GET reads whatever exists; it must never provision.
+        when(vitalSignService.findList(prescriptionListId))
+                .thenReturn(java.util.Optional.of(vitalList));
         when(vitalSignService.getDays(vitalListId)).thenReturn(List.of(vitalDay));
 
         mockMvc.perform(get("/api/vital-signs")
@@ -103,6 +105,37 @@ class VitalSignControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(dayId.toString()))
                 .andExpect(jsonPath("$[0].dayDate").value(LocalDate.now().toString()));
+    }
+
+    @Test
+    void getGrid_withoutGrid_returnsEmptyAndNeverProvisions() throws Exception {
+        // The CSRF PoC from the issue: a list whose grid does not exist yet.
+        // The GET answers 200 with an empty body and leaves the DB untouched.
+        when(vitalSignService.findList(prescriptionListId))
+                .thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/vital-signs/grid")
+                        .param("prescriptionListId", prescriptionListId.toString())
+                        .header("Authorization", "Bearer test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        org.mockito.Mockito.verify(vitalSignService,
+                org.mockito.Mockito.never()).getOrCreate(any());
+    }
+
+    @Test
+    void ensureGrid_provisionsAndReturnsTheGrid() throws Exception {
+        // #365: provisioning is the POST's job - idempotent, VITALS_ENTER-gated.
+        when(vitalSignService.getOrCreate(prescriptionListId)).thenReturn(vitalList);
+        when(vitalSignService.getDays(vitalListId)).thenReturn(List.of(vitalDay));
+
+        mockMvc.perform(post("/api/vital-signs/grid")
+                        .param("prescriptionListId", prescriptionListId.toString())
+                        .with(TestSecurityHelper.nurse()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(dayId.toString()))
+                .andExpect(jsonPath("$[0].vitalListId").value(vitalListId.toString()));
     }
 
     @Test

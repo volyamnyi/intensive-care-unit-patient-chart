@@ -5,12 +5,14 @@ import com.superhumans.audit.AuditActionDefinition.EventClass;
 import com.superhumans.audit.AuditActorResolver;
 import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.DomainAuditEmitter;
+import com.superhumans.service.PermissionService;
 import com.superhumans.prosthesismanufacturing.dto.BrakCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.BrakEventResponse;
 import com.superhumans.prosthesismanufacturing.dto.BranchResponse;
 import com.superhumans.prosthesismanufacturing.dto.EvidenceFileResponse;
 import com.superhumans.prosthesismanufacturing.dto.FailureSnapshotResponse;
 import com.superhumans.prosthesismanufacturing.dto.FlowInstanceResponse;
+import com.superhumans.prosthesismanufacturing.dto.FlowInstancePageResponse;
 import com.superhumans.prosthesismanufacturing.dto.InstanceCreateRequest;
 import com.superhumans.prosthesismanufacturing.dto.PauseRequest;
 import com.superhumans.prosthesismanufacturing.dto.ResourceUsageResponse;
@@ -63,6 +65,7 @@ public class FlowInstanceController {
     BrakService brakService;
     CurrentUser currentUser;
     DomainAuditEmitter auditEmitter;
+    PermissionService permissionService;
 
     @PostMapping
     @PreAuthorize("@permissionService.has('PROSTHETICS_INSTANCE_CREATE')")
@@ -77,11 +80,31 @@ public class FlowInstanceController {
     @Operation(summary = "List instances (prosthetist sees only own)")
     public List<FlowInstanceResponse> list(@RequestParam(required = false) Long assignee,
                                            @RequestParam(required = false) String status) {
-        if (assignee != null && !currentUser.canViewAllInstances()) {
-            assignee = null;
-        }
-        Long effectiveAssignee = currentUser.canViewAllInstances() ? assignee : currentUser.userId();
+        Long effectiveAssignee = effectiveAssignee(assignee);
         return instanceService.list(effectiveAssignee, status);
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
+    @Operation(summary = "List instances with bounded pagination (prosthetist sees only own)")
+    public FlowInstancePageResponse listPage(
+            @RequestParam(required = false) Long assignee,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return instanceService.listPage(effectiveAssignee(assignee), status, page, size, patientView());
+    }
+
+    /** Patient identifiers are only exposed to callers holding PATIENT_VIEW (#411). */
+    private boolean patientView() {
+        return permissionService.has(Codes.PATIENT_VIEW);
+    }
+
+    private Long effectiveAssignee(Long requestedAssignee) {
+        if (!currentUser.canViewAllInstances()) {
+            return currentUser.userId();
+        }
+        return requestedAssignee;
     }
 
     @GetMapping("/{id}")
@@ -270,13 +293,29 @@ public class FlowInstanceController {
                 .body(new ByteArrayResource(evidence.getFileData()));
     }
 
-    @GetMapping("/{id}/pdf")
+    @PostMapping("/{id}/pdf")
     @PreAuthorize("@permissionService.hasAny('PROSTHETICS_DASHBOARD','MODULE_PROSTHETICS_ACCESS')")
-    @Operation(summary = "Generate final or failure report PDF")
-    @org.springframework.transaction.annotation.Transactional
+    @Operation(summary = "Generate and download final or failure report PDF")
     public ResponseEntity<ByteArrayResource> generateReport(@PathVariable UUID id) {
-        byte[] pdf = instanceService.generateReport(id, currentUser.userId(),
-                currentUser.canViewAllInstances());
+        final byte[] pdf;
+        try {
+            pdf = instanceService.generateReport(id, currentUser.userId(),
+                    currentUser.canViewAllInstances());
+        } catch (IllegalStateException renderFailure) {
+            auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContext())
+                    .eventClass(EventClass.BUSINESS)
+                    .module("prosthetics")
+                    .functionalArea("report")
+                    .action("prosthetics.report.generate")
+                    .actionType(ActionType.GENERATE)
+                    .target(new AuditEvent.AuditTarget("FlowInstance", id.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.FAILURE)
+                    .errorCode("PROSTHETICS_PDF_RENDER_FAILED")
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+            throw renderFailure;
+        }
         auditEmitter.emit("prosthetics", () -> AuditEvent.builder()
                 .actor(AuditActorResolver.fromCurrentContext())
                 .eventClass(EventClass.USER_ACTIVITY)
@@ -316,5 +355,17 @@ public class FlowInstanceController {
     @Operation(summary = "List child branches of the instance")
     public List<FlowInstanceResponse> listBranches(@PathVariable UUID id) {
         return brakService.listBranches(id, currentUser.userId(), currentUser.canViewAllInstances());
+    }
+
+    /**
+     * Permission codes for this controller, taken from the allowlisted
+     * {@code PermissionCodes} SPI (#427 item 2) — no literals, no drift.
+     */
+    static final class Codes {
+        static final String PATIENT_VIEW =
+                com.superhumans.entity.core.PermissionCodes.PROSTHETICS_PRODUCTION_PATIENT_VIEW;
+
+        private Codes() {
+        }
     }
 }

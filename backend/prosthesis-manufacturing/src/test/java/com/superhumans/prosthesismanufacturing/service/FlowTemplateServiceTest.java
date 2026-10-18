@@ -1,6 +1,6 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.dto.TemplateCreateRequest;
 import com.superhumans.prosthesismanufacturing.entity.ElementType;
 import com.superhumans.prosthesismanufacturing.entity.LimbSide;

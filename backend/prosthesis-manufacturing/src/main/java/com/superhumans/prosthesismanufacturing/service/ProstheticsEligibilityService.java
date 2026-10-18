@@ -66,6 +66,7 @@ public class ProstheticsEligibilityService {
     static final Set<Long> ELIGIBLE_DOCUMENT_TEMPLATE_IDS = Set.of(120L, 121L);
     /** Assumption for blocker (f): documents-cache TTL. Single place. */
     static final Duration DOCUMENTS_CACHE_TTL = Duration.ofMinutes(5);
+    static final int MAX_DOCUMENTS_CACHE_ENTRIES = 10_000;
 
     MisService misService;
     ProstheticsOrderService orderService;
@@ -119,6 +120,7 @@ public class ProstheticsEligibilityService {
      */
     @Transactional(readOnly = true)
     public List<ProstheticsCandidateResponse> getCandidates(String query) {
+        evictExpiredDocuments();
         String needle = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
         return misService.getPatientsUnderTreatment().parallelStream()
                 .filter(p -> p.getId() != null && p.getDepartmentId() != null
@@ -179,10 +181,25 @@ public class ProstheticsEligibilityService {
         return fresh == null ? List.of() : fresh;
     }
 
+    private void evictExpiredDocuments() {
+        Instant now = clock.instant();
+        documentsCache.entrySet().removeIf(entry ->
+                !entry.getValue().loadedAt().plus(DOCUMENTS_CACHE_TTL).isAfter(now));
+        // A large/churning MIS roster must not grow the process-local cache
+        // without bound during a single TTL window.
+        if (documentsCache.size() >= MAX_DOCUMENTS_CACHE_ENTRIES) {
+            documentsCache.clear();
+        }
+    }
+
     /**
      * Test hook: drops all cached documents.
      */
     void clearDocumentsCache() {
         documentsCache.clear();
+    }
+
+    int cachedDocumentCount() {
+        return documentsCache.size();
     }
 }

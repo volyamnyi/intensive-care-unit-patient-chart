@@ -11,6 +11,7 @@ import com.superhumans.mis.dto.DocumentMisDTO;
 import com.superhumans.mis.dto.MedicineMisDTO;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.service.AuditService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,13 +35,14 @@ class MisServiceImplTest {
     private MisApiClient client;
     private AuditService audit;
     private MisServiceImpl service;
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         client = mock(MisApiClient.class);
         audit = mock(AuditService.class);
-        service = new MisServiceImpl(client, audit);
+        service = new MisServiceImpl(client, audit, meterRegistry);
     }
 
     private JsonNode json(String body) {
@@ -159,6 +161,15 @@ class MisServiceImplTest {
         assertThat(all.get(0).getPatientStatus()).isEqualTo("MOV");
         assertThat(all.get(1).getPatientStatus()).isEqualTo("CMP");
         assertThat(all.get(2).getPatientStatus()).isNull();
+    }
+
+    @Test
+    void unrecognized200Envelope_isCountedAndDoesNotLeakValues() {
+        stubPatientList("{\"unexpectedWrapper\":[{\"patientName\":\"private-value\"}]}");
+
+        assertThat(service.getPatientsUnderTreatment()).isEmpty();
+        assertThat(meterRegistry.get("mis.response.unrecognized_envelope").counter().count())
+                .isEqualTo(1.0);
     }
 
     @Test

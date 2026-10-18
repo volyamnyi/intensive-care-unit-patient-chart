@@ -249,9 +249,10 @@ public final class AuditActionCatalog {
             a("medication.dose.unassign", "medication", "dose", ActionType.UNASSIGN,
                     EventClass.BUSINESS, ActorPolicy.USER, DataClass.CLINICAL,
                     false, Flag.MANDATORY, Flag.WRITE),
-            a("medication.dose.complete", "medication", "dose", ActionType.COMPLETE,
-                    EventClass.BUSINESS, ActorPolicy.USER, DataClass.CLINICAL,
-                    false, Flag.MANDATORY, Flag.WRITE),
+            // #359 removed medication.dose.complete: the complete endpoint is now a
+            // two-person alias of execute, so the dose is audited once, as
+            // medication.dose.execute (USER_AND_WITNESS) - the standalone completion
+            // action had no emitter left.
             a("medication.dose.execute", "medication", "dose", ActionType.DOSE_EXECUTE,
                     EventClass.BUSINESS, ActorPolicy.USER_AND_WITNESS, DataClass.CLINICAL,
                     false, Flag.MANDATORY, Flag.WRITE),

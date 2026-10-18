@@ -18,13 +18,36 @@ class AuditClientIpResolverTest {
     }
 
     @Test
-    void trustedProxyUsesLeftmostValidForwardedAddress() {
+    void trustedProxyTakesRightmostValidForwardedAddress() {
         var resolver = new AuditClientIpResolver("10.0.0.0/8, 2001:db8::1");
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr("10.0.0.5");
         request.addHeader("X-Forwarded-For", "unknown, 203.0.113.9, 10.0.0.6");
 
         assertThat(resolver.resolveClientIp(request)).isEqualTo("203.0.113.9");
+    }
+
+    @Test
+    void trustedProxyIgnoresClientSuppliedLeftmostEntries() {
+        // #361: proxies APPEND, so the leftmost XFF entry is client-controlled.
+        // A client that sends its own X-Forwarded-For ahead of the real chain
+        // must not get its chosen IP into the audit trail.
+        var resolver = new AuditClientIpResolver("10.0.0.0/8");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("10.0.0.5");
+        request.addHeader("X-Forwarded-For", "1.2.3.4, 198.51.100.7, 10.0.0.6");
+
+        assertThat(resolver.resolveClientIp(request)).isEqualTo("198.51.100.7");
+    }
+
+    @Test
+    void fullyTrustedChainFallsBackToLeftmostLiteral() {
+        var resolver = new AuditClientIpResolver("10.0.0.0/8");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRemoteAddr("10.0.0.5");
+        request.addHeader("X-Forwarded-For", "10.0.0.7, 10.0.0.6");
+
+        assertThat(resolver.resolveClientIp(request)).isEqualTo("10.0.0.7");
     }
 
     @Test

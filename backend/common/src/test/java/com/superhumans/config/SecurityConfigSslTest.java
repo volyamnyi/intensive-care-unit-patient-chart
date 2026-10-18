@@ -16,6 +16,7 @@ import com.superhumans.service.AuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * ({@code redirectToHttps}) applies to every request, including the otherwise
  * public permit-all endpoints, and plain HTTP requests are redirected to HTTPS.
  */
+@ActiveProfiles("security-fixture")
 @WebMvcTest(value = SecurityFixtureController.class, properties = "server.ssl.enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, SecurityFixtureController.class})
 class SecurityConfigSslTest {

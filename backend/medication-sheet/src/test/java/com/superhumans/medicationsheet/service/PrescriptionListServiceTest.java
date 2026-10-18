@@ -138,79 +138,21 @@ class PrescriptionListServiceTest {
         assertThat(listCaptor.getValue().getDocumentName()).isEqualTo("Test Document");
     }
 
-    // --- acquireLock ---
+// --- acquireLock / releaseLock: deleted (#363) ---
+// The methods had no caller in src/main and acquireLock wrote the user id into
+// the STATUS column. Concurrent editing is guarded by @Version (see
+// PrescriptionRepositoryTest).
 
     @Test
-    void acquireLock_setsEditingUser() {
-        UUID userId = UUID.randomUUID();
-        testList.setStatus("Saved");
-
-        service.acquireLock(testList, userId);
-
-        assertThat(testList.getEditingUserId()).isEqualTo(userId);
-        assertThat(testList.getEditingStartedAt()).isNotNull();
-    }
-
-    @Test
-    void acquireLock_throws_whenFinished() {
-        testList.setStatus("Finished");
-        UUID userId = UUID.randomUUID();
-
-        assertThatThrownBy(() -> service.acquireLock(testList, userId))
-                .isInstanceOf(DocumentLockedException.class)
-                .hasMessageContaining("closed");
-    }
-
-    @Test
-    void acquireLock_throws_whenEditedByAnotherUser() {
-        UUID otherUser = UUID.randomUUID();
-        UUID currentUser = UUID.randomUUID();
-        testList.setEditingUserId(otherUser);
-        testList.setStatus(otherUser.toString());
-
-        assertThatThrownBy(() -> service.acquireLock(testList, currentUser))
-                .isInstanceOf(DocumentLockedException.class)
-                .hasMessageContaining("another user");
-    }
-
-    @Test
-    void acquireLock_succeeds_whenSameUserReacquires() {
-        UUID userId = UUID.randomUUID();
-        testList.setEditingUserId(userId);
-        testList.setStatus(userId.toString());
-
-        service.acquireLock(testList, userId);
-
-        assertThat(testList.getEditingUserId()).isEqualTo(userId);
-    }
-
-    // --- releaseLock ---
-
-    @Test
-    void releaseLock_clearsEditingUser_whenSameUser() {
-        UUID userId = UUID.randomUUID();
-        testList.setEditingUserId(userId);
-        testList.setStatus(userId.toString());
-        when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
-        when(listRepository.save(any())).thenReturn(testList);
-
-        service.releaseLock(listId, userId);
-
-        verify(listRepository).save(listCaptor.capture());
-        assertThat(listCaptor.getValue().getEditingUserId()).isNull();
-        assertThat(listCaptor.getValue().getStatus()).isEqualTo("Saved");
-    }
-
-    @Test
-    void releaseLock_noop_whenDifferentUser() {
-        UUID otherUser = UUID.randomUUID();
-        UUID currentUser = UUID.randomUUID();
-        testList.setEditingUserId(otherUser);
-        when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
-
-        service.releaseLock(listId, currentUser);
-
-        verify(listRepository, never()).save(any());
+    void lockMethods_areGone_soTheStatusHackCannotReturn() {
+        // #363 tripwire: the dead lock must not come back in its old form -
+        // reviving it would re-introduce list.setStatus(userId.toString()).
+        assertThat(java.util.Arrays.stream(PrescriptionListService.class.getDeclaredMethods())
+                .map(java.lang.reflect.Method::getName))
+                .doesNotContain("acquireLock", "releaseLock");
+        assertThat(java.util.Arrays.stream(PrescriptionList.class.getDeclaredMethods())
+                .map(java.lang.reflect.Method::getName))
+                .doesNotContain("isEditing", "getEditingUserId", "setEditingUserId");
     }
 
     // --- close ---
@@ -224,8 +166,6 @@ class PrescriptionListServiceTest {
 
         verify(listRepository).save(listCaptor.capture());
         assertThat(listCaptor.getValue().getStatus()).isEqualTo("Finished");
-        assertThat(listCaptor.getValue().getEditingUserId()).isNull();
-        assertThat(listCaptor.getValue().getEditingStartedAt()).isNull();
     }
 
     @Test

@@ -149,6 +149,9 @@ class SignatureServiceTest {
                 .thenReturn(Optional.empty());
 
         signatureService.assertNoNurseSignature(clinicalDayId);
+
+        // #428 item 7: no-exception alone made a guard deletion invisible.
+        verify(signatureRepository).findByClinicalDayIdAndRole(clinicalDayId, "NURSE");
     }
 
     @Test
@@ -168,5 +171,8 @@ class SignatureServiceTest {
                 .thenReturn(Optional.empty());
 
         signatureService.assertNoDoctorSignature(clinicalDayId);
+
+        // #428 item 7: the lookup actually happened.
+        verify(signatureRepository).findByClinicalDayIdAndRole(clinicalDayId, "DOCTOR");
     }
 }

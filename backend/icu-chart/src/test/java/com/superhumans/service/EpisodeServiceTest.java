@@ -6,7 +6,10 @@ import com.superhumans.dto.EpisodePatchRequest;
 import com.superhumans.dto.EpisodeResponse;
 import com.superhumans.icu.entity.Episode;
 import com.superhumans.icu.entity.EpisodeStatus;
+import com.superhumans.entity.core.User;
+import com.superhumans.entity.core.UserRole;
 import com.superhumans.exception.BusinessException;
+import com.superhumans.exception.BadRequestException;
 import com.superhumans.exception.EpisodeAlreadyActiveException;
 import com.superhumans.exception.NotFoundException;
 import com.superhumans.exception.VersionConflictException;
@@ -14,6 +17,7 @@ import com.superhumans.mapper.EpisodeMapper;
 import com.superhumans.mis.MisService;
 import com.superhumans.icu.repository.ClinicalDayRepository;
 import com.superhumans.icu.repository.EpisodeRepository;
+import com.superhumans.repository.core.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +57,12 @@ class EpisodeServiceTest {
 
     @Mock
     private ClinicalDayRepository clinicalDayRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private EpisodeService episodeService;
@@ -134,12 +144,11 @@ class EpisodeServiceTest {
     }
 
     @Test
-    void searchEpisodes_withoutFilters_returnsAll() {
-        when(episodeRepository.findAll()).thenReturn(List.of(testEpisode));
-
-        List<EpisodeResponse> results = episodeService.searchEpisodes(null, null);
-
-        assertThat(results).hasSize(1);
+    void searchEpisodes_withoutFilters_rejectsUnboundedRoster() {
+        assertThatThrownBy(() -> episodeService.searchEpisodes(null, null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("filter");
+        verify(episodeRepository, never()).findAll();
     }
 
     @Test
@@ -211,6 +220,40 @@ class EpisodeServiceTest {
     }
 
     @Test
+    void updateEpisode_reassigningAttendance_requiresCurrentAttendingOrHeadOfDepartment() {
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(User.builder()
+                .id(userId).role(UserRole.DOCTOR).build()));
+
+        EpisodePatchRequest req = new EpisodePatchRequest(
+                null, null, null, null, 22L, null, null, null, 0);
+
+        assertThatThrownBy(() -> episodeService.updateEpisode(episodeId, req, userId))
+                .isInstanceOf(org.springframework.security.authorization.AuthorizationDeniedException.class);
+        verify(episodeRepository, never()).save(any(Episode.class));
+    }
+
+    @Test
+    void updateEpisode_headOfDepartmentCanReassignAttendance() {
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(User.builder()
+                .id(userId).role(UserRole.HEAD_OF_DEPARTMENT).build()));
+        when(userRepository.findById(22L)).thenReturn(Optional.of(User.builder()
+                .id(22L).role(UserRole.DOCTOR).email("doctor22@example.test").build()));
+        when(episodeRepository.save(any(Episode.class))).thenReturn(testEpisode);
+        when(episodeMapper.toResponse(any(Episode.class))).thenReturn(EpisodeResponse.builder().id(episodeId).build());
+
+        EpisodePatchRequest req = new EpisodePatchRequest(
+                null, null, null, null, 22L, null, null, null, 0);
+
+        episodeService.updateEpisode(episodeId, req, userId);
+
+        assertThat(testEpisode.getAttendingDoctorId()).isEqualTo(22L);
+        verify(emailService).sendAttendingDoctorChanged("doctor22@example.test", episodeId, null);
+        verify(auditService).logUpdate("Episode", episodeId, userId, null, "Updated episode fields");
+    }
+
+    @Test
     void closeEpisode_withVersionMismatch_throws() {
         when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
         EpisodeCloseRequest req = new EpisodeCloseRequest(LocalDateTime.now(), 999);
@@ -235,6 +278,30 @@ class EpisodeServiceTest {
         assertThat(episodeCaptor.getValue().getStatus()).isEqualTo(EpisodeStatus.COMPLETED);
         assertThat(episodeCaptor.getValue().getDischargeDate()).isEqualTo(req.getDischargeDate());
         verify(auditService).logAction("Episode", episodeId, "CLOSE", userId);
+    }
+
+    @Test
+    void closeEpisode_completedEpisode_currentlyPermitted_noProductionGuard() {
+        // #428 item 1: pin CURRENT behavior — double-close is allowed (no
+        // status guard in closeEpisode); when a guard lands, flip this test.
+        testEpisode.setStatus(EpisodeStatus.COMPLETED);
+        when(episodeRepository.findById(episodeId)).thenReturn(Optional.of(testEpisode));
+        when(episodeRepository.save(any(Episode.class))).thenReturn(testEpisode);
+
+        EpisodeCloseRequest req = new EpisodeCloseRequest(LocalDateTime.now(), 0);
+
+        episodeService.closeEpisode(episodeId, req, userId);
+
+        verify(episodeRepository).save(any(Episode.class));
+    }
+
+    @Test
+    void closeEpisode_unknownId_throws() {
+        when(episodeRepository.findById(any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> episodeService.closeEpisode(episodeId,
+                new EpisodeCloseRequest(LocalDateTime.now(), 0), userId))
+                .isInstanceOf(NotFoundException.class);
     }
 
     // ---- Archive tests (CR-06 #425): pins CURRENT lifecycle behavior so the

@@ -14,6 +14,9 @@ import java.util.UUID;
 @Repository
 public interface StepExecutionRepository extends JpaRepository<StepExecution, UUID> {
     List<StepExecution> findByInstanceId(UUID instanceId);
+
+    /** One query for a whole page of instances (#411 item 3, batch enrichment). */
+    List<StepExecution> findByInstanceIdIn(java.util.Collection<UUID> instanceIds);
     List<StepExecution> findByInstanceIdAndStepId(UUID instanceId, UUID stepId);
     Optional<StepExecution> findByInstanceIdAndStepIdAndAttemptNumber(UUID instanceId, UUID stepId, Integer attemptNumber);
 

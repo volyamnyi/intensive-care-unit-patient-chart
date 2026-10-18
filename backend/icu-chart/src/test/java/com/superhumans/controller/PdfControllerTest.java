@@ -43,6 +43,9 @@ class PdfControllerTest {
     @MockitoBean
     private AuditService auditService;
 
+    @MockitoBean
+    private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+
     @BeforeEach
     void setUp() {
         when(jwtTokenProvider.validateToken(any())).thenReturn(true);

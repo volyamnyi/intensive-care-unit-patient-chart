@@ -10,6 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
@@ -71,6 +72,8 @@ class BrakNotificationDeliveryServiceTest {
         ReflectionTestUtils.setField(service, "frontendBaseUrl", "");
         ReflectionTestUtils.setField(service, "maxAttempts", 5);
         ReflectionTestUtils.setField(service, "batchSize", 20);
+        lenient().when(outboxRepository.claimForDelivery(any(), eq(BrakNotificationStatus.PROCESSING),
+                anyList(), any(), any(), any())).thenReturn(1);
     }
 
     @Test
@@ -122,6 +125,38 @@ class BrakNotificationDeliveryServiceTest {
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
+    }
+
+    @Test
+    void deliver_processingRowWithLiveLeaseDoesNotSendAgain() {
+        BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.PROCESSING, 1);
+        row.setLeaseUntil(LocalDateTime.now().plusMinutes(1));
+        when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
+                .thenReturn(Optional.of(row));
+
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+
+        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
+        verify(outboxRepository, never()).claimForDelivery(any(), any(), anyList(), any(), any(), any());
+    }
+
+    @Test
+    void deliver_expiredProcessingRowCanBeReclaimed() {
+        BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.PROCESSING, 1);
+        row.setLeaseUntil(LocalDateTime.now().minusMinutes(1));
+        stubFullContext(row);
+        when(notificationService.resolveRecipients())
+                .thenReturn(List.of(admin(1L, "a@hospital.local")));
+        when(composer.buildSubject(any())).thenReturn("SUBJ");
+        when(composer.buildBody(any())).thenReturn("BODY");
+        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+                .thenReturn(new int[]{1, 0});
+
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+
+        verify(outboxRepository).claimForDelivery(any(), eq(BrakNotificationStatus.PROCESSING),
+                anyList(), any(), any(), any());
+        verify(notificationService).sendToRecipients(any(), any(), any(), any());
     }
 
     @Test
@@ -259,8 +294,9 @@ class BrakNotificationDeliveryServiceTest {
     void sweep_deliversDueRowsOldestFirst() {
         BrakNotificationOutbox first = outboxRow(BrakNotificationStatus.PENDING, 0);
         BrakNotificationOutbox second = outboxRow(BrakNotificationStatus.FAILED, 1);
-        when(outboxRepository.findByStatusInAndAttemptsLessThanOrderByCreatedAtAsc(
+        when(outboxRepository.findDueForDelivery(
                 List.of(BrakNotificationStatus.PENDING, BrakNotificationStatus.FAILED),
+                BrakNotificationStatus.PROCESSING,
                 5, PageRequest.of(0, 20)))
                 .thenReturn(List.of(first, second));
         when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
@@ -287,8 +323,9 @@ class BrakNotificationDeliveryServiceTest {
     void sweep_oneBadRowDoesNotAbortOthers() {
         BrakNotificationOutbox bad = outboxRow(BrakNotificationStatus.PENDING, 0);
         BrakNotificationOutbox good = outboxRow(BrakNotificationStatus.PENDING, 0);
-        when(outboxRepository.findByStatusInAndAttemptsLessThanOrderByCreatedAtAsc(
-                anyList(), anyInt(), any())).thenReturn(List.of(bad, good));
+        when(outboxRepository.findDueForDelivery(
+                anyList(), eq(BrakNotificationStatus.PROCESSING), anyInt(), any()))
+                .thenReturn(List.of(bad, good));
         when(outboxRepository.findByBrakEventIdAndKindForUpdate(EVENT_ID, BrakNotificationKind.SINGLE))
                 .thenReturn(Optional.of(bad), Optional.of(good));
         when(brakEventRepository.findById(EVENT_ID)).thenReturn(Optional.of(brakEvent()));

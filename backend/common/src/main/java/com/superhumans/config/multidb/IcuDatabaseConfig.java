@@ -33,9 +33,19 @@ public class IcuDatabaseConfig {
         return MultiDatabaseSupport.moduleDataSource(properties);
     }
 
+    /**
+     * Transaction/JPA view of the icu pool: lazily acquires a connection
+     * (#423 item 2) so a request that touches one module DB no longer reserves
+     * a connection in all four pools. Liquibase and seeding keep the raw pool.
+     */
+    @Bean
+    public DataSource icuLazyDataSource(@Qualifier("icuDataSource") DataSource dataSource) {
+        return MultiDatabaseSupport.lazyTransactionDataSource(dataSource);
+    }
+
     @Bean
     public LocalContainerEntityManagerFactoryBean icuEntityManagerFactory(
-            @Qualifier("icuDataSource") DataSource dataSource) {
+            @Qualifier("icuLazyDataSource") DataSource dataSource) {
         return MultiDatabaseSupport.entityManagerFactory(dataSource,
                 "com.superhumans.icu.entity", "com.superhumans.entity.base");
     }

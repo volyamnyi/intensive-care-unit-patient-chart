@@ -1,6 +1,11 @@
 package com.superhumans.controller;
 
 import com.superhumans.dto.PdfResponse;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.service.PdfGeneratorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,8 +26,14 @@ import lombok.experimental.FieldDefaults;
 public class PdfController {
 
     PdfGeneratorService pdfGeneratorService;
+    DomainAuditEmitter auditEmitter;
 
+    // #364: PDFs are patient-level document exports, so they take the same
+    // PATIENT_VIEW gate as the medication module's PDFs. A role granted only the
+    // module-visit checkbox (MODULE_ICU_ACCESS) can browse the ICU but must not
+    // export complete clinical-day documents.
     @GetMapping("/clinical-days/{clinicalDayId}/pdf")
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     public ResponseEntity<PdfResponse> getPdf(@PathVariable UUID clinicalDayId) {
         return ResponseEntity.ok()
                 .header("Cache-Control", "no-store")
@@ -33,6 +44,7 @@ public class PdfController {
     @GetMapping(
             value = "/clinical-days/{clinicalDayId}/pdf/file",
             produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     public ResponseEntity<byte[]> getPdfFile(@PathVariable UUID clinicalDayId) {
         return ResponseEntity.ok()
                 .header("Cache-Control", "no-store")
@@ -46,7 +58,23 @@ public class PdfController {
             @PathVariable UUID clinicalDayId,
             Authentication auth) {
         Long userId = (Long) auth.getCredentials();
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(pdfGeneratorService.generatePdf(clinicalDayId, userId));
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(pdfGeneratorService.generatePdf(clinicalDayId, userId));
+        } catch (IllegalStateException renderFailure) {
+            auditEmitter.emit("icu", () -> AuditEvent.builder()
+                    .actor(AuditActorResolver.fromCurrentContextOrSystem("icu-pdf-job"))
+                    .eventClass(EventClass.BUSINESS)
+                    .module("icu")
+                    .functionalArea("pdf")
+                    .action("icu.pdf.generate")
+                    .actionType(ActionType.GENERATE)
+                    .target(new AuditEvent.AuditTarget("ClinicalDay", clinicalDayId.toString(), null))
+                    .outcome(AuditEvent.AuditOutcome.FAILURE)
+                    .errorCode("ICU_PDF_RENDER_FAILED")
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+            throw renderFailure;
+        }
     }
 }

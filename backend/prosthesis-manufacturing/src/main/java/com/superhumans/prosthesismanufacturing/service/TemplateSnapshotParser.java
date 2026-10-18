@@ -1,7 +1,7 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,9 +32,11 @@ public class TemplateSnapshotParser {
 
     public SnapshotTemplate parse(String json) {
         try {
-            return objectMapper.readValue(json, SnapshotTemplate.class);
+            return objectMapper.readerFor(SnapshotTemplate.class)
+                    .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                    .readValue(json);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Template snapshot is corrupted");
+            throw new IllegalArgumentException("Template snapshot is corrupted", e);
         }
     }
 
@@ -69,8 +71,7 @@ public class TemplateSnapshotParser {
     @AllArgsConstructor
     @FieldDefaults(level = AccessLevel.PRIVATE)
     // Historic snapshots persisted before the Quality Gate removal may still carry a
-    // "gate" block — tolerate and ignore it instead of failing the parse.
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    // "gate" block — parser-level unknown-property tolerance keeps it compatible.
     public static class SnapshotStage {
         UUID id;
         String name;

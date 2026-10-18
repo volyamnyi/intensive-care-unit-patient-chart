@@ -1,5 +1,6 @@
 package com.superhumans.config;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,7 +11,13 @@ import org.springframework.web.bind.annotation.RestController;
  * {@link SecurityConfig} unit tests. It is registered explicitly through
  * {@code @WebMvcTest(SecurityFixtureController.class)}, so it shadows paths
  * that the real application would serve (auth, swagger, api-docs).
+ * <p>
+ * Profiled: the shared common test-jar sits on the other modules' test
+ * classpaths (#428 item 10), so an unprofiled {@code @RestController} would be
+ * component-scanned into their integration contexts and collide with the real
+ * {@code AuthController} mapping. The tests below activate the profile.
  */
+@Profile("security-fixture")
 @RestController
 public class SecurityFixtureController {
 

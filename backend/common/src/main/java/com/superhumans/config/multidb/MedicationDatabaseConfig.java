@@ -33,9 +33,19 @@ public class MedicationDatabaseConfig {
         return MultiDatabaseSupport.moduleDataSource(properties);
     }
 
+    /**
+     * Transaction/JPA view of the med pool: lazily acquires a connection
+     * (#423 item 2) so a request that touches one module DB no longer reserves
+     * a connection in all four pools. Liquibase and seeding keep the raw pool.
+     */
+    @Bean
+    public DataSource medLazyDataSource(@Qualifier("medDataSource") DataSource dataSource) {
+        return MultiDatabaseSupport.lazyTransactionDataSource(dataSource);
+    }
+
     @Bean
     public LocalContainerEntityManagerFactoryBean medEntityManagerFactory(
-            @Qualifier("medDataSource") DataSource dataSource) {
+            @Qualifier("medLazyDataSource") DataSource dataSource) {
         return MultiDatabaseSupport.entityManagerFactory(dataSource,
                 "com.superhumans.medicationsheet.entity", "com.superhumans.entity.base");
     }

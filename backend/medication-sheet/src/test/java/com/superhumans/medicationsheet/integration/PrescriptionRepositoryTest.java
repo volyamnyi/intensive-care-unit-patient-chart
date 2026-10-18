@@ -139,19 +139,91 @@ class PrescriptionRepositoryTest {
         assertThat(exec.getStatus()).isEqualTo("Completed");
     }
 
-    @Test
-    void shouldCreateSignature() {
-        PrescriptionItem item = em.find(PrescriptionItem.class, itemId);
-        PrescriptionSignature sig = PrescriptionSignature.builder()
-                .item(item)
-                .userId(UUID.randomUUID())
-                .role("DOCTOR")
-                .signedAt(LocalDateTime.now())
-                .status("Active")
-                .build();
-        sig = em.persistFlushFind(sig);
+@Test
+void shouldCreateSignature() {
+PrescriptionItem item = em.find(PrescriptionItem.class, itemId);
+PrescriptionSignature sig = PrescriptionSignature.builder()
+.item(item)
+.userId(UUID.randomUUID())
+.role("DOCTOR")
+.signedAt(LocalDateTime.now())
+.status("Active")
+.build();
+sig = em.persistFlushFind(sig);
 
-        assertThat(sig.getId()).isNotNull();
-        assertThat(sig.getRole()).isEqualTo("DOCTOR");
-    }
+assertThat(sig.getId()).isNotNull();
+assertThat(sig.getRole()).isEqualTo("DOCTOR");
+}
+
+/**
+     * #363: the deleted soft edit lock had no caller, so concurrent editing has
+     * exactly one guard - the {@code @Version} optimistic lock. This pins the
+     * conflict explicitly: two editors load the same list, the first save wins,
+     * the second one fails instead of silently overwriting it.
+     */
+@Test
+void concurrentEdits_secondSaveFailsWithOptimisticLock() {
+var emf = em.getEntityManager().getEntityManagerFactory();
+
+// The class tx is uncommitted, so the probe list is created and committed in
+// its own session - the two editors below must be able to see it.
+PrescriptionList probe;
+var setup = emf.createEntityManager();
+try {
+setup.getTransaction().begin();
+probe = PrescriptionList.builder()
+.patientId(999_001L)
+.documentName("concurrency-probe")
+.status("Saved")
+.build();
+setup.persist(probe);
+setup.getTransaction().commit();
+} finally {
+setup.close();
+}
+
+// Two independent sessions, like two doctors in two tabs.
+var firstSession = emf.createEntityManager();
+var secondSession = emf.createEntityManager();
+try {
+firstSession.getTransaction().begin();
+secondSession.getTransaction().begin();
+
+PrescriptionList first = firstSession.find(PrescriptionList.class, probe.getId());
+PrescriptionList second = secondSession.find(PrescriptionList.class, probe.getId());
+first.setDocumentName("editor-one-name");
+second.setDocumentName("editor-two-name");
+
+firstSession.merge(first);
+        firstSession.getTransaction().commit();
+
+        // The second editor's copy is now stale; committing it must fail. The stale
+        // update matches no row and surfaces wrapped in the commit RollbackException.
+        secondSession.merge(second);
+        assertThatThrownBy(secondSession.getTransaction()::commit)
+.isInstanceOf(jakarta.persistence.RollbackException.class)
+.hasMessageContaining("committing");
+} finally {
+if (firstSession.getTransaction().isActive()) {
+firstSession.getTransaction().rollback();
+}
+if (secondSession.getTransaction().isActive()) {
+secondSession.getTransaction().rollback();
+}
+firstSession.close();
+secondSession.close();
+
+var cleanup = emf.createEntityManager();
+try {
+cleanup.getTransaction().begin();
+PrescriptionList left = cleanup.find(PrescriptionList.class, probe.getId());
+if (left != null) {
+cleanup.remove(left);
+}
+cleanup.getTransaction().commit();
+} finally {
+cleanup.close();
+}
+}
+}
 }

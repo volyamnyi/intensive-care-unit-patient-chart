@@ -28,7 +28,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -99,7 +98,6 @@ public class BrakNotificationDeliveryService {
      * {@code THRESHOLD} row for the same event. Never throws for mail
      * problems.
      */
-    @Transactional
     public void deliver(UUID brakEventId, Long actorId, BrakNotificationKind kind) {
         if (!enabled) {
             log.info("Brak email delivery disabled, keeping it queued brakEventId={}",
@@ -110,26 +108,8 @@ public class BrakNotificationDeliveryService {
                     AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_DISABLED");
             return;
         }
-        BrakNotificationOutbox row = outboxRepository
-                .findByBrakEventIdAndKindForUpdate(brakEventId, kind)
-                .orElse(null);
+        BrakNotificationOutbox row = claim(brakEventId, kind, actorId);
         if (row == null) {
-            log.warn("Brak email skipped, no outbox row brakEventId={} kind={}", brakEventId, kind);
-            return;
-        }
-        if (row.getStatus() == BrakNotificationStatus.SENT
-                || row.getStatus() == BrakNotificationStatus.SKIPPED
-                || row.getStatus() == BrakNotificationStatus.DEAD) {
-            log.info("Brak email already terminal ({}), skipping repeat brakEventId={}",
-                    row.getStatus(), brakEventId);
-            return;
-        }
-        if (row.getStatus() == BrakNotificationStatus.FAILED
-                && row.getAttempts() >= maxAttempts) {
-            row.setStatus(BrakNotificationStatus.DEAD);
-            row.setLastError("attempts exhausted (" + row.getAttempts() + ")");
-            log.error("Brak email dead, attempts exhausted brakEventId={} attempts={}",
-                    brakEventId, row.getAttempts());
             return;
         }
         BrakEvent brakEvent = brakEventRepository.findById(brakEventId).orElse(null);
@@ -137,6 +117,9 @@ public class BrakNotificationDeliveryService {
             // Cannot happen (same-transaction enqueue), but fail closed and
             // terminal so the sweep does not spin on it forever.
             row.setStatus(BrakNotificationStatus.SKIPPED);
+            row.setLeaseUntil(null);
+            row.setClaimedBy(null);
+            outboxRepository.save(row);
             log.warn("Brak email skipped, BrakEvent not found brakEventId={}", brakEventId);
             return;
         }
@@ -144,6 +127,9 @@ public class BrakNotificationDeliveryService {
                 .orElse(null);
         if (instance == null) {
             row.setStatus(BrakNotificationStatus.SKIPPED);
+            row.setLeaseUntil(null);
+            row.setClaimedBy(null);
+            outboxRepository.save(row);
             log.warn("Brak email skipped, FlowInstance not found brakEventId={} instanceId={}",
                     brakEventId, brakEvent.getInstanceId());
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
@@ -155,6 +141,9 @@ public class BrakNotificationDeliveryService {
         List<User> recipients = notificationService.resolveRecipients();
         if (recipients.isEmpty()) {
             row.setStatus(BrakNotificationStatus.SKIPPED);
+            row.setLeaseUntil(null);
+            row.setClaimedBy(null);
+            outboxRepository.save(row);
             log.warn("Brak email skipped, no prosthetics administrators with an address "
                     + "brakEventId={}", brakEventId);
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
@@ -233,22 +222,24 @@ public class BrakNotificationDeliveryService {
                 subject, body, recipients,
                 brakEventId);
 
-        row.setAttempts(row.getAttempts() + 1);
+        int attempts = row.getAttempts() + 1;
         String outcome = (kind == BrakNotificationKind.THRESHOLD ? "kind=THRESHOLD " : "")
                 + "sent:" + result[0] + " failed:" + result[1];
+        BrakNotificationStatus finalStatus;
         if (result[1] == 0) {
-            row.setStatus(BrakNotificationStatus.SENT);
-            row.setLastError(null);
-        } else if (row.getAttempts() >= maxAttempts) {
-            row.setStatus(BrakNotificationStatus.DEAD);
-            row.setLastError(outcome);
+            finalStatus = BrakNotificationStatus.SENT;
+        } else if (attempts >= maxAttempts) {
+            finalStatus = BrakNotificationStatus.DEAD;
             log.error("Brak email dead, attempts exhausted brakEventId={} attempts={} {}",
-                    brakEventId, row.getAttempts(), outcome);
+                    brakEventId, attempts, outcome);
         } else {
-            row.setStatus(BrakNotificationStatus.FAILED);
-            row.setLastError(outcome);
+            finalStatus = BrakNotificationStatus.FAILED;
         }
-        outboxRepository.save(row);
+        outboxRepository.recordDelivery(row.getId(), finalStatus, attempts,
+                result[1] == 0 ? null : outcome, BrakNotificationStatus.PROCESSING);
+        row.setStatus(finalStatus);
+        row.setAttempts(attempts);
+        row.setLastError(result[1] == 0 ? null : outcome);
         auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                 result[1] == 0 ? ACTION_SENT : ACTION_FAILED, actorId, null, outcome);
         emitDeliveryOutcome(brakEventId, kind, actorId,
@@ -294,15 +285,15 @@ public class BrakNotificationDeliveryService {
      * overlapping itself); one bad row never aborts the sweep.
      */
     @Scheduled(fixedDelayString = "${app.prosthetics.brak-notification.outbox-poll-ms:60000}")
-    @Transactional
     public void sweep() {
         if (!enabled) {
             log.debug("Brak email sweep skipped (disabled)");
             return;
         }
         List<BrakNotificationOutbox> due = outboxRepository
-                .findByStatusInAndAttemptsLessThanOrderByCreatedAtAsc(
+                .findDueForDelivery(
                         List.of(BrakNotificationStatus.PENDING, BrakNotificationStatus.FAILED),
+                        BrakNotificationStatus.PROCESSING,
                         maxAttempts,
                         PageRequest.of(0, batchSize));
         for (BrakNotificationOutbox row : due) {
@@ -313,6 +304,47 @@ public class BrakNotificationDeliveryService {
                         row.getBrakEventId(), ex.getMessage());
             }
         }
+    }
+
+    private BrakNotificationOutbox claim(UUID brakEventId, BrakNotificationKind kind, Long actorId) {
+        BrakNotificationOutbox row = outboxRepository
+                .findByBrakEventIdAndKindForUpdate(brakEventId, kind)
+                .orElse(null);
+        if (row == null) {
+            log.warn("Brak email skipped, no outbox row brakEventId={} kind={}", brakEventId, kind);
+            return null;
+        }
+        if (row.getStatus() == BrakNotificationStatus.SENT
+                || row.getStatus() == BrakNotificationStatus.SKIPPED
+                || row.getStatus() == BrakNotificationStatus.DEAD) {
+            log.info("Brak email already terminal ({}), skipping repeat brakEventId={}",
+                    row.getStatus(), brakEventId);
+            return null;
+        }
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        if (row.getStatus() == BrakNotificationStatus.PROCESSING
+                && row.getLeaseUntil() != null && row.getLeaseUntil().isAfter(now)) {
+            return null;
+        }
+        if (row.getStatus() == BrakNotificationStatus.FAILED
+                && row.getAttempts() >= maxAttempts) {
+            row.setStatus(BrakNotificationStatus.DEAD);
+            row.setLastError("attempts exhausted (" + row.getAttempts() + ")");
+            outboxRepository.save(row);
+            return null;
+        }
+        String claimedBy = "brak-notification-" + UUID.randomUUID();
+        int claimed = outboxRepository.claimForDelivery(row.getId(),
+                BrakNotificationStatus.PROCESSING,
+                List.of(BrakNotificationStatus.PENDING, BrakNotificationStatus.FAILED),
+                now, now.plusMinutes(5), claimedBy);
+        if (claimed == 0) {
+            return null;
+        }
+        row.setStatus(BrakNotificationStatus.PROCESSING);
+        row.setLeaseUntil(now.plusMinutes(5));
+        row.setClaimedBy(claimedBy);
+        return row;
     }
 
     /**

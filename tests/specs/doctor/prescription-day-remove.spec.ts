@@ -83,6 +83,20 @@ async function planPart(request: APIRequestContext, token: string, partId: strin
   expect(res.status()).toBe(200);
 }
 
+// #359: completing a dose requires the second nurse's credentials - the same
+// two-person contract as the execute endpoint.
+async function completePart(request: APIRequestContext, nurseToken: string, partId: string): Promise<void> {
+  const res = await request.put(`${API}/prescriptions/day-parts/${partId}/complete`, {
+    headers: { Authorization: `Bearer ${nurseToken}` },
+    data: {
+      actualDose: '1tab',
+      secondPersonLogin: testUser(4).login,
+      secondPersonPassword: testUser(4).password,
+    },
+  });
+  expect(res.status()).toBe(200);
+}
+
 async function gotoDetail(page: Page, listId: string): Promise<void> {
   await page.goto(`/prescriptions/doctor/${listId}`);
   await expect(page).toHaveTitle('Призначення — Деталі', { timeout: 10_000 });
@@ -189,8 +203,7 @@ test.describe('Doctor — «−» day removal (last day of the row)', () => {
       const morning = parts.find((p) => p.dayId === last.dayId && p.period === 'morning');
       if (!morning) throw new Error('no morning part on last day');
       await planPart(request, doctorToken, morning.id, '12.5 мг');
-      const done = await request.put(`${API}/prescriptions/day-parts/${morning.id}/complete`, { headers: nurseAuth });
-      expect(done.status()).toBe(200);
+      await completePart(request, nurseToken, morning.id);
 
       await gotoDetail(page, listId);
       const row = await rowFor(page, name);

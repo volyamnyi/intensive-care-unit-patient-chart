@@ -26,3 +26,9 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: icu/080-clinical-indexes.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/081-race-guards.sql
+  - include:
+      relativeToChangelogFile: true
+      file: icu/082-drop-redundant-day-index.sql

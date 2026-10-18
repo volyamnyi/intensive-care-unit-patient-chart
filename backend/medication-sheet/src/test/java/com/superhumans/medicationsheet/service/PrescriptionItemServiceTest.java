@@ -23,6 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +40,9 @@ class PrescriptionItemServiceTest {
     private PrescriptionItemService service;
 
     @Captor private ArgumentCaptor<PrescriptionItem> itemCaptor;
+    @SuppressWarnings("unchecked")
+    private ArgumentCaptor<List<PrescriptionDayPart>> batchCaptor = ArgumentCaptor.forClass(List.class);
+
     @Captor private ArgumentCaptor<PrescriptionDayPart> partCaptor;
 
     private UUID listId;
@@ -61,6 +65,7 @@ class PrescriptionItemServiceTest {
                 .sortOrder(0)
                 .build();
         testItem.setId(itemId);
+        lenient().when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(testItem));
     }
 
     // --- getByList ---
@@ -119,12 +124,14 @@ class PrescriptionItemServiceTest {
         when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
         when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId)).thenReturn(List.of());
         when(itemRepository.save(any(PrescriptionItem.class))).thenReturn(testItem);
-        when(dayRepository.save(any(PrescriptionItemDay.class))).thenAnswer(inv -> {
-            PrescriptionItemDay d = inv.getArgument(0);
-            d.setId(UUID.randomUUID());
-            return d;
+        when(dayRepository.saveAll(anyList())).thenAnswer(inv -> {
+            java.util.List<PrescriptionItemDay> days = new java.util.ArrayList<>(inv.getArgument(0));
+            for (PrescriptionItemDay d : days) {
+                d.setId(UUID.randomUUID());
+            }
+            return days;
         });
-        when(partRepository.save(any(PrescriptionDayPart.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
         PrescriptionItem result = service.addItem(listId, "Aspirin", null, "PO", "BID");
 
@@ -134,10 +141,18 @@ class PrescriptionItemServiceTest {
         assertThat(itemCaptor.getValue().getStatus()).isEqualTo("Active");
 
         // 21 days created
-        verify(dayRepository, times(21)).save(any(PrescriptionItemDay.class));
+        verify(dayRepository).saveAll(anyList());
 
-        // 84 day parts created (21 days × 4 parts: morning, day, evening, night)
-        verify(partRepository, times(84)).save(partCaptor.capture());
+        // 84 day parts created (21 days × 4 periods: morning, day, evening, night)
+        verify(partRepository).saveAll(batchCaptor.capture());
+        List<String> expectedPeriods = java.util.stream.IntStream.range(0, 21)
+                .mapToObj(i -> List.of("morning", "day", "evening", "night"))
+                .flatMap(List::stream)
+                .toList();
+        assertThat(batchCaptor.getValue())
+                .hasSize(84)
+                .extracting(PrescriptionDayPart::getPeriod)
+                .containsExactlyElementsOf(expectedPeriods);
 
         assertThat(result.getId()).isEqualTo(itemId);
     }
@@ -149,8 +164,8 @@ class PrescriptionItemServiceTest {
         when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
         when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId)).thenReturn(List.of(existing));
         when(itemRepository.save(any(PrescriptionItem.class))).thenReturn(testItem);
-        when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
-        when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(dayRepository.saveAll(anyList())).thenAnswer(inv -> { java.util.List<PrescriptionItemDay> days = new java.util.ArrayList<>(inv.getArgument(0)); for (PrescriptionItemDay d : days) { d.setId(UUID.randomUUID()); } return days; });
+        when(partRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
         service.addItem(listId, "NewDrug", null, "IV", "stat");
 
@@ -171,18 +186,13 @@ class PrescriptionItemServiceTest {
         when(listRepository.findById(listId)).thenReturn(Optional.of(testList));
         when(itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId)).thenReturn(List.of());
         when(itemRepository.save(any())).thenReturn(testItem);
-        when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
-        when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(dayRepository.saveAll(anyList())).thenAnswer(inv -> { java.util.List<PrescriptionItemDay> days = new java.util.ArrayList<>(inv.getArgument(0)); for (PrescriptionItemDay d : days) { d.setId(UUID.randomUUID()); } return days; });
+        when(partRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
         service.addItem(listId, "Drug", null, "PO", "BID");
 
-        verify(partRepository, times(84)).save(partCaptor.capture());
-        List<PrescriptionDayPart> allParts = new java.util.ArrayList<>();
-        for (var inv : org.mockito.Mockito.mockingDetails(partRepository).getInvocations()) {
-            if (inv.getMethod().getName().equals("save")) {
-                allParts.add(inv.getArgument(0));
-            }
-        }
+        verify(partRepository).saveAll(batchCaptor.capture());
+        List<PrescriptionDayPart> allParts = batchCaptor.getValue();
         long morningCount = allParts.stream().filter(p -> "morning".equals(p.getPeriod())).count();
         long nightCount = allParts.stream().filter(p -> "night".equals(p.getPeriod())).count();
         assertThat(morningCount).isEqualTo(21);
@@ -198,6 +208,7 @@ class PrescriptionItemServiceTest {
         when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(testItem));
         when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId))
                 .thenReturn(List.of(first, last));
+        // addDay creates ONE day and its 4 parts, so it keeps the single-save path.
         when(dayRepository.save(any(PrescriptionItemDay.class))).thenAnswer(inv -> {
             PrescriptionItemDay d = inv.getArgument(0);
             d.setId(UUID.randomUUID());
@@ -225,7 +236,7 @@ class PrescriptionItemServiceTest {
     void addDay_whenItemHasNoActiveDays_createsForToday() {
         when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(testItem));
         when(dayRepository.findByItemIdAndDeletedFalseOrderByDayDateAsc(itemId)).thenReturn(List.of());
-        when(dayRepository.save(any())).thenAnswer(inv -> { PrescriptionItemDay d = inv.getArgument(0); d.setId(UUID.randomUUID()); return d; });
+        when(dayRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         var result = service.addDay(itemId);
@@ -402,19 +413,14 @@ class PrescriptionItemServiceTest {
         verify(partRepository, never()).save(any());
     }
 
-    @Test
-    void markCompleted_throws_whenPartUnplanned() {
-        UUID dayPartId = UUID.randomUUID();
-        PrescriptionDayPart part = PrescriptionDayPart.builder()
-                .period("morning").isPlanned(false).isCompleted(false).build();
-        part.setId(dayPartId);
-        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
-
-        assertThatThrownBy(() -> service.markCompleted(dayPartId, UUID.randomUUID()))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Незаплановане");
-
-        verify(partRepository, never()).save(any());
+@Test
+    void markCompleted_isGone_soNoUnauthenticatedCompletionPathRemains() {
+        // #359: completing a dose without two-person authentication used to be
+        // possible through PrescriptionItemService.markCompleted. The method was
+        // deleted and the endpoint now goes through PrescriptionExecutionService.
+        assertThat(PrescriptionItemService.class.getDeclaredMethods())
+                .extracting(java.lang.reflect.Method::getName)
+                .doesNotContain("markCompleted");
     }
 
     @Test
@@ -431,8 +437,8 @@ class PrescriptionItemServiceTest {
             saved.setId(UUID.randomUUID());
             return saved;
         });
-        when(dayRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(partRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(dayRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
         PrescriptionItem result = service.addItem(listId, "NewDrug", null, "IV", "stat");
 
@@ -492,43 +498,10 @@ class PrescriptionItemServiceTest {
                 .isInstanceOf(NotFoundException.class);
     }
 
-    // --- markCompleted ---
-
-    @Test
-    void markCompleted_setsNurseNameAndFlag() {
-        UUID dayPartId = UUID.randomUUID();
-        UUID nurseId = UUID.randomUUID();
-        PrescriptionDayPart part = PrescriptionDayPart.builder()
-                .period("morning").isPlanned(true).isCompleted(false).build();
-        part.setId(dayPartId);
-
-        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
-        when(partRepository.save(any())).thenReturn(part);
-
-        service.markCompleted(dayPartId, nurseId);
-
-        verify(partRepository).save(partCaptor.capture());
-        assertThat(partCaptor.getValue().getIsCompleted()).isTrue();
-        assertThat(partCaptor.getValue().getNurseName()).isEqualTo(nurseId.toString());
-    }
-
-    // --- markCompletedFinished ---
-
-    @Test
-    void markCompletedFinished_setsFlag() {
-        UUID dayPartId = UUID.randomUUID();
-        PrescriptionDayPart part = PrescriptionDayPart.builder()
-                .period("morning").isCompleted(true).isCompletedFinished(false).build();
-        part.setId(dayPartId);
-
-        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(part));
-        when(partRepository.save(any())).thenReturn(part);
-
-        service.markCompletedFinished(dayPartId);
-
-        verify(partRepository).save(partCaptor.capture());
-        assertThat(partCaptor.getValue().getIsCompletedFinished()).isTrue();
-    }
+    // --- markCompleted / markCompletedFinished: deleted (#359) ---
+    // Both could flip the completion flags without the two-person contract and
+    // neither was reachable from a controller. The reflection test above pins
+    // their absence.
 
     // --- markPlannedFinished («Відмінити препарат») ---
 

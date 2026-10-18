@@ -23,17 +23,19 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
             UUID.fromString("ffffffff-ffff-ffff-ffff-fffffffffff1");
 
     @Test
-    void swaggerUi_withoutAuthentication_isPermitted() {
+    void swaggerUi_isDeniedWhenDocsAreDisabledByDefault() {
+        // springdoc.api-docs.enabled defaults to false, so the swagger paths get
+        // no permitAll rule - the secure default is an authenticated 401.
         var res = restTemplate.getForEntity("/swagger-ui/index.html", String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
-    void apiDocs_withoutAuthentication_isPermitted() {
+    void apiDocs_isDeniedWhenDocsAreDisabledByDefault() {
         var res = restTemplate.getForEntity("/api-docs", String.class);
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
@@ -89,9 +91,12 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void completeDayPart_asDoctor_returnsForbidden() {
+void completeDayPart_asDoctor_returnsForbidden() {
+        // #359: complete takes the two-person body; binding runs before security,
+        // so the 403 probe needs a valid body just like the endpoint contract.
         var res = restTemplate.exchange("/api/prescriptions/day-parts/{id}/complete",
-                HttpMethod.PUT, authGet(getDoctorToken()), String.class, FAKE_DAY_PART_ID);
+                HttpMethod.PUT, authEntity(twoPersonBody(), getDoctorToken()),
+                String.class, FAKE_DAY_PART_ID);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
@@ -99,9 +104,14 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     @Test
     void completeDayPart_asNurse_passesRuleAndReturnsNotFound() {
         var res = restTemplate.exchange("/api/prescriptions/day-parts/{id}/complete",
-                HttpMethod.PUT, authGet(getNurseToken()), String.class, FAKE_DAY_PART_ID);
+                HttpMethod.PUT, authEntity(twoPersonBody(), getNurseToken()),
+                String.class, FAKE_DAY_PART_ID);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    private static String twoPersonBody() {
+        return "{\"actualDose\":\"1tab\",\"secondPersonLogin\":\"nurse2\",\"secondPersonPassword\":\"nurse123\"}";
     }
 
     @Test
@@ -119,7 +129,7 @@ class SecurityRulesIntegrationTest extends AbstractIntegrationTest {
     void searchEpisodes_asAdmin_withModulePermission_isAllowed() {
         setRolePermission("ADMINISTRATOR", "MODULE_ICU_ACCESS", true);
         try {
-            var res = restTemplate.exchange("/api/episodes", HttpMethod.GET,
+            var res = restTemplate.exchange("/api/episodes?patientId=1001", HttpMethod.GET,
                     authGet(getAdminToken()), String.class);
 
             assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);

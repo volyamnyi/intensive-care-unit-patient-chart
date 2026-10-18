@@ -55,6 +55,12 @@ public class BrakNotificationOutbox extends BaseEntity {
     @Column(name = "last_error", columnDefinition = "TEXT")
     String lastError;
 
+    @Column(name = "lease_until")
+    java.time.LocalDateTime leaseUntil;
+
+    @Column(name = "claimed_by", length = 100)
+    String claimedBy;
+
     @PrePersist
     @PreUpdate
     public void validate() {

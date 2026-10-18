@@ -68,7 +68,6 @@ function makeList(id: string) {
     departmentId: null,
     documentName: 'Листок',
     status: 'Active' as const,
-    editingUserId: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   };

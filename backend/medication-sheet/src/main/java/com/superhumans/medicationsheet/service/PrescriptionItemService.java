@@ -1,6 +1,7 @@
 package com.superhumans.medicationsheet.service;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.Hibernate;
 
 import com.superhumans.audit.AuditActionDefinition.ActionType;
 import com.superhumans.audit.AuditActionDefinition.DataClass;
@@ -27,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,7 +47,9 @@ public class PrescriptionItemService {
 
     @Transactional(readOnly = true)
     public List<PrescriptionItem> getByList(UUID listId) {
-        return itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId);
+        List<PrescriptionItem> items = itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId);
+        initializeNestedDays(items);
+        return items;
     }
 
     @Transactional
@@ -70,7 +74,12 @@ public class PrescriptionItemService {
         item.setUpdatedBy(0L);
         item = itemRepository.save(item);
 
+        // One batch per level (#429 item 3): 21 day inserts + 84 part inserts in
+        // three statements instead of 105 round-trips. The audit fields are set
+        // explicitly because FieldDefaults defaults are not applied to
+        // builder-built instances.
         LocalDate startDate = LocalDate.now();
+        List<PrescriptionItemDay> days = new ArrayList<>(21);
         for (int i = 0; i < 21; i++) {
             PrescriptionItemDay day = PrescriptionItemDay.builder()
                     .item(item)
@@ -78,8 +87,12 @@ public class PrescriptionItemService {
                     .build();
             day.setCreatedBy(0L);
             day.setUpdatedBy(0L);
-            day = dayRepository.save(day);
+            days.add(day);
+        }
+        List<PrescriptionItemDay> persistedDays = dayRepository.saveAll(days);
 
+        List<PrescriptionDayPart> parts = new ArrayList<>(84);
+        for (PrescriptionItemDay day : persistedDays) {
             for (String period : List.of("morning", "day", "evening", "night")) {
                 PrescriptionDayPart part = PrescriptionDayPart.builder()
                         .day(day)
@@ -91,9 +104,10 @@ public class PrescriptionItemService {
                         .build();
                 part.setCreatedBy(0L);
                 part.setUpdatedBy(0L);
-                partRepository.save(part);
+                parts.add(part);
             }
         }
+        partRepository.saveAll(parts);
         log.info("Prescription item added: id={}, medicine={}, atc={}, 21 days created",
                 item.getId(), medicineName, item.getMedicineAtcCode());
         final UUID createdItemId = item.getId();
@@ -168,6 +182,12 @@ public class PrescriptionItemService {
 
     @Transactional
     public void removeDay(UUID itemId, UUID dayId, Long userId) {
+        // Serialize all removals for the item before checking the last-day invariant.
+        PrescriptionItem item = itemRepository.findByIdForUpdate(itemId)
+                .orElseThrow(() -> new NotFoundException("Item not found: " + itemId));
+        if (Boolean.TRUE.equals(item.getDeleted())) {
+            throw new NotFoundException("Item not found: " + itemId);
+        }
         PrescriptionItemDay day = dayRepository.findById(dayId)
                 .orElseThrow(() -> new NotFoundException("Day not found: " + dayId));
         if (Boolean.TRUE.equals(day.getDeleted())) {
@@ -176,7 +196,7 @@ public class PrescriptionItemService {
         if (day.getItem() == null || !itemId.equals(day.getItem().getId())) {
             throw new NotFoundException("Day not found: " + dayId);
         }
-        requireNotFinished(day.getItem().getList());
+        requireNotFinished(item.getList());
 
         boolean hasExecuted = day.getDayParts() != null && day.getDayParts().stream()
                 .anyMatch(p -> Boolean.TRUE.equals(p.getIsCompleted()) || Boolean.TRUE.equals(p.getIsCompletedFinished()));
@@ -296,34 +316,11 @@ public class PrescriptionItemService {
         return saved;
     }
 
-    @Transactional
-    public PrescriptionDayPart markCompleted(UUID dayPartId, UUID nurseId) {
-        PrescriptionDayPart part = getDayPart(dayPartId);
-        requireNotFinished(part);
-        if (!Boolean.TRUE.equals(part.getIsPlanned())) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE,
-                    "Незаплановане призначення не може бути виконане");
-        }
-        part.setIsCompleted(true);
-        part.setNurseName(nurseId.toString());
-        part.setUpdatedBy(0L);
-        PrescriptionDayPart saved = partRepository.save(part);
-        emitDayPart(saved.getId(), "medication.dose.complete", ActionType.COMPLETE,
-                List.of(AuditChanges.statusChanged("PLANNED", "COMPLETED")));
-        return saved;
-    }
-
-    @Transactional
-    public PrescriptionDayPart markCompletedFinished(UUID dayPartId) {
-        PrescriptionDayPart part = getDayPart(dayPartId);
-        requireNotFinished(part);
-        part.setIsCompletedFinished(true);
-        part.setUpdatedBy(0L);
-        PrescriptionDayPart saved = partRepository.save(part);
-        emitDayPart(saved.getId(), "medication.dose.complete", ActionType.COMPLETE,
-                List.of(AuditChanges.fieldChanged("completedFinished", DataClass.IDENTIFIER)));
-        return saved;
-    }
+    // #359: markCompleted and markCompletedFinished used to live here. Both set a
+    // completion flag without the two-person contract and neither was reachable
+    // from a controller; completing a dose now has exactly one path -
+    // PrescriptionExecutionService.execute. Their absence is pinned by
+    // PrescriptionItemServiceTest.
 
     @Transactional
     public PrescriptionDayPart markPlannedFinished(UUID dayPartId, UUID doctorId, Long userId) {
@@ -459,6 +456,14 @@ public class PrescriptionItemService {
             throw new NotFoundException("Item not found: " + itemId);
         }
         item.getList();
+        initializeNestedDays(List.of(item));
         return item;
+    }
+
+    private void initializeNestedDays(List<PrescriptionItem> items) {
+        items.forEach(item -> {
+            Hibernate.initialize(item.getDays());
+            item.getDays().forEach(day -> Hibernate.initialize(day.getDayParts()));
+        });
     }
 }

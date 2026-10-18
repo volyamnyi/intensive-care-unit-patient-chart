@@ -251,28 +251,50 @@ public class ProductionReadService {
     @Transactional(readOnly = true)
     public ProductionSummaryDto summary(Long assigneeOrNull) {
         long started = System.currentTimeMillis();
-        List<FlowInstance> instances = assigneeOrNull == null
-                ? instanceRepository.findAll()
-                : instanceRepository.findByAssignedUserId(assigneeOrNull);
-        List<ProductionWorkItemDto> rows = buildRows(instances);
+        // SQL aggregates only (#429 item 2): five flat queries regardless of
+        // history size — no findAll(), no template_snapshot JSONB parsing.
+        Map<String, Long> byStatus = new HashMap<>();
+        long total = 0;
+        for (Object[] row : instanceRepository.countByStatusGrouped(assigneeOrNull)) {
+            FlowInstanceStatus status = (FlowInstanceStatus) row[0];
+            long count = ((Number) row[1]).longValue();
+            byStatus.put(status == null ? "NULL" : status.name(), count);
+            total += count;
+        }
+        long brakItems = instanceRepository.countInstancesWithBrak(assigneeOrNull);
+        long reworkItems = instanceRepository.countInstancesWithRework(assigneeOrNull);
+        Long avgElapsed = roundToLong(instanceRepository.avgElapsedSeconds(
+                assigneeOrNull, LocalDateTime.now(clock)));
+        Long avgActive = roundToLong(instanceRepository.avgActiveSeconds(assigneeOrNull));
+
         ProductionSummaryDto result = ProductionSummaryDto.builder()
-                .totalItems(rows.size())
-                .inWork((int) rows.stream().filter(ProductionReadService::isInWork).count())
-                .active((int) rows.stream()
-                        .filter(r -> "IN_PROGRESS".equals(r.getStatus())).count())
-                .paused((int) rows.stream().filter(ProductionReadService::isPaused).count())
-                .completed((int) rows.stream()
-                        .filter(r -> "COMPLETED".equals(r.getStatus())).count())
-                .failed((int) rows.stream().filter(ProductionWorkItemDto::isFailed).count())
-                .brakItems((int) rows.stream().filter(r -> r.getBrakCount() > 0).count())
-                .reworkItems((int) rows.stream().filter(r -> r.getReworkCount() > 0).count())
-                .avgElapsedSeconds(average(rows, ProductionWorkItemDto::getElapsedSeconds))
-                .avgActiveSeconds(average(rows, ProductionWorkItemDto::getActiveSeconds))
+                .totalItems((int) total)
+                .inWork((int) (count(byStatus, "NEW") + count(byStatus, "IN_PROGRESS")))
+                .active((int) count(byStatus, "IN_PROGRESS"))
+                .paused((int) (count(byStatus, "PAUSED")
+                        + count(byStatus, "BLOCKED_PATIENT")
+                        + count(byStatus, "BLOCKED_MATERIAL")))
+                .completed((int) count(byStatus, "COMPLETED"))
+                .failed((int) count(byStatus, "FAILED"))
+                .brakItems((int) brakItems)
+                .reworkItems((int) reworkItems)
+                .avgElapsedSeconds(avgElapsed)
+                .avgActiveSeconds(avgActive)
                 .build();
         log.debug("Production summary: {} items in {} ms",
                 result.getTotalItems(), System.currentTimeMillis() - started);
         // No worklist-view emit here: summary/attention/team are dashboard aggregates without a dedicated catalog action;
         return result;
+    }
+
+    private static long count(Map<String, Long> byStatus, String status) {
+        return byStatus.getOrDefault(status, 0L);
+    }
+
+    private static Long roundToLong(Double value) {
+        // The row-level average used integer division on longs; keep that shape
+        // so the KPI cards do not shift by a second.
+        return value == null ? null : (long) Math.floor(value);
     }
 
     private static boolean isInWork(ProductionWorkItemDto row) {
@@ -307,10 +329,12 @@ public class ProductionReadService {
     @Transactional
     public List<ProductionWorkItemDto> attention(Long assigneeOrNull) {
         long started = System.currentTimeMillis();
-        List<FlowInstance> instances = assigneeOrNull == null
-                ? instanceRepository.findAll()
-                : instanceRepository.findByAssignedUserId(assigneeOrNull);
-        List<ProductionWorkItemDto> result = buildRows(instances).stream()
+        // Pre-filtered in SQL (#429 item 2): open instances plus anything with
+        // brak/rework history. A terminal instance with no brak and no children
+        // can never raise a flag, so it is never materialized or parsed.
+        List<FlowInstance> candidates = instanceRepository.findAttentionCandidates(
+                assigneeOrNull, List.of(FlowInstanceStatus.COMPLETED));
+        List<ProductionWorkItemDto> result = buildRows(candidates).stream()
                 .filter(r -> !r.getAttentionFlags().isEmpty())
                 .sorted(Comparator.comparingInt(ProductionReadService::severity).reversed()
                         .thenComparing(ProductionWorkItemDto::getElapsedSeconds,
@@ -351,10 +375,29 @@ public class ProductionReadService {
     @Transactional
     public List<ProductionTeamRowDto> team() {
         long started = System.currentTimeMillis();
-        Map<Long, List<ProductionWorkItemDto>> byUser = buildRows(instanceRepository.findAll())
+        // Team scope needs a per-row overdue count, and "expected" comes from the
+        // immutable template snapshot (a norm sum over stages), so this is the
+        // one aggregate that cannot be a pure GROUP BY (#429 item 2). What it
+        // can do is stop loading the fat snapshot of every archived instance:
+        // only instances that are still open, or that carry brak/rework history,
+        // can ever raise OVERDUE / REPEAT_BRAK / REWORK. Terminal clean rows
+        // only contribute their status counts and active seconds, which come
+        // from the same filtered set plus a single status projection.
+        Map<Long, List<ProductionWorkItemDto>> byUser = buildRows(
+                instanceRepository.findAttentionCandidates(null,
+                        List.of(FlowInstanceStatus.COMPLETED)))
                 .stream()
                 .filter(r -> r.getProsthetistUserId() != null)
                 .collect(Collectors.groupingBy(ProductionWorkItemDto::getProsthetistUserId));
+        // Terminal clean instances still count towards the per-user totals:
+        Map<Long, Integer> completedPerUser = new HashMap<>();
+        Map<Long, Long> activeSecondsPerUser = new HashMap<>();
+        for (Object[] row : instanceRepository.countTerminalCleanByAssignee(
+                List.of(FlowInstanceStatus.COMPLETED))) {
+            Long userId = (Long) row[0];
+            completedPerUser.put(userId, ((Number) row[1]).intValue());
+            activeSecondsPerUser.put(userId, ((Number) row[2]).longValue());
+        }
         List<ProductionTeamRowDto> result = byUser.entrySet().stream()
                 .map(e -> {
                     List<ProductionWorkItemDto> rows = e.getValue();
@@ -366,7 +409,8 @@ public class ProductionReadService {
                             .paused((int) rows.stream()
                                     .filter(ProductionReadService::isPaused).count())
                             .completed((int) rows.stream()
-                                    .filter(r -> "COMPLETED".equals(r.getStatus())).count())
+                                    .filter(r -> "COMPLETED".equals(r.getStatus())).count()
+                                    + completedPerUser.getOrDefault(e.getKey(), 0))
                             .failed((int) rows.stream().filter(ProductionWorkItemDto::isFailed).count())
                             .brakItems((int) rows.stream()
                                     .filter(r -> r.getBrakCount() > 0).count())
@@ -377,7 +421,8 @@ public class ProductionReadService {
                                     .count())
                             .activeSeconds(rows.stream()
                                     .mapToLong(r -> r.getActiveSeconds() == null
-                                            ? 0L : r.getActiveSeconds()).sum())
+                                            ? 0L : r.getActiveSeconds()).sum()
+                                    + activeSecondsPerUser.getOrDefault(e.getKey(), 0L))
                             .build();
                 })
                 .sorted(Comparator.comparingInt(ProductionTeamRowDto::getInWork).reversed()
@@ -675,7 +720,7 @@ public class ProductionReadService {
         if (assignedUserId == null) {
             flags.add(FLAG_NO_ASSIGNEE);
         }
-        if (ProductionNormativeService.isOverdue(elapsedSeconds, expectedActiveSeconds, normative)) {
+        if (ProductionNormativeService.isOverdue(status, elapsedSeconds, expectedActiveSeconds, normative)) {
             flags.add(FLAG_OVERDUE);
         }
         if (ProductionNormativeService.isStale(status, lastActivityAt, now, normative)) {

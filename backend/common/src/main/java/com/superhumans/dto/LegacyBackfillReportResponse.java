@@ -15,10 +15,12 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LegacyBackfillReportResponse {
-    int scanned;
+    // Counts are 64-bit: a keyset-paged scan can exceed the old 32-bit bounds
+    // on a long-lived legacy table and must not silently truncate (#429).
+    long scanned;
     int inserted;
     int skippedExisting;
-    int skippedInvalid;
+    long skippedInvalid;
     int httpRequestKind;
     int auditActionKind;
     long legacySourceCount;

@@ -58,6 +58,8 @@ APP_SEED_DATA_ENABLED=false     # критично для продакшну
 
 **Boot-guard (A2 fix):** `SeedDataGuard` — `@Component`, що виконується перед `SeedDataInitializer` (через `@DependsOn`) і **не запускає застосунок** (`IllegalStateException`), якщо активний профіль `prod` і сід-дані ввімкнено. Це практично виключає випадок «випадково ввімкнули сід у проді».
 
+**Вартість сід-бутстрау (#429 item 7, інформаційно):** `data-med.sql` — це ~12.8 тис. `INSERT … ON CONFLICT` (~11 МБ), які виконуються на кожному dev/E2I-буті. Навіть коли всі рядки вже є, Postgres і парсить, планує та probe-ить кожне твердження — орієнтовно **15–40 с** додаткового часу старту. У production це не впливає (`APP_SEED_DATA_ENABLED=false`). Під час розвідки або при створенні скрипта міграції враховуйте цю затримку; змінювати самі файли сіду не можна (їхні байти є входами Liquibase-контрольних сум).
+
 **Паролі більше не перезаписуються:** у `data-core.sql` обидва `INSERT ... users` використовують `ON CONFLICT (login) DO NOTHING` (а не `DO UPDATE SET password_hash = EXCLUDED.password_hash`), тож рестарт проти наявної БД **ніколи** не відкатить операторський пароль до демо-значення.
 
 > ⚠️ **Обов'язково до go-live:** перший старт (dev, або якщо прод ввімкнув сід один раз) створює `9` демо-користувачів з публічно відомими паролями (`doctor1/doctor123`, `admin/admin123`, …). Після першого старту **замініть або вимкніть** ці облікові записи — тепер жоден рестарт ніколи не поверне паролі, але самі демо-обліковки лишаються робочими, поки ви вручну їх не закриєте.
@@ -136,20 +138,27 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_DATASOURCE_ICU_URL/USERNAME/PASSWORD` | … `my_fullstack_icu` | |
 | `APP_DATASOURCE_MED_URL/USERNAME/PASSWORD` | … `my_fullstack_med` | |
 | `APP_DATASOURCE_PROSTH_URL/USERNAME/PASSWORD` | … `my_fullstack_prosth` | |
-| `APP_JWT_SECRET` | `openssl rand -base64 64` | Замінити дев-секрет з `application.yml:43`; `JwtSecretGuard` падає на старті в `prod`, якщо стоїть дев-дефолт (A1) |
+| `APP_DATASOURCE_POOL_MAX` / `APP_DATASOURCE_POOL_MIN_IDLE` | `20` / `1` | Bounds all four custom datasource pools. Chained transactions begin on all four managers, but each EMF talks to a lazy connection proxy, so a connection is only checked out from the pool whose DB the request actually touches (#423); the 4× worst case still applies to requests that write to every module. Min-idle is independent of max |
+| `APP_JWT_SECRET` | `openssl rand -base64 64` | Обов'язковий секрет без дефолту; `JwtSecretGuard` перевіряє конфіг на старті в `prod` (A1) |
+| `APP_JWT_EXPIRATION_MS` | `86400000` | Access-token TTL and cookie max-age use the same setting |
 | `APP_CORS_ALLOWED_ORIGINS` | `https://supercare.superhumans.com` (кома-список) | Точний allowlist для credentialed CORS (P0 #345; wildcard заборонено boot-guard'ом); дефолт — лише localhost |
 | `APP_SEED_DATA_ENABLED` | **`false`** | Критично — інакше демо-дані |
-| `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Єдиний MIS-клієнт (`MisServiceImpl`, див. 1.5); моків/режимів немає |
-| `APP_MIS_API_LOGIN` / `APP_MIS_API_PASSWORD` / `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Інтеграційні credentials MIS, не в yml, не в git, ніколи в логи |
-| `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Real-режим: `app.mis.api.base-url`, без дефолту — fail-fast на старті, якщо порожньо |
+| `APP_MIS_API_BASE_URL` | *(base URL MIS)* | Єдиний MIS-клієнт, без режимів/моків; обов'язковий у local/prod, без дефолту — fail-fast на старті |
 | `APP_MIS_API_TOKEN_PATH` | `/token` | Real-режим: `app.mis.api.token-path` (має починатись з `/`) |
 | `APP_MIS_API_RUN_PATH` | `/api/run` | Real-режим: `app.mis.api.run-path` (має починатись з `/`) |
-| `APP_MIS_API_LOGIN` | *(з vault)* | Real-режим: логін MIS API, не в yml, не в git |
-| `APP_MIS_API_PASSWORD` | *(з vault)* | Real-режим: пароль MIS API, не в yml, не в git, ніколи в логи |
-| `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Real-режим: installationId, не в yml, не в git |
-| `SPRING_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` | реальний SMTP | `application.yml:26-35` — env-плейсхолдери `${SPRING_MAIL_*}` з локальними дефолтами (localhost:1025, без auth) |
-| `LOGGING_LEVEL_ROOT` | `INFO` | `application.yml:99` = DEBUG — забагато для прод |
-| `LOGGING_LEVEL_COM_SUPERHUMANS` | `INFO` | `application.yml:102` = TRACE |
+| `APP_MIS_API_LOGIN` / `APP_MIS_API_PASSWORD` / `APP_MIS_API_INSTALLATION_GUID` | *(з vault)* | Credentials MIS, environment-only, ніколи не логувати; у CI використовуються лише stub credentials |
+| `APP_MIS_API_CONNECT_TIMEOUT_MS` / `APP_MIS_API_READ_TIMEOUT_MS` / `APP_MIS_API_TOKEN_SKEW_SEC` | `5000` / `15000` / `60` | MIS HTTP timeout and token-refresh tuning |
+| `APP_SCHEDULING_DAY_CLOSE_HOUR` / `APP_SCHEDULING_ESCALATION_HOUR` | `7` / `9` | Local-hour scheduler times; systemd must set `TZ=Europe/Kyiv` |
+| `APP_MAIL_FROM` / `APP_MAIL_FRONTEND_BASE_URL` | `noreply@hospital.local` / *(empty)* | Sender for ICU escalation e-mail and the absolute base URL used to build the «Відкрити карту» link; empty ⇒ link omitted |
+| `APP_SCHEDULING_SIGNING_WINDOW_START` / `APP_SCHEDULING_SIGNING_WINDOW_END` / `APP_SCHEDULING_SIGNING_WINDOW_ENABLED` | `0` / `23` / `true` | Signing-window gate; defaults shown, set explicitly per deployment |
+| `APP_AUDIT_RELAY_POLL_MS` / `APP_AUDIT_RELAY_BATCH_SIZE` / `APP_AUDIT_RELAY_LEASE_SECONDS` / `APP_AUDIT_RELAY_MAX_ATTEMPTS` | `1000` / `20` / `60` / `12` | Audit outbox relay tuning |
+| `APP_AUDIT_RETENTION_ENABLED` / `APP_AUDIT_RETENTION_CRON` / `APP_AUDIT_RETENTION_OUTBOX_DELIVERED_DAYS` / `APP_AUDIT_RETENTION_CHUNK_SIZE` | `false` / `0 0 3 * * *` / `30` / `500` | Retention is disabled until explicitly enabled and approved; chunk size bounds each short core transaction |
+| `APP_AUDIT_TRUSTED_PROXY_CIDRS` | *(empty)* | Comma-separated CIDRs whose `X-Forwarded-For` value is trusted for `AuditLog.ipAddress`; empty ⇒ every forwarded value is ignored (nginx-recorded IP only) |
+| `APP_AUDIT_LEGACY_WRITE_ENABLED` | `true` | Dual-write to legacy `audit_logs`; set `false` after the backfill has been verified (§ F.2 cutover) |
+| `APP_PROSTHETICS_BRAK_NOTIFICATION_*` | see application defaults | Outbox enable/from/frontend URL/poll/max-attempts/batch-size; set SMTP separately |
+| `SPRING_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` | реальний SMTP | Env-плейсхолдери; локальні defaults не використовувати в production |
+| `LOGGING_LEVEL_ROOT` | `INFO` | Явно задавати для production |
+| `LOGGING_LEVEL_COM_SUPERHUMANS` | `INFO` | Явно задавати для production; не використовувати TRACE у production |
 
 **Правило:** жодний секрет не живе у репозиторії. Жоден секрет не живе у `application.yml` в продакшні. Усе — через `EnvironmentFile` / systemd / Vault.
 
@@ -204,8 +213,17 @@ java -Xms1g -Xmx2g -jar /opt/ictc/backend/app/target/app-*.jar \
 #   [main] ... Running Spring Boot ...
 #   [main] Core liquibase: liquibase changelog db.changelog-master-core.yaml ...
 #   [main] Liquibase: ChangeSet core/001-initial.sql::split-core:1::... ran successfully
+#   [main] Liquibase: ChangeSet core/015-users-id-identity.sql::split-core:16 ran successfully
 #   ... (усі changeset-и)
 #   [main] ... Started IcuPatientChartApplication in X.XXX seconds
+#
+# users.id стає справжнім identity-стовпцем (GENERATED BY DEFAULT AS IDENTITY).
+# Після міграції послідовність має бути СПРАЦУ за MAX(users.id):
+#   SELECT last_value, (SELECT MAX(id) FROM users) FROM users_id_seq;
+# Якщо значення менше за MAX(id) — наступний сід упаде з
+# "duplicate key value violates unique constraint users_pkey" і контекст не
+# підніметься. Ремонт (без зміни коду):
+#   SELECT setval('users_id_seq', GREATEST(COALESCE(MAX(id),0),1), true) FROM users;
 ```
 
 **Час старту першого разу** — до 60-90 сек (Liquibase створює ~30 таблиць у 4 БД + індекси, `PermissionService` сіє RBAC). Наступні разів — ~15-25 сек.
@@ -240,9 +258,22 @@ psql -d my_fullstack_core -c "SELECT login FROM users;"          # лише ре
 
 Шаблон — [Appendix C](#appendix-c--nginx-reverse-proxy). Ключові моменти:
 - TLS термінує nginx (Let's Encrypt, DNS-01 через Cloudflare API, epic #344); вбудований SSL застосунку вимкнено, backend — plain HTTP на `:8085` (P0 #345).
-- `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` — інакше `AuditLog.ipAddress` (§79 ТЗ) буде IP nginx, а не користувача.
+- `proxy_set_header X-Forwarded-For $remote_addr;` — **перезапис, не апенд** (#361): `$proxy_add_x_forwarded_for` залишав клієнтські підроблені XFF-записи попереду справжнього IP, а `forward-headers-strategy: framework` брав перше значення → ключ лок-ауту (`ip|login`) та `AuditLog.ipAddress` були керованими клієнтом. `$remote_addr` — це socket peer, який nginx реально бачив.
+- `app.audit.trusted-proxy-cidrs` (`APP_AUDIT_TRUSTED_PROXY_CIDRS`) — app-рівень захисту тим самим правилом: XFF читається тільки від довіреного peer, і береться **правий** недовіренений запис ланцюга, не лівий (лівий — клієнтський).
 - `X-Forwarded-Proto https` — інакше `jwt` cookie вийде без `Secure` (P0 #345).
 - `client_max_body_size` — для завантаження evidence-файлів у prosthetics (10 МБ ліміт у `EvidenceFileService`).
+- Бекенд слухає `:8085` у всіх інтерфейсах — тримайте `ufw`/мережевий ACL так, щоб ззовні був доступний лише nginx (residual #356); `server.address` у `application.yml` може обмежити прив'язку до loopback, якщо топологія це дозволяє.
+- **Таймінг логіну (#366):** кожен невдалий логін платить один cost-10 BCrypt
+  (`AuthService.payBcryptCost`) — незалежно від гілки (LOCAL/направленья LDAP/NULL-хеш),
+  тож час відповіді не класифікує тип акаунта. Прийнятый residual: мережева латентність
+  LDAP-bind'a (каталог у корпоративній мережі) залишається — вона неусувна без
+  навмисного уповільнення happy-path.
+- **Відмова core-БД при живих токенах (#367):** обраний режим — uniform fail-closed
+  401. Перевірка користувача в `JwtAuthenticationFilter` ловить `DataAccessException`,
+  пише best-effort audit (`AUTH_USER_STORE_UNAVAILABLE`; сам audit теж може бути мертвий —
+  і це проковтується) і пропускає запит неавтентифікованим. Жодних 500 з фільтра:
+  клієнти з валідними токенами бачать той самий 401, що й з невалідним токеном. Не 503:
+  різні статуси для різних підкласів збою розкривають топологію і ламають фронтенд-обробку.
 
 ### 1.9 Перевірка з'єднання з MIS
 
@@ -518,7 +549,7 @@ max_wal_senders = 4
 
 Далі — `pg_basebackup` + `pg_rewind` для standby, або `pgBackRest` (рекомендовано) / `Barman` / `wal-g` для повноцінного PITR.
 
-**Мінімум для продакшну на початку:** `pg_dump` × 4 щохвилини (cron 15-20 хв) **або** `pgBackRest` з повним щодня + інкрементальним щогодини.
+**Мінімум для продакшну на початку:** `pg_dump` × 4 щодня з ротацією та перевіреним offsite-копіюванням **або** `pgBackRest` з повним щодня + інкрементальним щогодини.
 
 ### 3.3 Слой 3: перш ніж деплой (чек-лист)
 
@@ -797,9 +828,14 @@ APP_JWT_EXPIRATION_MS=86400000
 # Four module pools are built programmatically (MultiDatabaseSupport) —
 # spring.datasource.hikari.* does NOT apply to them. The only supported knob:
 APP_DATASOURCE_POOL_MAX=20
-# Capacity note: the chained transaction manager opens ONE connection per pool
-# per @Transactional request, so max concurrent requests ≈ APP_DATASOURCE_POOL_MAX
-# (4 pools × 20 = 80 connections; Postgres max_connections must cover them).
+APP_DATASOURCE_POOL_MIN_IDLE=1
+# Capacity note: the chained transaction manager still begins a transaction on
+# all four module managers, but each EMF now talks to a
+# LazyConnectionDataSourceProxy, so a connection is checked out only from the
+# pool whose DB is actually touched (#423). Worst case (a request writing to
+# every module) still reserves one connection per pool, so size max against
+# concurrent transactional requests; typical single-module traffic uses 1 of 4.
+# Postgres max_connections must cover 4 × APP_DATASOURCE_POOL_MAX.
 # CI integration runs use APP_DATASOURCE_POOL_MAX=2.
 
 # --- Seed-data (КРИТИЧНО: false в проді) ---
@@ -1062,11 +1098,17 @@ ExecStartPost=/usr/bin/curl -fsS http://localhost:8085/api/health || true
 
 ```nginx
 # /etc/nginx/conf.d/ictc.conf
+# Protect the backend and bound unauthenticated mutation/audit traffic by the
+# socket peer (not client-supplied X-Forwarded-For). Tune against production
+# traffic before raising the limits.
+limit_req_zone $binary_remote_addr zone=ictc_api:10m rate=20r/s;
+limit_req_status 429;
+
 upstream ictc_backend {
     server 127.0.0.1:8085;
-    # Для multi-instance:
-    # server 10.0.0.11:8085;
-    # server 10.0.0.12:8085;
+    # Keep exactly one application instance: token revocations are in-memory
+    # and are not shared across JVMs (#371). Do not add another server here
+    # until a shared revocation store is implemented and verified.
     keepalive 32;
 }
 
@@ -1108,12 +1150,18 @@ server {
 
     # API
     location /api/ {
+        limit_req zone=ictc_api burst=60 nodelay;
         proxy_pass http://ictc_backend;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;   # ← КРИТИЧНО для AuditLog.ipAddress
+        # #361: OVERWRITE, never append. $proxy_add_x_forwarded_for keeps any
+        # client-supplied XFF entries AHEAD of the real IP, and the framework
+        # strategy takes the first value - so appending let a client spoof the
+        # login-lockout key and the audit IP. $remote_addr is the socket peer
+        # nginx actually saw: the single trusted source for the client IP.
+        proxy_set_header X-Forwarded-For $remote_addr;   # ← КРИТИЧНО для lockout + AuditLog.ipAddress (#361)
         proxy_set_header X-Forwarded-Proto $scheme;                    # ← КРИТИЧНО для Secure jwt cookie (P0 #345)
         proxy_set_header X-Forwarded-Host $host;
         proxy_read_timeout 300s;
@@ -1126,12 +1174,30 @@ server {
         return 404;
     }
 
-    # Rate-limit (опційно)
-    # limit_req zone=api burst=20 nodelay;
 }
 ```
 
-> **Сесійні припущення (#371 item 3):** (a) токен-ревокації живуть у пам'яті одного JVM — рестарт їх вайпає, а два апстріми бачать різні набори (шаблон вище малює один апстрім; якщо додасте другий — або тримайте sticky sessions, або переносьте ревокації в core-БД); записи лежать до першого реплею токена (lazy-eviction), тож `TokenRevocationService` повільно росте між рестартами — нормально для одного інстансу. (b) `Secure`-кука, видана по https, не стирається http-запитом (mismatch прапорців) — force logout тільки по https.
+> **Сесійні припущення (#371 item 3):** (a) токен-ревокації живуть у пам'яті одного JVM — рестарт їх стирає. Production nginx має рівно один backend instance; не додавайте другий upstream, доки revocation store не стане спільним для інстансів. Записи видаляються при replay (lazy eviction), тому map може зростати до рестарту; контролюйте її розмір/перезапуски. (b) `Secure`-кука, видана по HTTPS, не стирається HTTP-запитом через mismatch прапорців — logout виконуйте тільки через HTTPS.
+
+### LOCAL password rotation (#371 item 7)
+
+Password changes are currently an operator/DBA procedure; no self-service endpoint exists. Generate a BCrypt hash using the approved offline BCrypt utility (never pass the plaintext password as a process argument or put it in SQL/history), then connect to the core database over the approved admin path and bind the login/hash parameters in the approved database client:
+
+```sql
+BEGIN;
+UPDATE users
+SET password_hash = $2, updated_at = now()
+WHERE login = $1
+  AND auth_provider = 'LOCAL'
+  AND deleted IS NOT TRUE
+RETURNING id, login;
+-- Execute as a prepared statement with bound parameters:
+--   $1 = login, $2 = BCrypt hash
+-- Verify exactly one row is returned, then COMMIT; otherwise ROLLBACK.
+COMMIT;
+```
+
+Do not update LDAP rows or store plaintext. Record the operator, ticket, account identifier, and timestamp in the approved operational audit trail; never record the password or hash in tickets/logs. Rotation does not invalidate already-issued JWTs: allow their configured TTL to expire, or use the established account-disable procedure if immediate access revocation is required.
 
 **Перевірка (з LAN-машини):**
 ```bash
@@ -1377,6 +1443,22 @@ ALTER TABLE permissions DROP COLUMN IF EXISTS group_code;
 --rollback ALTER TABLE permissions ADD COLUMN IF NOT EXISTS group_code VARCHAR(64);
 ```
 
+### E.6 Rollback, що звужує колонку — два відомі винятки
+
+`ALTER COLUMN … TYPE VARCHAR(N)` з меншим `N` у rollback **обрізає або падає**, якщо в таблиці
+вже є довші значення. Правило для всіх нових changeset-ів: спочатку перевірка довжини
+(`IF EXISTS (SELECT 1 … WHERE length(col) > N) THEN RAISE EXCEPTION … END`), потім сам `ALTER`.
+Це перевіряє `LiquibaseRollbackGuardTripwireTest`.
+
+Два застосовані changeset-и порушують правило і **заморожені** checksum-ом (`DATABASECHANGELOG`
+у кожному середовищі; редагування файлу дає «Validation Failed» на старті — перевірено, що
+`--validCheckSum` не врятує):
+
+| Changeset | Колонка | Небезпека | Що робити перед rollback |
+|---|---|---|---|
+| `core/004` (`split-core:4`) | `audit_logs.entity` 255 → 100 | обрізає реальні URI виду `/instances/{uuid}/steps/{uuid}/complete` | перевірити `SELECT max(length(entity)) FROM audit_logs;`, при >100 — спочатку архівувати/чистити |
+| `prosth/007` (`split-prosth:21`) | `prosthetics_flow_instances.pause_category` 32 → 16 | forward-чистка (`:22`) NULL-ить лише 3 відомі значення; вільний текст, записаний пізніше, буде обрізано | перевірити `SELECT pause_category, length(pause_category) … GROUP BY 1` і вирішити долю даних |
+
 Це «правильно» з точки зору лічильника: 1 → 2 → 3 → … → 6 (зламано) → **7 (скасовує 6)** → 8 → …
 
 ---
@@ -1489,12 +1571,29 @@ GRANT SELECT ON audit_events, audit_event_targets, audit_legacy_events,
 - Нічого не реконструюється: відсутні old/new лишаються `null`; legacy-запис
   ніколи не подається як доказ успішної операції (бейдж у консолі).
 
+### F.3.1 Перехідний режим таблиці `audit_logs` (після F.1)
+
+- `audit_logs` — **legacy-джерело для одноразового backfill, а не джерело істини**.
+  Клієнти консолі читають лише `audit_events` / `audit_legacy_events`; запити до
+  `GET /api/audit` лишаються legacy-сумісними, але нові події туди не пишуться
+  після `APP_AUDIT_LEGACY_WRITE_ENABLED=false`.
+- Жодного запиту не робиться «останнім рядком» (`saveNextEntry`) — сканування
+  keyset-сторінками по `id > cursor` (`ORDER BY id LIMIT 1000`), тож паралельні
+  вставки не зміщують курсор і не пропускають рядки (#406).
+- Сканування робиться батчами: існуючі рядки читаються одним
+  `findBySourceTableAndSourceIds`, записується лише відсутнє, потім кожна
+  сторінка перевіряється щедрим read-back (missing / checksum-drift → `verified=false`).
+- Повторний прогін безпечний (`UNIQUE(source_table, source_id)` + чанкові
+  коміти): рядки, що з'явилися після попереднього снепшота, підбираються наступним.
+- Ad-hoc SQL по `audit_logs` після cutover не є доказом: звірятися з консоллю
+  (канонічні події) та звітом backfill (`missing`/`checksumMismatches`).
+
 ### F.4 Retention (D1: тимчасові 2 роки) та архів
 
 - `retention_until` рахується автоматично (`occurredAt + 2 роки`) для нових і backfill-рядків.
 - Архіватор вимкнений за замовчуванням. Увімкнення:
   `APP_AUDIT_RETENTION_ENABLED=true` (+ опційно `APP_AUDIT_RETENTION_CRON`, default `0 0 3 * * *`,
-  `APP_AUDIT_RETENTION_OUTBOX_DELIVERED_DAYS`, default `30`).
+  `APP_AUDIT_RETENTION_OUTBOX_DELIVERED_DAYS`, default `30`, `APP_AUDIT_RETENTION_CHUNK_SIZE`, default `500`).
   Властивості: `app.audit.retention.enabled/cron/outbox-delivered-days`.
 - Цикл: expired `audit_events` (+ їх targets) і `audit_legacy_events` → archive-таблиці,
   потім DELETE оригіналів (targets першими — живий FK `RESTRICT`); DELIVERED outbox-копії
@@ -1567,6 +1666,48 @@ relay drain ≥ 50 events/s; backfill ≥ 100 rows/s. Пороги у тесті
 - Окрема архівна роль БД з правом тільки INSERT/SELECT в archive-таблиці —
   створити DBA за зразком F.2.
 - Prometheus/Grafana/Alertmanager інстанси та пейджинг — за таблицею F.5.
+
+### F.9 Транзакції між 4 БД — чому це не 2PC (#375)
+
+Усі `@Transactional` за замовчуванням ідуть через `ChainedTransactionManager`:
+ноги відкриваються `core → icu → med → prosth`, комітяться у зворотному порядку.
+
+| Ситуація | Результат |
+|---|---|
+| Виняток у тілі методу | Відкат усіх ніг — стан консистентний |
+| Збій **під час коміту** пізнішої ноги | Раніше закомічені ноги лишаються **дurable** |
+
+Саме другий рядок — вікно, про яке йдеться в #375, і він уже траплявся в практиці
+(«mixed outcome», #321). Сценарій, зафіксований тестом
+`ChainedTransactionCommitWindowTest`: коміт `med` успішний, коміт `icu` падає →
+бізнес-рядки в `med`/`prosth` збережені, а `audit_logs` у `core` відкочено →
+**бізнес-запис без свого аудиту**.
+
+**Чому залишили deprecated-менеджер.** Повноцінне рішення — 2PC (JTA/Atomikos), що
+є непропорційним для цього розгортання. Залишковий ризик прийнято; Javadoc у
+`MultiTransactionConfig` описує його разом із пасткою нижче.
+
+**Як звузити вікно (без зміни коду).** Legacy-аудит пишеться в `core`, тоді як
+бізнес-дані лежать у БД фічі. `AuditService` — єдина точка запису, тому один
+перемикач прибирає core-ногу з усіх кросс-ДБ записів:
+
+```bash
+APP_AUDIT_LEGACY_WRITE_ENABLED=false
+```
+
+Це зменшує вікно до справжніх кросс-ДБ бізнес-записів. **Перед вимкненням**
+переконайтеся, що аудит v2 (`audit_events` + outbox) уже працює — legacy-таблиця
+стане неповною.
+
+**Пастка: не «лікуйте» аудит через `REQUIRES_NEW`.**
+`MultiTransactionStatus.registerTransactionManager` передає `TransactionDefinition`
+в кожну ногу, тому `REQUIRES_NEW` призупинив би 4 відкриті ноги і відкрив 4 нові —
+8 з'єднань з пулу на один запис аудиту (CI обмежує кожен пул до 2). Перевірено
+розбіром байткоду.
+
+**Інвентаризація.** `CrossDatabaseWriteInventoryTest` тримає список усіх сервісів
+фіч-модулів, що пишуть бізнес-дані + core-аудит в одній транзакції (21 сервіс).
+Новий такий виклик зупиняє збірку, поки його не додано до списку.
 
 ---
 

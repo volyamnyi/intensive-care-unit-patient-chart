@@ -18,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,11 +29,20 @@ class VitalSignServiceTest {
     @Mock private VitalSignEntryRepository vitalEntryRepository;
     @Mock private PrescriptionListRepository listRepository;
     @Mock private com.superhumans.audit.DomainAuditEmitter auditEmitter;
+    // #382: provisioning runs inside a TransactionTemplate the service builds
+    // from the med-leg manager. A stub manager that hands back a status and
+    // accepts commit/rollback makes that template run the callback in-line -
+    // the repositories are still pure mocks, so nothing needs a real database.
+    @Mock private org.springframework.transaction.PlatformTransactionManager medTransactionManager;
 
     @InjectMocks
     private VitalSignService service;
 
     @Captor private ArgumentCaptor<VitalSignEntry> entryCaptor;
+    @SuppressWarnings("unchecked")
+    @Captor private ArgumentCaptor<List<VitalSignDay>> dayBatch = ArgumentCaptor.forClass(List.class);
+    @SuppressWarnings("unchecked")
+    @Captor private ArgumentCaptor<List<VitalSignEntry>> entryBatch = ArgumentCaptor.forClass(List.class);
     @Captor private ArgumentCaptor<VitalSignList> listCaptor;
 
     private UUID prescriptionListId;
@@ -42,6 +52,14 @@ class VitalSignServiceTest {
 
     @BeforeEach
     void setUp() {
+        var status = new org.springframework.transaction.support.SimpleTransactionStatus();
+        org.mockito.Mockito.lenient()
+                .when(medTransactionManager.getTransaction(any(org.springframework.transaction.TransactionDefinition.class)))
+                .thenReturn(status);
+        org.mockito.Mockito.lenient().doNothing().when(medTransactionManager).commit(any());
+        org.mockito.Mockito.lenient()
+                .doNothing().when(medTransactionManager).rollback(any());
+
         prescriptionListId = UUID.randomUUID();
         vitalListId = UUID.randomUUID();
 
@@ -72,13 +90,15 @@ class VitalSignServiceTest {
         when(vitalListRepository.findByPrescriptionListId(prescriptionListId))
                 .thenReturn(Optional.empty());
         when(listRepository.findById(prescriptionListId)).thenReturn(Optional.of(prescriptionList));
-        when(vitalListRepository.save(any(VitalSignList.class))).thenReturn(vitalList);
-        when(vitalDayRepository.save(any(VitalSignDay.class))).thenAnswer(inv -> {
-            VitalSignDay d = inv.getArgument(0);
-            d.setId(UUID.randomUUID());
-            return d;
+when(vitalListRepository.save(any(VitalSignList.class))).thenReturn(vitalList);
+        when(vitalDayRepository.saveAll(anyList())).thenAnswer(inv -> {
+            java.util.List<VitalSignDay> days = new java.util.ArrayList<>(inv.getArgument(0));
+            for (VitalSignDay d : days) {
+                d.setId(UUID.randomUUID());
+            }
+            return days;
         });
-        when(vitalEntryRepository.save(any(VitalSignEntry.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(vitalEntryRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
         VitalSignList result = service.getOrCreate(prescriptionListId);
 
@@ -86,11 +106,13 @@ class VitalSignServiceTest {
         verify(vitalListRepository).save(listCaptor.capture());
         assertThat(listCaptor.getValue().getPrescriptionList().getId()).isEqualTo(prescriptionListId);
 
-        // 21 days created
-        verify(vitalDayRepository, times(21)).save(any(VitalSignDay.class));
+        // 21 days created in ONE batch statement (#429 item 3)
+        verify(vitalDayRepository).saveAll(dayBatch.capture());
+        assertThat(dayBatch.getValue()).hasSize(21);
 
-        // 84 entries created (21 days × 4 periods: morning, day, evening, night)
-        verify(vitalEntryRepository, times(84)).save(any(VitalSignEntry.class));
+        // 84 entries created (21 days × 4 periods) in ONE batch statement
+        verify(vitalEntryRepository).saveAll(entryBatch.capture());
+        assertThat(entryBatch.getValue()).hasSize(84);
 
         assertThat(result.getId()).isEqualTo(vitalListId);
     }

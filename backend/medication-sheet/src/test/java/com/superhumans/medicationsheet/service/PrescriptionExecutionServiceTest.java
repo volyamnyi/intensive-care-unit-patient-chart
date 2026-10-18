@@ -143,6 +143,25 @@ class PrescriptionExecutionServiceTest {
     }
 
     @Test
+    void execute_throws_whenPartUnplanned() {
+        // The guard used to live in PrescriptionItemService.markCompleted, which
+        // #359 removed. Moving the complete endpoint onto this service without
+        // moving the guard would have let the execute path complete a dose that
+        // nobody planned.
+        testPart.setIsPlanned(false);
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+
+        assertThatThrownBy(() -> service.execute(
+                dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Незаплановане призначення");
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+        verify(partRepository, never()).save(any(PrescriptionDayPart.class));
+    }
+
+    @Test
     void execute_throws_whenListFinished() {
         PrescriptionList finished = PrescriptionList.builder().patientId(1001L).status("Finished").build();
         PrescriptionItem item = PrescriptionItem.builder().list(finished).build();

@@ -42,6 +42,7 @@ public class MisApiClient {
     final ObjectMapper objectMapper;
     final MisAuthService misAuthService;
     final MisApiProperties properties;
+    final MisHealthIndicator healthIndicator;
 
     public JsonNode callMethod(String methodName, Param... params) {
         properties.ensureConfigured();
@@ -67,11 +68,12 @@ public class MisApiClient {
         requestBody.set("params", paramsArray);
         requestBody.put("installationId", properties.getInstallationGuid());
 
+        String token = misAuthService.getAccessToken();
         try {
-            return post(url, requestBody, misAuthService.getAccessToken(), methodName);
+            return post(url, requestBody, token, methodName);
         } catch (MisBadResponseException e) {
             if (e.getStatusCode() == 401) {
-                misAuthService.invalidateToken();
+                misAuthService.invalidateTokenIfCurrent(token);
                 return post(url, requestBody, misAuthService.getAccessToken(), methodName);
             }
             throw e;
@@ -90,21 +92,27 @@ public class MisApiClient {
                     url, HttpMethod.POST,
                     new HttpEntity<>(requestBody.toString(), headers),
                     String.class).getBody();
-            return objectMapper.readTree(response);
+            JsonNode parsed = objectMapper.readTree(response);
+            healthIndicator.recordSuccess();
+            return parsed;
         } catch (HttpStatusCodeException e) {
             log.error("MIS API call failed: method={}, httpStatus={}",
                     methodName, e.getStatusCode().value());
+            healthIndicator.recordFailure("HTTP " + e.getStatusCode().value());
             throw new MisBadResponseException(methodName, e.getStatusCode().value(), e);
         } catch (ResourceAccessException e) {
             log.error("MIS API call failed: method={}, error={}", methodName, e.getMessage());
             if (hasCause(e, SocketTimeoutException.class)) {
+                healthIndicator.recordFailure("timeout");
                 throw new MisTimeoutException("MIS API call timed out: " + methodName, e);
             }
+            healthIndicator.recordFailure("transport");
             throw new MisApiException("MIS API call failed: " + methodName, e);
         } catch (MisApiException e) {
             throw e;
         } catch (Exception e) {
             log.error("MIS API call failed: method={}, error={}", methodName, e.getMessage());
+            healthIndicator.recordFailure("transport");
             throw new MisApiException("MIS API call failed: " + methodName, e);
         }
     }

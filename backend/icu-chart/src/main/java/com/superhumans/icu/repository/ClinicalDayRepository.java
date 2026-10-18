@@ -13,6 +13,9 @@ import java.util.UUID;
 public interface ClinicalDayRepository extends JpaRepository<ClinicalDay, UUID> {
     List<ClinicalDay> findByEpisodeIdOrderByDayNumberAsc(UUID episodeId);
     Optional<ClinicalDay> findByEpisodeIdAndStatus(UUID episodeId, ClinicalDayStatus status);
+
+    @Query("SELECT cd FROM ClinicalDay cd JOIN FETCH cd.episode WHERE cd.id = :id")
+    Optional<ClinicalDay> findByIdWithEpisode(@Param("id") UUID id);
     Optional<ClinicalDay> findFirstByEpisodeIdOrderByDayNumberDesc(UUID episodeId);
     List<ClinicalDay> findByEpisodeIdAndStatusInOrderByDayNumberAsc(UUID episodeId, List<ClinicalDayStatus> statuses);
     List<ClinicalDay> findByStatusIn(List<ClinicalDayStatus> statuses);

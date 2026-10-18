@@ -62,10 +62,10 @@ public class ClinicalDayService {
         return jobTransactionTemplate;
     }
 
-    @Value("${app.scheduling.signing-window-start:7}")
+    @Value("${app.scheduling.signing-window-start:0}")
     private int signingWindowStartHour;
 
-    @Value("${app.scheduling.signing-window-end:9}")
+    @Value("${app.scheduling.signing-window-end:23}")
     private int signingWindowEndHour;
 
     @Value("${app.scheduling.signing-window-enabled:true}")
@@ -387,7 +387,16 @@ public class ClinicalDayService {
         for (ClinicalDay expired : expiredDays) {
             final UUID dayId = expired.getId();
             try {
-                jobTransactionTemplate().executeWithoutResult(status -> autoCloseSingleDay(dayId));
+                Boolean closed = jobTransactionTemplate().execute(status -> autoCloseSingleDay(dayId));
+                if (Boolean.TRUE.equals(closed)) {
+                    try {
+                        pdfGeneratorService.generatePdf(dayId, 0L);
+                        log.info("Auto-generated PDF for auto-closed clinical day {}", dayId);
+                    } catch (Exception e) {
+                        log.error("Failed to auto-generate PDF for auto-closed clinical day {}: {}",
+                                dayId, e.getMessage());
+                    }
+                }
             } catch (RuntimeException e) {
                 log.error("Auto-close failed for clinical day {}: {}", dayId, e.getMessage());
                 recordAutoCloseFailure(dayId);
@@ -404,7 +413,7 @@ public class ClinicalDayService {
         }
     }
 
-    private void autoCloseSingleDay(UUID dayId) {
+    private boolean autoCloseSingleDay(UUID dayId) {
         UUID rootId = UUID.randomUUID();
         try (var correlation = installJobCorrelationScope();
                 var operation = auditEmitter.beginOperation(rootId)) {
@@ -412,7 +421,7 @@ public class ClinicalDayService {
                     .orElseThrow(() -> new NotFoundException("Clinical day not found: " + dayId));
             if (day.getStatus() != ClinicalDayStatus.OPEN && day.getStatus() != ClinicalDayStatus.REOPENED) {
                 // Signed or closed between the scan and this unit of work — not ours to close.
-                return;
+                return false;
             }
             // Recalculate while the day is still OPEN: recalculate() enforces
             // the day lock, and this unit owns the closing write.
@@ -426,13 +435,6 @@ public class ClinicalDayService {
             day.setClosedAt(LocalDateTime.now());
             day.setUpdatedBy(0L);
             clinicalDayRepository.save(day);
-            try {
-                pdfGeneratorService.generatePdf(day.getId(), 0L);
-                log.info("Auto-generated PDF for auto-closed clinical day {}", day.getId());
-            } catch (Exception e) {
-                log.error("Failed to auto-generate PDF for auto-closed clinical day {}: {}",
-                        day.getId(), e.getMessage());
-            }
             log.info("Auto-closed clinical day {} for episode {}", day.getId(), day.getEpisode().getId());
             auditService.logAction("ClinicalDay", day.getId(), "AUTO_CLOSE", 0L);
             final UUID autoClosedDayId = day.getId();
@@ -453,6 +455,7 @@ public class ClinicalDayService {
                     .changes(List.of(AuditChanges.statusChanged(null, "CLOSED")))
                     .source(AuditEvent.AuditSource.SCHEDULED_JOB)
                     .build());
+            return true;
         }
     }
 

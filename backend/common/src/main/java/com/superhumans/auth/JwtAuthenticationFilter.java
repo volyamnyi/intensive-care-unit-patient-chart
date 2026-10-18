@@ -15,6 +15,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +30,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     JwtTokenProvider jwtTokenProvider;
@@ -62,10 +64,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long userId = userIdRaw != null ? Long.valueOf(userIdRaw) : null;
             UserRepository userRepository = userRepositoryProvider.getIfAvailable();
             if (userRepository != null) {
-                var currentUser = userId == null ? null : userRepository.findById(userId).orElse(null);
-                if (currentUser == null || Boolean.TRUE.equals(currentUser.getDeleted())
-                        || !currentUser.getRole().name().equals(role)) {
-                    recordTokenRejected(request);
+                try {
+                    var currentUser = userId == null ? null
+                            : userRepository.findById(userId).orElse(null);
+                    if (currentUser == null || Boolean.TRUE.equals(currentUser.getDeleted())
+                            || !currentUser.getRole().name().equals(role)) {
+                        recordTokenRejected(request, "AUTH_TOKEN_REJECTED");
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+                } catch (org.springframework.dao.DataAccessException userStoreUnavailable) {
+                    // #367: a core-DB outage must degrade every authenticated
+                    // request to the same uniform fail-closed 401, not a
+                    // container 500 from the filter. The token is valid, but the
+                    // live-user re-check cannot run, so the request continues
+                    // unauthenticated and the security chain rejects it.
+                    log.warn("User re-check store unavailable for token subject {}: {}",
+                            login, userStoreUnavailable.getMessage());
+                    recordTokenRejected(request, "AUTH_USER_STORE_UNAVAILABLE");
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -76,7 +92,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(auth);
 
         } else if (token != null) {
-            recordTokenRejected(request);
+            recordTokenRejected(request, "AUTH_TOKEN_REJECTED");
         }
         filterChain.doFilter(request, response);
     }
@@ -85,8 +101,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Records presenting an invalid, revoked or stale token. Only non-GET requests are
      * recorded to avoid a write per idle-polling request with an expired session; the
      * outcome is always DENIED and the token value itself is never stored.
+     *
+     * <p>Best-effort (#367): during a core-DB outage the audit store is usually
+     * dead too, and the filter must never propagate - the uniform 401 matters
+     * more than the audit row.
      */
-    private void recordTokenRejected(HttpServletRequest request) {
+    private void recordTokenRejected(HttpServletRequest request, String errorCode) {
         String method = request.getMethod();
         if ("GET".equals(method) || "HEAD".equals(method) || "OPTIONS".equals(method)) {
             return;
@@ -96,19 +116,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         AuditClientIpResolver resolver = clientIpResolverProvider.getIfAvailable();
-        recorder.record(AuditEvent.builder()
-                .actor(AuditActorResolver.unknown())
-                .eventClass(EventClass.SECURITY)
-                .module("platform")
-                .functionalArea("token")
-                .action("platform.auth.token.rejected")
-                .actionType(ActionType.ACCESS_DENIED)
-                .outcome(AuditEvent.AuditOutcome.DENIED)
-                .errorCode("AUTH_TOKEN_REJECTED")
-                .ipAddress(resolver == null ? null : resolver.resolveClientIp(request))
-                .userAgentClass(AuditClientIpResolver.reduceUserAgent(request.getHeader("User-Agent")))
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        try {
+            recorder.record(AuditEvent.builder()
+                    .actor(AuditActorResolver.unknown())
+                    .eventClass(EventClass.SECURITY)
+                    .module("platform")
+                    .functionalArea("token")
+                    .action("platform.auth.token.rejected")
+                    .actionType(ActionType.ACCESS_DENIED)
+                    .outcome(AuditEvent.AuditOutcome.DENIED)
+                    .errorCode(errorCode)
+                    .ipAddress(resolver == null ? null : resolver.resolveClientIp(request))
+                    .userAgentClass(AuditClientIpResolver.reduceUserAgent(request.getHeader("User-Agent")))
+                    .source(AuditEvent.AuditSource.API)
+                    .build());
+        } catch (RuntimeException auditStoreAlsoDown) {
+            log.debug("Token-rejection audit unavailable: {}", auditStoreAlsoDown.getMessage());
+        }
     }
 
     private String resolveToken(HttpServletRequest request) {

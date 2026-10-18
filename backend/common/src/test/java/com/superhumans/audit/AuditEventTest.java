@@ -147,6 +147,56 @@ class AuditEventTest {
         assertThat(event.metadata()).containsEntry("affectedRecords", 2);
     }
 
+    /**
+     * #397 item 5: the change list is bounded, and the boundary itself must be
+     * accepted — an off-by-one cap would silently drop legitimate events.
+     */
+    @Test
+    void changeListIsBoundedAndRejectsAnOversizedEvent() {
+        var boundary = statusChanges(AuditEvent.MAX_CHANGES);
+
+        AuditEvent event = AuditEvent.builder()
+                .actor(USER)
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("episode")
+                .action("icu.episode.create")
+                .actionType(ActionType.CREATE)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .changes(boundary)
+                .build();
+
+        assertThat(event.changes()).hasSize(AuditEvent.MAX_CHANGES);
+
+        assertThatThrownBy(() -> AuditEvent.builder()
+                .actor(USER)
+                .eventClass(EventClass.BUSINESS)
+                .module("icu")
+                .functionalArea("episode")
+                .action("icu.episode.create")
+                .actionType(ActionType.CREATE)
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .source(AuditEvent.AuditSource.API)
+                .changes(statusChanges(AuditEvent.MAX_CHANGES + 1))
+                .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("too many changes");
+    }
+
+    /**
+     * Distinct fields, because the constructor sorts by field name. No old/new
+     * values: values are restricted to the {@code SAFE_VALUE_FIELDS} allowlist,
+     * which would otherwise reject the synthetic fields before the cap is
+     * reached.
+     */
+    private static java.util.List<AuditEvent.AuditChange> statusChanges(int count) {
+        return java.util.stream.IntStream.range(0, count)
+                .mapToObj(i -> new AuditEvent.AuditChange(
+                        "field" + i, AuditEvent.ChangeType.SET, DataClass.IDENTIFIER, null, null))
+                .toList();
+    }
+
     private AuditEvent eventWithChange(AuditEvent.AuditChange change) {
         return AuditEvent.builder()
                 .actor(USER)

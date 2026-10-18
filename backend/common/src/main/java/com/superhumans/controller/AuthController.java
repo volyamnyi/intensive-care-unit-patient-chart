@@ -1,10 +1,12 @@
 package com.superhumans.controller;
 
+import com.superhumans.audit.AuditClientIpResolver;
 import com.superhumans.auth.JwtTokenProvider;
 import com.superhumans.auth.TokenRevocationService;
 import com.superhumans.dto.LoginRequest;
 import com.superhumans.dto.LoginResponse;
 import com.superhumans.service.AuthService;
+import com.superhumans.util.AuthUsers;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.NonFinal;
@@ -27,6 +29,7 @@ public class AuthController {
     AuthService authService;
     JwtTokenProvider jwtTokenProvider;
     TokenRevocationService tokenRevocationService;
+    AuditClientIpResolver clientIpResolver;
 
     // Cookie lifetime follows the token TTL (#371): a TTL reconfiguration
     // must not silently diverge cookie and token lifetimes.
@@ -36,7 +39,11 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req, HttpServletRequest request) {
-        ResponseEntity<LoginResponse> response = authService.login(req, request.getRemoteAddr());
+        // #361: one trust path for the limiter and the audit trail. The resolver
+        // honours the trusted-proxy CIDR gate instead of trusting whatever
+        // getRemoteAddr() was rewritten to.
+        String clientIp = clientIpResolver.resolveClientIp(request);
+        ResponseEntity<LoginResponse> response = authService.login(req, clientIp);
         if (response.getBody() == null) {
             return response;
         }
@@ -65,7 +72,8 @@ public class AuthController {
             tokenRevocationService.revoke(jwtTokenProvider.getJtiFromToken(token),
                     jwtTokenProvider.getExpirationFromToken(token).toInstant());
         }
-        if (authentication != null && authentication.getCredentials() instanceof Long userId) {
+        Long userId = AuthUsers.idOrNull(authentication);
+        if (userId != null) {
             String role = authentication.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
                     .findFirst()

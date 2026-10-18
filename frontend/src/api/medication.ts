@@ -32,8 +32,10 @@ export const prescriptionApi = {
     client.delete<void>(`/prescriptions/items/${itemId}/days/${dayId}`),
   planDose: (dayPartId: string, dose: string) =>
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/plan`, { dose }),
-  completeDose: (dayPartId: string) =>
-    client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/complete`),
+  // #359: completing a dose goes through the same two-person contract as execute -
+// the request body carries the second nurse's credentials.
+  completeDose: (dayPartId: string, data: PrescriptionExecutionCreateRequest) =>
+    client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/complete`, data),
   cancelMedication: (dayPartId: string) =>
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/cancel`),
   restoreToPlanned: (dayPartId: string) =>
@@ -48,10 +50,10 @@ export const prescriptionApi = {
     client.get<PrescriptionInteractionsResponse>(`/prescriptions/${listId}/interactions`),
   getPdfInfo: (id: string) =>
     client.get<PrescriptionPdfInfo>(`/prescriptions/${id}/pdf/info`),
-  getPdfZip: (id: string) =>
-    client.get<Blob>(`/prescriptions/${id}/pdf/file`, { responseType: 'blob' }),
-  getPdfPage: (id: string, pageIndex: number) =>
-    client.get<Blob>(`/prescriptions/${id}/pdf/pages/${pageIndex}`, { responseType: 'blob' }),
+  generatePdfZip: (id: string) =>
+    client.post<Blob>(`/prescriptions/${id}/pdf/file`, undefined, { responseType: 'blob' }),
+  generatePdfPage: (id: string, pageIndex: number) =>
+    client.post<Blob>(`/prescriptions/${id}/pdf/pages/${pageIndex}`, undefined, { responseType: 'blob' }),
 };
 
 /** Administrator drug-interactions dataset import (served by the medication module, #304). */
@@ -73,8 +75,23 @@ export const vitalSignApi = {
     client.get<VitalSignDay[]>(`/vital-signs`, { params: { prescriptionListId } }),
   getEntries: (dayId: string) =>
     client.get<VitalSignEntry[]>(`/vital-signs/days/${dayId}/entries`),
-  getGrid: (prescriptionListId: string) =>
-    client.get<VitalGridDay[]>(`/vital-signs/grid`, { params: { prescriptionListId } }),
+  // #365: a GET must never provision rows, so the grid load goes through the
+  // POST ensure first (nurses and VITALS_ENTER holders provision on open). A
+  // read-only visitor gets 403 there and falls back to the pure GET - the grid
+  // shows whatever data exists, provisioning is a clinical act.
+  getGrid: async (prescriptionListId: string) => {
+    try {
+      return await client.post<VitalGridDay[]>(`/vital-signs/grid`, null,
+        { params: { prescriptionListId } });
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403) {
+        return await client.get<VitalGridDay[]>(`/vital-signs/grid`,
+          { params: { prescriptionListId } });
+      }
+      throw err;
+    }
+  },
   create: (data: VitalSignEntryCreateRequest) =>
     client.post<VitalSignEntry>('/vital-signs', data),
   updateEntry: (entryId: string, data: { temperature?: number; systolicBp?: number; diastolicBp?: number; spo2?: number; pulse?: number; stool?: string; painScore?: number }) =>

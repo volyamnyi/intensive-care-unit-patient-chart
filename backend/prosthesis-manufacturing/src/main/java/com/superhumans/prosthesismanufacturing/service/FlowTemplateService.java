@@ -1,7 +1,7 @@
 package com.superhumans.prosthesismanufacturing.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.dto.FlowTemplateResponse;
 import com.superhumans.prosthesismanufacturing.dto.TemplateCreateRequest;
 import com.superhumans.audit.AuditActionDefinition.ActionType;
@@ -392,7 +392,7 @@ public class FlowTemplateService {
         }
         try {
             return objectMapper.writeValueAsString(values);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new BadRequestException("Invalid list value");
         }
     }

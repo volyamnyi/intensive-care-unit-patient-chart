@@ -1,5 +1,10 @@
 package com.superhumans.service;
 
+import com.superhumans.audit.AuditActionDefinition.ActionType;
+import com.superhumans.audit.AuditActionDefinition.EventClass;
+import com.superhumans.audit.AuditActorResolver;
+import com.superhumans.audit.AuditEvent;
+import com.superhumans.audit.DomainAuditEmitter;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
@@ -14,13 +19,6 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.UnitValue;
-import com.superhumans.audit.AuditActionDefinition.ActionType;
-import com.superhumans.audit.AuditActionDefinition.DataClass;
-import com.superhumans.audit.AuditActionDefinition.EventClass;
-import com.superhumans.audit.AuditActorResolver;
-import com.superhumans.audit.AuditChanges;
-import com.superhumans.audit.AuditEvent;
-import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.dto.PdfResponse;
 import com.superhumans.icu.entity.*;
 import com.superhumans.entity.core.User;
@@ -67,7 +65,7 @@ public class PdfGeneratorService {
     ClinicalDayRepository clinicalDayRepository;
     EpisodeRepository episodeRepository;
     HourlyRecordRepository hourlyRecordRepository;
-    AuditService auditService;
+    IcuPdfAuditService pdfAuditService;
     DomainAuditEmitter auditEmitter;
     MedicalOrderRepository medicalOrderRepository;
     OrderExecutionRepository orderExecutionRepository;
@@ -86,9 +84,9 @@ public class PdfGeneratorService {
         return toResponse(pdf);
     }
 
-    @Transactional
     public PdfResponse generatePdf(UUID clinicalDayId, Long userId) {
-        ClinicalDay day = clinicalDayRepository.findById(clinicalDayId)
+        ClinicalDay day = clinicalDayRepository.findByIdWithEpisode(clinicalDayId)
+                .or(() -> clinicalDayRepository.findById(clinicalDayId))
                 .orElseThrow(() -> new NotFoundException("Клінічний день не знайдено: " + clinicalDayId));
 
         if (day.getStatus() == ClinicalDayStatus.OPEN
@@ -113,32 +111,23 @@ public class PdfGeneratorService {
                 .generatedAt(LocalDateTime.now())
                 .generatedBy(userId)
                 .build();
-        if (pdfContent != null) {
-            pdf.setChecksum(Integer.toHexString(pdfContent.hashCode()));
-            pdf.setFileData(pdfContent);
-        }
+        pdf.setChecksum(sha256(pdfContent));
+        pdf.setFileData(pdfContent);
         pdf.setCreatedBy(userId);
         pdf.setUpdatedBy(userId);
         pdf = generatedPdfRepository.save(pdf);
-        auditService.logAction("GeneratedPdf", clinicalDayId, "GENERATE", userId);
         final UUID generatedPdfId = pdf.getId();
-        auditEmitter.emit("icu", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContextOrSystem("icu-pdf-job"))
-                .eventClass(EventClass.BUSINESS)
-                .module("icu")
-                .functionalArea("pdf")
-                .action("icu.pdf.generate")
-                .actionType(ActionType.GENERATE)
-                .target(new AuditEvent.AuditTarget(
-                        "GeneratedPdf", generatedPdfId.toString(), null))
-                .relatedEntities(List.of(new AuditEvent.AuditTarget(
-                        "ClinicalDay", clinicalDayId.toString(), null)))
-                .outcome(AuditEvent.AuditOutcome.SUCCESS)
-                .changes(List.of(AuditChanges.fieldChanged("fileVersion", DataClass.IDENTIFIER)))
-                .affectedRecords(1)
-                .source(AuditEvent.AuditSource.API)
-                .build());
+        pdfAuditService.recordGenerated(clinicalDayId, generatedPdfId, userId, 1);
         return toResponse(pdf);
+    }
+
+    private static String sha256(byte[] content) {
+        try {
+            return java.util.HexFormat.of().formatHex(
+                    java.security.MessageDigest.getInstance("SHA-256").digest(content));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is unavailable", e);
+        }
     }
 
     /**
@@ -179,12 +168,14 @@ public class PdfGeneratorService {
     // ========================================================================
 
     private byte[] buildPdfContent(ClinicalDay day, int version, Long userId) {
+        Document document = null;
+        PdfDocument pdfDoc = null;
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PdfWriter writer = new PdfWriter(baos);
-            PdfDocument pdfDoc = new PdfDocument(writer);
+            pdfDoc = new PdfDocument(writer);
             pdfDoc.setDefaultPageSize(PageSize.A4.rotate());
-            Document document = new Document(pdfDoc);
+            document = new Document(pdfDoc);
 
             PdfFont font = loadFont();
             PdfFont boldFont = loadBoldFont(font);
@@ -290,8 +281,22 @@ public class PdfGeneratorService {
             addFooter(document, font, version, userId);
 
             document.close();
+            document = null;
             return baos.toByteArray();
         } catch (Exception e) {
+            if (document != null) {
+                try {
+                    document.close();
+                } catch (Exception closeFailure) {
+                    e.addSuppressed(closeFailure);
+                }
+            } else if (pdfDoc != null) {
+                try {
+                    pdfDoc.close();
+                } catch (Exception closeFailure) {
+                    e.addSuppressed(closeFailure);
+                }
+            }
             log.error("PDF content build failed for clinical day {}: {}: {}",
                     day != null ? day.getId() : null,
                     e.getClass().getName(), e.getMessage(), e);
@@ -660,12 +665,13 @@ public class PdfGeneratorService {
         for (MedicalNote note : notes) {
             String author = authorNames.getOrDefault(note.getAuthorId(),
                     String.valueOf(note.getAuthorId()));
-            doc.add(new Paragraph("  [" + note.getNoteType() + "] " + author + " ("
+            doc.add(new Paragraph("  [" + nullToEmpty(note.getNoteType()) + "] " + author + " ("
                     + translateRole(note.getRole()) + "):")
                     .setFont(font).setBold());
-            doc.add(new Paragraph("    " + note.getText()).setFont(font));
-            doc.add(new Paragraph("    — " + note.getCreatedAt()
-                    .format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).setFont(font));
+            doc.add(new Paragraph("    " + nullToEmpty(note.getText())).setFont(font));
+            doc.add(new Paragraph("    — " + (note.getCreatedAt() == null ? ""
+                    : note.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))))
+                    .setFont(font));
             doc.add(new Paragraph(" "));
         }
     }
@@ -682,11 +688,12 @@ public class PdfGeneratorService {
         Map<Long, String> userNames = getScaleUserNames(scales);
         for (ScaleResult sr : scales) {
             addTableRow(table, font,
-                    sr.getScale().getName(),
-                    sr.getResult(),
-                    sr.getCalculatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
+                    sr.getScale() == null ? "" : nullToEmpty(sr.getScale().getName()),
+                    nullToEmpty(sr.getResult()),
+                    sr.getCalculatedAt() == null ? ""
+                            : sr.getCalculatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
                     userNames.getOrDefault(sr.getCalculatedBy(),
-                            String.valueOf(sr.getCalculatedBy())));
+                            sr.getCalculatedBy() == null ? "" : String.valueOf(sr.getCalculatedBy())));
         }
         doc.add(table);
     }
@@ -707,6 +714,10 @@ public class PdfGeneratorService {
     private Cell cell(String text) {
         Paragraph p = new Paragraph(text != null ? text : "");
         return new Cell().add(p).setPadding(1);
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private Cell infoCell(String text, PdfFont font, PdfFont boldFont, float size) {

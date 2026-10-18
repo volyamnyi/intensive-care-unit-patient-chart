@@ -1,6 +1,8 @@
 package com.superhumans.prosthesismanufacturing.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
@@ -25,6 +27,10 @@ public class ProsthesisManufacturingConfig {
      */
     @Bean
     public ObjectMapper prosthesisObjectMapper() {
-        return new ObjectMapper();
+        // Match the legacy snapshot behavior while moving to Jackson 3: old
+        // snapshots omit primitive booleans and must deserialize as false.
+        return JsonMapper.builder()
+                .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+                .build();
     }
 }

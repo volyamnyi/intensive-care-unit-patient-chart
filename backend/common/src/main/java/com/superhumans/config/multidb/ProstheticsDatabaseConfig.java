@@ -33,9 +33,19 @@ public class ProstheticsDatabaseConfig {
         return MultiDatabaseSupport.moduleDataSource(properties);
     }
 
+    /**
+     * Transaction/JPA view of the prosth pool: lazily acquires a connection
+     * (#423 item 2) so a request that touches one module DB no longer reserves
+     * a connection in all four pools. Liquibase and seeding keep the raw pool.
+     */
+    @Bean
+    public DataSource prosthLazyDataSource(@Qualifier("prosthDataSource") DataSource dataSource) {
+        return MultiDatabaseSupport.lazyTransactionDataSource(dataSource);
+    }
+
     @Bean
     public LocalContainerEntityManagerFactoryBean prosthEntityManagerFactory(
-            @Qualifier("prosthDataSource") DataSource dataSource) {
+            @Qualifier("prosthLazyDataSource") DataSource dataSource) {
         return MultiDatabaseSupport.entityManagerFactory(dataSource,
                 "com.superhumans.prosthesismanufacturing.entity", "com.superhumans.entity.base");
     }

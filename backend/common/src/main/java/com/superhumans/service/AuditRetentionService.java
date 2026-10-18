@@ -9,7 +9,9 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import javax.sql.DataSource;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -17,8 +19,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Retention enforcement for the audit store (F8, D1: temporary two-year
@@ -45,6 +51,8 @@ public class AuditRetentionService {
     AuditEventRecorder auditEventRecorder;
     boolean retentionEnabled;
     int outboxDeliveredDays;
+    int chunkSize;
+    TransactionTemplate coreTransactionTemplate;
 
     public AuditRetentionService(
             @Qualifier("coreDataSource") DataSource coreDataSource,
@@ -54,7 +62,9 @@ public class AuditRetentionService {
             MeterRegistry meterRegistry,
             AuditEventRecorder auditEventRecorder,
             @Value("${app.audit.retention.enabled:false}") boolean retentionEnabled,
-            @Value("${app.audit.retention.outbox-delivered-days:30}") int outboxDeliveredDays) {
+            @Value("${app.audit.retention.outbox-delivered-days:30}") int outboxDeliveredDays,
+            @Qualifier("coreTransactionManager") PlatformTransactionManager coreTransactionManager,
+            @Value("${app.audit.retention.chunk-size:500}") int chunkSize) {
         this.coreDataSource = coreDataSource;
         this.icuDataSource = icuDataSource;
         this.medDataSource = medDataSource;
@@ -63,6 +73,8 @@ public class AuditRetentionService {
         this.auditEventRecorder = auditEventRecorder;
         this.retentionEnabled = retentionEnabled;
         this.outboxDeliveredDays = outboxDeliveredDays;
+        this.chunkSize = Math.max(1, chunkSize);
+        this.coreTransactionTemplate = new TransactionTemplate(coreTransactionManager);
     }
 
     @Scheduled(cron = "${app.audit.retention.cron:0 0 3 * * *}")
@@ -89,55 +101,21 @@ public class AuditRetentionService {
         // PostgreSQL JDBC cannot infer a type for Instant parameters —
         // bind java.sql.Timestamp explicitly.
         java.sql.Timestamp cutoff = java.sql.Timestamp.from(now);
-        JdbcTemplate core = new JdbcTemplate(coreDataSource);
-        int archivedTargets = core.update(
-                "INSERT INTO audit_event_targets_archive "
-                        + "(audit_id, relation_type, entity_type, entity_id, business_key, occurred_at) "
-                        + "SELECT t.audit_id, t.relation_type, t.entity_type, t.entity_id, "
-                        + "t.business_key, t.occurred_at FROM audit_event_targets t "
-                        + "JOIN audit_events e ON e.audit_id = t.audit_id "
-                        + "WHERE e.retention_until < ? "
-                        + "ON CONFLICT DO NOTHING",
-                cutoff);
-        int archivedEvents = core.update(
-                "INSERT INTO audit_events_archive "
-                        + "(audit_id, schema_version, occurred_at, recorded_at, event_class, module, "
-                        + "functional_area, action, action_type, criticality, actor_type, actor_id, "
-                        + "actor_login, actor_display_name, actor_roles, target_type, target_id, "
-                        + "business_key, outcome, request_id, user_action_id, correlation_id, "
-                        + "parent_audit_id, retention_class, retention_until, integrity_hash, event_payload) "
-                        + "SELECT audit_id, schema_version, occurred_at, recorded_at, event_class, module, "
-                        + "functional_area, action, action_type, criticality, actor_type, actor_id, "
-                        + "actor_login, actor_display_name, actor_roles, target_type, target_id, "
-                        + "business_key, outcome, request_id, user_action_id, correlation_id, "
-                        + "parent_audit_id, retention_class, retention_until, integrity_hash, event_payload "
-                        + "FROM audit_events WHERE retention_until < ? "
-                        + "ON CONFLICT DO NOTHING",
-                cutoff);
-        int archivedLegacy = core.update(
-                "INSERT INTO audit_legacy_events_archive "
-                        + "(audit_id, source_table, source_id, occurred_at, legacy_kind, legacy_entity, "
-                        + "legacy_entity_id, legacy_action, legacy_user_id, legacy_user_role, "
-                        + "legacy_ip_address, legacy_old_value, legacy_new_value, legacy_details, "
-                        + "legacy_correlation_id, legacy_is_deleted, schema_version, context_completeness, "
-                        + "timestamp_precision, outcome, checksum, retention_until, backfilled_at) "
-                        + "SELECT audit_id, source_table, source_id, occurred_at, legacy_kind, legacy_entity, "
-                        + "legacy_entity_id, legacy_action, legacy_user_id, legacy_user_role, "
-                        + "legacy_ip_address, legacy_old_value, legacy_new_value, legacy_details, "
-                        + "legacy_correlation_id, legacy_is_deleted, schema_version, context_completeness, "
-                        + "timestamp_precision, outcome, checksum, retention_until, backfilled_at "
-                        + "FROM audit_legacy_events WHERE retention_until < ? "
-                        + "ON CONFLICT DO NOTHING",
-                cutoff);
-        int deletedTargets = core.update(
-                "DELETE FROM audit_event_targets t USING audit_events_archive a "
-                        + "WHERE t.audit_id = a.audit_id");
-        int deletedEvents = core.update(
-                "DELETE FROM audit_events e USING audit_events_archive a "
-                        + "WHERE e.audit_id = a.audit_id");
-        int deletedLegacy = core.update(
-                "DELETE FROM audit_legacy_events e USING audit_legacy_events_archive a "
-                        + "WHERE e.audit_id = a.audit_id");
+        int archivedTargets = 0;
+        int archivedEvents = 0;
+        ChunkResult eventChunk;
+        do {
+            eventChunk = archiveCanonicalChunk(cutoff);
+            archivedTargets += eventChunk.targets();
+            archivedEvents += eventChunk.events();
+        } while (eventChunk.events() > 0);
+
+        int archivedLegacy = 0;
+        ChunkResult legacyChunk;
+        do {
+            legacyChunk = archiveLegacyChunk(cutoff);
+            archivedLegacy += legacyChunk.events();
+        } while (legacyChunk.events() > 0);
         Map<String, Integer> deletedOutbox = pruneOutboxes(now);
 
         count("audit.retention.archived.events", archivedEvents);
@@ -145,12 +123,6 @@ public class AuditRetentionService {
         count("audit.retention.archived.legacy", archivedLegacy);
         deletedOutbox.forEach((module, deleted) -> meterRegistry
                 .counter("audit.retention.outbox.deleted", "module", module).increment(deleted));
-        if (deletedTargets != archivedTargets || deletedEvents != archivedEvents
-                || deletedLegacy != archivedLegacy) {
-            log.warn("Audit retention archive/delete drift targets={}/{} events={}/{} legacy={}/{}",
-                    deletedTargets, archivedTargets, deletedEvents, archivedEvents,
-                    deletedLegacy, archivedLegacy);
-        }
         AuditRetentionReportResponse report = AuditRetentionReportResponse.builder()
                 .enabled(true)
                 .cutoff(now.toString())
@@ -204,6 +176,84 @@ public class AuditRetentionService {
                         + "AND delivered_at < CAST(? AS timestamptz) - (? * INTERVAL '1 day')",
                 cutoff, outboxDeliveredDays)));
         return deleted;
+    }
+
+    private ChunkResult archiveCanonicalChunk(java.sql.Timestamp cutoff) {
+        return coreTransactionTemplate.execute(status -> {
+            NamedParameterJdbcTemplate core = new NamedParameterJdbcTemplate(coreDataSource);
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("cutoff", cutoff)
+                    .addValue("limit", chunkSize);
+            List<UUID> ids = core.query(
+                    "SELECT audit_id FROM audit_events "
+                            + "WHERE retention_until < :cutoff "
+                            + "ORDER BY retention_until, audit_id LIMIT :limit",
+                    params, (rs, rowNum) -> rs.getObject("audit_id", UUID.class));
+            if (ids.isEmpty()) {
+                return new ChunkResult(0, 0);
+            }
+            params.addValue("ids", ids);
+            int targets = core.update(
+                    "INSERT INTO audit_event_targets_archive "
+                            + "(audit_id, relation_type, entity_type, entity_id, business_key, occurred_at) "
+                            + "SELECT audit_id, relation_type, entity_type, entity_id, business_key, occurred_at "
+                            + "FROM audit_event_targets WHERE audit_id IN (:ids) ON CONFLICT DO NOTHING",
+                    params);
+            core.update(
+                    "INSERT INTO audit_events_archive "
+                            + "(audit_id, schema_version, occurred_at, recorded_at, event_class, module, "
+                            + "functional_area, action, action_type, criticality, actor_type, actor_id, "
+                            + "actor_login, actor_display_name, actor_roles, target_type, target_id, "
+                            + "business_key, outcome, request_id, user_action_id, correlation_id, "
+                            + "parent_audit_id, retention_class, retention_until, integrity_hash, event_payload) "
+                            + "SELECT audit_id, schema_version, occurred_at, recorded_at, event_class, module, "
+                            + "functional_area, action, action_type, criticality, actor_type, actor_id, "
+                            + "actor_login, actor_display_name, actor_roles, target_type, target_id, "
+                            + "business_key, outcome, request_id, user_action_id, correlation_id, "
+                            + "parent_audit_id, retention_class, retention_until, integrity_hash, event_payload "
+                            + "FROM audit_events WHERE audit_id IN (:ids) ON CONFLICT DO NOTHING",
+                    params);
+            core.update("DELETE FROM audit_event_targets WHERE audit_id IN (:ids)", params);
+            int events = core.update("DELETE FROM audit_events WHERE audit_id IN (:ids)", params);
+            return new ChunkResult(targets, events);
+        });
+    }
+
+    private ChunkResult archiveLegacyChunk(java.sql.Timestamp cutoff) {
+        return coreTransactionTemplate.execute(status -> {
+            NamedParameterJdbcTemplate core = new NamedParameterJdbcTemplate(coreDataSource);
+            MapSqlParameterSource params = new MapSqlParameterSource()
+                    .addValue("cutoff", cutoff)
+                    .addValue("limit", chunkSize);
+            List<UUID> ids = core.query(
+                    "SELECT audit_id FROM audit_legacy_events "
+                            + "WHERE retention_until < :cutoff "
+                            + "ORDER BY retention_until, audit_id LIMIT :limit",
+                    params, (rs, rowNum) -> rs.getObject("audit_id", UUID.class));
+            if (ids.isEmpty()) {
+                return new ChunkResult(0, 0);
+            }
+            params.addValue("ids", ids);
+            core.update(
+                    "INSERT INTO audit_legacy_events_archive "
+                            + "(audit_id, source_table, source_id, occurred_at, legacy_kind, legacy_entity, "
+                            + "legacy_entity_id, legacy_action, legacy_user_id, legacy_user_role, "
+                            + "legacy_ip_address, legacy_old_value, legacy_new_value, legacy_details, "
+                            + "legacy_correlation_id, legacy_is_deleted, schema_version, context_completeness, "
+                            + "timestamp_precision, outcome, checksum, retention_until, backfilled_at) "
+                            + "SELECT audit_id, source_table, source_id, occurred_at, legacy_kind, legacy_entity, "
+                            + "legacy_entity_id, legacy_action, legacy_user_id, legacy_user_role, "
+                            + "legacy_ip_address, legacy_old_value, legacy_new_value, legacy_details, "
+                            + "legacy_correlation_id, legacy_is_deleted, schema_version, context_completeness, "
+                            + "timestamp_precision, outcome, checksum, retention_until, backfilled_at "
+                            + "FROM audit_legacy_events WHERE audit_id IN (:ids) ON CONFLICT DO NOTHING",
+                    params);
+            int events = core.update("DELETE FROM audit_legacy_events WHERE audit_id IN (:ids)", params);
+            return new ChunkResult(0, events);
+        });
+    }
+
+    private record ChunkResult(int targets, int events) {
     }
 
     private void count(String name, int value) {

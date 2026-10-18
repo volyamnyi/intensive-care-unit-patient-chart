@@ -2,7 +2,7 @@ package com.superhumans.prosthesismanufacturing.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.dto.ProductionQuery;
 import com.superhumans.prosthesismanufacturing.dto.ProductionWorkItemDto;
 import com.superhumans.prosthesismanufacturing.entity.BrakEvent;
@@ -272,15 +272,20 @@ class ProductionReadServiceIntegrationTest {
     void attention_ordersFlaggedSeverestFirst() {
         List<ProductionWorkItemDto> queue = readService.attention(null);
 
-        // I6 (NEW, unassigned, fresh) is the only clean row of the six.
-        assertThat(queue).hasSize(5);
+        // I6 (NEW, unassigned, fresh) and the COMPLETED instance are the two
+        // unflagged rows: a terminal item is never OVERDUE (#429 item 2 — the
+        // queue is about what needs attention now, and that also makes the
+        // pre-filter possible in SQL).
+        assertThat(queue).hasSize(4);
         assertThat(queue.get(0).getStatus()).isEqualTo("FAILED");
         assertThat(queue.get(0).getAttentionFlags()).contains("FAILED");
         assertThat(queue.get(queue.size() - 1).getAttentionFlags())
                 .containsExactly("NO_ASSIGNEE");
         assertThat(queue.stream()
                 .filter(r -> r.getAttentionFlags().contains("OVERDUE")).count())
-                .isGreaterThanOrEqualTo(2);
+                .isPositive();
+        assertThat(queue).allSatisfy(row ->
+                assertThat(row.getStatus()).isNotEqualTo("COMPLETED"));
     }
 
     @Test
@@ -303,7 +308,9 @@ class ProductionReadServiceIntegrationTest {
         assertThat(first.getFailed()).isZero();
         assertThat(first.getBrakItems()).isEqualTo(2);
         assertThat(first.getReworkItems()).isEqualTo(1);
-        assertThat(first.getOverdueItems()).isEqualTo(2);
+        assertThat(first.getOverdueItems())
+                .describedAs("only running items can be overdue (#429 item 2)")
+                .isEqualTo(1);
         var second = team.get(1);
         assertThat(second.getUserId()).isEqualTo(6L);
         assertThat(second.getFailed()).isEqualTo(1);

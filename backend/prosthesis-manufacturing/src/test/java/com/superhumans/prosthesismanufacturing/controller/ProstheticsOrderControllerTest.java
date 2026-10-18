@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -25,6 +26,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -112,6 +114,16 @@ class ProstheticsOrderControllerTest {
                         .content("{\"patientId\":\"13373\",\"documentId\":681078}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderNumber").value("MIS-13373-681078"));
+    }
+
+    @Test
+    void provision_requiresOrderManagePermission() throws Exception {
+        PreAuthorize guard = ProstheticsOrderController.class
+                .getMethod("provision", com.superhumans.prosthesismanufacturing.dto.OrderProvisionRequest.class)
+                .getAnnotation(PreAuthorize.class);
+
+        assertThat(guard).isNotNull();
+        assertThat(guard.value()).isEqualTo("@permissionService.has('PROSTHETICS_ORDER_MANAGE')");
     }
 
     @Test

@@ -85,11 +85,13 @@ class SecurityTokenIntegrationTest extends AbstractIntegrationTest {
     void secB05_cookieOnlyAuthenticates_forgedCookieRejected() {
         String cookie = loginAs("doctor1", "doctor123");
 
-        ResponseEntity<String> ok = restTemplate.exchange("/api/episodes", HttpMethod.GET,
+        // The search endpoint requires at least one filter (BAD_REQUEST otherwise); the
+        // subject here is cookie authentication, so a valid patientId is passed.
+        ResponseEntity<String> ok = restTemplate.exchange("/api/episodes?patientId=1001", HttpMethod.GET,
                 cookieGet(cookie), String.class);
         assertThat(ok.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        ResponseEntity<String> forged = restTemplate.exchange("/api/episodes", HttpMethod.GET,
+        ResponseEntity<String> forged = restTemplate.exchange("/api/episodes?patientId=1001", HttpMethod.GET,
                 cookieGet("forged.cookie.value"), String.class);
         assertThat(forged.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }

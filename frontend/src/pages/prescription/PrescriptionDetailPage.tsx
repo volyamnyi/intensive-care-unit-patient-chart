@@ -217,7 +217,7 @@ export default function PrescriptionDetailPage() {
     if (!id || pdfBusy) return
     setPdfBusy(true)
     try {
-      const res = await prescriptionApi.getPdfZip(id)
+      const res = await prescriptionApi.generatePdfZip(id)
       const url = window.URL.createObjectURL(res.data)
       const a = document.createElement('a')
       a.href = url
@@ -240,7 +240,7 @@ export default function PrescriptionDetailPage() {
     try {
       const info = await prescriptionApi.getPdfInfo(id)
       for (let i = 0; i < info.data.pages; i++) {
-        const res = await prescriptionApi.getPdfPage(id, i)
+        const res = await prescriptionApi.generatePdfPage(id, i)
         await printPdfBlob(res.data)
       }
       toast.success(`PDF надіслано на друк (${info.data.pages} стор.)`)

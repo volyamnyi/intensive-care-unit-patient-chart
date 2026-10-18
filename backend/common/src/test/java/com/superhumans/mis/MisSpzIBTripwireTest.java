@@ -90,8 +90,10 @@ class MisSpzIBTripwireTest {
         try {
             String content = Files.readString(p, StandardCharsets.UTF_8);
             return content.toLowerCase(java.util.Locale.ROOT).contains("spzib");
-        } catch (Exception e) {
-            return false;
+        } catch (java.io.IOException e) {
+            // IO failures fail loudly (#428 item 4): an unreadable file must
+            // not be silently counted clean.
+            throw new java.io.UncheckedIOException(p.toString(), e);
         }
     }
 

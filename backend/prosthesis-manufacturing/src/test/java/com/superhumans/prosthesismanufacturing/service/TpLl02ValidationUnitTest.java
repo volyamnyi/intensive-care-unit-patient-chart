@@ -3,7 +3,7 @@ package com.superhumans.prosthesismanufacturing.service;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotElement;
 import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser.SnapshotStep;
 import java.math.BigDecimal;
@@ -25,7 +25,7 @@ class TpLl02ValidationUnitTest {
     @BeforeEach
     void setUp() {
         // Only validateValues is needed — other deps can be null for this test
-        service = new FlowInstanceService(null, null, null, null, null, null, null, null, null, null, null, null, new ObjectMapper());
+        service = new FlowInstanceService(null, null, null, null, null, null, null, null, null, null, null, null, null, new ObjectMapper());
     }
 
     private SnapshotStep measurementStep() {

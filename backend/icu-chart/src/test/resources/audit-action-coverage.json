@@ -739,16 +739,6 @@
                         "level":  "operation"
                     },
                     {
-                        "action":  "medication.dose.complete",
-                        "tests":  [
-                                      {
-                                          "class":  "com.superhumans.medicationsheet.service.PrescriptionItemServiceTest",
-                                          "module":  "medication-sheet"
-                                      }
-                                  ],
-                        "level":  "operation"
-                    },
-                    {
                         "action":  "medication.dose.execute",
                         "tests":  [
                                       {

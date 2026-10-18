@@ -20,18 +20,36 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Loads one consistent snapshot for Phase 17 PDF generation: the list with
- * all non-deleted items/days/parts plus executions in a single read-only
- * transaction, the MIS patient, and the institution settings.
+ * all non-deleted items/days/parts plus executions, the MIS patient, and the
+ * institution settings.
+ *
+ * <h2>Transaction shape (#383)</h2>
+ *
+ * The snapshot spans two databases (medication data + core institution
+ * settings) and one external system (MIS). A single {@code @Transactional}
+ * method bound to the {@code @Primary} chained manager would hold one
+ * connection in <em>every</em> pool for the whole call — including the
+ * seconds-long MIS HTTP round trip — which is how a slow MIS exhausts
+ * {@code APP_DATASOURCE_POOL_MAX} and cascades timeouts to unrelated
+ * requests. Instead each database is opened only for the time its own query
+ * runs, and the MIS call happens with no transaction open at all:
+ *
+ * <ol>
+ *   <li>{@code medTransactionManager} — list/items/days/parts/executions
+ *       (lazy collections must be initialized here)</li>
+ *   <li>{@code coreTransactionManager} — the two institution settings</li>
+ *   <li>no transaction — {@code misService.getPatient}</li>
+ * </ol>
  */
 @Service
-@RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionPdfDataLoader {
 
@@ -40,9 +58,54 @@ public class PrescriptionPdfDataLoader {
     PrescriptionExecutionRepository executionRepository;
     MisService misService;
     SystemSettingsRepository systemSettingsRepository;
+    TransactionTemplate medTransactionTemplate;
+    TransactionTemplate coreTransactionTemplate;
 
-    @Transactional(readOnly = true)
+    public PrescriptionPdfDataLoader(
+            PrescriptionListRepository listRepository,
+            PrescriptionItemRepository itemRepository,
+            PrescriptionExecutionRepository executionRepository,
+            MisService misService,
+            SystemSettingsRepository systemSettingsRepository,
+            @Qualifier("medTransactionManager") PlatformTransactionManager medTransactionManager,
+            @Qualifier("coreTransactionManager") PlatformTransactionManager coreTransactionManager) {
+        this.listRepository = listRepository;
+        this.itemRepository = itemRepository;
+        this.executionRepository = executionRepository;
+        this.misService = misService;
+        this.systemSettingsRepository = systemSettingsRepository;
+        this.medTransactionTemplate = new TransactionTemplate(medTransactionManager);
+        this.medTransactionTemplate.setReadOnly(true);
+        this.coreTransactionTemplate = new TransactionTemplate(coreTransactionManager);
+        this.coreTransactionTemplate.setReadOnly(true);
+    }
+
+    /** Snapshot rows plus the patient id the MIS lookup needs. */
+    private record PrescriptionData(PrescriptionPdfSnapshot snapshot, Long patientId) {
+    }
+
+    /** The two core-database settings, both fail-soft to an empty string. */
+    private record InstitutionSettings(String name, String edrpou) {
+    }
+
     public LoadedSnapshot load(UUID listId) {
+        PrescriptionData data = medTransactionTemplate.execute(
+                status -> readPrescriptionData(listId));
+
+        InstitutionSettings settings = coreTransactionTemplate.execute(
+                status -> new InstitutionSettings(loadSetting("institution_name"),
+                        loadSetting("institution_edrpou")));
+
+        // External call, deliberately outside every transaction (#383).
+        Optional<PatientDTO> patient = data.patientId() == null
+                ? Optional.empty()
+                : misService.getPatient(data.patientId());
+
+        return new LoadedSnapshot(data.snapshot(), patient, settings.name(), settings.edrpou());
+    }
+
+    /** Runs inside the medication-database transaction; see {@link #load}. */
+    private PrescriptionData readPrescriptionData(UUID listId) {
         PrescriptionList list = listRepository.findById(listId)
                 .filter(row -> !Boolean.TRUE.equals(row.getDeleted()))
                 .orElseThrow(() -> new NotFoundException("Prescription list not found: " + listId));
@@ -125,11 +188,7 @@ public class PrescriptionPdfDataLoader {
                 snapItems,
                 executions);
 
-        Optional<PatientDTO> patient = list.getPatientId() == null
-                ? Optional.empty()
-                : misService.getPatient(list.getPatientId());
-
-        return new LoadedSnapshot(snapshot, patient, loadSetting("institution_name"), loadSetting("institution_edrpou"));
+        return new PrescriptionData(snapshot, list.getPatientId());
     }
 
     private String loadSetting(String key) {

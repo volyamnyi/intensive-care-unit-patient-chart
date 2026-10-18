@@ -7,7 +7,6 @@ export interface PrescriptionList {
   departmentId: string | null;
   documentName: string;
   status: PrescriptionListStatus;
-  editingUserId: string | null;
   createdAt: string;
   updatedAt: string;
 }

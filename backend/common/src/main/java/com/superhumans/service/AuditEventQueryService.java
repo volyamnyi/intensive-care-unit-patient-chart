@@ -96,7 +96,7 @@ public class AuditEventQueryService {
         try {
             Optional<AuditLegacyEvent> legacy = legacyEventRepository.findById(auditId);
             if (legacy.isPresent()) {
-                return toLegacyDetail(legacy.get());
+                return toLegacyDetail(legacy.get(), restrictedDetail());
             }
             AuditEventEntity entity = eventRepository.findById(auditId)
                     .orElseThrow(() -> new NotFoundException("Audit event not found: " + auditId));
@@ -257,7 +257,7 @@ public class AuditEventQueryService {
                 .build();
     }
 
-    private static AuditEventDetailResponse toLegacyDetail(AuditLegacyEvent entity) {
+    private static AuditEventDetailResponse toLegacyDetail(AuditLegacyEvent entity, boolean restricted) {
         String recomputed = LegacyAuditChecksum.sha256(LegacyAuditChecksum.canonical(
                 entity.getLegacyEntity(),
                 entity.getLegacyEntityId(),
@@ -303,7 +303,7 @@ public class AuditEventQueryService {
                 .metadata(Map.of())
                 .integrityHash(entity.getChecksum())
                 .integrityVerified(entity.getChecksum() != null && entity.getChecksum().equals(recomputed))
-                .restrictedDetail(false)
+                .restrictedDetail(restricted)
                 .legacy(true)
                 .legacyDetail(LegacyEventDetailResponse.builder()
                         .legacyKind(entity.getLegacyKind())
@@ -316,9 +316,9 @@ public class AuditEventQueryService {
                         .legacyUserId(entity.getLegacyUserId())
                         .legacyUserRole(entity.getLegacyUserRole())
                         .legacyIpAddress(entity.getLegacyIpAddress())
-                        .legacyOldValue(entity.getLegacyOldValue())
-                        .legacyNewValue(entity.getLegacyNewValue())
-                        .legacyDetails(entity.getLegacyDetails())
+                        .legacyOldValue(restricted ? entity.getLegacyOldValue() : null)
+                        .legacyNewValue(restricted ? entity.getLegacyNewValue() : null)
+                        .legacyDetails(restricted ? entity.getLegacyDetails() : null)
                         .legacyCorrelationId(entity.getLegacyCorrelationId())
                         .legacyIsDeleted(entity.getLegacyIsDeleted())
                         .schemaVersion(entity.getSchemaVersion())
