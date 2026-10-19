@@ -21,14 +21,34 @@ function rowForPatient(page: any, patientId: number) {
   });
 }
 
+/**
+ * Soft-delete every list the patient already has.
+ *
+ * A patient may have only one open prescription list (#404 rejects a second
+ * one), and the stub patient is shared with the other medication specs, which
+ * create their lists earlier in the run. Without this, the create below is
+ * refused with 422 and the drawer never navigates.
+ */
+async function clearPrescriptionLists(request: any, token: string, patientId: number) {
+  const res = await request.get(`${API}/prescriptions?patientId=${patientId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const lists = await res.json();
+  if (!Array.isArray(lists)) return;
+  for (const list of lists) {
+    await request.delete(`${API}/prescriptions/${list.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+}
+
 // Guarantee the patient has at least one prescription list (the drawer opens only on existing lists).
 async function ensurePrescriptionList(request: any, token: string, patientId: number) {
   const res = await request.get(`${API}/prescriptions?patientId=${patientId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const lists = await res.json();
-  if (Array.isArray(lists) && lists.length > 0) return;
-  await request.post(`${API}/prescriptions`, {
+  if (Array.isArray(lists) && lists.length > 0) return;  await request.post(`${API}/prescriptions`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { patientId: String(patientId) },
   });
@@ -63,6 +83,9 @@ test.describe('Prescription Workflow (Doctor)', () => {
   test('creates a prescription list for a patient from the lists drawer', async ({ page, request }) => {
     const token = await getToken(request);
     const patient = await firstMedicationPatient(request, token);
+    // The patient must have no open list, otherwise the create is refused
+    // (one open list per patient, #404) and the drawer stays put.
+    await clearPrescriptionLists(request, token, patient.id);
 
     await page.goto('/prescriptions/doctor');
     await page.getByRole('button', { name: deptTabName(patient.departmentId) }).click();
