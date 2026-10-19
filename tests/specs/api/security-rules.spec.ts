@@ -25,12 +25,18 @@ test.describe('API Security Rules', () => {
     expect(res.status()).toBe(401);
   });
 
-  test('swagger UI and OpenAPI docs are publicly accessible', async ({ request }) => {
+  /**
+ * #370 item 3 made the OpenAPI catalogue default-off in every environment
+ * (enabled per environment, prod double-disables), because an anonymously
+ * readable endpoint catalogue is reconnaissance. This assertion previously
+ * pinned the old "publicly accessible" contract.
+ */
+  test('swagger UI and OpenAPI docs are NOT anonymously readable by default', async ({ request }) => {
     const docs = await request.get(`${BACKEND}/api-docs`);
-    expect(docs.status()).toBe(200);
+    expect(docs.status()).toBe(404);
 
     const swaggerUi = await request.get(`${BACKEND}/swagger-ui/index.html`);
-    expect(swaggerUi.status()).toBe(200);
+    expect(swaggerUi.status()).toBe(404);
   });
 
   test('nurse cannot create episodes (prescriber role required)', async ({ request }) => {
@@ -130,15 +136,21 @@ test.describe('API Security Rules', () => {
     expect(nurseRes.status()).toBe(404);
   });
 
+  /**
+ * A filter is required: an unfiltered `GET /episodes` is a whole-store dump
+ * and is rejected with 400 (pinned by EpisodeServiceTest
+ * searchEpisodes_withoutFilters_rejectsUnboundedRoster). The case is about the
+ * *role* rule, so it searches a patient rather than the whole store.
+ */
   test('episode search is readable by all clinical roles', async ({ request }) => {
     const doctor = await getToken(request, testUser(1).login, testUser(1).password);
-    const doctorRes = await request.get(`${API}/episodes`, {
+    const doctorRes = await request.get(`${API}/episodes?patientId=1001`, {
       headers: { Authorization: `Bearer ${doctor}` },
     });
     expect(doctorRes.ok()).toBeTruthy();
 
     const nurse = await getToken(request, testUser(3).login, testUser(3).password);
-    const nurseRes = await request.get(`${API}/episodes`, {
+    const nurseRes = await request.get(`${API}/episodes?patientId=1001`, {
       headers: { Authorization: `Bearer ${nurse}` },
     });
     expect(nurseRes.ok()).toBeTruthy();
