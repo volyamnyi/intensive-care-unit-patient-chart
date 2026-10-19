@@ -39,6 +39,7 @@ import com.superhumans.icu.repository.OrderExecutionRepository;
 import com.superhumans.icu.repository.ScaleResultRepository;
 import com.superhumans.icu.repository.SignatureRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,8 +101,12 @@ public class PdfGeneratorService {
 
         byte[] pdfContent = buildPdfContent(day, nextVersion, userId);
         if (pdfContent == null || pdfContent.length == 0) {
+            // buildPdfContent logs and swallows the real cause; re-throwing keeps
+            // that cause on the exception chain so the failure is diagnosable
+            // from the 500's stack trace instead of a bare "build failed".
             throw new IllegalStateException(
-                    "PDF content build failed for clinical day " + clinicalDayId);
+                    "PDF content build failed for clinical day " + clinicalDayId,
+                    pdfContentFailure);
         }
 
         GeneratedPdf pdf = GeneratedPdf.builder()
@@ -167,7 +172,12 @@ public class PdfGeneratorService {
     // PDF CONTENT BUILDING
     // ========================================================================
 
+    /** Cause of the most recent {@link #buildPdfContent} failure, re-thrown by the caller. */
+    @NonFinal
+    private Throwable pdfContentFailure;
+
     private byte[] buildPdfContent(ClinicalDay day, int version, Long userId) {
+        pdfContentFailure = null;
         Document document = null;
         PdfDocument pdfDoc = null;
         try {
@@ -187,9 +197,9 @@ public class PdfGeneratorService {
                     .findByClinicalDayIdOrderByHourAsc(day.getId());
             List<Signature> signatures = signatureRepository.findByClinicalDayId(day.getId());
             List<ScaleResult> scales = scaleResultRepository
-                    .findByClinicalDayIdOrderByCalculatedAtDescIdDesc(day.getId());
+                    .findByClinicalDayIdWithScale(day.getId());
             List<ScaleResult> episodeScales = episode != null
-                    ? scaleResultRepository.findByEpisodeIdOrderByCalculatedAtDescIdDesc(episode.getId())
+                    ? scaleResultRepository.findByEpisodeIdWithScale(episode.getId())
                     : Collections.emptyList();
             List<MedicalNote> notes = medicalNoteRepository
                     .findByClinicalDayIdOrderByCreatedAtAsc(day.getId());
@@ -300,6 +310,7 @@ public class PdfGeneratorService {
             log.error("PDF content build failed for clinical day {}: {}: {}",
                     day != null ? day.getId() : null,
                     e.getClass().getName(), e.getMessage(), e);
+            pdfContentFailure = e;
             return null;
         }
     }

@@ -212,7 +212,7 @@ class PdfGeneratorServiceTest {
         scale.setResult("7");
         scale.setCalculatedAt(null);
         scale.setCalculatedBy(userId);
-        when(scaleResultRepository.findByClinicalDayIdOrderByCalculatedAtDescIdDesc(clinicalDayId))
+        when(scaleResultRepository.findByClinicalDayIdWithScale(clinicalDayId))
                 .thenReturn(List.of(scale));
 
         when(generatedPdfRepository.save(any(GeneratedPdf.class))).thenAnswer(invocation -> {

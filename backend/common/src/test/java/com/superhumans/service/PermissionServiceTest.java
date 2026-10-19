@@ -283,10 +283,18 @@ class PermissionServiceTest {
         assertThat(matrix.get(UserRole.ADMINISTRATOR))
                 .containsExactlyInAnyOrder(PermissionCatalog.PATIENT_VIEW, PermissionCatalog.AUDIT_ACCESS,
                         PermissionCatalog.MODULE_ADMIN_ACCESS);
+        /**
+         * A prosthetist provisions the MIS order they are about to work on, so
+         * they need PROSTHETICS_ORDER_MANAGE. #369 re-gated the provision write
+         * behind this code instead of the read-level PROSTHETICS_DASHBOARD grant;
+         * without also granting it to the role, the setup wizard dead-ended at
+         * step 2 with a 403 for the only role that may create instances.
+         * Template management stays admin-only.
+         */
         assertThat(matrix.get(UserRole.PROSTHETIST))
-                .contains(PermissionCatalog.PROSTHETICS_DASHBOARD, PermissionCatalog.PROSTHETICS_STEP_COMPLETE)
-                .doesNotContain(PermissionCatalog.PROSTHETICS_TEMPLATE_MANAGE,
-                        PermissionCatalog.PROSTHETICS_ORDER_MANAGE);
+                .contains(PermissionCatalog.PROSTHETICS_DASHBOARD, PermissionCatalog.PROSTHETICS_STEP_COMPLETE,
+                        PermissionCatalog.PROSTHETICS_ORDER_MANAGE)
+                .doesNotContain(PermissionCatalog.PROSTHETICS_TEMPLATE_MANAGE);
         assertThat(matrix.get(UserRole.PROSTHETICS_ADMINISTRATOR))
                 .contains(PermissionCatalog.PROSTHETICS_TEMPLATE_MANAGE,
                         PermissionCatalog.PROSTHETICS_ORDER_MANAGE);
