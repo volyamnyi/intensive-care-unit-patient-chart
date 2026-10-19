@@ -252,7 +252,7 @@ describe('WizardScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Попередній/ }));
     await waitFor(() => {
-      expect(flowInstanceApiMock.backward).toHaveBeenCalledWith('inst-1');
+      expect(flowInstanceApiMock.backward).toHaveBeenCalledWith('inst-1', 'step-2');
     });
     await waitFor(() => {
       expect(screen.getByText(/Зняття мірок/)).toBeInTheDocument();
@@ -281,7 +281,7 @@ describe('WizardScreen', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Попередній/ }));
     await waitFor(() => {
-      expect(flowInstanceApiMock.backward).toHaveBeenCalledWith('inst-1');
+      expect(flowInstanceApiMock.backward).toHaveBeenCalledWith('inst-1', 'step-2');
     });
   });
 
