@@ -29,7 +29,9 @@ async function firstIcuPatient(request: any, token: string): Promise<{ id: numbe
 }
 
 async function closeActiveEpisode(request: any, token: string, patientId: number) {
-  const response = await request.get(`${API}/episodes`, {
+  // Filtered: an unfiltered GET /episodes is a whole-store dump and is
+  // rejected with 400, so the body would be an error object, not an array.
+  const response = await request.get(`${API}/episodes?patientId=${patientId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const list = await response.json() as any[];

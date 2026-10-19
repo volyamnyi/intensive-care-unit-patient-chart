@@ -30,13 +30,17 @@ test.describe('API Security Rules', () => {
  * (enabled per environment, prod double-disables), because an anonymously
  * readable endpoint catalogue is reconnaissance. This assertion previously
  * pinned the old "publicly accessible" contract.
+ *
+ * With springdoc disabled the path is unmapped, so an anonymous request never
+ * reaches a handler and the security chain answers 401. The contract that
+ * matters is "not anonymously readable", so that is what is asserted.
  */
   test('swagger UI and OpenAPI docs are NOT anonymously readable by default', async ({ request }) => {
     const docs = await request.get(`${BACKEND}/api-docs`);
-    expect(docs.status()).toBe(404);
+    expect(docs.status()).toBe(401);
 
     const swaggerUi = await request.get(`${BACKEND}/swagger-ui/index.html`);
-    expect(swaggerUi.status()).toBe(404);
+    expect(swaggerUi.status()).toBe(401);
   });
 
   test('nurse cannot create episodes (prescriber role required)', async ({ request }) => {
