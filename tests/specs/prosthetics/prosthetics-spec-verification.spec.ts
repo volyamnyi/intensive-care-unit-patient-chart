@@ -514,12 +514,19 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
     await test.step('3.9 Navigate to Order Review (Spec 2.3.3)', async () => {
       logStep('Navigate to order review screen');
 
-      const currentUrl = page.url();
+const currentUrl = page.url();
       if (currentUrl.includes('order-review') || currentUrl.includes('review')) {
         log('✓ Already on order review screen');
       } else {
         const nextButton = page.getByRole('button', { name: /Далі/i }).first();
-        await nextButton.click();
+        // "Далі" is disabled until a MIS document is selected
+        // (OrderSelectPage: disabled={!draft.orderId && !draft.misDocumentUrl}).
+        // An unconditional click() waits for the disabled button until the
+        // 10-minute test timeout - three attempts is 30 minutes, which is enough
+        // to blow the whole 40-minute E2E job budget and cancel the run. Fail fast
+        // and loudly instead, so the real cause is reported.
+        await expect(nextButton).toBeEnabled({ timeout: 15000 });
+        await nextButton.click({ timeout: 15000 });
         await page.waitForURL('**/order-review**', { timeout: 10000 }).catch(() => {
           log('⚠ URL did not match expected pattern, checking current state');
         });

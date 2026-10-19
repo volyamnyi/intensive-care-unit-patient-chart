@@ -146,12 +146,21 @@ void completeDayPart_asDoctor_returnsForbidden() {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
+    /**
+     * The point of this case is the authorization rule: a nurse must reach the
+     * handler (200), not be rejected (403). #365 removed the self-provisioning
+     * side effect from this GET - creating the grid is now an explicit
+     * {@code POST /grid/ensure} - so an unknown list id yields an empty grid
+     * with 200 instead of the old 404. Asserting 404 here would pin back the
+     * behaviour #365 deliberately removed.
+     */
     @Test
-    void vitalSigns_asNurse_passesRuleAndReturnsNotFound() {
+    void vitalSigns_asNurse_passesRule() {
         var res = restTemplate.exchange("/api/vital-signs?prescriptionListId={id}",
                 HttpMethod.GET, authGet(getNurseToken()), String.class, UUID.randomUUID());
 
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(res.getBody()).isEqualTo("[]");
     }
 
     private void setRolePermission(String role, String code, boolean granted) {

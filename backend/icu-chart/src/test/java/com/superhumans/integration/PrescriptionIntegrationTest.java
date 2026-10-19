@@ -8,9 +8,12 @@ import com.superhumans.medicationsheet.service.PrescriptionListService;
 import com.superhumans.repository.core.AuditLogRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.*;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -36,6 +39,9 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
     private PrescriptionListService listService;
     @Autowired
     private AuditLogRepository auditLogRepository;
+    @Autowired
+    @Qualifier("medTransactionManager")
+    private PlatformTransactionManager medTransactionManager;
 
     private static final UUID SEED_LIST_ID =
             UUID.fromString("cccc0001-0001-0001-0001-000000000001");
@@ -298,13 +304,24 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
         return itemService.addItem(list.getId(), "IT-Drug", null, "IV", "test").getId();
     }
 
+    /**
+ * #384 made {@code PrescriptionItemDay.dayParts} lazy, so walking item -> days
+ * -> parts only works while a session is open. {@code getDays} returns
+ * detached entities, hence the explicit transaction here rather than a lazy
+ * navigation in the test.
+ */
     private PrescriptionDayPart morningPartOf(UUID itemId, LocalDate dayDate) {
-        return itemService.getDays(itemId).stream()
-                .filter(d -> dayDate.equals(d.getDayDate()))
-                .findFirst().orElseThrow()
-                .getDayParts().stream()
-                .filter(p -> "morning".equals(p.getPeriod()))
-                .findFirst().orElseThrow();
+        return partOf(itemId, dayDate, "morning");
+    }
+
+    private PrescriptionDayPart partOf(UUID itemId, LocalDate dayDate, String period) {
+        return new TransactionTemplate(medTransactionManager).execute(status ->
+                itemService.getDays(itemId).stream()
+                        .filter(d -> dayDate.equals(d.getDayDate()))
+                        .findFirst().orElseThrow()
+                        .getDayParts().stream()
+                        .filter(p -> period.equals(p.getPeriod()))
+                        .findFirst().orElseThrow());
     }
 
     private boolean hasAudit(String entity, UUID entityId, String action) {
@@ -391,10 +408,7 @@ class PrescriptionIntegrationTest extends AbstractIntegrationTest {
         UUID itemId = newItemId();
         LocalDate today = LocalDate.now();
         PrescriptionDayPart target = morningPartOf(itemId, today);
-        PrescriptionDayPart sibling = itemService.getDays(itemId).stream()
-                .filter(d -> today.equals(d.getDayDate())).findFirst().orElseThrow()
-                .getDayParts().stream()
-                .filter(p -> "day".equals(p.getPeriod())).findFirst().orElseThrow();
+        PrescriptionDayPart sibling = partOf(itemId, today, "day");
         itemService.planDose(target.getId(), "50mg", UUID.randomUUID(), 1L);
         itemService.planDose(sibling.getId(), "25mg", UUID.randomUUID(), 1L);
 
