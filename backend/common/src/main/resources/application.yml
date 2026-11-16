@@ -157,6 +157,10 @@ app:
       # All keys have code defaults via @Value, so this block is documentation
       # plus a single place to flip the switch; SMTP itself stays SPRING_MAIL_*.
       enabled: ${APP_PROSTHETICS_BRAK_NOTIFICATION_ENABLED:true}
+      # Sender of the brak mail. Must be an address authorized for the SMTP
+      # account (SPRING_MAIL_USERNAME): a foreign domain is accepted by the
+      # mail server and then fails SPF/DKIM/DMARC, so the message is
+      # rewritten, spam-filed or bounced without the app noticing (#438).
       from: ${APP_PROSTHETICS_BRAK_NOTIFICATION_FROM:noreply@hospital.local}
       frontend-base-url: ${APP_PROSTHETICS_BRAK_NOTIFICATION_FRONTEND_BASE_URL:}
       # v2 outbox (issue #320): sweep interval, attempts per row, rows per sweep.

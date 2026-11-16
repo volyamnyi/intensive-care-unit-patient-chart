@@ -29,6 +29,7 @@ import com.superhumans.prosthesismanufacturing.service.TemplateSnapshotParser;
 import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.AuditService;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +41,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @ExtendWith(MockitoExtension.class)
 class BrakNotificationDeliveryServiceTest {
@@ -61,19 +67,86 @@ class BrakNotificationDeliveryServiceTest {
     @Mock BrakNotificationComposer composer;
     @Mock BrakNotificationService notificationService;
 
+    /**
+     * Transaction-manager stub: the delivery outcome is audited inside a short
+     * own transaction (issue #436), and the unit test only has to know that a
+     * transaction was active while the emitter ran.
+     */
+    private static final PlatformTransactionManager STUB_TRANSACTION_MANAGER =
+            new AbstractPlatformTransactionManager() {
+                @Override
+                protected Object doGetTransaction() {
+                    return new Object();
+                }
+
+                @Override
+                protected void doBegin(Object transaction, TransactionDefinition definition) {
+                }
+
+                @Override
+                protected void doCommit(DefaultTransactionStatus status) {
+                }
+
+                @Override
+                protected void doRollback(DefaultTransactionStatus status) {
+                }
+            };
+
+    private final List<Boolean> transactionActiveDuringEmit = new ArrayList<>();
+
     private BrakNotificationDeliveryService service;
 
     @BeforeEach
     void setUp() {
         service = new BrakNotificationDeliveryService(outboxRepository, brakEventRepository,
                 instanceRepository, orderRepository, userRepository, auditService, auditEmitter,
-                snapshotParser, composer, notificationService);
+                snapshotParser, composer, notificationService, STUB_TRANSACTION_MANAGER);
         ReflectionTestUtils.setField(service, "enabled", true);
         ReflectionTestUtils.setField(service, "frontendBaseUrl", "");
         ReflectionTestUtils.setField(service, "maxAttempts", 5);
         ReflectionTestUtils.setField(service, "batchSize", 20);
         lenient().when(outboxRepository.claimForDelivery(any(), eq(BrakNotificationStatus.PROCESSING),
                 anyList(), any(), any(), any())).thenReturn(1);
+        lenient().doAnswer(invocation -> {
+            transactionActiveDuringEmit.add(
+                    TransactionSynchronizationManager.isActualTransactionActive());
+            return null;
+        }).when(auditEmitter).emit(any(String.class), any());
+    }
+
+    @Test
+    void deliver_emitsDeliveryOutcomeInsideATransaction() {
+        BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.PENDING, 0);
+        stubFullContext(row);
+        when(notificationService.resolveRecipients())
+                .thenReturn(List.of(admin(1L, "a@hospital.local")));
+        when(composer.buildSubject(any())).thenReturn("SUBJ");
+        when(composer.buildBody(any())).thenReturn("BODY");
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
+                .thenReturn(new int[]{1, 0});
+
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+
+        assertThat(transactionActiveDuringEmit).isNotEmpty().allMatch(Boolean::booleanValue);
+    }
+
+    @Test
+    void deliver_auditFailureDoesNotBreakTheDeliveredNotification() {
+        BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.PENDING, 0);
+        stubFullContext(row);
+        when(notificationService.resolveRecipients())
+                .thenReturn(List.of(admin(1L, "a@hospital.local")));
+        when(composer.buildSubject(any())).thenReturn("SUBJ");
+        when(composer.buildBody(any())).thenReturn("BODY");
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
+                .thenReturn(new int[]{1, 0});
+        org.mockito.Mockito.doThrow(new IllegalStateException("audit store down"))
+                .when(auditEmitter).emit(any(String.class), any());
+
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+
+        assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
+        assertThat(row.getAttempts()).isEqualTo(1);
     }
 
     @Test
@@ -124,7 +197,7 @@ class BrakNotificationDeliveryServiceTest {
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
-        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
+        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -136,7 +209,7 @@ class BrakNotificationDeliveryServiceTest {
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
-        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
+        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any(), any());
         verify(outboxRepository, never()).claimForDelivery(any(), any(), anyList(), any(), any(), any());
     }
 
@@ -149,14 +222,14 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         verify(outboxRepository).claimForDelivery(any(), eq(BrakNotificationStatus.PROCESSING),
                 anyList(), any(), any(), any());
-        verify(notificationService).sendToRecipients(any(), any(), any(), any());
+        verify(notificationService).sendToRecipients(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -168,7 +241,7 @@ class BrakNotificationDeliveryServiceTest {
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.DEAD);
-        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
+        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -179,7 +252,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
@@ -199,7 +272,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
@@ -216,7 +289,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{0, 1});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
@@ -236,7 +309,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{0, 1});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
@@ -254,7 +327,7 @@ class BrakNotificationDeliveryServiceTest {
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
 
         assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SKIPPED);
-        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any());
+        verify(notificationService, never()).sendToRecipients(any(), any(), any(), any(), any());
         verify(auditService).logEvent("BrakNotification", EVENT_ID,
                 "SKIPPED_NO_RECIPIENTS", CONFIRMER_ID, null, null);
     }
@@ -309,14 +382,14 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.sweep();
 
         assertThat(first.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
         assertThat(second.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
-        verify(notificationService, times(2)).sendToRecipients(any(), any(), any(), any());
+        verify(notificationService, times(2)).sendToRecipients(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -337,7 +410,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.sweep();
@@ -445,6 +518,27 @@ class BrakNotificationDeliveryServiceTest {
     }
 
     @Test
+    void deliver_recordsRecipientCountOutcomeAndAttemptInTheAuditEvent() {
+        BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.PENDING, 0);
+        stubFullContext(row);
+        when(notificationService.resolveRecipients())
+                .thenReturn(List.of(admin(1L, "a@hospital.local")));
+        when(composer.buildSubject(any())).thenReturn("SUBJ");
+        when(composer.buildBody(any())).thenReturn("BODY");
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
+                .thenReturn(new int[]{1, 0});
+
+        service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
+
+        var event = emittedOutcome();
+        assertThat(event.metadata())
+                .containsEntry("deliveryKind", "SINGLE")
+                .containsEntry("recipientCount", 1)
+                .containsEntry("outcomeCode", "SENT")
+                .containsEntry("attempt", 1);
+    }
+
+    @Test
     void deliver_passesResolvedDataToComposer() {
         BrakNotificationOutbox row = outboxRow(BrakNotificationStatus.PENDING, 0);
         stubFullContext(row);
@@ -452,7 +546,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildSubject(any())).thenReturn("SUBJ");
         when(composer.buildBody(any())).thenReturn("BODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.SINGLE);
@@ -479,7 +573,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildThresholdSubject(any())).thenReturn("TSUBJ");
         when(composer.buildThresholdBody(any())).thenReturn("TBODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.THRESHOLD);
@@ -507,7 +601,7 @@ class BrakNotificationDeliveryServiceTest {
                 .thenReturn(List.of(admin(1L, "a@hospital.local")));
         when(composer.buildThresholdSubject(any())).thenReturn("TSUBJ");
         when(composer.buildThresholdBody(any())).thenReturn("TBODY");
-        when(notificationService.sendToRecipients(any(), any(), any(), any()))
+        when(notificationService.sendToRecipients(any(), any(), any(), any(), any()))
                 .thenReturn(new int[]{1, 0});
 
         service.deliver(EVENT_ID, CONFIRMER_ID, BrakNotificationKind.THRESHOLD);

@@ -22,12 +22,14 @@ import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.repository.core.UserRepository;
 import com.superhumans.service.AuditService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -48,10 +50,14 @@ import java.util.UUID;
  * after-commit listener: under the ChainedTransactionManager such a listener
  * fires per-leg mid-chain without a usable transaction context
  * (issue #321: HeuristicCompletion with mixed outcome).
+ *
+ * <p>Because the sweep runs outside any business transaction, the delivery
+ * outcome is audited in a short, own transaction on the module manager
+ * (issue #436) — otherwise the module outbox would reject every append and
+ * the delivery would leave no trace in the Audit console.
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class BrakNotificationDeliveryService {
 
     static final String NOTIFICATION_ENTITY = "BrakNotification";
@@ -76,6 +82,50 @@ public class BrakNotificationDeliveryService {
     private final TemplateSnapshotParser snapshotParser;
     private final BrakNotificationComposer composer;
     private final BrakNotificationService notificationService;
+
+    /**
+     * Short, own transaction for the delivery-outcome audit event (issue #436).
+     *
+     * <p>The sweep runs on a scheduler thread <em>without</em> an ambient
+     * transaction, and the module outbox only accepts appends inside a
+     * transaction bound to the module DataSource
+     * ({@code AuditOutboxJdbcStore.append}) — without one, every
+     * {@code prosthetics.notification.delivery.outcome} event was dropped with
+     * an {@code IllegalStateException}, so the Audit console showed the queue
+     * but never the delivery.
+     *
+     * <p>Deliberately the module's own manager, not the chained one: one audit
+     * INSERT must not reserve a connection in all four pools, and
+     * {@code REQUIRES_NEW} on the chained manager is a documented trap
+     * (suspends four legs, begins four more — see
+     * {@code MultiTransactionConfig}).
+     */
+    private final TransactionTemplate auditTransactionTemplate;
+
+    public BrakNotificationDeliveryService(
+            BrakNotificationOutboxRepository outboxRepository,
+            BrakEventRepository brakEventRepository,
+            FlowInstanceRepository instanceRepository,
+            ProstheticsOrderRepository orderRepository,
+            UserRepository userRepository,
+            AuditService auditService,
+            DomainAuditEmitter auditEmitter,
+            TemplateSnapshotParser snapshotParser,
+            BrakNotificationComposer composer,
+            BrakNotificationService notificationService,
+            @Qualifier("prosthTransactionManager") PlatformTransactionManager prostheticsTransactionManager) {
+        this.outboxRepository = outboxRepository;
+        this.brakEventRepository = brakEventRepository;
+        this.instanceRepository = instanceRepository;
+        this.orderRepository = orderRepository;
+        this.userRepository = userRepository;
+        this.auditService = auditService;
+        this.auditEmitter = auditEmitter;
+        this.snapshotParser = snapshotParser;
+        this.composer = composer;
+        this.notificationService = notificationService;
+        this.auditTransactionTemplate = new TransactionTemplate(prostheticsTransactionManager);
+    }
 
     @Value("${app.prosthetics.brak-notification.enabled:true}")
     private boolean enabled;
@@ -105,7 +155,7 @@ public class BrakNotificationDeliveryService {
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                     ACTION_SKIPPED_DISABLED, actorId, null, null);
             emitDeliveryOutcome(brakEventId, kind, actorId,
-                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_DISABLED");
+                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_DISABLED", null);
             return;
         }
         BrakNotificationOutbox row = claim(brakEventId, kind, actorId);
@@ -135,7 +185,8 @@ public class BrakNotificationDeliveryService {
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                     ACTION_SKIPPED_INSTANCE_NOT_FOUND, actorId, null, null);
             emitDeliveryOutcome(brakEventId, kind, actorId,
-                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_INSTANCE_NOT_FOUND");
+                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_INSTANCE_NOT_FOUND",
+                    null);
             return;
         }
         List<User> recipients = notificationService.resolveRecipients();
@@ -148,8 +199,12 @@ public class BrakNotificationDeliveryService {
                     + "brakEventId={}", brakEventId);
             auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                     ACTION_SKIPPED_NO_RECIPIENTS, actorId, null, null);
+            java.util.Map<String, Object> noRecipientMetadata = new java.util.TreeMap<>();
+            noRecipientMetadata.put("recipientCount", 0);
+            noRecipientMetadata.put("outcomeCode", BrakNotificationStatus.SKIPPED.name());
             emitDeliveryOutcome(brakEventId, kind, actorId,
-                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_NO_RECIPIENTS");
+                    AuditEvent.AuditOutcome.CANCELLED, "BRAK_NOTIFICATION_SKIPPED_NO_RECIPIENTS",
+                    noRecipientMetadata);
             return;
         }
 
@@ -220,7 +275,7 @@ public class BrakNotificationDeliveryService {
         }
         int[] result = notificationService.sendToRecipients(
                 subject, body, recipients,
-                brakEventId);
+                brakEventId, kind);
 
         int attempts = row.getAttempts() + 1;
         String outcome = (kind == BrakNotificationKind.THRESHOLD ? "kind=THRESHOLD " : "")
@@ -242,42 +297,71 @@ public class BrakNotificationDeliveryService {
         row.setLastError(result[1] == 0 ? null : outcome);
         auditService.logEvent(NOTIFICATION_ENTITY, brakEventId,
                 result[1] == 0 ? ACTION_SENT : ACTION_FAILED, actorId, null, outcome);
+        java.util.Map<String, Object> deliveryMetadata = new java.util.TreeMap<>();
+        deliveryMetadata.put("recipientCount", recipients.size());
+        deliveryMetadata.put("outcomeCode", finalStatus.name());
+        deliveryMetadata.put("attempt", attempts);
         emitDeliveryOutcome(brakEventId, kind, actorId,
                 result[1] == 0 ? AuditEvent.AuditOutcome.SUCCESS : AuditEvent.AuditOutcome.FAILURE,
-                row.getStatus() == BrakNotificationStatus.DEAD ? "BRAK_NOTIFICATION_DEAD" : null);
+                row.getStatus() == BrakNotificationStatus.DEAD ? "BRAK_NOTIFICATION_DEAD" : null,
+                deliveryMetadata);
         if (result[1] > 0 && row.getStatus() != BrakNotificationStatus.DEAD) {
             log.error("Brak email completed with failures brakEventId={} sent={} failed={}",
                     brakEventId, result[0], result[1]);
         }
     }
 
+    /**
+     * Records the delivery outcome in the canonical audit trail.
+     *
+     * <p>The emit runs inside a short, own transaction on the module manager:
+     * the sweep has no ambient transaction, and the module outbox rejects
+     * appends outside one (issue #436 — every delivery-outcome event was
+     * silently dropped). The transaction holds nothing but the audit INSERT:
+     * the SMTP call already happened, so no external I/O runs inside it.
+     *
+     * <p>Fail-safe: an audit failure must never re-classify an already
+     * delivered notification, so it is logged and swallowed here.
+     *
+     * @param extraMetadata delivery facts for the audit trail (recipient count,
+     *                      subject, SMTP outcome) — may be {@code null}
+     */
     private void emitDeliveryOutcome(UUID brakEventId, BrakNotificationKind kind, Long actorId,
-            AuditEvent.AuditOutcome outcome, String errorCode) {
+            AuditEvent.AuditOutcome outcome, String errorCode,
+            java.util.Map<String, Object> extraMetadata) {
         final UUID deliveryEventId = brakEventId;
-        auditEmitter.emit("prosthetics", () -> {
-            AuditEvent.AuditActor initiatedBy = actorId == null ? null
-                    : new AuditEvent.AuditActor(AuditEvent.ActorType.USER,
-                            actorId.toString(), null, null, java.util.Set.of(), null, null);
-            java.util.Map<String, Object> metadata = new java.util.TreeMap<>();
-            metadata.put("deliveryKind", kind == null ? "UNKNOWN" : kind.name());
-            return AuditEvent.builder()
-                    .actor(new AuditEvent.AuditActor(AuditEvent.ActorType.SERVICE,
-                            "brak-notification-sweep", null, null, java.util.Set.of(),
-                            initiatedBy, null))
-                    .eventClass(EventClass.BUSINESS)
-                    .module("prosthetics")
-                    .functionalArea("notification")
-                    .action("prosthetics.notification.delivery.outcome")
-                    .actionType(ActionType.DELIVERY)
-                    .target(new AuditEvent.AuditTarget("BrakEvent", deliveryEventId.toString(), null))
-                    .outcome(outcome)
-                    .errorCode(errorCode)
-                    .changes(java.util.List.of(com.superhumans.audit.AuditChanges.fieldChanged(
-                            "deliveryStatus", DataClass.IDENTIFIER)))
-                    .metadata(metadata)
-                    .source(AuditEvent.AuditSource.SCHEDULED_JOB)
-                    .build();
-        });
+        try {
+            auditTransactionTemplate.executeWithoutResult(status -> auditEmitter.emit("prosthetics", () -> {
+                AuditEvent.AuditActor initiatedBy = actorId == null ? null
+                        : new AuditEvent.AuditActor(AuditEvent.ActorType.USER,
+                                actorId.toString(), null, null, java.util.Set.of(), null, null);
+                java.util.Map<String, Object> metadata = new java.util.TreeMap<>();
+                metadata.put("deliveryKind", kind == null ? "UNKNOWN" : kind.name());
+                if (extraMetadata != null) {
+                    metadata.putAll(extraMetadata);
+                }
+                return AuditEvent.builder()
+                        .actor(new AuditEvent.AuditActor(AuditEvent.ActorType.SERVICE,
+                                "brak-notification-sweep", null, null, java.util.Set.of(),
+                                initiatedBy, null))
+                        .eventClass(EventClass.BUSINESS)
+                        .module("prosthetics")
+                        .functionalArea("notification")
+                        .action("prosthetics.notification.delivery.outcome")
+                        .actionType(ActionType.DELIVERY)
+                        .target(new AuditEvent.AuditTarget("BrakEvent", deliveryEventId.toString(), null))
+                        .outcome(outcome)
+                        .errorCode(errorCode)
+                        .changes(java.util.List.of(com.superhumans.audit.AuditChanges.fieldChanged(
+                                "deliveryStatus", DataClass.IDENTIFIER)))
+                        .metadata(metadata)
+                        .source(AuditEvent.AuditSource.SCHEDULED_JOB)
+                        .build();
+            }));
+        } catch (RuntimeException ex) {
+            log.warn("Brak delivery outcome not recorded in the audit trail brakEventId={} kind={}: {}",
+                    brakEventId, kind, ex.getMessage());
+        }
     }
 
     /**

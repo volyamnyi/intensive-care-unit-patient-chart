@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
+import com.superhumans.prosthesismanufacturing.entity.BrakNotificationKind;
 import com.superhumans.repository.core.UserRepository;
 import java.util.List;
 import java.util.UUID;
@@ -68,7 +69,8 @@ class BrakNotificationServiceTest {
         List<User> recipients =
                 List.of(admin(1L, "a@hospital.local"), admin(2L, "b@hospital.local"));
 
-        int[] result = service.sendToRecipients("SUBJ", "BODY", recipients, EVENT_ID);
+        int[] result = service.sendToRecipients("SUBJ", "BODY", recipients, EVENT_ID,
+                BrakNotificationKind.SINGLE);
 
         assertThat(result).containsExactly(2, 0);
         ArgumentCaptor<SimpleMailMessage> sent = ArgumentCaptor.forClass(SimpleMailMessage.class);
@@ -88,7 +90,8 @@ class BrakNotificationServiceTest {
         doThrow(new MailSendException("smtp down")).doNothing()
                 .when(mailSender).send(any(SimpleMailMessage.class));
 
-        int[] result = service.sendToRecipients("SUBJ", "BODY", recipients, EVENT_ID);
+        int[] result = service.sendToRecipients("SUBJ", "BODY", recipients, EVENT_ID,
+                BrakNotificationKind.SINGLE);
 
         assertThat(result).containsExactly(1, 1);
         verify(mailSender, times(2)).send(any(SimpleMailMessage.class));
@@ -100,8 +103,33 @@ class BrakNotificationServiceTest {
                 .when(mailSender).send(any(SimpleMailMessage.class));
 
         assertThatCode(() -> service.sendToRecipients(
-                        "SUBJ", "BODY", List.of(admin(1L, "a@hospital.local")), EVENT_ID))
+                        "SUBJ", "BODY", List.of(admin(1L, "a@hospital.local")), EVENT_ID,
+                        BrakNotificationKind.SINGLE))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void maskAddress_keepsTheDomainButHidesTheLocalPart() {
+        assertThat(BrakNotificationService.maskAddress("t.test_melnyk@superhumans.com"))
+                .isEqualTo("t***@superhumans.com");
+        assertThat(BrakNotificationService.maskAddress("  admin@hospital.local "))
+                .isEqualTo("a***@hospital.local");
+        assertThat(BrakNotificationService.maskAddress("   ")).isEqualTo("<none>");
+        assertThat(BrakNotificationService.maskAddress("not-an-address")).isEqualTo("***");
+    }
+
+    @Test
+    void senderDomainMismatch_reportsASenderOutsideTheSmtpAccountDomain() {
+        assertThat(BrakNotificationService.senderDomainMismatch(
+                "noreply@hospital.local", "medicinelistnotifications@superhumans.com"))
+                .isEqualTo("hospital.local");
+        assertThat(BrakNotificationService.senderDomainMismatch(
+                "medicinelistnotifications@superhumans.com",
+                "medicinelistnotifications@superhumans.com"))
+                .isNull();
+        // No SMTP account (local relay) - nothing to compare with, no warning.
+        assertThat(BrakNotificationService.senderDomainMismatch("noreply@hospital.local", ""))
+                .isNull();
     }
 
     private User admin(Long id, String email) {

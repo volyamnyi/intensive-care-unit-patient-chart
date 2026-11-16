@@ -52,10 +52,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.mail.MailSendException;
@@ -63,6 +65,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -114,6 +117,14 @@ class BrakNotificationIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private AuditLogRepository auditLogRepository;
 
+    /**
+     * Transaction-bound view of the prosthetics pool: the audit outbox rows
+     * must be read through the same DataSource the module transaction
+     * manager uses (see #434 - a raw-pool query cannot see rows written by
+     * the current transaction).
+     */
+    @Autowired @Qualifier("prosthLazyDataSource") private DataSource prosthLazyDataSource;
+
     @MockitoBean private JavaMailSender mailSender;
 
     private final List<UUID> createdInstances = new ArrayList<>();
@@ -121,11 +132,17 @@ class BrakNotificationIntegrationTest {
     private final List<UUID> createdOrders = new ArrayList<>();
     private final List<String> createdPatients = new ArrayList<>();
     private final List<User> createdUsers = new ArrayList<>();
+    private boolean templateCreatedByTest;
 
     @AfterEach
     void cleanUp() {
         for (UUID eventId : createdEvents) {
             outboxRepository.deleteAll(outboxRepository.findAllByBrakEventId(eventId));
+            // Canonical audit rows of a non-transactional run are committed and
+            // must be removed explicitly (the module outbox is append-only).
+            new org.springframework.jdbc.core.JdbcTemplate(prosthLazyDataSource).update(
+                    "DELETE FROM audit_outbox WHERE payload::jsonb->'target'->>'entityId' = ?",
+                    eventId.toString());
         }
         for (UUID instanceId : createdInstances) {
             executionRepository.deleteAll(executionRepository.findByInstanceId(instanceId));
@@ -148,6 +165,65 @@ class BrakNotificationIntegrationTest {
         createdOrders.clear();
         createdPatients.clear();
         createdUsers.clear();
+    }
+
+    /**
+     * Removes everything a non-transactional test committed.
+     *
+     * <p>The class-level transaction is suspended for such a test
+     * ({@code NOT_SUPPORTED}), so its rows are committed and the class-level
+     * {@code @AfterEach} cleanup is rolled back with it — the committed rows
+     * must be purged explicitly, outside any transaction. Otherwise the fixed
+     * template ids of this fixture would leak into the next integration class.
+     */
+    private void purgeCommittedRows() {
+        var jdbc = new org.springframework.jdbc.core.JdbcTemplate(prosthLazyDataSource);
+        for (UUID eventId : createdEvents) {
+            outboxRepository.deleteAll(outboxRepository.findAllByBrakEventId(eventId));
+            jdbc.update("DELETE FROM audit_outbox WHERE payload::jsonb->'target'->>'entityId' = ?",
+                    eventId.toString());
+        }
+        for (UUID instanceId : createdInstances) {
+            executionRepository.deleteAll(executionRepository.findByInstanceId(instanceId));
+            brakEventRepository.deleteAll(brakEventRepository.findByInstanceId(instanceId));
+        }
+        // Branches reference their original via parent_instance_id, and bulk
+        // deletes do not guarantee order: remove one by one, newest first.
+        List<UUID> childrenFirst = new ArrayList<>(createdInstances);
+        Collections.reverse(childrenFirst);
+        for (UUID instanceId : childrenFirst) {
+            instanceRepository.deleteById(instanceId);
+        }
+        orderRepository.deleteAllById(createdOrders);
+        patientRepository.deleteAllById(createdPatients);
+        for (User user : createdUsers) {
+            userRepository.delete(user);
+        }
+        if (templateCreatedByTest) {
+            deleteTemplate(TEMPLATE_TP_LL_02);
+            templateCreatedByTest = false;
+        }
+        createdInstances.clear();
+        createdEvents.clear();
+        createdOrders.clear();
+        createdPatients.clear();
+        createdUsers.clear();
+    }
+
+    /**
+     * Removes the template subtree (elements → steps → stages → template).
+     * Only a template this test created is removed — the seeded TP-LL-02
+     * template of the dev database stays untouched.
+     */
+    private void deleteTemplate(UUID templateId) {
+        var jdbc = new org.springframework.jdbc.core.JdbcTemplate(prosthLazyDataSource);
+        jdbc.update("DELETE FROM prosthetics_template_elements WHERE step_id IN "
+                + "(SELECT id FROM prosthetics_template_steps WHERE stage_id IN "
+                + "(SELECT id FROM prosthetics_template_stages WHERE template_id = ?))", templateId);
+        jdbc.update("DELETE FROM prosthetics_template_steps WHERE stage_id IN "
+                + "(SELECT id FROM prosthetics_template_stages WHERE template_id = ?)", templateId);
+        jdbc.update("DELETE FROM prosthetics_template_stages WHERE template_id = ?", templateId);
+        jdbc.update("DELETE FROM prosthetics_flow_templates WHERE id = ?", templateId);
     }
 
     @Test
@@ -309,6 +385,58 @@ class BrakNotificationIntegrationTest {
         }
     }
 
+    /**
+     * Issue #436: the delivery outcome must reach the canonical audit trail
+     * even when the sweep runs WITHOUT an ambient transaction - exactly the
+     * production condition (the scheduler thread has none).
+     *
+     * <p>The class-level {@code @Transactional} is suspended for this method
+     * ({@code NOT_SUPPORTED}), so the brak, the sweep and the audit append
+     * all run outside a test transaction. Before the fix the module outbox
+     * rejected every append ("requires an active business transaction") and
+     * the delivery-outcome event was silently dropped.
+     */
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void sweepWithoutAmbientTransaction_recordsTheDeliveryOutcomeInTheAuditTrail() {
+        String tag = uniqueTag();
+        User admin = createAdmin("brak-int-" + tag + "@example.invalid");
+        UUID orderId = createOrder();
+        UUID instanceId = createInstanceAtBrak(orderId);
+        try {
+            BranchResponse branch = brakService.createBrakAndBranch(
+                    instanceId, new BrakCreateRequest(STAGE_D12, true, false, "без транзакції"),
+                    PROSTHETIST);
+            createdInstances.add(branch.getNewInstanceId());
+            createdEvents.add(branch.getBrakEventId());
+
+            deliveryService.sweep();
+
+            assertThat(deliveryOutcomeActions(branch.getBrakEventId()))
+                    .contains("prosthetics.notification.delivery.outcome");
+            BrakNotificationOutbox row = outboxRepository
+                    .findByBrakEventIdAndKind(branch.getBrakEventId(),
+                            BrakNotificationKind.SINGLE)
+                    .orElseThrow();
+            assertThat(row.getStatus()).isEqualTo(BrakNotificationStatus.SENT);
+            assertThat(row.getAttempts()).isEqualTo(1);
+        } finally {
+            purgeCommittedRows();
+        }
+    }
+
+    /**
+     * Canonical audit actions recorded for one brak event. Scoped to the event
+     * id: the outbox is append-only and survives test runs, so an unscoped
+     * query can be satisfied by a stale row (see #434).
+     */
+    private List<String> deliveryOutcomeActions(UUID brakEventId) {
+        return new org.springframework.jdbc.core.JdbcTemplate(prosthLazyDataSource).queryForList(
+                "SELECT payload::jsonb->>'action' AS action FROM audit_outbox "
+                        + "WHERE payload::jsonb->'target'->>'entityId' = ?",
+                String.class, brakEventId.toString());
+    }
+
     private List<SimpleMailMessage> allSent() {
         ArgumentCaptor<SimpleMailMessage> captor =
                 ArgumentCaptor.forClass(SimpleMailMessage.class);
@@ -437,6 +565,11 @@ class BrakNotificationIntegrationTest {
                 UUID.randomUUID().toString());
         createStage(STAGE_D17, tpl, 5, "Примірювання та коректування тренувального протеза",
                 STEP_E0028.toString());
+        // The template carries FIXED stage ids that other integration classes
+        // also use (CrossFeatureRegressionIntegrationTest). A non-transactional
+        // run would leave them behind and break the next class, so such a run
+        // purges the template it created.
+        templateCreatedByTest = true;
     }
 
     private void createStage(UUID stageId, FlowTemplate tpl, int orderIdx, String name,

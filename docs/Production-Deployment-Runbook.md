@@ -155,7 +155,7 @@ mvn -B clean package -DskipTests         # → backend/app/target/app-*.jar
 | `APP_AUDIT_RETENTION_ENABLED` / `APP_AUDIT_RETENTION_CRON` / `APP_AUDIT_RETENTION_OUTBOX_DELIVERED_DAYS` / `APP_AUDIT_RETENTION_CHUNK_SIZE` | `false` / `0 0 3 * * *` / `30` / `500` | Retention is disabled until explicitly enabled and approved; chunk size bounds each short core transaction |
 | `APP_AUDIT_TRUSTED_PROXY_CIDRS` | *(empty)* | Comma-separated CIDRs whose `X-Forwarded-For` value is trusted for `AuditLog.ipAddress`; empty ⇒ every forwarded value is ignored (nginx-recorded IP only) |
 | `APP_AUDIT_LEGACY_WRITE_ENABLED` | `true` | Dual-write to legacy `audit_logs`; set `false` after the backfill has been verified (§ F.2 cutover) |
-| `APP_PROSTHETICS_BRAK_NOTIFICATION_*` | see application defaults | Outbox enable/from/frontend URL/poll/max-attempts/batch-size; set SMTP separately |
+| `APP_PROSTHETICS_BRAK_NOTIFICATION_*` | see application defaults | Outbox enable/from/frontend URL/poll/max-attempts/batch-size; set SMTP separately. `…_FROM` must be an address authorized for the SMTP account (issue #438) — the default domain is not owned by the account, so the mail is accepted and then rewritten/spam-filed/bounced |
 | `SPRING_MAIL_HOST` / `PORT` / `USERNAME` / `PASSWORD` | реальний SMTP | Env-плейсхолдери; локальні defaults не використовувати в production |
 | `LOGGING_LEVEL_ROOT` | `INFO` | Явно задавати для production |
 | `LOGGING_LEVEL_COM_SUPERHUMANS` | `INFO` | Явно задавати для production; не використовувати TRACE у production |
@@ -914,6 +914,47 @@ SPRING_MAIL_WRITETIMEOUT_MS=10000
 #   SELECT brak_event_id, status, attempts, last_error
 #   FROM prosthetics_brak_notifications
 #   WHERE kind='THRESHOLD' AND order_id='<order-uuid>' ORDER BY created_at;
+#
+# --- Brak email: sender, recipient, bounce (issue #438) ---
+# SENDER. The default sender is noreply@hospital.local — a domain the SMTP
+# account does not own. The mail server still accepts the message (SMTP 250),
+# but SPF/DKIM/DMARC fail afterwards, so the mail can be rewritten, spam-filed
+# or bounced long after the app logged the delivery. The app cannot see a
+# bounce (it happens after the 250), so set an authorized sender:
+#   APP_PROSTHETICS_BRAK_NOTIFICATION_FROM=<address authorized for the SMTP account>
+# At startup the backend logs the effective configuration and WARNs when the
+# sender domain differs from the SMTP account domain (domains only, no
+# credentials):
+#   Brak email notification: senderDomain=… smtpHost=… smtpPort=… smtpAccountDomain=…
+#
+# RECIPIENT. Recipients are the users with role PROSTHETICS_ADMINISTRATOR that
+# have a non-empty users.email. The address is written ONCE — when the account
+# is seeded — so changing APP_TEST_EMAIL<n> does NOT update an existing user
+# (UserSeedService skips an existing login). There is no API/UI to edit the
+# address; correct it in the database:
+#   UPDATE users SET email='<address>'
+#   WHERE role='PROSTHETICS_ADMINISTRATOR' AND (email IS NULL OR btrim(email)='');
+#   SELECT login, email FROM users WHERE role='PROSTHETICS_ADMINISTRATOR';
+#
+# DELIVERY EVIDENCE. Every attempt writes the legacy audit row
+# (BrakNotification / SENT|FAILED|SKIPPED_* in the core audit log) AND the
+# canonical event prosthetics.notification.delivery.outcome (module outbox ->
+# core audit_events -> Audit console). The canonical event carries
+# deliveryKind (SINGLE|THRESHOLD), recipientCount, outcomeCode and attempt.
+# A brak owns TWO mails by design: SINGLE (per brak) and, from the third brak
+# of an order chain, THRESHOLD (subject "Брак №N…") — the log line carries the
+# kind so they can be told apart.
+#
+# NOT A BUG (do not chase):
+#   - a brak on stage 9 (d0000020/e0000032) never mails (stage 6 only);
+#   - SKIPPED_NO_RECIPIENTS — no prosthetics administrator with an address;
+#   - app.prosthetics.brak-notification.enabled=false — mails are switched off;
+#   - the log says "accepted by SMTP", not "delivered": a 250 is not an inbox.
+#
+# BOUNCE. When the app logged the delivery but no mail arrived, the message
+# left the system — look for a delivery report (DSN) in the mailbox of the
+# SMTP account (SPRING_MAIL_USERNAME); a 550 at that point (unknown mailbox,
+# policy, spam) is invisible to the application.
 
 # --- Logging ---
 LOGGING_LEVEL_ROOT=INFO
