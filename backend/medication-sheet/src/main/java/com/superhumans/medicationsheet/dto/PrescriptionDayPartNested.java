@@ -26,4 +26,6 @@ public class PrescriptionDayPartNested {
     String administeredAt;
     String dispensedAt;
     Boolean administeredAtManual;
+    /** Optimistic-lock version of the latest execution (#446); null without an execution. */
+    Integer executionVersion;
 }

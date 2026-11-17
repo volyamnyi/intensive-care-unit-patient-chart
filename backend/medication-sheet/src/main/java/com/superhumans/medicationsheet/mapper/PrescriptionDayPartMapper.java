@@ -39,6 +39,7 @@ public interface PrescriptionDayPartMapper {
         response.setAdministeredAt(formatActualTime(execution.getAdministeredAt()));
         response.setDispensedAt(formatActualTime(execution.getDispensedAt()));
         response.setAdministeredAtManual(Boolean.TRUE.equals(execution.getAdministeredAtManual()));
+        response.setExecutionVersion(execution.getVersion());
         return response;
     }
 

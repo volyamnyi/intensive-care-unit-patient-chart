@@ -70,6 +70,7 @@ public interface PrescriptionItemMapper {
                                 .administeredAtManual(execution == null
                                         ? Boolean.FALSE
                                         : Boolean.TRUE.equals(execution.getAdministeredAtManual()))
+                                .executionVersion(execution == null ? null : execution.getVersion())
                                 .build());
                     }
                 }

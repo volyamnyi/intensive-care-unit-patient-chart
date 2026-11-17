@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Loader2, Plus, Minus, Trash2, X, Undo2, Eraser } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Loader2, Plus, Minus, Trash2, X, Undo2, Eraser } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -7,6 +7,7 @@ import type { PrescriptionDayPart, PrescriptionInteractionsResponse, PairInterac
 import type { GridItem } from './PrescriptionGrid';
 import { gridDateMeta, shouldMarkAddedCell } from './prescriptionDateMeta';
 import { INTERACTION_SEVERITY, SEVERITY_LABELS, SEVERITY_ORDER } from './interactionSeverity';
+import { formatActualTime } from '@/lib/actualTime';
 
 /** Warned-cell border color per severity (#351); status fills still win, only chrome is tinted. */
 const WARN_BORDER: Record<string, string> = { critical: '#DC2626', high: '#EA580C', medium: '#D97706' };
@@ -62,6 +63,19 @@ function cellLabel(part: PrescriptionDayPart | undefined) {
 }
 
 function dayPartKey(date: string, period: string) { return `${date}|${period}`; }
+
+/**
+ * Lower bound of the list period for one item (V3): the first non-deleted day
+ * of that item. Mirrors the server-side `minNonDeletedDayDate`.
+ */
+function itemMinDayDate(item: GridItem): string | undefined {
+  let min: string | undefined;
+  item.cells.forEach((dp) => {
+    if (!dp.dayDate) return;
+    if (!min || dp.dayDate < min) min = dp.dayDate;
+  });
+  return min;
+}
 
 // «−» removes the LAST non-deleted day of the row: the dayId behind the
 // maximum dayDate among the item's cells. Computed from domain data at click
@@ -170,11 +184,29 @@ function PrescriptionCell({
                   fontWeight: dp?.isPlanned || dp?.isCompleted ? 600 : 400,
                 }}>
                 {label}
+                {dp?.administeredAtManual && (
+                  <Clock
+                    className="ml-0.5 inline size-2.5 align-middle"
+                    role="img"
+                    aria-label="Фактичний час уточнено вручну"
+                  />
+                )}
               </span>
             </TooltipTrigger>
             {dp && (
               <TooltipContent>
                 <p>{`${PERIOD_FULL[dp.period]}: ${dp.dose ?? '—'}`}</p>
+                {dp.administeredAt && (
+                  <div className="mt-1 border-t border-current/20 pt-1">
+                    <p className="text-[10px]">Введено: {formatActualTime(dp.administeredAt)}</p>
+                    {dp.dispensedAt && (
+                      <p className="text-[10px]">Видано: {formatActualTime(dp.dispensedAt)}</p>
+                    )}
+                    {dp.administeredAtManual && (
+                      <p className="text-[10px]">(уточнено вручну)</p>
+                    )}
+                  </div>
+                )}
                 {(() => {
                   const pairs = itemPairs
                     .filter(p => rangeDays(p.overlapStart, p.overlapEnd).includes(date))
@@ -228,16 +260,20 @@ export interface PrescriptionSpreadsheetProps {
   onCancelMedication: (dayPartId: string) => Promise<void>;
   onRestoreToPlanned: (dayPartId: string) => Promise<void>;
   onCancelAssignment: (dayPartId: string) => Promise<void>;
-  onOpenExecute: (dp: PrescriptionDayPart, el: HTMLElement) => void;
+  onOpenExecute: (dp: PrescriptionDayPart, el: HTMLElement, minDate?: string) => void;
   onOpenDeleteConfirm: (itemId: string, el: HTMLElement) => void;
   /** Server-computed interaction warnings (#304); null = not fetched. */
   interactions?: PrescriptionInteractionsResponse | null;
+  /** True when the user holds PRESCRIPTION_ACTUAL_TIME_EDIT (#444/#446). */
+  canCorrectActualTime?: boolean;
+  /** Opens the correction dialog for an executed dose (#446). */
+  onOpenActualTimeCorrection?: (dp: PrescriptionDayPart, minDate?: string) => void;
 }
 
 export default function PrescriptionSpreadsheet({
   canEdit, isDoctor, isNurse, gridItems, visibleDates, allDates, viewStart, daysToShow,
   loading, onShiftLeft, onShiftRight, onAddDay, onRemoveDay, onPlan, onCancelMedication, onRestoreToPlanned, onCancelAssignment, onOpenExecute, onOpenDeleteConfirm,
-  interactions,
+  interactions, canCorrectActualTime, onOpenActualTimeCorrection,
 }: PrescriptionSpreadsheetProps) {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editingDose, setEditingDose] = useState('');
@@ -584,9 +620,16 @@ export default function PrescriptionSpreadsheet({
 
                       const onClick = (e: React.MouseEvent) => {
                         if (!dp || !canEdit) return;
-                        if (dp.isCompleted || dp.isCompletedFinished) return;
+                        if (dp.isCompleted || dp.isCompletedFinished) {
+                          // Executed dose: the only action is the actual-time
+                          // correction (#446), gated by the permission.
+                          if (canCorrectActualTime && onOpenActualTimeCorrection) {
+                            onOpenActualTimeCorrection(dp, itemMinDayDate(item));
+                          }
+                          return;
+                        }
                         if (isDoctor) { startEdit(dp); return; }
-                        if (isNurse && dp.isPlanned) { onOpenExecute(dp, e.currentTarget as HTMLElement); return; }
+                        if (isNurse && dp.isPlanned) { onOpenExecute(dp, e.currentTarget as HTMLElement, itemMinDayDate(item)); return; }
                       };
 
                       return (

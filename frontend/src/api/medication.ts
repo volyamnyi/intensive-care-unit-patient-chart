@@ -2,7 +2,7 @@ import client from './client';
 import type {
   PrescriptionList, PrescriptionListCreateRequest,
   PrescriptionItem, PrescriptionItemAddRequest,
-  PrescriptionDayPart, PrescriptionExecutionCreateRequest,
+  PrescriptionDayPart, PrescriptionExecutionCreateRequest, PrescriptionActualTimeUpdateRequest,
   PrescriptionPdfInfo, PrescriptionInteractionsResponse, DrugInteractionImportReport,
   DrugInteractionCatalog,
   MedicineCatalogItem,
@@ -44,6 +44,10 @@ export const prescriptionApi = {
     client.put<PrescriptionDayPart>(`/prescriptions/day-parts/${dayPartId}/cancel-assignment`),
   executeDose: (dayPartId: string, data: PrescriptionExecutionCreateRequest) =>
     client.post<void>(`/prescriptions/day-parts/${dayPartId}/execute`, data),
+  // #444/#446: correction of an already recorded actual time (administration
+  // and/or dispensing). Requires PRESCRIPTION_ACTUAL_TIME_EDIT on the server.
+  updateActualTime: (executionId: string, data: PrescriptionActualTimeUpdateRequest) =>
+    client.put<PrescriptionDayPart>(`/prescriptions/executions/${executionId}/actual-time`, data),
   getMedicineCatalog: (keyword?: string, signal?: AbortSignal) =>
     client.get<MedicineCatalogItem[]>('/prescriptions/medicine-catalog', { params: { keyword }, signal }),
   getInteractions: (listId: string) =>

@@ -386,7 +386,8 @@ java -jar app/target/app-*.jar
 | `PUT` | `/api/prescriptions/day-parts/{id}/replan` | Doctor/HOD | Restore cancelled dose to planned, keeping the dose (422 if not cancelled or completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/cancel-assignment` | Doctor/HOD | Reset one period cell to unplanned, siblings untouched (422 if completed) |
 | `PUT` | `/api/prescriptions/day-parts/{id}/complete` | Nurse/HOD | Complete day part — same two-person contract as `execute` (a different nurse's login/password in the body); creates the execution record (#359) |
-| `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (server-owned 2P auth: second NURSE + password, never the executor) |
+| `POST` | `/api/prescriptions/day-parts/{id}/execute` | Nurse/HOD | Execute dose (server-owned 2P auth: second NURSE + password, never the executor); optional `administeredAt`/`dispensedAt` record the actual times (#443) |
+| `PUT` | `/api/prescriptions/executions/{executionId}/actual-time` | `PRESCRIPTION_ACTUAL_TIME_EDIT` | Correct the recorded actual administration/dispensing time — mandatory reason + optimistic lock (409 on a stale version); append-only audit (#444/#446) |
 | `GET` | `/api/prescriptions/medicine-catalog?keyword=` | Yes | Medicine catalog search |
 | `GET` | `/api/prescriptions/{listId}/pdf/info` | `PATIENT_VIEW` | Page count + file name (no PII) |
 | `POST` | `/api/prescriptions/{listId}/pdf/file` | `PATIENT_VIEW` | Generate + download the Form №003-4/о ZIP (renders once, no cached-bytes mutation, #370/#412) |

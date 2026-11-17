@@ -21,7 +21,7 @@ import type { PrescriptionList, PrescriptionItem } from '../../types/medication'
 export default function PrescriptionDetailPage() {
   useEffect(() => { document.title = 'Призначення — Деталі' }, [])
   const { id } = useParams<{ id: string }>()
-  const { user } = useAuth()
+  const { user, hasPermission } = useAuth()
   const isNurseUser = user?.role === 'NURSE'
 
   const [prescription, setPrescription] = useState<PrescriptionList | null>(null)
@@ -185,14 +185,26 @@ export default function PrescriptionDetailPage() {
     }
   }
 
-  const handleExecute: GridProps['onExecute'] = async (dayPartId, actualDose, secondPersonLogin, secondPersonPassword) => {
+  const handleExecute: GridProps['onExecute'] = async (
+    dayPartId, actualDose, secondPersonLogin, secondPersonPassword, administeredAt, dispensedAt,
+  ) => {
     setError(null)
     try {
-      await prescriptionApi.executeDose(dayPartId, { actualDose, secondPersonLogin, secondPersonPassword })
+      await prescriptionApi.executeDose(dayPartId, {
+        actualDose, secondPersonLogin, secondPersonPassword, administeredAt, dispensedAt,
+      })
       if (id) await reloadAfterMutation(id)
     } catch (err) {
       throw err
     }
+  }
+
+  // Actual-time correction (#444/#446): a dedicated permission, a mandatory
+  // reason and an optimistic lock on the server.
+  const canCorrectActualTime = hasPermission('PRESCRIPTION_ACTUAL_TIME_EDIT')
+
+  const handleActualTimeUpdated = async () => {
+    if (id) await reloadAfterMutation(id)
   }
 
   const handleClose = async () => {
@@ -328,6 +340,8 @@ export default function PrescriptionDetailPage() {
         onSearchMedicine={(keyword, signal) => prescriptionApi.getMedicineCatalog(keyword, signal).then(r => r.data)}
         loading={loading}
         interactions={interactions}
+        canCorrectActualTime={canCorrectActualTime}
+        onActualTimeUpdated={handleActualTimeUpdated}
       />
 
       {!isNurseUser && (

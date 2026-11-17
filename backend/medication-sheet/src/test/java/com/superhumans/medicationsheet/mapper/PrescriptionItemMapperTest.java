@@ -3,13 +3,16 @@ package com.superhumans.medicationsheet.mapper;
 import com.superhumans.medicationsheet.dto.PrescriptionDayPartNested;
 import com.superhumans.medicationsheet.dto.PrescriptionItemResponse;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
+import com.superhumans.medicationsheet.entity.PrescriptionExecution;
 import com.superhumans.medicationsheet.entity.PrescriptionItem;
 import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
 import com.superhumans.medicationsheet.entity.PrescriptionList;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,5 +99,62 @@ class PrescriptionItemMapperTest {
         PrescriptionItemResponse response = mapper.toResponse(item);
 
         assertThat(response.getDayParts()).isNotNull().isEmpty();
+    }
+
+    /**
+     * The grid wire carries the actual-time facts of the latest execution plus
+     * its optimistic-lock version (#446) - the correction endpoint needs the
+     * version, otherwise a stale write would silently overwrite the fact.
+     */
+    @Test
+    void mapDayParts_attachesExecutionFactsAndVersion() {
+        var list = PrescriptionList.builder().patientId(1001L).build();
+        list.setId(UUID.randomUUID());
+
+        var day = PrescriptionItemDay.builder().dayDate(LocalDate.of(2026, 7, 26)).build();
+        day.setId(UUID.randomUUID());
+
+        var executed = PrescriptionDayPart.builder()
+                .day(day).period("morning").dose("500mg")
+                .isPlanned(true).isCompleted(true).build();
+        executed.setId(UUID.randomUUID());
+
+        var planned = PrescriptionDayPart.builder()
+                .day(day).period("day").dose("250mg")
+                .isPlanned(true).isCompleted(false).build();
+        planned.setId(UUID.randomUUID());
+
+        day.setDayParts(List.of(executed, planned));
+
+        var item = PrescriptionItem.builder()
+                .list(list).medicineName("Aspirin").status("Active").sortOrder(0).build();
+        item.setId(UUID.randomUUID());
+        item.setDays(List.of(day));
+
+        var execution = PrescriptionExecution.builder()
+                .dayPart(executed)
+                .administeredAt(LocalDateTime.of(2026, 7, 26, 10, 30, 7))
+                .dispensedAt(LocalDateTime.of(2026, 7, 26, 10, 29, 0))
+                .administeredAtManual(true)
+                .build();
+        execution.setId(UUID.randomUUID());
+        execution.setVersion(3);
+
+        PrescriptionItemResponse response = mapper.toResponse(item);
+        mapper.mapDayParts(item, response, Map.of(executed.getId(), execution));
+
+        PrescriptionDayPartNested withExecution = response.getDayParts().get(0);
+        assertThat(withExecution.getExecutionId()).isEqualTo(execution.getId());
+        assertThat(withExecution.getAdministeredAt()).isEqualTo("2026-07-26T10:30:07");
+        assertThat(withExecution.getDispensedAt()).isEqualTo("2026-07-26T10:29:00");
+        assertThat(withExecution.getAdministeredAtManual()).isTrue();
+        assertThat(withExecution.getExecutionVersion()).isEqualTo(3);
+
+        PrescriptionDayPartNested withoutExecution = response.getDayParts().get(1);
+        assertThat(withoutExecution.getExecutionId()).isNull();
+        assertThat(withoutExecution.getAdministeredAt()).isNull();
+        assertThat(withoutExecution.getDispensedAt()).isNull();
+        assertThat(withoutExecution.getAdministeredAtManual()).isFalse();
+        assertThat(withoutExecution.getExecutionVersion()).isNull();
     }
 }

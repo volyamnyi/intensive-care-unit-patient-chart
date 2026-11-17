@@ -50,12 +50,34 @@ export interface PrescriptionDayPart {
   isCompletedFinished: boolean;
   doctorName: string | null;
   nurseName: string | null;
+  /** Latest execution of this day part (#443); null while the dose is not executed. */
+  executionId?: string | null;
+  /** ISO local "yyyy-MM-dd'T'HH:mm:ss" - actual administration time. */
+  administeredAt?: string | null;
+  /** ISO local "yyyy-MM-dd'T'HH:mm:ss" - actual dispensing time (optional). */
+  dispensedAt?: string | null;
+  /** True when the actual time was entered/adjusted manually (#443). */
+  administeredAtManual?: boolean;
+  /** Optimistic-lock version of the latest execution (#446); required by the correction endpoint. */
+  executionVersion?: number | null;
 }
 
 export interface PrescriptionExecutionCreateRequest {
   actualDose: string;
   secondPersonLogin: string;
   secondPersonPassword: string;
+  /** Optional actual administration time, ISO local "yyyy-MM-dd'T'HH:mm[:ss]" (#443). */
+  administeredAt?: string;
+  /** Optional actual dispensing time, same format (#443). */
+  dispensedAt?: string;
+}
+
+/** Body of PUT /prescriptions/executions/{executionId}/actual-time (#444/#446). */
+export interface PrescriptionActualTimeUpdateRequest {
+  administeredAt: string;
+  dispensedAt?: string;
+  reason: string;
+  version: number;
 }
 
 /** Batch metadata for the Form №003-4/о PDF download (Phase 17, no PII). */

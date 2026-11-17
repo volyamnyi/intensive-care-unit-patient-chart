@@ -18,6 +18,7 @@ const mockGetPdfZip = vi.fn();
 const mockGetPdfInfo = vi.fn();
 const mockGetPdfPage = vi.fn();
 const mockPrintPdfBlob = vi.fn();
+const mockUpdateActualTime = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 const mockObjectHistory = vi.fn().mockResolvedValue({
@@ -41,6 +42,7 @@ vi.mock('../../api/medication', () => ({
     restoreToPlanned: (...a: unknown[]) => mockRestoreToPlanned(...a),
     cancelAssignment: (...a: unknown[]) => mockCancelAssignment(...a),
     executeDose: vi.fn(),
+    updateActualTime: (...a: unknown[]) => mockUpdateActualTime(...a),
     addItem: vi.fn(), removeItem: (...a: unknown[]) => mockRemoveItem(...a), create: vi.fn(), delete: vi.fn(), close: vi.fn(),
     getByPatient: vi.fn(),
     getInteractions: (...a: unknown[]) => mockGetInteractions(...a),
@@ -486,5 +488,72 @@ describe('PrescriptionDetailPage — drug interaction warnings (#304)', () => {
     expect(await screen.findByText('Взаємодій препаратів більше не виявлено.')).toBeInTheDocument();
     expect(document.querySelector('td[data-interaction-severity]')).toBeNull();
     expect(document.querySelector('td[data-interaction-warn="true"]')).toBeNull();
+  });
+});
+
+// Actual-time correction (#444/#446): a dedicated permission, a mandatory
+// reason, an optimistic lock and a grid refresh after a successful save.
+describe('PrescriptionDetailPage — actual time correction (#446)', () => {
+  function makeExecutedItem() {
+    return {
+      ...makeItem(),
+      dayParts: [
+        {
+          id: 'dp-1', dayId: 'day-1', dayDate: '2020-01-02', period: 'morning', dose: '5mg',
+          isPlanned: true, isPlannedFinished: false, isCompleted: true, isCompletedFinished: false,
+          doctorName: null, nurseName: null,
+          executionId: 'exec-1',
+          administeredAt: '2020-01-02T10:30:00',
+          dispensedAt: '2020-01-02T10:29:00',
+          administeredAtManual: true,
+          executionVersion: 3,
+        },
+      ],
+    };
+  }
+
+  const withoutPermission = {
+    ...doctorAuth,
+    hasPermission: (code: string) => code !== 'PRESCRIPTION_ACTUAL_TIME_EDIT',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUpdateActualTime.mockReset().mockResolvedValue({ data: {} });
+    mockGetInteractions.mockReset().mockResolvedValue({ data: { warnings: [], missingAtc: null } });
+  });
+
+  it('opens the correction dialog for an executed dose and saves it through the API', async () => {
+    renderPage(() => doctorAuth, [makeExecutedItem()]);
+    await screen.findByText('Dopamine');
+
+    const cell = screen.getAllByText('✓')[0].closest('td');
+    await userEvent.click(cell!);
+    expect(await screen.findByText('Коригування фактичного часу')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Причина коригування'), 'Помилка медсестри');
+    await userEvent.click(screen.getByRole('button', { name: 'Зберегти' }));
+
+    await waitFor(() => expect(mockUpdateActualTime).toHaveBeenCalledTimes(1));
+    expect(mockUpdateActualTime).toHaveBeenCalledWith('exec-1', {
+      administeredAt: '2020-01-02T10:30:00',
+      dispensedAt: '2020-01-02T10:29:00',
+      reason: 'Помилка медсестри',
+      version: 3,
+    });
+    // The grid is refreshed so the corrected fact is displayed again.
+    await waitFor(() => expect(mockGetItems).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('Фактичний час оновлено'));
+  });
+
+  it('does not open the correction dialog without PRESCRIPTION_ACTUAL_TIME_EDIT', async () => {
+    renderPage(() => withoutPermission, [makeExecutedItem()]);
+    await screen.findByText('Dopamine');
+
+    const cell = screen.getAllByText('✓')[0].closest('td');
+    await userEvent.click(cell!);
+
+    await waitFor(() => expect(screen.queryByText('Коригування фактичного часу')).not.toBeInTheDocument());
+    expect(mockUpdateActualTime).not.toHaveBeenCalled();
   });
 });

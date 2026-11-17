@@ -58,6 +58,8 @@ function renderGrid(props: Partial<GridProps> = {}) {
         onRemoveItem={props.onRemoveItem ?? vi.fn()}
         onSearchMedicine={props.onSearchMedicine ?? vi.fn().mockResolvedValue([])}
         loading={props.loading}
+        canCorrectActualTime={props.canCorrectActualTime}
+        onActualTimeUpdated={props.onActualTimeUpdated}
       />
     </ThemeModeProvider>
   );
@@ -334,5 +336,57 @@ describe('PrescriptionSpreadsheet — added/removed day markers', () => {
     await screen.findByRole('menu', { name: 'Контекстне меню дня' });
     fireEvent.keyDown(document.body, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('menu', { name: 'Контекстне меню дня' })).not.toBeInTheDocument());
+  });
+});
+
+// Actual-time facts of an executed dose (#446): the grid shows them in the
+// cell tooltip and offers a correction dialog behind a dedicated permission.
+describe('PrescriptionSpreadsheet — actual time (#446)', () => {
+  function executedPart(over: Partial<PrescriptionDayPart> = {}): PrescriptionDayPart {
+    return makeDayPart({
+      id: 'dp-executed',
+      isPlanned: true,
+      isCompleted: true,
+      dose: '5mg',
+      executionId: 'exec-1',
+      administeredAt: '2020-01-02T10:30:00',
+      dispensedAt: '2020-01-02T10:29:00',
+      administeredAtManual: true,
+      executionVersion: 3,
+      ...over,
+    });
+  }
+
+  it('shows the actual times in the cell tooltip', async () => {
+    renderGrid({ items: [makeItem([executedPart()])] });
+    const label = screen.getAllByText('✓')[0];
+    await userEvent.hover(label);
+    expect(await screen.findByText('Введено: 02.01.2020 10:30:00')).toBeInTheDocument();
+    expect(screen.getByText('Видано: 02.01.2020 10:29:00')).toBeInTheDocument();
+    expect(screen.getByText('(уточнено вручну)')).toBeInTheDocument();
+  });
+
+  it('marks a manually adjusted time with a clock indicator', () => {
+    renderGrid({ items: [makeItem([executedPart()])] });
+    expect(screen.getByRole('img', { name: 'Фактичний час уточнено вручну' })).toBeInTheDocument();
+  });
+
+  it('does not mark an automatically recorded time', () => {
+    renderGrid({ items: [makeItem([executedPart({ administeredAtManual: false })])] });
+    expect(screen.queryByRole('img', { name: 'Фактичний час уточнено вручну' })).not.toBeInTheDocument();
+  });
+
+  it('opens the correction dialog when a completed cell is clicked and the permission is held', async () => {
+    renderGrid({ items: [makeItem([executedPart()])], canCorrectActualTime: true });
+    const cell = screen.getAllByText('✓')[0].closest('td');
+    await userEvent.click(cell!);
+    expect(await screen.findByText('Коригування фактичного часу')).toBeInTheDocument();
+  });
+
+  it('does not open the correction dialog without the permission', async () => {
+    renderGrid({ items: [makeItem([executedPart()])], canCorrectActualTime: false });
+    const cell = screen.getAllByText('✓')[0].closest('td');
+    await userEvent.click(cell!);
+    await waitFor(() => expect(screen.queryByText('Коригування фактичного часу')).not.toBeInTheDocument());
   });
 });

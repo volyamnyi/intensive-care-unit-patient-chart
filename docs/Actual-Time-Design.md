@@ -82,6 +82,7 @@ Legacy-рядок стає медично коректним: факт = час 
 | `administeredAt` | `string \| null` | фактичний час введення, ISO local |
 | `dispensedAt` | `string \| null` | фактичний час видачі |
 | `administeredAtManual` | `boolean` | ручне введення/коригування часу |
+| `executionVersion` | `integer \| null` | optimistic-lock версія execution'а — обов'язкова для endpoint'у коригування (стale → 409 `VERSION_CONFLICT`) |
 
 Завантаження для грида — **batch** через існуючий `PrescriptionExecutionRepository.findByDayPartIdIn(...)` (використовується `PrescriptionPdfDataLoader`; 1 IN-запит на грид, без N+1). На day part мапиться **останній** execution (за `created_at`/id). PDF-рендер 003-4/о не змінюється.
 

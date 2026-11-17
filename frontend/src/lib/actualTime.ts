@@ -16,9 +16,43 @@ export type ActualTimeValidationCode =
   | "AFTER_MAX"
   | "DISPENSE_AFTER_ADMIN";
 
+/**
+ * Ukrainian messages mirroring the server-side contract
+ * (`ActualTimeValidator.MSG_*`). The server stays the source of truth - these
+ * strings only drive the inline UX before the request is sent.
+ */
+export const ACTUAL_TIME_ERROR_MESSAGES: Record<ActualTimeValidationCode, string> = {
+  OK: "",
+  MALFORMED: "Невірний формат часу.",
+  FUTURE: "Фактичний час не може бути в майбутньому",
+  BEFORE_MIN: "Фактичний час поза межами періоду листка",
+  AFTER_MAX: "Фактичний час поза межами періоду листка",
+  DISPENSE_AFTER_ADMIN: "Час видачі не може бути пізніше часу введення",
+};
+
+/** Human-readable message for a validation code ('' for OK). */
+export function actualTimeErrorMessage(code: ActualTimeValidationCode): string {
+  return ACTUAL_TIME_ERROR_MESSAGES[code] ?? "";
+}
+
 const ISO_WITH_OPTIONAL_SECONDS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
 const TIME_HH_MM = /^\d{2}:\d{2}$/;
 const TIME_HH_MM_SS = /^\d{2}:\d{2}:\d{2}$/;
+
+/**
+ * Current local wall-clock time in the wire format ("yyyy-MM-dd'T'HH:mm:ss").
+ *
+ * The domain stores naive local timestamps (design §6), so the browser's local
+ * clock is the right source here - not `toISOString()`, which would convert to
+ * UTC. Kept separate from {@link validateActualTime}, which never reads a
+ * clock on its own (callers pass `nowIso` explicitly).
+ */
+export function currentLocalIso(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  return `${date}T${time}`;
+}
 
 /** Pad a browser-emitted `HH:mm` to `HH:mm:00`. Returns '' for garbage. */
 export function normalizeTime(t: string | null | undefined): string {

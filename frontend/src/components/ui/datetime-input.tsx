@@ -53,10 +53,10 @@ export function DatetimeInput({
     setParts(splitValue(value));
   }, [value]);
 
-  const minDate = min?.slice(0, 10);
-  const minTime = min?.slice(11, 19);
-  const maxDate = max?.slice(0, 10);
-  const maxTime = max?.slice(11, 19);
+  const minDate = min?.slice(0, 10) || undefined;
+  const minTime = min && min.length >= 19 ? min.slice(11, 19) : undefined;
+  const maxDate = max?.slice(0, 10) || undefined;
+  const maxTime = max && max.length >= 19 ? max.slice(11, 19) : undefined;
 
   const handleDate = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
