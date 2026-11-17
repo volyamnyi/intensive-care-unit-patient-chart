@@ -5,7 +5,7 @@ import {
   planDose,
   executeDose,
   findTodayMorningPart,
-  ensureRolePermission,
+  grantRolePermission,
   ACTUAL_TIME_EDIT_PERMISSION,
   localDate,
   localTime,
@@ -24,15 +24,11 @@ test.describe('Doctor — actual time correction (#446)', () => {
     const MEDICINE = 'IT446-Correction';
 
     // The correction right is a matrix grant: a fresh database holds it for
-    // DOCTOR by default, a long-lived one may not. Grant it for the test and
-    // restore the previous state afterwards.
-    const restorePermission = await ensureRolePermission(
-      request,
-      'DOCTOR',
-      ACTUAL_TIME_EDIT_PERMISSION,
-    );
+    // DOCTOR by default, a long-lived one may not. Grant it through the admin
+    // API (the sanctioned path for an existing database).
+    await grantRolePermission(request, 'DOCTOR', ACTUAL_TIME_EDIT_PERMISSION);
 
-    try {
+    {
       // --- API setup: doctor plans, nurse executes ------------------------
       const doctorToken = await getToken(request, 1);
       const patient = await firstMedicationPatient(request, doctorToken);
@@ -99,8 +95,6 @@ test.describe('Doctor — actual time correction (#446)', () => {
       expect(part.dose).toBe(DOSE);
       expect(part.period).toBe('morning');
       expect(part.dayDate).toBe(localDate(new Date()));
-    } finally {
-      await restorePermission();
     }
   });
 
@@ -133,5 +127,86 @@ test.describe('Doctor — actual time correction (#446)', () => {
       },
     });
     expect(res.status()).toBe(403);
+  });
+
+  test('a time outside the list period is rejected inline and nothing is sent', async ({ page, request }) => {
+    const MEDICINE = 'IT447-Outside';
+
+    await grantRolePermission(request, 'DOCTOR', ACTUAL_TIME_EDIT_PERMISSION);
+
+    const doctorToken = await getToken(request, 1);
+    const patient = await firstMedicationPatient(request, doctorToken);
+    const listId = await ensureMedicationList(request, doctorToken, patient.id);
+    const { dayPartId } = await ensureActualTimeItem(request, doctorToken, listId, MEDICINE);
+    await planDose(request, doctorToken, dayPartId, DOSE);
+
+    const nurseToken = await getToken(request, 3);
+    await executeDose(request, nurseToken, dayPartId, { actualDose: DOSE });
+
+    await page.goto(`/prescriptions/doctor/${listId}`);
+    const row = page.locator('tbody tr', { has: page.getByText(MEDICINE) });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    const done = row.getByText('✓', { exact: true });
+    await expect(done).toBeVisible({ timeout: 15_000 });
+
+    await done.click();
+    await expect(page.getByText('Коригування фактичного часу')).toBeVisible();
+
+    // The list starts today, so yesterday is outside the list period (V3).
+    const yesterday = new Date(Date.now() - 24 * 60 * 60_000);
+    await page.getByLabel('Нова дата введення').fill(localDate(yesterday));
+    await page.getByLabel('Новий час введення').fill(localTime(yesterday));
+
+    await expect(page.getByText('Фактичний час поза межами періоду листка')).toBeVisible();
+    // The blocked submit proves that no request leaves the browser.
+    await expect(page.getByRole('button', { name: 'Зберегти' })).toBeDisabled();
+  });
+
+  test('a concurrent correction surfaces the conflict banner', async ({ page, request }) => {
+    const MEDICINE = 'IT447-Conflict';
+
+    await grantRolePermission(request, 'DOCTOR', ACTUAL_TIME_EDIT_PERMISSION);
+
+    const doctorToken = await getToken(request, 1);
+    const patient = await firstMedicationPatient(request, doctorToken);
+    const listId = await ensureMedicationList(request, doctorToken, patient.id);
+    const { itemId, dayPartId } = await ensureActualTimeItem(request, doctorToken, listId, MEDICINE);
+    await planDose(request, doctorToken, dayPartId, DOSE);
+
+    const nurseToken = await getToken(request, 3);
+    await executeDose(request, nurseToken, dayPartId, { actualDose: DOSE });
+
+    await page.goto(`/prescriptions/doctor/${listId}`);
+    const row = page.locator('tbody tr', { has: page.getByText(MEDICINE) });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    const done = row.getByText('✓', { exact: true });
+    await expect(done).toBeVisible({ timeout: 15_000 });
+
+    await done.click();
+    await expect(page.getByText('Коригування фактичного часу')).toBeVisible();
+
+    // --- someone else corrects the same execution in the meantime --------
+    const part = await findTodayMorningPart(request, doctorToken, listId, itemId);
+    const concurrent = new Date(Date.now() - 6 * 60_000);
+    const concurrentRes = await request.put(
+      `http://localhost:8085/api/prescriptions/executions/${part.executionId}/actual-time`,
+      {
+        headers: { Authorization: `Bearer ${doctorToken}` },
+        data: {
+          administeredAt: `${localDate(concurrent)}T${localTime(concurrent)}`,
+          reason: 'Паралельне коригування',
+          version: part.executionVersion,
+        },
+      },
+    );
+    expect(concurrentRes.status()).toBe(200);
+
+    // The dialog still holds the stale version -> 409 -> conflict banner.
+    await page.getByLabel('Причина коригування').fill('Повторне коригування');
+    await page.getByRole('button', { name: 'Зберегти' }).click();
+
+    await expect(page.getByText('Дані змінено іншим користувачем')).toBeVisible({ timeout: 10_000 });
+    // The dialog stays open - nothing was overwritten.
+    await expect(page.getByText('Коригування фактичного часу')).toBeVisible();
   });
 });

@@ -138,4 +138,91 @@ test.describe('Nurse — actual time capture at execution (#446)', () => {
     await expect(page.getByRole('button', { name: 'Продовжити' })).toBeDisabled();
     await expect(row.getByText('✓', { exact: true })).toHaveCount(0);
   });
+
+  test('a browser timezone change does not move the stored actual time (#447)', async ({ page, request, browser }) => {
+    const MEDICINE = 'IT447-Timezone';
+
+    const doctorToken = await getToken(request, 1);
+    const patient = await firstMedicationPatient(request, doctorToken);
+    const listId = await ensureMedicationList(request, doctorToken, patient.id);
+    const { dayPartId } = await ensureActualTimeItem(request, doctorToken, listId, MEDICINE);
+    await planDose(request, doctorToken, dayPartId, DOSE);
+
+    // A fixed wall clock of the day - the browser, the server and the test
+    // process all run in the same local timezone for this step.
+    const manual = new Date(Date.now() - 2 * 60 * 60_000);
+
+    await page.goto(`/prescriptions/nurse/${listId}`);
+    const row = page.locator('tbody tr', { has: page.getByText(MEDICINE) });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.getByText(DOSE, { exact: true }).click();
+    await page.getByLabel('Дата введення').fill(localDate(manual));
+    await page.getByLabel('Час введення').fill(localTime(manual));
+    await page.getByRole('button', { name: 'Продовжити' }).click();
+    const second = nurse2();
+    await page.getByPlaceholder('Логін другої особи').fill(second.login);
+    await page.getByPlaceholder('Пароль').fill(second.password);
+    await page.getByRole('button', { name: 'Підтвердити' }).click();
+
+    const done = row.getByText('✓', { exact: true });
+    await expect(done).toBeVisible({ timeout: 15_000 });
+    await done.hover();
+    await expect(page.getByText('Введено: ' + displayActualTime(manual))).toBeVisible();
+
+    // --- the same list is opened in another timezone ----------------------
+    // The stored value is a NAIVE local timestamp: changing the browser's
+    // timezone must not move the recorded fact (design §6).
+    const ctx = await browser.newContext({
+      storageState: '.auth/nurse.json',
+      timezoneId: 'America/New_York',
+    });
+    const otherPage = await ctx.newPage();
+    try {
+      await otherPage.goto(`/prescriptions/nurse/${listId}`);
+      const otherRow = otherPage.locator('tbody tr', { has: otherPage.getByText(MEDICINE) });
+      await expect(otherRow).toBeVisible({ timeout: 15_000 });
+      const otherDone = otherRow.getByText('✓', { exact: true });
+      await expect(otherDone).toBeVisible({ timeout: 15_000 });
+      await otherDone.hover();
+      await expect(otherPage.getByText('Введено: ' + displayActualTime(manual))).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test('a dose executed without a manual time shows the fact without the manual marker', async ({ page, request }) => {
+    const MEDICINE = 'IT447-Legacy';
+
+    const doctorToken = await getToken(request, 1);
+    const patient = await firstMedicationPatient(request, doctorToken);
+    const listId = await ensureMedicationList(request, doctorToken, patient.id);
+    const { dayPartId } = await ensureActualTimeItem(request, doctorToken, listId, MEDICINE);
+    await planDose(request, doctorToken, dayPartId, DOSE);
+
+    // No administeredAt -> the server defaults to the operation time and
+    // marks the value as NOT manually adjusted (legacy rows behave the same).
+    const nurseToken = await getToken(request, 3);
+    const executed = await request.post(`http://localhost:8085/api/prescriptions/day-parts/${dayPartId}/execute`, {
+      headers: { Authorization: `Bearer ${nurseToken}` },
+      data: {
+        actualDose: DOSE,
+        secondPersonLogin: nurse2().login,
+        secondPersonPassword: nurse2().password,
+      },
+    });
+    expect(executed.ok(), `failed to execute dose: ${executed.status()}`).toBeTruthy();
+
+    await page.goto(`/prescriptions/nurse/${listId}`);
+    const row = page.locator('tbody tr', { has: page.getByText(MEDICINE) });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    const done = row.getByText('✓', { exact: true });
+    await expect(done).toBeVisible({ timeout: 15_000 });
+
+    // The fact is visible...
+    await done.hover();
+    await expect(page.getByText(/Введено: \d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}/)).toBeVisible();
+    // ...but nothing says that it was adjusted by hand.
+    await expect(row.getByRole('img', { name: 'Фактичний час уточнено вручну' })).toHaveCount(0);
+    await expect(page.getByText('(уточнено вручну)')).toHaveCount(0);
+  });
 });

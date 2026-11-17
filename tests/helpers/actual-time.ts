@@ -29,20 +29,36 @@ export async function loginToken(
 }
 
 /**
- * Make sure a role holds a permission and return a restore function.
+ * Make sure a role holds a permission (idempotent grant through the admin API).
  *
  * The default matrix grants PRESCRIPTION_ACTUAL_TIME_EDIT to DOCTOR and
  * HEAD_OF_DEPARTMENT, but `PermissionService.seedIfEmpty()` only seeds a FRESH
  * database: a long-lived dev database whose `role_permissions` table was
- * populated before the permission existed keeps the old matrix. The spec
- * therefore grants the code through the admin API and restores the previous
- * state afterwards - the same pattern as the admin RBAC spec.
+ * populated before the permission existed keeps the old matrix. The specs
+ * therefore grant the code through the admin API - the sanctioned path for an
+ * existing database (no SQL backfill).
+ *
+ * The grant is deliberately NOT undone afterwards: the actual-time specs run
+ * in different Playwright projects (api / doctor) and therefore in parallel,
+ * so a spec that revoked the grant while another one was using it would make
+ * the suite flaky. Leaving the grant in place converges a stale dev database
+ * to the documented default matrix instead.
  */
-export async function ensureRolePermission(
+export async function grantRolePermission(
   request: APIRequestContext,
   role: string,
   permissionCode: string,
-): Promise<() => Promise<void>> {
+): Promise<void> {
+  await setRolePermission(request, role, permissionCode, true);
+}
+
+/** Grant or revoke a permission for a role through the admin API. */
+export async function setRolePermission(
+  request: APIRequestContext,
+  role: string,
+  permissionCode: string,
+  granted: boolean,
+): Promise<void> {
   const admin = adminUser();
   const loginRes = await request.post(`${API}/auth/login`, {
     data: { login: admin.login, password: admin.password },
@@ -50,29 +66,11 @@ export async function ensureRolePermission(
   expect(loginRes.ok(), `failed to log in as admin: ${loginRes.status()}`).toBeTruthy();
   const headers = { Authorization: `Bearer ${(await loginRes.json()).token}` };
 
-  const matrixRes = await request.get(`${API}/admin/permissions`, { headers });
-  expect(matrixRes.ok(), `failed to read the permission matrix: ${matrixRes.status()}`).toBeTruthy();
-  const matrix = await matrixRes.json();
-  const alreadyGranted: boolean = (matrix?.grants?.[role] ?? []).includes(permissionCode);
-
-  const set = async (granted: boolean) => {
-    const res = await request.put(`${API}/admin/permissions`, {
-      headers,
-      data: { role, permissionCode, granted },
-    });
-    expect(res.ok(), `failed to set ${role}/${permissionCode}=${granted}: ${res.status()}`).toBeTruthy();
-  };
-
-  if (!alreadyGranted) {
-    await set(true);
-  }
-
-  return async () => {
-    // Restore the previous state only when the spec changed it.
-    if (!alreadyGranted) {
-      await set(false);
-    }
-  };
+  const res = await request.put(`${API}/admin/permissions`, {
+    headers,
+    data: { role, permissionCode, granted },
+  });
+  expect(res.ok(), `failed to set ${role}/${permissionCode}=${granted}: ${res.status()}`).toBeTruthy();
 }
 
 /** Local calendar date (yyyy-MM-dd) - the domain stores naive local dates. */
