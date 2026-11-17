@@ -111,4 +111,31 @@ test.describe('Nurse — actual time capture at execution (#446)', () => {
     await done.click();
     await expect(page.getByText('Коригування фактичного часу')).toHaveCount(0, { timeout: 3_000 });
   });
+
+  test('a future actual time is rejected inline and no request is sent', async ({ page, request }) => {
+    const MEDICINE = 'IT446-Future';
+
+    const doctorToken = await getToken(request, 1);
+    const patient = await firstMedicationPatient(request, doctorToken);
+    const listId = await ensureMedicationList(request, doctorToken, patient.id);
+    const { dayPartId } = await ensureActualTimeItem(request, doctorToken, listId, MEDICINE);
+    await planDose(request, doctorToken, dayPartId, DOSE);
+
+    await page.goto(`/prescriptions/nurse/${listId}`);
+    const row = page.locator('tbody tr', { has: page.getByText(MEDICINE) });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.getByText(DOSE, { exact: true }).click();
+
+    // The client allows at most now + 5 min (V2); two hours ahead always
+    // fails. Date and time are filled together so the case stays valid even
+    // when the wall clock is close to midnight.
+    const future = new Date(Date.now() + 2 * 60 * 60_000);
+    await page.getByLabel('Дата введення').fill(localDate(future));
+    await page.getByLabel('Час введення').fill(localTime(future));
+
+    await expect(page.getByText('Фактичний час не може бути в майбутньому')).toBeVisible();
+    // The blocked submit proves that no request leaves the browser.
+    await expect(page.getByRole('button', { name: 'Продовжити' })).toBeDisabled();
+    await expect(row.getByText('✓', { exact: true })).toHaveCount(0);
+  });
 });
