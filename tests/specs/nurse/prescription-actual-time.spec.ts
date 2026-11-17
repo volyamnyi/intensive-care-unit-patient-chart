@@ -6,6 +6,7 @@ import {
   localDate,
   localTime,
   displayActualTime,
+  safePastDate,
 } from '../../helpers/actual-time';
 import { nurse2 } from '../../helpers/test-users';
 
@@ -31,8 +32,9 @@ test.describe('Nurse — actual time capture at execution (#446)', () => {
     await planDose(request, doctorToken, dayPartId, DOSE);
 
     // A manual time in the past: V2 (not in the future) and V3 (today is
-    // inside the list period) both hold.
-    const manual = new Date(Date.now() - 2 * 60_000);
+    // inside the list period) both hold. safePastDate keeps the value inside
+    // the period even in the first minutes after midnight (#447).
+    const manual = safePastDate(2);
 
     await page.goto(`/prescriptions/nurse/${listId}`);
     const row = page.locator('tbody tr', { has: page.getByText(MEDICINE) });
@@ -150,7 +152,7 @@ test.describe('Nurse — actual time capture at execution (#446)', () => {
 
     // A fixed wall clock of the day - the browser, the server and the test
     // process all run in the same local timezone for this step.
-    const manual = new Date(Date.now() - 2 * 60 * 60_000);
+    const manual = safePastDate(120);
 
     await page.goto(`/prescriptions/nurse/${listId}`);
     const row = page.locator('tbody tr', { has: page.getByText(MEDICINE) });

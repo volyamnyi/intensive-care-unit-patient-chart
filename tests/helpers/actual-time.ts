@@ -92,6 +92,39 @@ export function displayActualTime(d: Date): string {
 }
 
 /**
+ * A timestamp in the past that is ALWAYS inside the list period (#447).
+ *
+ * The specs record "N minutes ago", but in the first minutes after midnight
+ * that value would fall on the PREVIOUS day - before the first day of the
+ * item - and the server would reject it with the V3 error
+ * («Фактичний час поза межами періоду листка»). The helper clamps the value
+ * into the first minute of today: always in the past, always inside the
+ * period. `floorOffsetSeconds` keeps two different offsets apart when the
+ * clamp is active, so a "correction" still changes the recorded fact.
+ */
+export function safePastDate(
+  minutesAgo: number,
+  floorOffsetSeconds = 0,
+  now: Date = new Date(),
+): Date {
+  const candidate = new Date(now.getTime() - minutesAgo * 60_000);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  if (candidate.getTime() >= startOfToday.getTime()) return candidate;
+  const floor = new Date(startOfToday.getTime() + floorOffsetSeconds * 1000);
+  return floor.getTime() <= now.getTime() ? floor : startOfToday;
+}
+
+/** ISO local wire value of {@link safePastDate} ("yyyy-MM-dd'T'HH:mm:ss"). */
+export function safePastIso(
+  minutesAgo: number,
+  floorOffsetSeconds = 0,
+  now: Date = new Date(),
+): string {
+  const d = safePastDate(minutesAgo, floorOffsetSeconds, now);
+  return `${localDate(d)}T${localTime(d)}`;
+}
+
+/**
  * Add a uniquely named medicine item and return the day part of TODAY's
  * morning slot - the cell the specs interact with. The name keeps the row
  * isolated from the other medication specs that share the stub patient.
@@ -120,12 +153,16 @@ export async function ensureActualTimeItem(
   const refreshed = await request.get(`${API}/prescriptions/${listId}/items`, { headers });
   const refreshedItems = await refreshed.json();
   const item = (Array.isArray(refreshedItems) ? refreshedItems : []).find((i: any) => i?.id === itemId);
+  const parts: any[] = item?.dayParts ?? [];
   const today = localDate(new Date());
-  const part = (item?.dayParts ?? []).find(
-    (p: any) => p?.dayDate === today && p?.period === 'morning',
-  );
+  // Today's morning slot - but a run that crosses midnight right here would
+  // leave the item (created a second ago) on the previous day. The first
+  // morning slot is then the right cell (#447).
+  const part =
+    parts.find((p: any) => p?.dayDate === today && p?.period === 'morning') ??
+    parts.find((p: any) => p?.period === 'morning');
   expect(part, `no morning day part for ${today} in item ${itemId}`).toBeTruthy();
-  return { itemId, dayPartId: part.id as string, dayDate: today };
+  return { itemId, dayPartId: part.id as string, dayDate: part.dayDate as string };
 }
 
 /** Plan a dose for a day part (doctor / HOD only). */
@@ -178,6 +215,13 @@ export async function findTodayMorningPart(
   });
   const items = await res.json();
   const item = (Array.isArray(items) ? items : []).find((i: any) => i?.id === itemId);
+  const parts: any[] = item?.dayParts ?? [];
   const today = localDate(new Date());
-  return (item?.dayParts ?? []).find((p: any) => p?.dayDate === today && p?.period === 'morning');
+  // Today's morning slot; a run that crossed midnight falls back to the
+  // executed cell - the executed dose is the one the specs care about (#447).
+  return (
+    parts.find((p: any) => p?.dayDate === today && p?.period === 'morning') ??
+    parts.find((p: any) => p?.executionId) ??
+    parts.find((p: any) => p?.period === 'morning')
+  );
 }

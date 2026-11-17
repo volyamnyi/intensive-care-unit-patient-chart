@@ -10,6 +10,7 @@ import {
   localDate,
   localTime,
   displayActualTime,
+  safePastDate,
 } from '../../helpers/actual-time';
 
 /**
@@ -36,7 +37,7 @@ test.describe('Doctor — actual time correction (#446)', () => {
       const { itemId, dayPartId } = await ensureActualTimeItem(request, doctorToken, listId, MEDICINE);
       await planDose(request, doctorToken, dayPartId, DOSE);
 
-      const recorded = new Date(Date.now() - 10 * 60_000);
+      const recorded = safePastDate(10);
       const nurseToken = await getToken(request, 3);
       await executeDose(request, nurseToken, dayPartId, {
         actualDose: DOSE,
@@ -62,7 +63,7 @@ test.describe('Doctor — actual time correction (#446)', () => {
       const save = page.getByRole('button', { name: 'Зберегти' });
       await expect(save).toBeDisabled();
 
-      const corrected = new Date(Date.now() - 5 * 60_000);
+      const corrected = safePastDate(5, 30);
       await page.getByLabel('Новий час введення').fill(localTime(corrected));
       await page.getByLabel('Причина коригування').fill('Дозу введено на 5 хвилин пізніше');
       await expect(save).not.toBeDisabled();
@@ -187,7 +188,7 @@ test.describe('Doctor — actual time correction (#446)', () => {
 
     // --- someone else corrects the same execution in the meantime --------
     const part = await findTodayMorningPart(request, doctorToken, listId, itemId);
-    const concurrent = new Date(Date.now() - 6 * 60_000);
+    const concurrent = safePastDate(6, 45);
     const concurrentRes = await request.put(
       `http://localhost:8085/api/prescriptions/executions/${part.executionId}/actual-time`,
       {

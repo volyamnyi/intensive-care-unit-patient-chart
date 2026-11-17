@@ -10,6 +10,8 @@ import {
   localTime,
   loginToken,
   planDose,
+  safePastDate,
+  safePastIso,
   setRolePermission,
 } from '../../helpers/actual-time';
 import { ensureMedicationList } from '../../helpers/medication';
@@ -68,10 +70,9 @@ async function executedDose(
   const { itemId, dayPartId } = await ensureActualTimeItem(request, doctorToken, listId, medicineName);
   await planDose(request, doctorToken, dayPartId, DOSE);
 
-  const administeredAt = new Date(Date.now() - 10 * 60_000);
-  const iso = `${localDate(administeredAt)}T${localTime(administeredAt)}`;
+  const administeredAt = safePastIso(10);
   const nurseToken = await loginToken(request, 3);
-  await executeDose(request, nurseToken, dayPartId, { actualDose: DOSE, administeredAt: iso });
+  await executeDose(request, nurseToken, dayPartId, { actualDose: DOSE, administeredAt });
 
   const facts = await readFacts(request, doctorToken, listId, itemId);
   expect(facts.executionId, 'the execution id was not exposed on the day part').toBeTruthy();
@@ -128,7 +129,7 @@ test.describe('Prescription actual-time API contract (#447)', () => {
 
   test('doctor corrects the actual time (200) and the fact changes', async ({ request }) => {
     const doctorToken = await loginToken(request, 1);
-    const corrected = new Date(Date.now() - 5 * 60_000);
+    const corrected = safePastDate(5, 30);
     const iso = `${localDate(corrected)}T${localTime(corrected)}`;
 
     const res = await request.put(`${API}/prescriptions/executions/${ctx.executionId}/actual-time`, {
@@ -145,7 +146,7 @@ test.describe('Prescription actual-time API contract (#447)', () => {
   test('head of department corrects the actual time (200)', async ({ request }) => {
     const hodToken = await loginToken(request, 5);
     const facts = await readFacts(request, hodToken, ctx.listId, ctx.itemId);
-    const corrected = new Date(Date.now() - 7 * 60_000);
+    const corrected = safePastDate(7, 40);
     const iso = `${localDate(corrected)}T${localTime(corrected)}`;
 
     const res = await request.put(`${API}/prescriptions/executions/${ctx.executionId}/actual-time`, {
