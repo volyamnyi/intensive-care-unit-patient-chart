@@ -36,6 +36,7 @@
 - **Prescription Dashboard** — Department toggle (Хірургія/Реабілітація), sortable patient table, search filter; patient roster served by the MIS (filterable by `?module=medication` departments 19/37)
 - **Prescription Grid** — Inline 21-day spreadsheet with 7-day scroll window, color-coded cells (blue=planned, green=completed, purple=cancelled), click-to-edit dose editing
 - **Drug-Interaction Alert** — Persistent contextual alert above the grid for planned-overlap interactions (#304/#350–#355): max-severity summary (critical/high/medium, low config-only) with an expandable per-pair list (drug names + description + overlap dates), one-time slide-in animation (gated by `prefers-reduced-motion`), per-severity row marks (accent border + tint, icon + label badge, severity-colored overlap-cell borders), hover/focus/click «Показати в таблиці» pair focus ring, assertive screen-reader announcements on detect/escalation only; never blocks planning
+- **Actual Administration / Dispensing Time** — At execution the nurse records the real time of administration (and optionally of dispensing) to the second; the planned day/period/dose stay untouched (#443). The fact is shown in the cell tooltip with a «(уточнено вручну)» marker; a doctor/HOD can correct it later with a mandatory reason and an optimistic lock (409 on a stale version, append-only audit) — `PRESCRIPTION_ACTUAL_TIME_EDIT` (#444/#446)
 - **Clinical Scale Assessments** — Record and view APACHE II, SOFA, RASS, CAM-ICU, Braden scores
 - **Medical Notes** — Add typed clinical notes per day
 - **Digital Sign-Off** — Two-stage signing workflow (nurse → doctor/HOD), triggers PDF generation
@@ -50,6 +51,7 @@
 - **Fluid Balance** — View intake, output, daily and cumulative balance
 - **Nurse Sign-Off** — First stage of the two-stage signing workflow
 - **Prescription Execution** — Execute medication doses inline with 2-factor authorization popover
+- **Actual Time Capture** — While executing a dose, fix the real time of administration (and optionally of dispensing) to the second; the value is stored as a naive local timestamp and shown in the cell tooltip (#443)
 
 ### For Prosthetists / Prosthetics Administrators
 - **Prosthetics Dashboard** — View own flow instances with status filters (Active, Paused, Completed, Failed)
@@ -523,8 +525,8 @@ icu-patient-chart/
 │       ├── services/           # AuthContext
 │       ├── layouts/            # Doctor, Nurse, Global layouts
 │       ├── lib/ utils/         # shared helpers (clinicalRanges, errorMessage)
-  │   └── test/               # Vitest tests (108 files)
-├── tests/                      # Playwright E2E (100 spec files, 10 projects)
+  │   └── test/               # Vitest tests (112 files)
+├── tests/                      # Playwright E2E (104 spec files, 10 projects)
 │   ├── playwright.config.ts
 │   ├── pages/                  # Page objects (7)
 │   ├── fixtures/               # Role-based test fixtures
@@ -556,12 +558,12 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (990 across 108 files) |
+| `npm t` | Run Vitest tests (1053 across 112 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
 |---|---|
-| `npx playwright test` | Run all E2E tests (102 files: 101 specs + auth setup, 494 tests) |
+| `npx playwright test` | Run all E2E tests (105 files: 104 specs + auth setup, 516 tests) |
 | `npx playwright test --project=doctor-chromium --project=hod-chromium --workers=1` | Run only doctor + HOD tests |
 | `npx playwright test --ui` | Run with Playwright UI mode |
 | `npx playwright test --list` | List tests |
@@ -577,16 +579,16 @@ icu-patient-chart/
 | `backend-test` | `mvn clean test` (unit, PostgreSQL service) | Same |
 | `backend-integration` | `mvn test -Pintegration-test` | Same |
 | `frontend-test` | Vitest + production build | Same |
-| `e2e-test` | Playwright (99 spec files; `needs: backend-test, frontend-test`) | Same |
+| `e2e-test` | Playwright (104 spec files; `needs: backend-test, frontend-test`) | Same |
 | `build` | JAR + frontend dist artifacts | Main push only; needs all 5 jobs |
 
 CI jobs run in parallel when triggered; if any fails, fix and repeat until every check passes.
 
 ### Testing Summary
-- **Backend tests**: 237 test files across the multi-module reactor — common (57) + icu-chart (94) + medication-sheet (26) + prosthesis-manufacturing (58) + app (2, ArchUnit `ModuleBoundaryTest` + `MultidbPackageStringsTest`) — `mvn test`
-- **Backend integration tests**: 351 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 990 tests (108 files) — includes responsive + prosthetics suites
-- **E2E Playwright tests**: 102 files (494 tests: 101 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
+- **Backend tests**: 251 test files across the multi-module reactor — common (66) + icu-chart (96) + medication-sheet (29) + prosthesis-manufacturing (58) + app (2, ArchUnit `ModuleBoundaryTest` + `MultidbPackageStringsTest`) — `mvn test`
+- **Backend integration tests**: 398 tests — `mvn test -Pintegration-test`
+- **Frontend Vitest tests**: 1053 tests (112 files) — includes responsive + prosthetics suites
+- **E2E Playwright tests**: 105 files (516 tests: 104 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 
 ### Resolved Issues (from exploratory testing — #71-#74)
@@ -612,7 +614,7 @@ chore: maintenance tasks
 
 ### Role Permissions
 
-Access is enforced by a **dynamic role-permission matrix** (28 permission codes across 8 categories in `PermissionCatalog`). The table below lists each permission (code and label) and the roles **granted it by default** via `PermissionCatalog.defaultMatrix()`. Administrators can change these grants at runtime through the admin UI («Доступи та ролі»), and the changes take effect immediately.
+Access is enforced by a **dynamic role-permission matrix** (29 permission codes across 8 categories in `PermissionCatalog`). The table below lists each permission (code and label) and the roles **granted it by default** via `PermissionCatalog.defaultMatrix()`. Administrators can change these grants at runtime through the admin UI («Доступи та ролі»), and the changes take effect immediately.
 
 | Permission (code → label) | DOCTOR | NURSE | HOD | ADMIN | AUDITOR | ADJ. SPECIALIST | PROSTHETIST | PROSTH. ADMIN |
 |---|---|---|---|---|---|---|---|---|
@@ -624,6 +626,7 @@ Access is enforced by a **dynamic role-permission matrix** (28 permission codes 
 | `PRESCRIPTION_CREATE` — Планування призначень | ✓ | — | ✓ | — | — | — | — | — |
 | `PRESCRIPTION_LIST_CREATE` — Створення листка призначень | ✓ | — | ✓ | — | — | — | — | — |
 | `PRESCRIPTION_EXECUTE` — Виконання призначень | — | ✓ | — | — | — | — | — | — |
+| `PRESCRIPTION_ACTUAL_TIME_EDIT` — Коригування фактичного часу виконання призначення | ✓ | — | ✓ | — | — | — | — | — |
 | `VITALS_ENTER` — Введення показників | — | ✓ | — | — | — | — | — | — |
 | `PATIENT_VIEW` — Перегляд даних пацієнта | ✓ | ✓ | ✓ | ✓ | — | ✓ | — | — |
 | `SCALE_APACHE_SOFA` — Шкали APACHE II / SOFA | ✓ | — | ✓ | — | — | — | — | — |

@@ -235,12 +235,15 @@ Frontend-gate (`useAuth().hasPermission(...)`) — тільки зручніст
 
 ### Playwright E2E
 
-- Контрольований час: `page.clock.install({ time: fixed })` (патерн overlay-тесту #355); фіксовані тестові дати; timezone-кейс — `context.timezoneId`.
-- Фазові спеки (#446): nurse — виконання з ручним часом → tooltip → reload-persistence → плановий заголовок незмінний; doctor — коригування з причиною → індикатор manual; без права — діалог недоступний.
-- Наскрізні сценарії ТЗ §7.3 — 15 пунктів (#447): відкриття листка → вибір призначення → редактор → дата → час → секунди → збереження → відображення → reload → повторне редагування → планове незмінне → невалідні → API-помилки → різні права → зміна timezone браузера.
-- Граничні: DST-дата; 23:59:59 → 00:00:30 наступного дня (вікно +1); секунди `:00` round-trip.
-- Статуси: cancelled → 422; finished → DOCUMENT_LOCKED; planned (не completed) → 422.
-- RBAC-матриця через API-спеку (`prescription-actual-time-access.spec.ts`).
+Спеки фази #447 (22 тести, три файли): `specs/api/prescription-actual-time-access.spec.ts` (13 — API-контракт), `specs/nurse/prescription-actual-time.spec.ts` (5 — фіксація), `specs/doctor/prescription-actual-time-correction.spec.ts` (4 — коригування). Кожен тест має **унікальну назву препарату** (`IT446-*` / `IT447-*`): тести одного файлу йдуть паралельно, а спільний рядок видаляв би setup сусіднього тесту.
+
+- **Контрольований час:** реальний час (без `page.clock`) — «зараз» прив'язаний до V2 (±5 хв). Детерминизм забезпечує хелпер `safePastDate`: значення «N хвилин тому» затискається в першу хвилину доби, коли воно впало б на попередню добу (за межами V3-вікна). Без цього спека була зелена о 23:30 і червона о 00:05.
+- **Timezone-кейс:** Playwright 1.61 не має `context.setTimezoneId()` → другий `browser.newContext({ storageState: '.auth/nurse.json', timezoneId: 'America/New_York' })`; той самий листок читається в іншому часовому поясі → naive-значення не «їде».
+- **DST:** `lib/actualTime.ts` не маршрутизує значення через `Date` (лише компоненти стінного годинника) → 03:30 у день весняного переходу лишається 03:30; unit-тести (25 кейсів) фіксують контракт, E2E — на живій локалі.
+- **RBAC-матриця** (API-спека): NURSE 403 / DOCTOR 200 / HOD 200 / ADMINISTRATOR 403 + grant→revoke цикл на NURSE (роль, яку не чіпає жоден інший спек — сусідні спеки живуть у різних Playwright-проєктах і працюють паралельно, тому grant для DOCTOR/HOD лишається, а revoke виконується лише на NURSE).
+- **Помилки API:** future → 422 «Фактичний час не може бути в майбутньому» (факт не змінюється); malformed → 400 `VALIDATION_ERROR`; порожня причина → 400; stale `version` → 409 `VERSION_CONFLICT` (факт виживає); невідомий execution → 404; невиконана доза → 404 (`executionId` відсутній — виправляти нічого); закритий листок → 422 `DOCUMENT_LOCKED`.
+- **UI:** час поза вікном листка → inline-помилка, запит не надсилається; паралельне коригування → банер конфлікту, діалог лишається відкритим, перезапису немає; виконання без ручного часу → факт видимий, маркера manual немає (legacy-рядки).
+- **Статуси:** cancelled/не-completed → 422 «Доза не виконана» (наскрізь недосяжно: execution створюється лише разом з `isCompleted=true`, тож невиконана доза не має `executionId` → 404).
 
 ## 11. Межі рішення (out of scope)
 
@@ -259,3 +262,32 @@ Frontend-gate (`useAuth().hasPermission(...)`) — тільки зручніст
 | 4 | #445 | §9 (компонент, нуль deps), §5 (клієнтський дзеркальний валідатор) |
 | 5 | #446 | §9 (popover/tooltip/діалог), §4 (wire), §10 (E2E фазові) |
 | 6 | #447 | §10 (наскрізні + граничні + RBAC-матриця), §7.2 (документація admin-UI кроку) |
+
+### Фактичний результат фази 6 (#447)
+
+Фаза 6 завершена локально (push і CI — лише за явним запитом owner'а).
+
+**Коміти фази 6:** `edeadcbd` (DST-фікс `lib/actualTime.ts` + 25 unit-кейсів), `6a663c67` (API-спека на 13 тестів + розширення doctor/nurse-спек), `a74eeee3` (entity-фікс `@PrePersist`), `0df84fd4` (midnight-safe E2E-хелпери). Фази 1–5: `6cd15aa8`, `3d12a0d6`, `42148289`, `359048fe`, `89cd766a`, `84422ba6` (#446 CLOSED).
+
+**Знайдені й виправлені дефекти:**
+
+1. **DST-дефект клієнтського валідатора** — `formatActualTime`/`validateActualTime` маршрутизували naive-значення через `Date` → 03:30 у день весняного переходу перетворювалось на 04:30. Виправлено: значення не заходить у `Date`/dayjs узагалі (лише арифметика компонентів стінного годинника через `Date.UTC` як оболонку).
+2. **Entity-дефект (з фази 2)** — колонка `administered_at_manual` NOT NULL, а поле nullable і Lombok `@Builder` не застосовує дефолти → будь-яке пряме створення execution (repository-тест) падало з `null value in column "administered_at_manual"`. Виправлено: `@PrePersist applyActualTimeDefaults()` → `false`, коли null.
+3. **Midnight-flake в E2E** — «N хвилин тому» в перші хвилини після опівночі потрапляло на попередню добу (за межами V3-вікна) → спека зелена о 23:30, червона о 00:05. Виправлено: `safePastDate`/`safePastIso` затискають значення в першу хвилину доби; `floorOffsetSeconds` тримає два різні зсуви різними, коли затиск активний; lookup day-part'ів має fallback на перший ранковий слот / виконану комірку.
+
+**Діагноз падіння prosthetics-інтеграції:** це **не дефект коду**, а забруднення локальної dev-БД — тести дублюють seed-дані (`c0000003` зі стадіями `d0000012…d0000021`, шаблон `TP-UL-01`). На scratch-БД (`it_core`/`it_icu`/`it_med`/`it_prosth`) увесь integration-профіль зелений. Локальний integration-прогін **має** йти на scratch-БД (CI створює чисті БД).
+
+**Докази (локально):**
+
+| Перевірка | Результат |
+|---|---|
+| Vitest | 112 файлів / 1053 тестів — green |
+| Oxlint | 0 errors (16 warnings baseline) |
+| `tsc --noEmit` + `npm run build` | green |
+| Backend unit (`mvn test -pl medication-sheet -am`) | medication-sheet 233 + common — green; checkstyle 0 violations |
+| Integration (scratch-БД) | **398 тестів, 0 failures/errors** (common 10 + med 26 + prosth 70 + icu 292, 15 pre-existing skips) |
+| E2E живо | **37/37 green** (13 API + 4 doctor + 5 nurse + 15 setup) — двічі; другий прогін на перепакованому jar **о 00:35**, тобто всередині midnight-вікна, який раніше ламав спеку |
+
+**Документація:** README (лічильники, рядок permission `PRESCRIPTION_ACTUAL_TIME_EDIT`, 29 кодів, features-рядки для лікаря/медсестри), UseManual (розділ «Фіксація фактичного часу видачі/введення» + таблиця ролей), цей документ (§10 — фактична матриця, §12 — цей підсумок).
+
+**Статусні guard'и:** «Доза не виконана» (422) наскрізь недосяжно — execution створюється лише разом з `isCompleted=true`, тож невиконана доза не має `executionId` → 404 `NOT_FOUND`.
