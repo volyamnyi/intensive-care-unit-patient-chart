@@ -25,9 +25,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -196,11 +199,39 @@ class PrescriptionControllerTest {
                 .list(testList).medicineName("Aspirin").status("Active").build();
         item.setId(itemId);
         when(itemService.getByList(listId)).thenReturn(List.of(item));
+        when(executionService.latestByDayPartIds(any())).thenReturn(Map.of());
 
         mockMvc.perform(get("/api/prescriptions/{listId}/items", listId)
                         .header("Authorization", "Bearer test-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].medicineName").value("Aspirin"));
+    }
+
+    @Test
+    void getItems_returnsExecutionActualTimeFields() throws Exception {
+        // #443 wire contract: the latest execution's actual-time facts ride on
+        // the day part; parts without an execution keep nulls and manual=false.
+        PrescriptionItem item = itemWithDayAndParts("Aspirin");
+        PrescriptionDayPart morning = item.getDays().get(0).getDayParts().get(0);
+        PrescriptionExecution exec = PrescriptionExecution.builder()
+                .administeredAt(LocalDateTime.parse("2026-01-15T10:30:07"))
+                .dispensedAt(LocalDateTime.parse("2026-01-15T10:29:00"))
+                .administeredAtManual(true)
+                .build();
+        exec.setId(UUID.randomUUID());
+        when(itemService.getByList(listId)).thenReturn(List.of(item));
+        when(executionService.latestByDayPartIds(any())).thenReturn(Map.of(morning.getId(), exec));
+
+        mockMvc.perform(get("/api/prescriptions/{listId}/items", listId)
+                        .header("Authorization", "Bearer test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].dayParts[0].executionId").value(exec.getId().toString()))
+                .andExpect(jsonPath("$[0].dayParts[0].administeredAt").value("2026-01-15T10:30:07"))
+                .andExpect(jsonPath("$[0].dayParts[0].dispensedAt").value("2026-01-15T10:29:00"))
+                .andExpect(jsonPath("$[0].dayParts[0].administeredAtManual").value(true))
+                .andExpect(jsonPath("$[0].dayParts[1].executionId").value(nullValue()))
+                .andExpect(jsonPath("$[0].dayParts[1].administeredAt").value(nullValue()))
+                .andExpect(jsonPath("$[0].dayParts[1].administeredAtManual").value(false));
     }
 
     @Test
@@ -397,7 +428,7 @@ class PrescriptionControllerTest {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).isCompleted(true).build();
         part.setId(dayPartId);
-        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any()))
+        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(PrescriptionExecution.builder().dayPart(part).build());
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
@@ -409,7 +440,31 @@ class PrescriptionControllerTest {
                 .andExpect(status().isOk());
 
         verify(executionService).execute(eq(dayPartId), eq(2L), eq("user"),
-                eq("50mg"), eq("nurse2"), eq("secret"));
+                eq("50mg"), eq("nurse2"), eq("secret"), isNull(), isNull());
+    }
+
+    @Test
+    void completeDose_forwardsActualTimeFields() throws Exception {
+        // #443: the optional actual-time fields pass through to the service verbatim.
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .period("morning").dose("50mg").isPlanned(true).isCompleted(true).build();
+        part.setId(dayPartId);
+        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(PrescriptionExecution.builder().dayPart(part).build());
+
+        mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
+                        .with(TestSecurityHelper.nurse())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"actualDose":"50mg","secondPersonLogin":"nurse2",
+                                 "secondPersonPassword":"secret",
+                                 "administeredAt":"2026-01-15T10:30:07",
+                                 "dispensedAt":"2026-01-15T10:29:00"}"""))
+                .andExpect(status().isOk());
+
+        verify(executionService).execute(eq(dayPartId), eq(2L), eq("user"),
+                eq("50mg"), eq("nurse2"), eq("secret"),
+                eq("2026-01-15T10:30:07"), eq("2026-01-15T10:29:00"));
     }
 
     @Test
@@ -420,7 +475,7 @@ class PrescriptionControllerTest {
                         .with(TestSecurityHelper.nurse()))
                 .andExpect(status().isBadRequest());
 
-        verify(executionService, never()).execute(any(), any(), any(), any(), any(), any());
+        verify(executionService, never()).execute(any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -433,7 +488,7 @@ class PrescriptionControllerTest {
                                  "secondPersonPassword":" "}"""))
                 .andExpect(status().isBadRequest());
 
-        verify(executionService, never()).execute(any(), any(), any(), any(), any(), any());
+        verify(executionService, never()).execute(any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -460,7 +515,8 @@ class PrescriptionControllerTest {
                 .andExpect(status().isOk());
 
         verify(executionService).execute(eq(dayPartId), eq(TEST_NURSE_ID), eq("user"),
-                eq(TEST_ACTUAL_DOSE), eq(TEST_NURSE_LOGIN), eq(TEST_SECOND_PERSON_PASSWORD));
+                eq(TEST_ACTUAL_DOSE), eq(TEST_NURSE_LOGIN), eq(TEST_SECOND_PERSON_PASSWORD),
+                isNull(), isNull());
     }
 
     @Test
@@ -561,7 +617,7 @@ class PrescriptionControllerTest {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).isCompleted(true).build();
         part.setId(dayPartId);
-        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any()))
+        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(PrescriptionExecution.builder().dayPart(part).build());
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
@@ -578,7 +634,7 @@ class PrescriptionControllerTest {
         PrescriptionDayPart part = PrescriptionDayPart.builder()
                 .period("morning").dose("50mg").isPlanned(true).isCompleted(true).build();
         part.setId(dayPartId);
-        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any()))
+        when(executionService.execute(eq(dayPartId), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(PrescriptionExecution.builder().dayPart(part).build());
 
         mockMvc.perform(put("/api/prescriptions/day-parts/{dayPartId}/complete", dayPartId)
@@ -754,7 +810,7 @@ class PrescriptionControllerTest {
                 .andExpect(status().isOk());
 
         verify(executionService).execute(eq(dayPartId), eq(4L), eq("user"),
-                eq("45mg"), eq("nurse2"), eq("nurse123"));
+                eq("45mg"), eq("nurse2"), eq("nurse123"), isNull(), isNull());
     }
 
     @Test

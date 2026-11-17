@@ -37,6 +37,26 @@ public class PrescriptionExecution extends BaseEntity {
     @Column(name = "second_person_id")
     UUID secondPersonId;
 
+    /**
+     * Actual administration time - the medical fact as recorded/adjusted
+     * (#443). Server-defaulted to the operation time; manual entry is flagged
+     * by {@link #administeredAtManual}. Naive local (design §6).
+     */
+    @Column(name = "administered_at")
+    LocalDateTime administeredAt;
+
+    /** Actual dispensing time - optional, distinct from administration (#443). */
+    @Column(name = "dispensed_at")
+    LocalDateTime dispensedAt;
+
+    /**
+     * True when {@link #administeredAt} was entered/adjusted manually.
+     * NOT NULL in the schema - {@code @Builder} does not apply field defaults,
+     * so every construction site must set it explicitly.
+     */
+    @Column(name = "administered_at_manual", nullable = false)
+    Boolean administeredAtManual;
+
     @Column(columnDefinition = "TEXT")
     String comment;
 }

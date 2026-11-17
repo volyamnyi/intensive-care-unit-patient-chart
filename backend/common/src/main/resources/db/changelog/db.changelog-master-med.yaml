@@ -29,3 +29,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: med/029-drop-redundant-vital-indexes.sql
+  - include:
+      relativeToChangelogFile: true
+      file: med/030-execution-actual-time.sql

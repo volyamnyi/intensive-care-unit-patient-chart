@@ -1,5 +1,6 @@
 package com.superhumans.medicationsheet.service;
 
+import com.superhumans.audit.AuditEvent;
 import com.superhumans.entity.core.User;
 import com.superhumans.entity.core.UserRole;
 import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
@@ -23,11 +24,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -45,6 +51,7 @@ class PrescriptionExecutionServiceTest {
 
     @Captor private ArgumentCaptor<PrescriptionExecution> execCaptor;
     @Captor private ArgumentCaptor<PrescriptionDayPart> partCaptor;
+    @Captor private ArgumentCaptor<Supplier<AuditEvent>> emitCaptor;
 
     private UUID dayPartId;
     private PrescriptionDayPart testPart;
@@ -96,7 +103,7 @@ class PrescriptionExecutionServiceTest {
 
         PrescriptionExecution result = service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD);
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, null, null);
 
         verify(executionRepository).save(execCaptor.capture());
         PrescriptionExecution exec = execCaptor.getValue();
@@ -122,7 +129,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 UUID.randomUUID(), CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, null, null))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessageContaining("Day part not found");
     }
@@ -134,7 +141,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, null, null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("виконано");
 
@@ -153,7 +160,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, null, null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Незаплановане призначення");
 
@@ -171,7 +178,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD))
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, null, null))
                 .isInstanceOf(DocumentLockedException.class)
                 .hasMessageContaining("Листок завершено");
 
@@ -186,7 +193,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, UNKNOWN_USER_LOGIN, WRONG_PASSWORD))
+                TEST_DOSE_NOT_FOUND, UNKNOWN_USER_LOGIN, WRONG_PASSWORD, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Помилка автентифікації другої особи");
     }
@@ -199,7 +206,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, WRONG_PASSWORD))
+                TEST_DOSE_NOT_FOUND, SECOND_USER_LOGIN, WRONG_PASSWORD, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Невірний пароль");
     }
@@ -216,7 +223,7 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, DOCTOR_LOGIN, DOCTOR_PASSWORD))
+                TEST_DOSE_NOT_FOUND, DOCTOR_LOGIN, DOCTOR_PASSWORD, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("роль медсестри");
     }
@@ -233,8 +240,180 @@ class PrescriptionExecutionServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
-                TEST_DOSE_NOT_FOUND, CURRENT_USER_LOGIN, "pwd"))
+                TEST_DOSE_NOT_FOUND, CURRENT_USER_LOGIN, "pwd", null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("не може бути тією ж");
+    }
+
+    // --- actual time (#443) ---
+
+    @Test
+    void execute_manualAdministeredTimeStoredWithSeconds() {
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+        when(userRepository.findByLogin(SECOND_USER_LOGIN)).thenReturn(Optional.of(secondUser));
+        when(passwordEncoder.matches(SECOND_USER_PASSWORD, secondUser.getPasswordHash())).thenReturn(true);
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.save(any(PrescriptionDayPart.class))).thenReturn(testPart);
+
+        service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN, TEST_DOSE,
+                SECOND_USER_LOGIN, SECOND_USER_PASSWORD, "2026-01-15T10:30:07", "2026-01-15T10:29:30");
+
+        verify(executionRepository).save(execCaptor.capture());
+        assertThat(execCaptor.getValue().getAdministeredAt())
+                .isEqualTo(LocalDateTime.parse("2026-01-15T10:30:07"));
+        assertThat(execCaptor.getValue().getDispensedAt())
+                .isEqualTo(LocalDateTime.parse("2026-01-15T10:29:30"));
+        assertThat(execCaptor.getValue().getAdministeredAtManual()).isTrue();
+    }
+
+    @Test
+    void execute_minutesOnlyTimeNormalizesToZeroSeconds() {
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+        when(userRepository.findByLogin(SECOND_USER_LOGIN)).thenReturn(Optional.of(secondUser));
+        when(passwordEncoder.matches(SECOND_USER_PASSWORD, secondUser.getPasswordHash())).thenReturn(true);
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.save(any(PrescriptionDayPart.class))).thenReturn(testPart);
+
+        service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN, TEST_DOSE,
+                SECOND_USER_LOGIN, SECOND_USER_PASSWORD, "2026-01-15T10:30", null);
+
+        verify(executionRepository).save(execCaptor.capture());
+        assertThat(execCaptor.getValue().getAdministeredAt())
+                .isEqualTo(LocalDateTime.parse("2026-01-15T10:30:00"));
+        assertThat(execCaptor.getValue().getAdministeredAtManual()).isTrue();
+    }
+
+    @Test
+    void execute_withoutActualTime_defaultsToOperationTimeAndNotManual() {
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+        when(userRepository.findByLogin(SECOND_USER_LOGIN)).thenReturn(Optional.of(secondUser));
+        when(passwordEncoder.matches(SECOND_USER_PASSWORD, secondUser.getPasswordHash())).thenReturn(true);
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.save(any(PrescriptionDayPart.class))).thenReturn(testPart);
+
+        service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN, TEST_DOSE,
+                SECOND_USER_LOGIN, SECOND_USER_PASSWORD, null, null);
+
+        verify(executionRepository).save(execCaptor.capture());
+        PrescriptionExecution exec = execCaptor.getValue();
+        assertThat(exec.getAdministeredAtManual()).isFalse();
+        assertThat(exec.getDispensedAt()).isNull();
+        // no manual entry: the fact equals the operation time (med/030 backfill semantics)
+        assertThat(exec.getAdministeredAt()).isEqualTo(exec.getExecutedAt());
+        assertThat(exec.getAdministeredAt()).isCloseTo(LocalDateTime.now(), within(Duration.ofSeconds(5)));
+    }
+
+    @Test
+    void execute_futureTimeRejectedBeforeSecondPersonAuth() {
+        // V2 must fire before the 2P check: an invalid time never triggers a
+        // second-person authentication attempt (design §4.2).
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+
+        assertThatThrownBy(() -> service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, "2030-01-15T10:30:07", null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_FUTURE);
+
+        verifyNoInteractions(userRepository);
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void execute_dispensedAfterAdministeredRejected() {
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+
+        assertThatThrownBy(() -> service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD,
+                "2026-01-15T10:30:00", "2026-01-15T10:30:01"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_DISPENSED_AFTER_ADMINISTERED);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void execute_timeOutsideListPeriodRejected() {
+        // The list holds a single day 2026-01-15: a value dated a week earlier
+        // is outside the [minDayDate; cellDayDate + 1] window (V3).
+        PrescriptionItem item = PrescriptionItem.builder().medicineName("Test").build();
+        PrescriptionItemDay day = PrescriptionItemDay.builder()
+                .item(item).dayDate(LocalDate.parse("2026-01-15")).build();
+        item.getDays().add(day);
+        testPart.setDay(day);
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+
+        assertThatThrownBy(() -> service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                TEST_DOSE, SECOND_USER_LOGIN, SECOND_USER_PASSWORD, "2026-01-08T10:00:00", null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_OUTSIDE_LIST);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void execute_nightDoseNextMorningWithinListPeriod() {
+        // Night dose of day D administered in the morning of D+1 - valid
+        // (upper V3 bound = cellDayDate + 1).
+        PrescriptionItem item = PrescriptionItem.builder().medicineName("Test").build();
+        PrescriptionItemDay day = PrescriptionItemDay.builder()
+                .item(item).dayDate(LocalDate.parse("2026-01-15")).build();
+        item.getDays().add(day);
+        testPart.setDay(day);
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+        when(userRepository.findByLogin(SECOND_USER_LOGIN)).thenReturn(Optional.of(secondUser));
+        when(passwordEncoder.matches(SECOND_USER_PASSWORD, secondUser.getPasswordHash())).thenReturn(true);
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.save(any(PrescriptionDayPart.class))).thenReturn(testPart);
+
+        service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN, TEST_DOSE,
+                SECOND_USER_LOGIN, SECOND_USER_PASSWORD, "2026-01-16T08:00:00", null);
+
+        verify(executionRepository).save(execCaptor.capture());
+        assertThat(execCaptor.getValue().getAdministeredAt())
+                .isEqualTo(LocalDateTime.parse("2026-01-16T08:00:00"));
+        assertThat(execCaptor.getValue().getAdministeredAtManual()).isTrue();
+    }
+
+    @Test
+    void execute_manualTimesAddFieldFactsToAudit() {
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+        when(userRepository.findByLogin(SECOND_USER_LOGIN)).thenReturn(Optional.of(secondUser));
+        when(passwordEncoder.matches(SECOND_USER_PASSWORD, secondUser.getPasswordHash())).thenReturn(true);
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.save(any(PrescriptionDayPart.class))).thenReturn(testPart);
+
+        service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN, TEST_DOSE,
+                SECOND_USER_LOGIN, SECOND_USER_PASSWORD, "2026-01-15T10:30:07", "2026-01-15T10:29:30");
+
+        verify(auditEmitter).emit(eq("medication"), emitCaptor.capture());
+        AuditEvent event = emitCaptor.getValue().get();
+        // the event canonicalizes changes sorted by field name (AuditEvent ctor)
+        assertThat(event.changes()).extracting(AuditEvent.AuditChange::field)
+                .containsExactly("actualDose", "administeredAt", "dispensedAt", "status");
+        // field-only facts (D4/§B5): the actual-time fields carry NO values
+        assertThat(event.changes())
+                .filteredOn(change -> "administeredAt".equals(change.field())
+                        || "dispensedAt".equals(change.field()))
+                .allSatisfy(change -> {
+                    assertThat(change.oldValue()).isNull();
+                    assertThat(change.newValue()).isNull();
+                });
+    }
+
+    @Test
+    void execute_withoutManualTimes_noActualTimeFieldFacts() {
+        when(partRepository.findById(dayPartId)).thenReturn(Optional.of(testPart));
+        when(userRepository.findByLogin(SECOND_USER_LOGIN)).thenReturn(Optional.of(secondUser));
+        when(passwordEncoder.matches(SECOND_USER_PASSWORD, secondUser.getPasswordHash())).thenReturn(true);
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partRepository.save(any(PrescriptionDayPart.class))).thenReturn(testPart);
+
+        service.execute(dayPartId, CURRENT_USER_ID, CURRENT_USER_LOGIN, TEST_DOSE,
+                SECOND_USER_LOGIN, SECOND_USER_PASSWORD, null, null);
+
+        verify(auditEmitter).emit(eq("medication"), emitCaptor.capture());
+        AuditEvent event = emitCaptor.getValue().get();
+        assertThat(event.changes()).extracting(AuditEvent.AuditChange::field)
+                .containsExactly("actualDose", "status");
     }
 }

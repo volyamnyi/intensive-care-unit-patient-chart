@@ -63,7 +63,7 @@ Endpoint count (code): **151**
 |---|---|---|
 | `common` | 177 | 24 |
 | `icu-chart` | 84 | 54 |
-| `medication-sheet` | 68 | 30 |
+| `medication-sheet` | 69 | 30 |
 | `prosthesis-manufacturing` | 101 | 43 |
 
 ## Endpoint matrix

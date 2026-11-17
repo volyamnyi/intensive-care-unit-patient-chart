@@ -11,7 +11,10 @@ import com.superhumans.audit.AuditEvent;
 import com.superhumans.audit.DomainAuditEmitter;
 import com.superhumans.medicationsheet.pdf.PrescriptionPdfService;
 import com.superhumans.mis.MisService;
+import com.superhumans.medicationsheet.entity.PrescriptionDayPart;
 import com.superhumans.medicationsheet.entity.PrescriptionExecution;
+import com.superhumans.medicationsheet.entity.PrescriptionItem;
+import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
 import com.superhumans.medicationsheet.service.PrescriptionExecutionService;
 import com.superhumans.medicationsheet.service.PrescriptionItemService;
 import com.superhumans.medicationsheet.service.PrescriptionListService;
@@ -30,7 +33,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -123,7 +128,32 @@ public class PrescriptionController {
             @ApiResponse(responseCode = "404", description = "Prescription list not found")
     })
     public List<PrescriptionItemResponse> getItems(@PathVariable UUID listId) {
-        return itemService.getByList(listId).stream().map(prescriptionItemMapper::toResponse).toList();
+        List<PrescriptionItem> items = itemService.getByList(listId);
+        // Attach the latest execution per day part in ONE batched query (no N+1).
+        List<UUID> partIds = new ArrayList<>();
+        for (PrescriptionItem item : items) {
+            if (item.getDays() == null) {
+                continue;
+            }
+            for (PrescriptionItemDay day : item.getDays()) {
+                if (day.getDayParts() == null) {
+                    continue;
+                }
+                for (PrescriptionDayPart part : day.getDayParts()) {
+                    if (part.getId() != null) {
+                        partIds.add(part.getId());
+                    }
+                }
+            }
+        }
+        Map<UUID, PrescriptionExecution> executionsByPartId = executionService.latestByDayPartIds(partIds);
+        return items.stream()
+                .map(item -> {
+                    PrescriptionItemResponse response = prescriptionItemMapper.toResponse(item);
+                    prescriptionItemMapper.mapDayParts(item, response, executionsByPartId);
+                    return response;
+                })
+                .toList();
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
@@ -224,8 +254,9 @@ public class PrescriptionController {
         Long currentUserId = (Long) auth.getCredentials();
         String currentUserLogin = (String) auth.getPrincipal();
         PrescriptionExecution executed = executionService.execute(dayPartId, currentUserId, currentUserLogin,
-                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword());
-        return prescriptionDayPartMapper.toResponse(executed.getDayPart());
+                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword(),
+                req.getAdministeredAt(), req.getDispensedAt());
+        return prescriptionDayPartMapper.toResponse(executed.getDayPart(), executed);
     }
 
     @PreAuthorize("@permissionService.has('PRESCRIPTION_CREATE')")
@@ -287,7 +318,8 @@ public class PrescriptionController {
         Long currentUserId = (Long) auth.getCredentials();
         String currentUserLogin = (String) auth.getPrincipal();
         executionService.execute(dayPartId, currentUserId, currentUserLogin,
-                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword());
+                req.getActualDose(), req.getSecondPersonLogin(), req.getSecondPersonPassword(),
+                req.getAdministeredAt(), req.getDispensedAt());
     }
 
     @GetMapping("/medicine-catalog")
