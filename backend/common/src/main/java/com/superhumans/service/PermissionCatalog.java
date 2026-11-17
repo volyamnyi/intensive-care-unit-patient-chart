@@ -31,6 +31,7 @@ public final class PermissionCatalog {
     public static final String PRESCRIPTION_CREATE = PermissionCodes.PRESCRIPTION_CREATE;
     public static final String PRESCRIPTION_LIST_CREATE = PermissionCodes.PRESCRIPTION_LIST_CREATE;
     public static final String PRESCRIPTION_EXECUTE = PermissionCodes.PRESCRIPTION_EXECUTE;
+    public static final String PRESCRIPTION_ACTUAL_TIME_EDIT = PermissionCodes.PRESCRIPTION_ACTUAL_TIME_EDIT;
     public static final String VITALS_ENTER = PermissionCodes.VITALS_ENTER;
     public static final String PATIENT_VIEW = PermissionCodes.PATIENT_VIEW;
     public static final String SCALE_APACHE_SOFA = PermissionCodes.SCALE_APACHE_SOFA;
@@ -89,6 +90,8 @@ public final class PermissionCatalog {
                     "Створення нового листка лікарських призначень (екземпляра) для пацієнта", CLINICAL),
             new Def(PRESCRIPTION_EXECUTE, "Виконання призначень",
                     "Виконання та завершення призначень медсестрою", CLINICAL),
+            new Def(PRESCRIPTION_ACTUAL_TIME_EDIT, "Коригування фактичного часу виконання призначення",
+                    "Коригування фактичного часу виконання призначення у листку лікарських призначень", CLINICAL),
             new Def(VITALS_ENTER, "Введення показників",
                     "Введення та редагування показників пацієнта (vital signs)", CLINICAL),
             new Def(PATIENT_VIEW, "Перегляд даних пацієнта",
@@ -140,7 +143,7 @@ public final class PermissionCatalog {
     private static final Map<UserRole, Set<String>> DEFAULT_MATRIX = Map.ofEntries(
             Map.entry(UserRole.DOCTOR, Set.of(
                     EPISODE_CREATE, CLINICAL_DAY_CREATE, SIGN_DOCTOR,
-                    PRESCRIPTION_CREATE, PRESCRIPTION_LIST_CREATE, PATIENT_VIEW,
+                    PRESCRIPTION_CREATE, PRESCRIPTION_LIST_CREATE, PRESCRIPTION_ACTUAL_TIME_EDIT, PATIENT_VIEW,
                     SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS,
                     MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.NURSE, Set.of(
@@ -149,7 +152,7 @@ public final class PermissionCatalog {
                     MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS)),
             Map.entry(UserRole.HEAD_OF_DEPARTMENT, Set.of(
                     EPISODE_CREATE, CLINICAL_DAY_CREATE, SIGN_DOCTOR, REOPEN_DAY,
-                    PRESCRIPTION_CREATE, PRESCRIPTION_LIST_CREATE, PATIENT_VIEW,
+                    PRESCRIPTION_CREATE, PRESCRIPTION_LIST_CREATE, PRESCRIPTION_ACTUAL_TIME_EDIT, PATIENT_VIEW,
                     SCALE_APACHE_SOFA, SCALE_CAMICU_BRADEN_RASS,
                     MODULE_ICU_ACCESS, MODULE_MEDICATION_ACCESS,
                     PROSTHETICS_PRODUCTION_VIEW, PROSTHETICS_PRODUCTION_VIEW_ALL)),

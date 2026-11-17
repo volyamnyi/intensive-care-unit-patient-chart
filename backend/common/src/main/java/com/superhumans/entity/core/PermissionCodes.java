@@ -22,6 +22,7 @@ public final class PermissionCodes {
     public static final String PRESCRIPTION_CREATE = "PRESCRIPTION_CREATE";
     public static final String PRESCRIPTION_LIST_CREATE = "PRESCRIPTION_LIST_CREATE";
     public static final String PRESCRIPTION_EXECUTE = "PRESCRIPTION_EXECUTE";
+    public static final String PRESCRIPTION_ACTUAL_TIME_EDIT = "PRESCRIPTION_ACTUAL_TIME_EDIT";
     public static final String VITALS_ENTER = "VITALS_ENTER";
     public static final String PATIENT_VIEW = "PATIENT_VIEW";
     public static final String SCALE_APACHE_SOFA = "SCALE_APACHE_SOFA";

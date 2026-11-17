@@ -75,7 +75,8 @@ public record AuditEvent(
             "status", "role", "permissionCode", "isDeleted", "reasonCode", "category",
             "severity", "returnStageId", "templateVersion", "version", "branchSequence",
             "dayNumber", "recordHour", "period",
-            "hospitalizationId", "departmentId", "attendingDoctorId");
+            "hospitalizationId", "departmentId", "attendingDoctorId",
+            "administeredAt", "dispensedAt");
     private static final Set<String> SAFE_METADATA_KEYS = Set.of(
             "sourceHash", "durationMs", "affectedRecords", "templateVersion", "pageCount",
             "fileSizeBytes", "recipientCount", "attempt", "deliveryKind", "outcomeCode",

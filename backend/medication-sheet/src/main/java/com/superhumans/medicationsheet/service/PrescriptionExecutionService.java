@@ -20,6 +20,7 @@ import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.ErrorCode;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.exception.VersionConflictException;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionExecutionRepository;
 import com.superhumans.repository.core.UserRepository;
@@ -179,6 +180,101 @@ public class PrescriptionExecutionService {
                 .source(AuditEvent.AuditSource.API)
                 .build());
         return exec;
+    }
+
+    @Transactional
+    public PrescriptionExecution updateActualTime(UUID executionId, Long currentUserId, String currentUserLogin,
+            String administeredAtRaw, String dispensedAtRaw, String reason, Integer version) {
+        PrescriptionExecution execution = executionRepository.findById(executionId)
+                .orElseThrow(() -> new NotFoundException("Execution not found: " + executionId));
+
+        PrescriptionDayPart part = execution.getDayPart();
+        if (part == null) {
+            throw new NotFoundException("Day part not found for execution: " + executionId);
+        }
+        // A correction only makes sense for an already-executed dose.
+        if (!Boolean.TRUE.equals(part.getIsCompleted()) && !Boolean.TRUE.equals(part.getIsCompletedFinished())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE,
+                    "Доза не виконана — немає що коригувати");
+        }
+        requireNotFinished(part);
+
+        // V1-V4 against the same list/day context as the primary fixation.
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime administeredAt = ActualTimeValidator.parseActualTime(administeredAtRaw);
+        LocalDateTime dispensedAt = ActualTimeValidator.parseActualTime(dispensedAtRaw);
+        if (administeredAt == null) {
+            // The correction endpoint always carries an explicit value (DTO @NotBlank),
+            // but keep the guard defensive: a missing value is a 400, not a silent now().
+            throw new IllegalArgumentException("Invalid request value.");
+        }
+        ActualTimeValidator.assertNotInFuture(administeredAt, now);
+        ActualTimeValidator.assertNotInFuture(dispensedAt, now);
+        LocalDate minDayDate = minNonDeletedDayDate(part.getDay());
+        LocalDate cellDayDate = part.getDay() == null ? null : part.getDay().getDayDate();
+        ActualTimeValidator.assertWithinListPeriod(administeredAt, minDayDate, cellDayDate);
+        ActualTimeValidator.assertWithinListPeriod(dispensedAt, minDayDate, cellDayDate);
+        ActualTimeValidator.assertDispensedNotAfterAdministered(administeredAt, dispensedAt);
+
+        // Optimistic lock: a stale version must not silently overwrite a medically
+        // significant value (VersionConflictException -> 409 VERSION_CONFLICT).
+        if (version == null || !version.equals(execution.getVersion())) {
+            throw new VersionConflictException("Execution version conflict: " + executionId);
+        }
+
+        // Capture old values for the audit event BEFORE mutating.
+        LocalDateTime oldAdministeredAt = execution.getAdministeredAt();
+        LocalDateTime oldDispensedAt = execution.getDispensedAt();
+
+        execution.setAdministeredAt(administeredAt);
+        execution.setDispensedAt(dispensedAt);
+        execution.setAdministeredAtManual(true);
+        // Append-only history in the comment column (full history lives in audit v2
+        // + object history). Never overwrite prior corrections.
+        String stamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
+        String entry = "[коригування " + stamp + "] " + currentUserLogin + ": " + reason;
+        String existing = execution.getComment();
+        execution.setComment(existing == null || existing.isBlank()
+                ? entry
+                : existing + "\n" + entry);
+        execution.setUpdatedBy(currentUserId);
+        execution = executionRepository.save(execution);
+
+        log.info("Actual time corrected: executionId={}", executionId);
+        final UUID correctedExecutionId = executionId;
+        final Long correctedUserId = currentUserId;
+        List<AuditEvent.AuditChange> changes = new ArrayList<>();
+        changes.add(new AuditEvent.AuditChange(
+                "administeredAt", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER,
+                oldAdministeredAt == null ? null : oldAdministeredAt.toString(),
+                administeredAt.toString()));
+        if (oldDispensedAt != null || dispensedAt != null) {
+            changes.add(new AuditEvent.AuditChange(
+                    "dispensedAt", AuditEvent.ChangeType.SET, DataClass.IDENTIFIER,
+                    oldDispensedAt == null ? null : oldDispensedAt.toString(),
+                    dispensedAt == null ? null : dispensedAt.toString()));
+        }
+        changes.add(AuditChanges.fieldChanged("reason", DataClass.NARRATIVE));
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(new AuditEvent.AuditActor(
+                        AuditEvent.ActorType.USER,
+                        correctedUserId == null ? null : correctedUserId.toString(),
+                        currentUserLogin,
+                        null,
+                        java.util.Set.of(),
+                        null,
+                        null))
+                .eventClass(EventClass.BUSINESS)
+                .module("medication")
+                .functionalArea("dose")
+                .action("medication.dose.actual_time.update")
+                .actionType(ActionType.UPDATE)
+                .target(new AuditEvent.AuditTarget("PrescriptionExecution", correctedExecutionId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.SUCCESS)
+                .changes(changes)
+                .source(AuditEvent.AuditSource.API)
+                .build());
+        return execution;
     }
 
     /**

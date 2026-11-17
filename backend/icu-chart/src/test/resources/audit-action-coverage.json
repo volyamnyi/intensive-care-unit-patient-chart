@@ -1,4 +1,4 @@
-﻿{
+{
     "version":  1,
     "note":  "F8 coverage gate (issue #338): every Audit v2 catalog action maps to covering test class(es), or carries an approved exclusion. Level emission = the test drives the operation and asserts the canonical event; level operation = the test covers the owning operation (emission asserted structurally by the relay/query/integration suite). Test sources are resolved per module - a renamed or deleted class fails the gate.",
     "actions":  [
@@ -740,6 +740,16 @@
                     },
                     {
                         "action":  "medication.dose.execute",
+                        "tests":  [
+                                      {
+                                          "class":  "com.superhumans.integration.MedicationAuditEmissionIntegrationTest",
+                                          "module":  "icu-chart"
+                                      }
+                                  ],
+                        "level":  "emission"
+                    },
+                    {
+                        "action":  "medication.dose.actual_time.update",
                         "tests":  [
                                       {
                                           "class":  "com.superhumans.integration.MedicationAuditEmissionIntegrationTest",

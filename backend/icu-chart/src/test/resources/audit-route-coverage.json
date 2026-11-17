@@ -55,6 +55,7 @@
     { "method": "DELETE", "path": "/api/prescriptions/items/{itemId}/days/{dayId}", "actions": ["medication.item.day.remove"] },
     { "method": "PUT", "path": "/api/prescriptions/day-parts/{dayPartId}/plan", "actions": ["medication.dose.plan"] },
     { "method": "PUT", "path": "/api/prescriptions/day-parts/{dayPartId}/complete", "actions": ["medication.dose.execute"] },
+    { "method": "PUT", "path": "/api/prescriptions/executions/{executionId}/actual-time", "actions": ["medication.dose.actual_time.update"] },
     { "method": "PUT", "path": "/api/prescriptions/day-parts/{dayPartId}/cancel", "actions": ["medication.dose.cancel"] },
     { "method": "PUT", "path": "/api/prescriptions/day-parts/{dayPartId}/replan", "actions": ["medication.dose.replan"] },
     { "method": "PUT", "path": "/api/prescriptions/day-parts/{dayPartId}/cancel-assignment", "actions": ["medication.dose.unassign"] },

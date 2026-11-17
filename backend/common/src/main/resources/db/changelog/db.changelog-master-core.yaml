@@ -44,3 +44,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: core/015-users-id-identity.sql
+  - include:
+      relativeToChangelogFile: true
+      file: core/016-actual-time-edit-permission.sql

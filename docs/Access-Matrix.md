@@ -2,7 +2,7 @@
 
 <!-- GENERATED FILE - do not edit by hand. Source of truth: `SecurityConfig`, `ClinicalSecurityRules` and the controller mappings. `AccessMatrixArtifactTest` fails when it goes stale. -->
 
-Endpoint count (code): **151**
+Endpoint count (code): **152**
 
 ## URL rules (first match wins)
 
@@ -63,7 +63,7 @@ Endpoint count (code): **151**
 |---|---|---|
 | `common` | 177 | 24 |
 | `icu-chart` | 84 | 54 |
-| `medication-sheet` | 69 | 30 |
+| `medication-sheet` | 70 | 31 |
 | `prosthesis-manufacturing` | 101 | 43 |
 
 ## Endpoint matrix
@@ -149,9 +149,10 @@ Endpoint count (code): **151**
 | `medication-sheet` | `PrescriptionController` | PUT | `/api/prescriptions/day-parts/{dayPartId}/cancel` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
 | `medication-sheet` | `PrescriptionController` | PUT | `/api/prescriptions/day-parts/{dayPartId}/cancel-assignment` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_EXECUTE')` | - |
 | `medication-sheet` | `PrescriptionController` | PUT | `/api/prescriptions/day-parts/{dayPartId}/complete` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
-| `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/day-parts/{dayPartId}/execute` | `hasAnyRole(CLINICAL_ROLES)` | `(class-level)` | - |
+| `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/day-parts/{dayPartId}/execute` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_ACTUAL_TIME_EDIT')` | - |
 | `medication-sheet` | `PrescriptionController` | PUT | `/api/prescriptions/day-parts/{dayPartId}/plan` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_EXECUTE')` | - |
 | `medication-sheet` | `PrescriptionController` | PUT | `/api/prescriptions/day-parts/{dayPartId}/replan` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
+| `medication-sheet` | `PrescriptionController` | PUT | `/api/prescriptions/executions/{executionId}/actual-time` | `hasAnyRole(CLINICAL_ROLES)` | `(class-level)` | - |
 | `medication-sheet` | `PrescriptionController` | DELETE | `/api/prescriptions/items/{itemId}` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
 | `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/items/{itemId}/days` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
 | `medication-sheet` | `PrescriptionController` | DELETE | `/api/prescriptions/items/{itemId}/days/{dayId}` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
@@ -224,4 +225,4 @@ Endpoint count (code): **151**
 | `medication-sheet` | `VitalSignController` | GET | `/api/vital-signs/grid` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('VITALS_ENTER')` | - |
 | `medication-sheet` | `VitalSignController` | POST | `/api/vital-signs/grid` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('VITALS_ENTER')` | - |
 
-Endpoints: **151** (with an ownership check: **17**).
+Endpoints: **152** (with an ownership check: **17**).

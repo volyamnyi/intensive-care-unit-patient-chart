@@ -11,6 +11,7 @@ import com.superhumans.medicationsheet.entity.PrescriptionList;
 import com.superhumans.exception.BusinessException;
 import com.superhumans.exception.DocumentLockedException;
 import com.superhumans.exception.NotFoundException;
+import com.superhumans.exception.VersionConflictException;
 import com.superhumans.medicationsheet.repository.PrescriptionDayPartRepository;
 import com.superhumans.medicationsheet.repository.PrescriptionExecutionRepository;
 import com.superhumans.repository.core.UserRepository;
@@ -415,5 +416,169 @@ class PrescriptionExecutionServiceTest {
         AuditEvent event = emitCaptor.getValue().get();
         assertThat(event.changes()).extracting(AuditEvent.AuditChange::field)
                 .containsExactly("actualDose", "status");
+    }
+
+    // --- updateActualTime (#444) ---
+
+    private PrescriptionExecution completedExecution(UUID execId, Integer version, LocalDate dayDate) {
+        PrescriptionList list = PrescriptionList.builder().patientId(1001L).status("Saved").build();
+        PrescriptionItem item = PrescriptionItem.builder().list(list).medicineName("Test").status("Active").build();
+        PrescriptionItemDay day = PrescriptionItemDay.builder().item(item).dayDate(dayDate).build();
+        item.getDays().add(day);
+        PrescriptionDayPart part = PrescriptionDayPart.builder()
+                .day(day).period("morning").dose("50mg")
+                .isPlanned(true).isCompleted(true).build();
+        day.getDayParts().add(part);
+        part.setId(UUID.randomUUID());
+        PrescriptionExecution exec = PrescriptionExecution.builder()
+                .dayPart(part)
+                .executedAt(LocalDateTime.parse(dayDate + "T09:00:00"))
+                .administeredAt(LocalDateTime.parse(dayDate + "T09:00:00"))
+                .actualDose("50mg")
+                .status("Completed")
+                .requires2pAuth(true)
+                .administeredAtManual(false)
+                .build();
+        exec.setId(execId);
+        exec.setVersion(version);
+        return exec;
+    }
+
+    @Test
+    void updateActualTime_happyPath_appliesNewValuesAndAppendsComment() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PrescriptionExecution result = service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-15T10:30:07", "2026-01-15T10:29:00", "Виправлено час", 1);
+
+        assertThat(result.getAdministeredAt()).isEqualTo(LocalDateTime.parse("2026-01-15T10:30:07"));
+        assertThat(result.getDispensedAt()).isEqualTo(LocalDateTime.parse("2026-01-15T10:29:00"));
+        assertThat(result.getAdministeredAtManual()).isTrue();
+        assertThat(result.getComment()).contains("Виправлено час").contains(CURRENT_USER_LOGIN);
+
+        verify(auditEmitter).emit(eq("medication"), emitCaptor.capture());
+        AuditEvent event = emitCaptor.getValue().get();
+        assertThat(event.action()).isEqualTo("medication.dose.actual_time.update");
+        assertThat(event.changes()).extracting(AuditEvent.AuditChange::field)
+                .contains("administeredAt", "dispensedAt", "reason");
+        AuditEvent.AuditChange atChange = event.changes().stream()
+                .filter(c -> "administeredAt".equals(c.field())).findFirst().orElseThrow();
+        assertThat(atChange.oldValue()).isEqualTo(LocalDateTime.parse("2026-01-15T09:00:00").toString());
+        assertThat(atChange.newValue()).isEqualTo(LocalDateTime.parse("2026-01-15T10:30:07").toString());
+    }
+
+    @Test
+    void updateActualTime_versionMismatch_throwsVersionConflict() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+
+        assertThatThrownBy(() -> service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-15T10:30:07", null, "reason", 999))
+                .isInstanceOf(VersionConflictException.class);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+        verify(auditEmitter, never()).emit(anyString(), any());
+    }
+
+    @Test
+    void updateActualTime_unfinishedDose_throwsBusinessException() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        exec.getDayPart().setIsCompleted(false);
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+
+        assertThatThrownBy(() -> service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-15T10:30:07", null, "reason", 1))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("не виконана");
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void updateActualTime_finishedList_throwsDocumentLocked() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        exec.getDayPart().getDay().getItem().getList().setStatus("Finished");
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+
+        assertThatThrownBy(() -> service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-15T10:30:07", null, "reason", 1))
+                .isInstanceOf(DocumentLockedException.class);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void updateActualTime_dispensedAfterAdministered_throws() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+
+        assertThatThrownBy(() -> service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-15T10:30:00", "2026-01-15T10:30:01", "reason", 1))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_DISPENSED_AFTER_ADMINISTERED);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void updateActualTime_futureTime_throws() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+
+        assertThatThrownBy(() -> service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2030-01-15T10:30:07", null, "reason", 1))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_FUTURE);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void updateActualTime_timeOutsideListPeriod_throws() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+
+        assertThatThrownBy(() -> service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-08T10:00:00", null, "reason", 1))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_OUTSIDE_LIST);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void updateActualTime_executionNotFound_throwsNotFound() {
+        UUID execId = UUID.randomUUID();
+        when(executionRepository.findById(execId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-15T10:30:07", null, "reason", 1))
+                .isInstanceOf(NotFoundException.class);
+
+        verify(executionRepository, never()).save(any(PrescriptionExecution.class));
+    }
+
+    @Test
+    void updateActualTime_appendsToExistingComment() {
+        UUID execId = UUID.randomUUID();
+        PrescriptionExecution exec = completedExecution(execId, 1, LocalDate.parse("2026-01-15"));
+        exec.setComment("старий коментар");
+        when(executionRepository.findById(execId)).thenReturn(Optional.of(exec));
+        when(executionRepository.save(any(PrescriptionExecution.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PrescriptionExecution result = service.updateActualTime(execId, CURRENT_USER_ID, CURRENT_USER_LOGIN,
+                "2026-01-15T10:30:07", null, "нова причина", 1);
+
+        assertThat(result.getComment()).startsWith("старий коментар\n[коригування");
+        assertThat(result.getComment()).contains("нова причина");
     }
 }

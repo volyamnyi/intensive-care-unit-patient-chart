@@ -322,6 +322,29 @@ public class PrescriptionController {
                 req.getAdministeredAt(), req.getDispensedAt());
     }
 
+    @PreAuthorize("@permissionService.has('PRESCRIPTION_ACTUAL_TIME_EDIT')")
+    @PutMapping("/executions/{executionId}/actual-time")
+    @Operation(summary = "Correct actual time", description = "Corrects the recorded actual administration/dispensing time of an executed dose. Requires PRESCRIPTION_ACTUAL_TIME_EDIT. Mandatory reason; optimistic lock via version.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Actual time corrected"),
+            @ApiResponse(responseCode = "400", description = "Invalid request value"),
+            @ApiResponse(responseCode = "403", description = "Missing permission"),
+            @ApiResponse(responseCode = "404", description = "Execution not found"),
+            @ApiResponse(responseCode = "409", description = "Version conflict"),
+            @ApiResponse(responseCode = "422", description = "Business rule violation")
+    })
+    public PrescriptionDayPartResponse correctActualTime(
+            @PathVariable UUID executionId,
+            @Valid @RequestBody PrescriptionActualTimeUpdateRequest req) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        Long currentUserId = (Long) auth.getCredentials();
+        String currentUserLogin = (String) auth.getPrincipal();
+        PrescriptionExecution executed = executionService.updateActualTime(
+                executionId, currentUserId, currentUserLogin,
+                req.getAdministeredAt(), req.getDispensedAt(), req.getReason(), req.getVersion());
+        return prescriptionDayPartMapper.toResponse(executed.getDayPart(), executed);
+    }
+
     @GetMapping("/medicine-catalog")
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Search medicine catalog",
