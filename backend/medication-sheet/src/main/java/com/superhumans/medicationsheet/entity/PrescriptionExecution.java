@@ -51,12 +51,27 @@ public class PrescriptionExecution extends BaseEntity {
 
     /**
      * True when {@link #administeredAt} was entered/adjusted manually.
-     * NOT NULL in the schema - {@code @Builder} does not apply field defaults,
-     * so every construction site must set it explicitly.
+     * NOT NULL in the schema - the flag is defaulted to {@code false} on
+     * persist, so a construction site that does not care about it (legacy
+     * rows, direct repository writes) still persists a valid row: the fact is
+     * simply not marked as manually adjusted.
      */
     @Column(name = "administered_at_manual", nullable = false)
     Boolean administeredAtManual;
 
     @Column(columnDefinition = "TEXT")
     String comment;
+
+    /**
+     * Default the manual flag before the INSERT. The column is NOT NULL while
+     * the Java field is nullable - a builder that omits it would otherwise
+     * write NULL and break the insert (#447, found by the integration
+     * regression).
+     */
+    @PrePersist
+    void applyActualTimeDefaults() {
+        if (administeredAtManual == null) {
+            administeredAtManual = false;
+        }
+    }
 }
