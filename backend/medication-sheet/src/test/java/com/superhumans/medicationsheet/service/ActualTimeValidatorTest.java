@@ -122,6 +122,48 @@ class ActualTimeValidatorTest {
                 .doesNotThrowAnyException();
     }
 
+    @Test
+    void v3_firstSecondsOfTheNextDay_areAccepted() {
+        // The night dose of day D may be documented in the first seconds of
+        // D+1 - the window starts exactly at 00:00:00 of that day (#447).
+        assertThatCode(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-01-16T00:00:00"), MIN_DAY, CELL_DAY))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-01-16T00:00:30"), MIN_DAY, CELL_DAY))
+                .doesNotThrowAnyException();
+        // One second later is already outside the window.
+        assertThatThrownBy(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-01-17T00:00:00"), MIN_DAY, CELL_DAY))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_OUTSIDE_LIST);
+    }
+
+    @Test
+    void v3_dstDay_keepsTheCalendarWindow() {
+        // 2026-03-29 is a DST spring-forward day in Europe/Kiev. The stored
+        // value is a NAIVE local timestamp, so the wall-clock components are
+        // the contract - the calendar day must not shift (#447).
+        LocalDate dstDay = LocalDate.parse("2026-03-29");
+        assertThatCode(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-03-29T00:00:30"), dstDay, dstDay))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-03-29T03:30:00"), dstDay, dstDay))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-03-30T00:00:00"), dstDay, dstDay))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-03-28T23:59:59"), dstDay, dstDay))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_OUTSIDE_LIST);
+        assertThatThrownBy(() -> ActualTimeValidator.assertWithinListPeriod(
+                LocalDateTime.parse("2026-03-31T00:00:00"), dstDay, dstDay))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ActualTimeValidator.MSG_OUTSIDE_LIST);
+    }
+
     // --- V4: dispensing not after administration ---
 
     @Test
