@@ -119,6 +119,7 @@ export default defineConfig({
         '**/responsive/tablet-admin.spec.ts',
         '**/responsive/tablet-prosthetics.spec.ts',
         '**/responsive/tablet-navigation.spec.ts',
+        '**/responsive/order-list-layout.spec.ts',
         '**/responsive/medication-markers-overflow.spec.ts',
       ],
       fullyParallel: false,
