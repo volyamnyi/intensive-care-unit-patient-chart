@@ -90,6 +90,10 @@ vi.mock('../pages/prosthetics/ProductionPage', () => ({
   default: () => <div>Production Monitoring</div>,
 }));
 
+vi.mock('../pages/prosthetics/setup/OrderReviewPage', () => ({
+  default: () => <div>Order Review Page</div>,
+}));
+
 vi.mock('../prosthetics/ProstheticsContext', () => ({
   ProstheticsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -179,6 +183,17 @@ describe('App', () => {
       expect(screen.getByText('App Selector')).toBeInTheDocument();
     });
     expect(screen.queryByText('Prosthetics Dashboard')).not.toBeInTheDocument();
+  });
+
+  it('redirects the retired template-selection URL to order review', async () => {
+    mockUser = { id: 7, login: 'prosthetist', fullName: 'Протезист', role: 'PROSTHETIST' };
+    mockHasRole = (...roles: string[]) => roles.includes('PROSTHETIST');
+    window.history.pushState({}, '', '/prosthetics/new/select-template');
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('Order Review Page')).toBeInTheDocument();
+      expect(window.location.pathname).toBe('/prosthetics/new/review-order');
+    });
   });
 
   it('renders the ICU module for ADMINISTRATOR granted MODULE_ICU_ACCESS', async () => {

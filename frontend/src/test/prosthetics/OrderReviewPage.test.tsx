@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import OrderReviewPage from '@/pages/prosthetics/setup/OrderReviewPage';
 import type { ProstheticsDraft } from '@/prosthetics/types';
@@ -13,13 +13,19 @@ const prostheticsPatientApiMock = vi.hoisted(() => ({
   getById: vi.fn(),
 }));
 
+const flowTemplateApiMock = vi.hoisted(() => ({
+  list: vi.fn(),
+}));
+
 const flowInstanceApiMock = vi.hoisted(() => ({
   list: vi.fn(),
+  create: vi.fn(),
 }));
 
 vi.mock('@/api/prosthetics', () => ({
   prostheticsOrderApi: prostheticsOrderApiMock,
   prostheticsPatientApi: prostheticsPatientApiMock,
+  flowTemplateApi: flowTemplateApiMock,
   flowInstanceApi: flowInstanceApiMock,
 }));
 
@@ -48,6 +54,20 @@ function mockUseProsthetics(draft: ProstheticsDraft = { patientId: null, orderId
 
 const orderMock = { id: 'o1', orderNumber: 'ORD-001', patientId: 'p1', productType: 'Протез', amputationLevel: 'above', limbSide: 'left', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' };
 const documentUrlMock = 'https://mis.example/document?request=abc';
+const templateMock = {
+  id: 't1',
+  name: 'TP-UL-01',
+  description: 'Операційна карта',
+  productType: 'Протез',
+  amputationLevel: 'above',
+  limbSide: 'left',
+  status: 'ACTIVE',
+  templateVersion: 1,
+  estimatedDurationMin: 480,
+  stages: [],
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+};
 
 describe('OrderReviewPage', () => {
   beforeEach(() => {
@@ -59,6 +79,7 @@ describe('OrderReviewPage', () => {
     prostheticsPatientApiMock.getById.mockResolvedValue({
       data: { id: 'p1', pib: 'Іван Іванов', birthDate: '1980-01-01' },
     });
+    flowTemplateApiMock.list.mockResolvedValue({ data: [templateMock] });
     flowInstanceApiMock.list.mockResolvedValue({ data: [] });
   });
 
@@ -178,8 +199,9 @@ describe('OrderReviewPage', () => {
     });
   });
 
-  it('navigates to template selection when Start is clicked', async () => {
+  it('auto-selects a sole exact template and creates the process from review', async () => {
     mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
+    flowInstanceApiMock.create.mockResolvedValue({ data: { id: 'instance-1' } });
     render(
       <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
         <OrderReviewPage />
@@ -193,8 +215,63 @@ describe('OrderReviewPage', () => {
       expect(flowInstanceApiMock.list).toHaveBeenCalled();
     });
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith('/prosthetics/new/select-template');
+      expect(flowInstanceApiMock.create).toHaveBeenCalledWith({
+        orderId: 'o1',
+        templateId: 't1',
+      });
+      expect(navigateMock).toHaveBeenCalledWith('/prosthetics/process/instance-1');
     });
+  });
+
+  it('requires an explicit selection when several exact templates match', async () => {
+    flowTemplateApiMock.list.mockResolvedValue({
+      data: [templateMock, { ...templateMock, id: 't2', name: 'TP-UL-02' }],
+    });
+    mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByRole('radio', { name: /TP-UL-01/ })).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: /Оберіть маршрут/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('radio', { name: /TP-UL-02/ }));
+    expect(screen.getByRole('button', { name: 'Старт' })).toBeEnabled();
+  });
+
+  it('offers product-type fallback only for manual selection', async () => {
+    flowTemplateApiMock.list
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [templateMock] });
+    mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Точного збігу за рівнем ампутації немає/)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('radio', { name: /TP-UL-01/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /Оберіть маршрут/ })).toBeDisabled();
+  });
+
+  it('blocks process creation when there are no compatible templates', async () => {
+    flowTemplateApiMock.list.mockResolvedValue({ data: [] });
+    mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Для цього замовлення немає активного шаблону/)).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('button', { name: /Немає доступних маршрутів/ })).toBeDisabled();
+    expect(flowInstanceApiMock.create).not.toHaveBeenCalled();
   });
 
   it('prefers the draft MIS document without resolving through the local order', async () => {

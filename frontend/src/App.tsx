@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { ThemeModeProvider } from './styles/ThemeContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -23,7 +23,6 @@ import ProductionPage from './pages/prosthetics/ProductionPage';
 import PatientSearchPage from './pages/prosthetics/setup/PatientSearchPage';
 import OrderSelectPage from './pages/prosthetics/setup/OrderSelectPage';
 import OrderReviewPage from './pages/prosthetics/setup/OrderReviewPage';
-import TemplateSelectPage from './pages/prosthetics/setup/TemplateSelectPage';
 import ProcessLayout from './pages/prosthetics/process/ProcessLayout';
 import ProcessDetail from './pages/prosthetics/process/ProcessDetail';
 import ProcessHistoryPage from './pages/prosthetics/process/ProcessHistoryPage';
@@ -225,9 +224,7 @@ function AppRoutes() {
           } />
           <Route path="select-template" element={
             <Guard roles={['PROSTHETIST', 'PROSTHETICS_ADMINISTRATOR']} permissions={[MODULE_PROSTHETICS]}>
-              <ProstheticsProvider>
-                <TemplateSelectPage />
-              </ProstheticsProvider>
+              <Navigate to="/prosthetics/new/review-order" replace />
             </Guard>
           } />
         </Route>

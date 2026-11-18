@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Loader2, Package } from 'lucide-react';
+import { ChevronLeft, Check, Clock, FileText, Layers, Loader2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { useProsthetics } from '@/prosthetics/ProstheticsContext';
-import { prostheticsOrderApi, prostheticsPatientApi, flowInstanceApi } from '@/api/prosthetics';
+import { flowTemplateApi, flowInstanceApi, prostheticsOrderApi, prostheticsPatientApi } from '@/api/prosthetics';
 import { getErrorMessage } from '@/utils/errorMessage';
-import type { ProstheticsOrder, ProstheticsPatient } from '@/prosthetics/types';
+import type { FlowTemplate, ProstheticsOrder, ProstheticsPatient } from '@/prosthetics/types';
 import { SetupSteps } from '@/components/prosthetics/SetupSteps';
 
 interface OrderWithPatient extends ProstheticsOrder {
@@ -35,9 +37,11 @@ function limbSideLabel(value: string | undefined): string {
   return value || '—';
 }
 
+type RouteMode = 'auto' | 'exact' | 'fallback' | 'none';
+
 export default function OrderReviewPage() {
   const navigate = useNavigate();
-  const { draft } = useProsthetics();
+  const { draft, setDraftField, resetDraft } = useProsthetics();
   const [order, setOrder] = useState<OrderWithPatient | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [docTemplateName, setDocTemplateName] = useState<string | null>(null);
@@ -47,6 +51,11 @@ export default function OrderReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [templates, setTemplates] = useState<FlowTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [routeMode, setRouteMode] = useState<RouteMode>('none');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = 'Перевірка замовлення — Виробництво протезів';
@@ -63,6 +72,54 @@ export default function OrderReviewPage() {
       navigate('/prosthetics/new/select-order');
       return;
     }
+
+    const loadTemplates = async (orderData: ProstheticsOrder) => {
+      setTemplatesLoading(true);
+      setTemplatesError(null);
+      setTemplates([]);
+      setRouteMode('none');
+      setSelectedTemplateId(null);
+      // A restored selection may belong to a different order/template set.
+      // Only a fresh unique exact match is auto-selected.
+      setDraftField('templateId', null);
+      try {
+        const exact = orderData.amputationLevel
+          ? (
+              await flowTemplateApi.list({
+                status: 'ACTIVE',
+                productType: orderData.productType,
+                amputationLevel: orderData.amputationLevel,
+              })
+            ).data
+          : [];
+        if (exact.length > 0) {
+          setTemplates(exact);
+          if (exact.length === 1) {
+            setRouteMode('auto');
+            setSelectedTemplateId(exact[0].id);
+            setDraftField('templateId', exact[0].id);
+          } else {
+            setRouteMode('exact');
+          }
+          return;
+        }
+
+        // No exact match: the productType-only list is a manual fallback and
+        // must never be used for automatic selection (decision contract #449).
+        const fallbackRes = await flowTemplateApi.list({
+          status: 'ACTIVE',
+          productType: orderData.productType,
+        });
+        const fallback = fallbackRes.data;
+        setTemplates(fallback);
+        setRouteMode(fallback.length > 0 ? 'fallback' : 'none');
+      } catch {
+        setTemplatesError('Не вдалося завантажити шаблони');
+        setRouteMode('none');
+      } finally {
+        setTemplatesLoading(false);
+      }
+    };
 
     const fetchData = async () => {
       setLoading(true);
@@ -90,6 +147,7 @@ export default function OrderReviewPage() {
           }
 
           setOrder({ ...orderRes.data, patient });
+          void loadTemplates(orderRes.data);
 
           if (!draftDocUrl) {
             try {
@@ -116,8 +174,13 @@ export default function OrderReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.orderId, draftDocUrl, navigate]);
 
+  const handleSelectTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    setDraftField('templateId', templateId);
+  };
+
   const handleStart = async () => {
-    if (!draft.orderId) return;
+    if (!draft.orderId || !selectedTemplateId) return;
     setChecking(true);
     setStartError(null);
     try {
@@ -131,9 +194,19 @@ export default function OrderReviewPage() {
         );
         return;
       }
-      navigate('/prosthetics/new/select-template');
-    } catch (err) {
-      setStartError(getErrorMessage(err, 'Не вдалося перевірити наявність процесу для замовлення'));
+      const created = await flowInstanceApi.create({
+        orderId: draft.orderId,
+        templateId: selectedTemplateId,
+      });
+      resetDraft();
+      navigate(`/prosthetics/process/${created.data.id}`);
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 400 || status === 409) {
+        setStartError(getErrorMessage(err, 'Процес для цього замовлення вже існує'));
+      } else {
+        setStartError(getErrorMessage(err, 'Не вдалося створити процес'));
+      }
     } finally {
       setChecking(false);
     }
@@ -193,11 +266,96 @@ export default function OrderReviewPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Перевірка замовлення</h1>
           <p className="text-sm text-muted-foreground">
-            Крок 3 з 4{order ? ` · ${order.orderNumber}` : draftDocTemplate ? ` · ${draftDocTemplate}` : ''}
+            Крок 3 з 3{order ? ` · ${order.orderNumber}` : draftDocTemplate ? ` · ${draftDocTemplate}` : ''}
           </p>
         </div>
         <SetupSteps current={3} />
       </div>
+
+      {draft.orderId && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Технологічний маршрут</CardTitle>
+            <CardDescription>
+              {routeMode === 'auto'
+                ? 'Автоматично обрано єдиний сумісний активний шаблон'
+                : routeMode === 'fallback'
+                  ? 'Точного збігу за рівнем ампутації немає — показано шаблони лише за типом виробу'
+                  : routeMode === 'exact'
+                    ? 'Доступно кілька сумісних маршрутів — оберіть один'
+                    : 'Завантаження доступних маршрутів'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {templatesLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : templatesError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Помилка</AlertTitle>
+                <AlertDescription>{templatesError}</AlertDescription>
+              </Alert>
+            ) : templates.length === 0 ? (
+              <Alert variant="destructive">
+                <AlertTitle>Немає доступних маршрутів</AlertTitle>
+                <AlertDescription>
+                  Для цього замовлення немає активного шаблону. Створення процесу неможливе.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="space-y-3" role="radiogroup" aria-label="Технологічні маршрути">
+                {templates.map((template) => {
+                  const selected = selectedTemplateId === template.id;
+                  return (
+                    <label
+                      key={template.id}
+                      className={`block cursor-pointer rounded-lg border p-3 transition-colors ${
+                        selected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="prosthetics-route"
+                        className="sr-only"
+                        checked={selected}
+                        onChange={() => handleSelectTemplate(template.id)}
+                      />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium">{template.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {template.description || 'Без опису'}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <Layers className="size-3.5" /> {template.stages.length} етапів
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="size-3.5" /> ~{Math.round(template.estimatedDurationMin / 60)} год
+                            </span>
+                            <span>Версія {template.templateVersion}</span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Badge variant="outline">{template.productType}</Badge>
+                            <Badge variant="outline">{template.amputationLevel}</Badge>
+                            <Badge variant="outline">{template.limbSide}</Badge>
+                            {routeMode === 'auto' && selected && (
+                              <Badge variant="secondary">Автоматично обрано</Badge>
+                            )}
+                            {routeMode === 'fallback' && (
+                              <Badge variant="secondary">За типом виробу</Badge>
+                            )}
+                          </div>
+                        </div>
+                        {selected && <Check className="size-4 shrink-0 text-primary" />}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="document">
         <TabsList className="mb-4">
@@ -333,7 +491,14 @@ export default function OrderReviewPage() {
           </Button>
           {draft.orderId ? (
             <Button
-              disabled={!docLoaded || checking}
+              disabled={
+                !docLoaded ||
+                templatesLoading ||
+                !!templatesError ||
+                !selectedTemplateId ||
+                routeMode === 'none' ||
+                checking
+              }
               className="w-full bg-accent text-accent-foreground hover:bg-accent/90 sm:w-auto"
               onClick={() => void handleStart()}
             >
@@ -341,10 +506,18 @@ export default function OrderReviewPage() {
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" /> Перевірка…
                 </>
-              ) : docLoaded ? (
-                'Старт'
-              ) : (
+              ) : !docLoaded ? (
                 'Очікування замовлення на протез…'
+              ) : templatesLoading ? (
+                'Завантаження маршрутів…'
+              ) : templatesError ? (
+                'Помилка завантаження маршрутів'
+              ) : routeMode === 'none' ? (
+                'Немає доступних маршрутів'
+              ) : !selectedTemplateId ? (
+                'Оберіть маршрут'
+              ) : (
+                'Старт'
               )}
             </Button>
           ) : (

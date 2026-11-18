@@ -370,7 +370,7 @@ Local suites green = done; start the next issue at Phase 1. When CI was explicit
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` or `npx vitest run` | Run Vitest tests (1055 tests across 112 files) |
+| `npm t` or `npx vitest run` | Run Vitest tests (1051 tests across 111 files) |
 
 ### Playwright (`cd tests`)
 | Command | Action |
@@ -383,7 +383,7 @@ Local suites green = done; start the next issue at Phase 1. When CI was explicit
 
 - **Backend**: 432 main sources / 251 test files across the multi-module reactor (common 177/66, icu-chart 84/96, medication-sheet 70/29, prosthesis-manufacturing 101/58, app 0/2 — the app tests are the ArchUnit `ModuleBoundaryTest` + `MultidbPackageStringsTest`). JaCoCo coverage floor on every module (parent-POM plugin): 0.50 instruction / 0.40 branch minimum, enforced by `mvn verify` in the CI `backend-test` job (#426 — ratchet toward the §88 target 60/50 as coverage improves). Checkstyle Google checks.
 - **Integration-suite isolation (#428)**: the `icu-chart` integration host uses class-level TRUNCATE/reseed and intentionally persistent intra-class state; do not enable parallel classes or forks against the shared databases. Prosthetics integration tests generally use transaction rollback; preserve each suite's existing isolation contract. Budget Spring contexts against the four datasource pools (one connection per pool per context); CI bounds each pool to 2, so avoid creating additional full application contexts without checking connection use. Keep environment-dependent LDAP/performance tests explicitly gated and documented.
-- **Frontend**: 1055 Vitest tests across 112 test files (160 TS/TSX sources) — all green locally. Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
+- **Frontend**: 1051 Vitest tests across 111 test files (159 TS/TSX sources) — all green locally. Run with `npm t`. Security-contract suite: `src/test/services/authSecurityContract.test.tsx`.
 - **E2E**: 490 Playwright tests in 102 files (101 specs + auth setup) in 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet). Лічильник = **tracked**-файли (те, що бачить CI): локально в робочому дереві можуть лежати додаткові untracked `tests/specs/*/exploratory.spec.ts` (31 тест) — вони **не** в репозиторії й не запускаються в CI, тому в лічильники не входять.
 
 ## Playwright Projects
@@ -857,7 +857,7 @@ frontend/
   tsconfig*.json       ← TypeScript configs
   index.html           ← App entry HTML
   public/              ← Static assets
-  src/                 ← 160 TS/TSX source + 112 test files
+  src/                 ← 159 TS/TSX source + 111 test files
 tests/
   playwright.config.ts ← Playwright config with 10 projects
   package.json         ← Test dependencies

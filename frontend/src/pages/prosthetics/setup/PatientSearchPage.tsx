@@ -103,7 +103,7 @@ export default function PatientSearchPage() {
         </Button>
         <div>
           <h1 className="font-display text-2xl font-bold">Вибір пацієнта</h1>
-          <p className="text-sm text-muted-foreground">Крок 1 з 4 · джерело даних: Doctor Eleks</p>
+          <p className="text-sm text-muted-foreground">Крок 1 з 3 · джерело даних: Doctor Eleks</p>
         </div>
         <SetupSteps current={1} className="mx-auto" />
       </div>

@@ -186,7 +186,7 @@ export default function OrderSelectPage() {
         </Button>
         <div>
           <h1 className="font-display text-2xl font-bold">Вибір замовлення</h1>
-          <p className="text-sm text-muted-foreground">Крок 2 з 4</p>
+          <p className="text-sm text-muted-foreground">Крок 2 з 3</p>
         </div>
         <SetupSteps current={2} className="ml-auto" />
       </div>

@@ -1,7 +1,7 @@
 import { Stepper, Step } from '@/components/ui/stepper';
 import { cn } from '@/lib/utils';
 
-const steps = ['Пацієнт', 'Замовлення', 'Перегляд', 'Маршрут'];
+const steps = ['Пацієнт', 'Замовлення', 'Перегляд'];
 
 interface SetupStepsProps {
   current: number;

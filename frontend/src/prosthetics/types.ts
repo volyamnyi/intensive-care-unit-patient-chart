@@ -283,7 +283,7 @@ export interface TemplatePatchRequest {
   version?: number;
 }
 
-export type WizardStep = 'select-patient' | 'select-order' | 'review-order' | 'select-template';
+export type WizardStep = 'select-patient' | 'select-order' | 'review-order';
 
 export interface ProstheticsDraft {
   patientId: string | null;
