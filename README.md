@@ -558,7 +558,7 @@ icu-patient-chart/
 | `npm run build` | `tsc -b && vite build` |
 | `npm run lint` | Oxlint |
 | `npx tsc --noEmit` | Type-check without build |
-| `npm t` | Run Vitest tests (1053 across 112 files) |
+| `npm t` | Run Vitest tests (1055 across 112 files) |
 
 #### E2E Tests (`cd tests`)
 | Command | Action |
@@ -587,7 +587,7 @@ CI jobs run in parallel when triggered; if any fails, fix and repeat until every
 ### Testing Summary
 - **Backend tests**: 251 test files across the multi-module reactor — common (66) + icu-chart (96) + medication-sheet (29) + prosthesis-manufacturing (58) + app (2, ArchUnit `ModuleBoundaryTest` + `MultidbPackageStringsTest`) — `mvn test`
 - **Backend integration tests**: 398 tests — `mvn test -Pintegration-test`
-- **Frontend Vitest tests**: 1053 tests (112 files) — includes responsive + prosthetics suites
+- **Frontend Vitest tests**: 1055 tests (112 files) — includes responsive + prosthetics suites
 - **E2E Playwright tests**: 101 files (485 tests: 100 specs + auth setup), 10 projects (setup, login, doctor, nurse, hod, admin, api, prosthetics, responsive-mobile, responsive-tablet)
 - **CI**: GitHub Actions — PostgreSQL service, JDK 25, Node 22, Playwright chromium, 40min timeout
 

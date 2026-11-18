@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,85 @@ function formatDocDate(raw: string | undefined): string {
   if (!raw) return '—';
   const d = new Date(raw);
   return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('uk-UA');
+}
+
+interface MisOrderDocumentRowProps {
+  doc: MisOrderDocument;
+  selected: boolean;
+  disabled: boolean;
+  provisioning: boolean;
+  onSelect: (doc: MisOrderDocument) => void;
+}
+
+/**
+ * One MIS document row. The same DOM is rendered as a readable stacked list
+ * below `lg` and as a fixed four-column table on desktop. Keeping one row
+ * avoids duplicate action buttons while long document/product names remain
+ * fully visible and the select action stays inside the viewport.
+ */
+function MisOrderDocumentRow({
+  doc,
+  selected,
+  disabled,
+  provisioning,
+  onSelect,
+}: MisOrderDocumentRowProps) {
+  const rowId = useId();
+  const titleId = `${rowId}-title`;
+  const productId = `${rowId}-product`;
+  const title = doc.documentTemplateName ?? `Шаблон ${doc.documentTemplateId}`;
+  const product = doc.productName || '—';
+  const date = formatDocDate(doc.documentCreationDate ?? doc.orderDate);
+  const actionLabel = provisioning ? 'Підготовка…' : selected ? 'Обрано' : 'Обрати';
+
+  return (
+    <TableRow
+      role="row"
+      className="block border-b px-3 py-3 last:border-b-0 lg:table-row lg:px-0 lg:py-0"
+    >
+      <TableCell
+        role="cell"
+        className="block whitespace-normal p-0 text-left font-medium [overflow-wrap:anywhere] lg:table-cell lg:p-2"
+      >
+        <span id={titleId}>{title}</span>
+      </TableCell>
+      <TableCell
+        role="cell"
+        className="block whitespace-normal p-0 pt-2 lg:table-cell lg:p-2 lg:whitespace-nowrap"
+      >
+        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground lg:hidden">
+          Дата
+        </span>
+        <span className="block whitespace-nowrap">{date}</span>
+      </TableCell>
+      <TableCell
+        role="cell"
+        className="block whitespace-normal p-0 pt-2 lg:table-cell lg:p-2"
+      >
+        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-muted-foreground lg:hidden">
+          Виріб
+        </span>
+        <span id={productId} className="block min-w-0 [overflow-wrap:anywhere]">
+          {product}
+        </span>
+      </TableCell>
+      <TableCell
+        role="cell"
+        className="block p-0 pt-3 sm:text-right lg:table-cell lg:p-2 lg:pt-2 lg:text-right"
+      >
+        <Button
+          size="sm"
+          variant={selected ? 'default' : 'outline'}
+          disabled={disabled}
+          aria-describedby={`${titleId} ${productId}`}
+          onClick={() => onSelect(doc)}
+          className="w-full sm:w-auto"
+        >
+          {actionLabel}
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 export default function OrderSelectPage() {
@@ -99,7 +178,7 @@ export default function OrderSelectPage() {
   };
 
   return (
-    <div className="max-w-page-narrow mx-auto py-8">
+    <div className="mx-auto max-w-page-narrow py-8 lg:max-w-page">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('/prosthetics/new/select-patient')}>
           <ChevronLeft className="size-4" />
@@ -153,7 +232,7 @@ export default function OrderSelectPage() {
         </CardHeader>
         <CardContent>
           {misLoading ? (
-            <div className="space-y-2">
+            <div role="status" aria-label="Завантаження замовлень MIS" className="space-y-2">
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </div>
@@ -165,40 +244,30 @@ export default function OrderSelectPage() {
           ) : misDocs.length === 0 ? (
             <p className="text-sm text-muted-foreground">Замовлень на протези в MIS не знайдено.</p>
           ) : (
-            <Table data-testid="mis-order-documents">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Документ</TableHead>
-                  <TableHead>Дата</TableHead>
-                  <TableHead>Виріб</TableHead>
-                  <TableHead className="text-right">Дія</TableHead>
+            <Table
+              role="table"
+              aria-label="Замовлення MIS"
+              data-testid="mis-order-documents"
+              className="block w-full lg:table lg:table-fixed"
+            >
+              <TableHeader role="rowgroup" className="hidden lg:table-header-group">
+                <TableRow role="row">
+                  <TableHead role="columnheader" className="w-[34%]">Документ</TableHead>
+                  <TableHead role="columnheader" className="w-[14%]">Дата</TableHead>
+                  <TableHead role="columnheader" className="w-[32%]">Виріб</TableHead>
+                  <TableHead role="columnheader" className="w-[20%] text-right">Дія</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody role="rowgroup" className="block lg:table-row-group">
                 {misDocs.map((doc) => (
-                  <TableRow key={`${doc.documentTemplateId}-${doc.documentId}-${doc.documentUrl}`}>
-                    <TableCell className="font-medium">
-                      {doc.documentTemplateName ?? `Шаблон ${doc.documentTemplateId}`}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDocDate(doc.documentCreationDate ?? doc.orderDate)}
-                    </TableCell>
-                    <TableCell>{doc.productName || '—'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant={draft.misDocumentUrl === doc.documentUrl ? 'default' : 'outline'}
-                        disabled={!doc.documentUrl || doc.documentId == null || provisioningUrl != null}
-                        onClick={() => void handleSelectMisDoc(doc)}
-                      >
-                        {provisioningUrl === doc.documentUrl
-                          ? 'Підготовка…'
-                          : draft.misDocumentUrl === doc.documentUrl
-                            ? 'Обрано'
-                            : 'Обрати'}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                  <MisOrderDocumentRow
+                    key={`${doc.documentTemplateId}-${doc.documentId}-${doc.documentUrl}`}
+                    doc={doc}
+                    selected={draft.misDocumentUrl === doc.documentUrl}
+                    disabled={!doc.documentUrl || doc.documentId == null || provisioningUrl != null}
+                    provisioning={provisioningUrl === doc.documentUrl}
+                    onSelect={(selectedDoc) => void handleSelectMisDoc(selectedDoc)}
+                  />
                 ))}
               </TableBody>
             </Table>

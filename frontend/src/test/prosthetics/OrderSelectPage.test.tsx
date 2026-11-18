@@ -40,6 +40,14 @@ const misDoc = {
   productName: '06.12.09 : Ортези на колінний суглоб',
 };
 
+const longMisDoc = {
+  ...misDoc,
+  documentTemplateName:
+    'Замовлення на протези нижніх кінцівок для пацієнта з дуже довгим суспільним описом виробу та додатковими умовами',
+  productName:
+    '06.12.09 : Ортези на колінний суглоб із регулюванням шарніра, симетричний дизайн із зовнішнім протезуванням нижньої кінцівки',
+};
+
 function renderPage() {
   mockUseProsthetics();
   return render(
@@ -87,6 +95,33 @@ describe('OrderSelectPage', () => {
       expect(screen.getByText('Замовлення на протези нижніх кінцівок')).toBeInTheDocument();
     });
     expect(screen.getByText('06.12.09 : Ортези на колінний суглоб')).toBeInTheDocument();
+  });
+
+  it('keeps long document and product text complete and describes the select action', async () => {
+    prostheticsOrderApiMock.listMisDocuments.mockResolvedValue({ data: [longMisDoc] });
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(longMisDoc.documentTemplateName)).toBeInTheDocument();
+    });
+    expect(screen.getByText(longMisDoc.productName)).toBeInTheDocument();
+
+    const selectButton = screen.getByRole('button', { name: 'Обрати' });
+    expect(selectButton).toHaveAccessibleDescription(
+      new RegExp(longMisDoc.documentTemplateName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    );
+    expect(selectButton).toHaveAccessibleDescription(
+      new RegExp(longMisDoc.productName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    );
+  });
+
+  it('exposes a loading status while MIS documents are being fetched', async () => {
+    prostheticsOrderApiMock.listMisDocuments.mockReturnValue(new Promise(() => {}));
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('status', { name: 'Завантаження замовлень MIS' })).toBeInTheDocument();
+    });
   });
 
   it('shows MIS empty state when no limb-order documents exist', async () => {
