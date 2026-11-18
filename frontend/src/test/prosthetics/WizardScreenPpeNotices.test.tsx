@@ -46,6 +46,7 @@ const STAGE_TRAINING_SOCKET = 'd0000014-0000-0000-0000-000000000014';
 const STEP_TRAINING_SOCKET = 'e0000024-0000-0000-0000-000000000024';
 const STAGE_NEGATIVE = 'd0000012-0000-0000-0000-000000000012';
 const STEP_PLASTER_NEGATIVE = 'e0000021-0000-0000-0000-000000000021';
+const STEP_MEASUREMENT = 'e0000020-0000-0000-0000-000000000020';
 
 const checkboxElement = (id: string, label: string) => ({
   id,
@@ -63,7 +64,30 @@ const checkboxElement = (id: string, label: string) => ({
   maxSizeMb: null,
 });
 
-function snapshotFor(stageId: string, stageName: string, stepId: string, stepName: string): SnapshotTemplate {
+function stepNode(id: string, name: string) {
+  return {
+    id,
+    name,
+    stepType: 'INFORMATION',
+    mandatory: true,
+    allowBackward: true,
+    autoStartTimer: false,
+    normDurationMin: 25,
+    elements: [checkboxElement('el-1', 'Підтвердити виконання')],
+  };
+}
+
+/**
+ * Синтетичний snapshot етапу. `previousSteps` — реальні кроки етапу, що
+ * передують поточку (щоб номер «КРОК N» рахувався як у проді).
+ */
+function snapshotFor(
+  stageId: string,
+  stageName: string,
+  stepId: string,
+  stepName: string,
+  previousSteps: { id: string; name: string }[] = [],
+): SnapshotTemplate {
   return {
     name: 'TP-LL-02',
     version: 1,
@@ -79,16 +103,8 @@ function snapshotFor(stageId: string, stageName: string, stepId: string, stepNam
         canSkip: false,
         requiresApproval: false,
         steps: [
-          {
-            id: stepId,
-            name: stepName,
-            stepType: 'INFORMATION',
-            mandatory: true,
-            allowBackward: true,
-            autoStartTimer: false,
-            normDurationMin: 25,
-            elements: [checkboxElement('el-1', 'Підтвердити виконання')],
-          },
+          ...previousSteps.map((s) => stepNode(s.id, s.name)),
+          stepNode(stepId, stepName),
         ],
       },
     ],
@@ -146,7 +162,7 @@ describe('WizardScreen PPE notices wiring', () => {
     });
   });
 
-  it('e0000024 рендерить обидва банери, full-kit вище за nitrile', async () => {
+  it('e0000024 рендерить лише full-kit (nitrile-банер видалено)', async () => {
     flowInstanceApiMock.getById.mockResolvedValue({
       data: instanceAt(STAGE_TRAINING_SOCKET, STEP_TRAINING_SOCKET),
     });
@@ -161,17 +177,15 @@ describe('WizardScreen PPE notices wiring', () => {
     renderWizard();
 
     const kit = await screen.findByTestId('ppe-notice-full-kit');
-    const nitrile = await screen.findByTestId('ppe-notice-nitrile');
     expect(kit).toBeInTheDocument();
-    expect(nitrile).toBeInTheDocument();
-    // Порядок у DOM: комплект першим (масив getPpeNotices).
-    expect(kit.compareDocumentPosition(nitrile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Банери стоять перед формою кроку.
+    // Банер стоїть перед формою кроку.
     const formControl = screen.getByText('Підтвердити виконання');
     expect(kit.compareDocumentPosition(formControl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Nitrile-банер на цьому кроці видалено.
+    expect(screen.queryByTestId('ppe-notice-nitrile')).not.toBeInTheDocument();
   });
 
-  it('e0000021 не рендерить жодного банера', async () => {
+  it('e0000021 (гіпсовий негатив) рендерить nitrile-банер', async () => {
     flowInstanceApiMock.getById.mockResolvedValue({
       data: instanceAt(STAGE_NEGATIVE, STEP_PLASTER_NEGATIVE),
     });
@@ -181,14 +195,20 @@ describe('WizardScreen PPE notices wiring', () => {
         'Виготовлення гіпсового негатива',
         STEP_PLASTER_NEGATIVE,
         'Виготовлення гіпсового негатива',
+        [{ id: STEP_MEASUREMENT, name: "Зняття та внесення об'ємних розмірів" }],
       ),
     });
     renderWizard();
 
     await waitFor(() => {
-      expect(screen.getByText('КРОК 1: Виготовлення гіпсового негатива')).toBeInTheDocument();
+      expect(screen.getByText('КРОК 2: Виготовлення гіпсового негатива')).toBeInTheDocument();
     });
+    const nitrile = await screen.findByTestId('ppe-notice-nitrile');
+    expect(nitrile).toBeInTheDocument();
+    expect(screen.getByText('Нітрилові рукавиці')).toBeInTheDocument();
+    expect(
+      screen.getByText('Роботу виконувати у штучних захисних рукавицях (нітрилові рукавиці)!!!'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('ppe-notice-full-kit')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('ppe-notice-nitrile')).not.toBeInTheDocument();
   });
 });

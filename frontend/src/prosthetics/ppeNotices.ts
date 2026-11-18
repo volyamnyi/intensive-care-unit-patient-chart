@@ -4,8 +4,8 @@
  *
  * Єдине джерело правил відображення: ключ — `stepId` кроку TP-LL-02
  * (назви етапів/кроків рядками ніде не дублюються). Один крок може нести
- * декілька повідомлень (напр. `e0000024` — комплект + нітрил); порядок
- * у масиві = порядок рендеру (`full-kit` завжди першим).
+ * декілька повідомлень; порядок у масиві = порядок рендеру (`full-kit`
+ * завжди першим).
  *
  * Повідомлення суто інформаційні (non-blocking): не додають елементів,
  * не впливають на валідацію `completeStep`, бекенд/seed не зачеплені.
@@ -95,6 +95,8 @@ const STEP_TRAINING_SOCKET = 'e0000024-0000-0000-0000-000000000024';
 const STEP_SOFT_LINER = 'e0000029-0000-0000-0000-000000000029';
 // Етап 2 / КРОК 1 «Виготовлення гіпсового позитива».
 const STEP_PLASTER_POSITIVE = 'e0000022-0000-0000-0000-000000000022';
+// Етап 1 / КРОК 2 «Виготовлення гіпсового негатива».
+const STEP_PLASTER_NEGATIVE = 'e0000021-0000-0000-0000-000000000021';
 // Етап 4 / КРОК 1 «Примірка тренувальної гільзи».
 const STEP_TRAINING_FITTING = 'e0000026-0000-0000-0000-000000000026';
 // Етап 6 / КРОК 1 «Примірювання та коректування тренувального протеза».
@@ -103,7 +105,8 @@ const STEP_TRAINING_CORRECTION = 'e0000028-0000-0000-0000-000000000028';
 const STEP_PERMANENT_CORRECTION = 'e0000032-0000-0000-0000-000000000032';
 
 export const PPE_NOTICES_BY_STEP: Record<string, PpeNotice[]> = {
-  [STEP_TRAINING_SOCKET]: [FULL_KIT_NOTICE, NITRILE_NOTICE],
+  [STEP_PLASTER_NEGATIVE]: [NITRILE_NOTICE],
+  [STEP_TRAINING_SOCKET]: [FULL_KIT_NOTICE],
   [STEP_SOFT_LINER]: [FULL_KIT_NOTICE],
   [STEP_PLASTER_POSITIVE]: [NITRILE_NOTICE],
   [STEP_TRAINING_FITTING]: [NITRILE_NOTICE],

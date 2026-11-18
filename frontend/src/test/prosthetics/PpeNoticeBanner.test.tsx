@@ -9,6 +9,7 @@ import {
 } from '@/prosthetics/ppeNotices';
 
 const STEP_TRAINING_SOCKET = 'e0000024-0000-0000-0000-000000000024';
+const STEP_PLASTER_POSITIVE = 'e0000022-0000-0000-0000-000000000022';
 
 describe('PpeNoticeBanner', () => {
   it('full-kit: role=alert, title, точний текст, 4 фото з alt+підписами, warning-класи', () => {
@@ -40,7 +41,7 @@ describe('PpeNoticeBanner', () => {
   });
 
   it('nitrile: role=alert, title «Захист рук», точний текст, 1 фото, default-варіант', () => {
-    const nitrile = getPpeNotices(STEP_TRAINING_SOCKET)[1];
+    const nitrile = getPpeNotices(STEP_PLASTER_POSITIVE)[0];
     expect(nitrile?.kind).toBe('nitrile');
     const { container } = render(<PpeNoticeBanner notice={nitrile!} />);
     const alert = screen.getByRole('alert');
@@ -60,7 +61,7 @@ describe('PpeNoticeBanner', () => {
     expect(container.querySelectorAll('[role="checkbox"], [role="button"]').length).toBe(0);
   });
 
-  it('стек e0000024: обидва банери у порядку [full-kit, nitrile]', () => {
+  it('e0000024: лише full-kit (nitrile-банер видалено)', () => {
     const { container } = render(
       <>
         {getPpeNotices(STEP_TRAINING_SOCKET).map((n) => (
@@ -69,8 +70,8 @@ describe('PpeNoticeBanner', () => {
       </>,
     );
     const alerts = container.querySelectorAll('[role="alert"]');
-    expect(alerts).toHaveLength(2);
+    expect(alerts).toHaveLength(1);
     expect(alerts[0]?.getAttribute('data-testid')).toBe('ppe-notice-full-kit');
-    expect(alerts[1]?.getAttribute('data-testid')).toBe('ppe-notice-nitrile');
+    expect(container.querySelectorAll('[data-testid="ppe-notice-nitrile"]')).toHaveLength(0);
   });
 });

@@ -15,11 +15,12 @@ import { testUser } from '../../helpers/test-users';
  * `prosthetics-chromium` project (storageState `.auth/prosthetist.json`).
  *
  * Карта нотисів (конфіг `ppeNotices.ts`, TP-LL-02 `c0000003`):
+ *   e0000021 (Етап 1, КРОК 2)                   → nitrile («Захист рук»)
  *   e0000022 (Етап 2) / e0000026 (Етап 4) / e0000028 (Етап 6) /
  *   e0000032 (Етап 9)                         → nitrile («Захист рук»)
  *   e0000029 (Етап 7)                          → full-kit (комплект ЗІЗ)
- *   e0000024 (Етап 3, КРОК 1)                  → ОБИДВА (full-kit вище)
- *   e0000021 / e0000023 / e0000025 / e0000030…  → без банерів
+ *   e0000024 (Етап 3, КРОК 1)                  → full-kit (nitrile-банер видалено)
+ *   e0000023 / e0000025 / e0000030…             → без банерів
  *
  * Кожен тест створює свіжий інстанс на вільному lower-замовленні і
  * добиває його в `afterEach`, щоб замовлення лишалося вільним.
@@ -35,6 +36,7 @@ const FULL_KIT_TEXT =
 const NITRILE_TITLE = 'Захист рук';
 const NITRILE_TEXT = 'Роботу виконувати у штучних захисних рукавицях (нітрилові рукавиці)!!!';
 
+const E21 = 'e0000021-0000-0000-0000-000000000021';
 const E22 = 'e0000022-0000-0000-0000-000000000022';
 const E23 = 'e0000023-0000-0000-0000-000000000023';
 const E24 = 'e0000024-0000-0000-0000-000000000024';
@@ -117,14 +119,20 @@ test.describe('Prosthetics — PPE notices', () => {
     await expect(page.getByTestId('ppe-notice-nitrile')).toHaveCount(0);
   }
 
-  test('ранні кроки: e22 nitrile → e23 чисто → e24 обидва → e25 чисто → e26 nitrile', async ({
+  test('ранні кроки: e21 nitrile → e22 nitrile → e23 чисто → e24 full-kit → e25 чисто → e26 nitrile', async ({
     page,
     request,
   }) => {
     test.setTimeout(300000);
     const errors = trackErrors(page);
-    instanceId = await startAtStep(request, E22);
+    instanceId = await startAtStep(request, E21);
 
+    await gotoWizard(page, instanceId);
+    await expect(page.getByText('КРОК 2: Виготовлення гіпсового негатива')).toBeVisible();
+    await expectNitrile(page);
+    await expect(page.getByTestId('ppe-notice-full-kit')).toHaveCount(0);
+
+    await completeToStep(request, h(), instanceId, E22);
     await gotoWizard(page, instanceId);
     await expectNitrile(page);
     await expect(page.getByTestId('ppe-notice-full-kit')).toHaveCount(0);
@@ -138,11 +146,8 @@ test.describe('Prosthetics — PPE notices', () => {
     await gotoWizard(page, instanceId);
     await expect(page.getByText('КРОК 1: Виготовлення тренувальної гільзи')).toBeVisible();
     await expectFullKit(page);
-    await expectNitrile(page);
-    // Порядок стеку: комплект вище, нітрил нижче.
-    const kitBox = await page.getByTestId('ppe-notice-full-kit').boundingBox();
-    const nitBox = await page.getByTestId('ppe-notice-nitrile').boundingBox();
-    expect(kitBox?.y).toBeLessThan(nitBox?.y ?? Number.POSITIVE_INFINITY);
+    // Nitrile-банер на цьому кроці видалено — лише комплект ЗІЗ.
+    await expect(page.getByTestId('ppe-notice-nitrile')).toHaveCount(0);
     // Фото комплекту реально завантажились (асети з public/ppe у git).
     const widths = await page
       .getByTestId('ppe-notice-full-kit')
@@ -219,23 +224,16 @@ test.describe('Prosthetics — PPE notices', () => {
     expect(errors).toEqual([]);
   });
 
-  test('responsive: крок з подвійним банером без горизонтального скролу на 360/768', async ({
+  test('responsive: кроки з банером (nitrile e21 / full-kit e24) без горизонтального скролу на 360/768', async ({
     page,
     request,
   }) => {
-    test.setTimeout(120000);
+    test.setTimeout(180000);
     const errors = trackErrors(page);
-    instanceId = await startAtStep(request, E24);
+    instanceId = await startAtStep(request, E21);
 
-    for (const viewport of [
-      { width: 360, height: 800 },
-      { width: 768, height: 1024 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await gotoWizard(page, instanceId);
-      await expect(page.getByTestId('ppe-notice-full-kit')).toBeVisible();
-      await expect(page.getByTestId('ppe-notice-nitrile')).toBeVisible();
-      // Чекаємо стабільної верстки (шрифти/дані), потім один замір.
+    /** Очікуємо стабільної верстки й міряємо ширину документа. */
+    async function expectNoHorizontalOverflow(page: Page, label: string) {
       let previous = Number.NaN;
       await expect
         .poll(
@@ -252,9 +250,29 @@ test.describe('Prosthetics — PPE notices', () => {
         docWidth: document.documentElement.scrollWidth,
         viewportWidth: window.innerWidth,
       }));
-      expect(docWidth, `horizontal overflow at ${viewport.width}px`).toBeLessThanOrEqual(
-        viewportWidth + 1,
-      );
+      expect(docWidth, `horizontal overflow (${label})`).toBeLessThanOrEqual(viewportWidth + 1);
+    }
+
+    const viewports = [
+      { width: 360, height: 800 },
+      { width: 768, height: 1024 },
+    ];
+
+    // nitrile-банер (layout «фото + текст») — інстанс ще на e0000021
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await gotoWizard(page, instanceId);
+      await expectNitrile(page);
+      await expectNoHorizontalOverflow(page, `nitrile @${viewport.width}px`);
+    }
+
+    // full-kit-банер (сітка 4 фото) — інстанс на e0000024
+    await completeToStep(request, h(), instanceId, E24);
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await gotoWizard(page, instanceId);
+      await expectFullKit(page);
+      await expectNoHorizontalOverflow(page, `full-kit @${viewport.width}px`);
     }
 
     expect(errors).toEqual([]);
