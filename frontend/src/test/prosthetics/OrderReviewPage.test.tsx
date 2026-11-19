@@ -30,6 +30,7 @@ vi.mock('@/api/prosthetics', () => ({
 }));
 
 const useProsthetics = vi.hoisted(() => vi.fn());
+const resetDraftMock = vi.hoisted(() => vi.fn());
 const navigateMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/prosthetics/ProstheticsContext', () => ({
@@ -48,7 +49,7 @@ function mockUseProsthetics(draft: ProstheticsDraft = { patientId: null, orderId
   useProsthetics.mockReturnValue({
     draft,
     setDraftField: vi.fn(),
-    resetDraft: vi.fn(),
+    resetDraft: resetDraftMock,
   });
 }
 
@@ -221,6 +222,10 @@ describe('OrderReviewPage', () => {
       });
       expect(navigateMock).toHaveBeenCalledWith('/prosthetics/process/instance-1');
     });
+    // Regression (#454, caught live by the E2E pause test): clearing the draft
+    // before navigating re-runs the guard effect, bounces to step 2 and leaves
+    // the just-created process unreachable.
+    expect(resetDraftMock).not.toHaveBeenCalled();
   });
 
   it('requires an explicit selection when several exact templates match', async () => {
@@ -330,6 +335,41 @@ describe('OrderReviewPage', () => {
       expect(
         screen.getByText(/Для цього замовлення вже існує процес у роботі/),
       ).toBeInTheDocument();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a create failure and stays on review when the backend fails unexpectedly', async () => {
+    flowInstanceApiMock.create.mockRejectedValue({ response: { status: 500 } });
+    mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: /Старт/i })).toBeEnabled());
+    screen.getByRole('button', { name: /Старт/i }).click();
+    await waitFor(() => {
+      expect(screen.getByText('Не вдалося створити процес')).toBeInTheDocument();
+    });
+    expect(flowInstanceApiMock.create).toHaveBeenCalledWith({ orderId: 'o1', templateId: 't1' });
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces the backend message when creation is rejected as a duplicate', async () => {
+    flowInstanceApiMock.create.mockRejectedValue({
+      response: { status: 409, data: { message: 'Процес для цього замовлення вже існує' } },
+    });
+    mockUseProsthetics({ patientId: 'p1', orderId: 'o1', templateId: null, instanceId: null });
+    render(
+      <MemoryRouter initialEntries={['/prosthetics/new/review-order']}>
+        <OrderReviewPage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: /Старт/i })).toBeEnabled());
+    screen.getByRole('button', { name: /Старт/i }).click();
+    await waitFor(() => {
+      expect(screen.getByText('Процес для цього замовлення вже існує')).toBeInTheDocument();
     });
     expect(navigateMock).not.toHaveBeenCalled();
   });

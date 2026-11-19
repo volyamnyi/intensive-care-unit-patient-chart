@@ -306,12 +306,12 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
     await test.step('3.2 Verify Patient Selection UI (Spec 2.3.1)', async () => {
       logStep('Verify patient selection screen elements per spec 2.3.1');
 
-      // Step indicator (Крок 1 з 4)
-      const stepIndicator = await page.getByText(/Крок 1 з 4/i).isVisible({ timeout: 5000 }).catch(() => false);
+      // Step indicator (Крок 1 з 3)
+      const stepIndicator = await page.getByText(/Крок 1 з 3/i).isVisible({ timeout: 5000 }).catch(() => false);
       if (stepIndicator) {
-        log('✓ Step indicator "Крок 1 з 4" visible');
+        log('✓ Step indicator "Крок 1 з 3" visible');
       } else {
-        reportBug('Minor', 'Step indicator "Крок 1 з 4" not visible', 'Screen should show "Крок 1 з 4"', 'Step indicator not found');
+        reportBug('Minor', 'Step indicator "Крок 1 з 3" not visible', 'Screen should show "Крок 1 з 3"', 'Step indicator not found');
       }
 
       // Search input
@@ -460,10 +460,10 @@ test.describe('Prosthetist Technical Chart — Specification Verification', () =
     await test.step('3.7 Verify Order Selection UI (Spec 2.3.2)', async () => {
       logStep('Verify order selection screen elements per spec 2.3.2');
 
-      // Step indicator (Крок 2 з 4)
-      const stepIndicator = await page.getByText(/Крок 2 з 4/i).isVisible({ timeout: 5000 }).catch(() => false);
+      // Step indicator (Крок 2 з 3)
+      const stepIndicator = await page.getByText(/Крок 2 з 3/i).isVisible({ timeout: 5000 }).catch(() => false);
       if (stepIndicator) {
-        log('✓ Step indicator "Крок 2 з 4" visible');
+        log('✓ Step indicator "Крок 2 з 3" visible');
       }
 
       // Patient context card (Sticky Header)
@@ -539,10 +539,10 @@ const currentUrl = page.url();
     await test.step('3.10 Verify Order Review UI (Spec 2.3.3)', async () => {
       logStep('Verify order review screen elements per spec 2.3.3');
 
-      // Step indicator (Крок 3 з 4)
-      const stepIndicator = await page.getByText(/Крок 3 з 4/i).isVisible({ timeout: 5000 }).catch(() => false);
+      // Step indicator (Крок 3 з 3)
+      const stepIndicator = await page.getByText(/Крок 3 з 3/i).isVisible({ timeout: 5000 }).catch(() => false);
       if (stepIndicator) {
-        log('✓ Step indicator "Крок 3 з 4" visible');
+        log('✓ Step indicator "Крок 3 з 3" visible');
       }
 
       // Left panel - Patient info (Spec 2.3.3 Section 1)
@@ -575,101 +575,69 @@ const currentUrl = page.url();
       await takeScreenshot(page, '18-order-review-ui');
     });
 
-    await test.step('3.11 Start process (Spec 2.3.3)', async () => {
-      logStep('Click "Старт" to proceed to template selection');
+    await test.step('3.11 Pick the technology route and start (Spec 2.3.3/2.3.4)', async () => {
+      logStep('Pick the route on the review screen, then click "Старт"');
+
+      const routeGroup = page.getByRole('radiogroup', { name: 'Технологічні маршрути' });
+      const emptyState = page.getByText(/Для цього замовлення немає активного шаблону/);
+      const routeVisible = await routeGroup.isVisible({ timeout: 15000 }).catch(() => false);
+
+      if (!routeVisible) {
+        if (await emptyState.isVisible({ timeout: 3000 }).catch(() => false)) {
+          reportBug(
+            'Critical',
+            'No compatible technology route',
+            'Review should offer an active route for the order',
+            'Empty route state displayed',
+            await takeScreenshot(page, 'bug-no-routes'),
+          );
+        } else {
+          reportBug(
+            'Major',
+            'Route selection not rendered',
+            'Review should render the technology route card',
+            'Route card not found',
+            await takeScreenshot(page, 'bug-no-route-card'),
+          );
+        }
+        return;
+      }
+
+      const routeCount = await routeGroup.getByRole('radio').count();
+      log(`✓ Route candidates: ${routeCount}`);
 
       const startButton = page.getByRole('button', { name: /Старт/i }).first();
-
-      // Wait for button to become enabled (PDF loaded)
-      await startButton.waitFor({ state: 'visible', timeout: 15000 });
-
-      const enabled = await startButton.isEnabled({ timeout: 5000 }).catch(() => false);
-      if (enabled) {
-        await startButton.click();
-        log('✓ "Старт" button clicked');
+      const alreadyChosen = await startButton.isEnabled({ timeout: 1000 }).catch(() => false);
+      if (alreadyChosen) {
+        log('✓ A single exact route was auto-selected');
       } else {
-        // Force click to test behavior
-        reportBug('Major', '"Старт" button should be enabled after PDF loads', 'Button should become active when document is ready', 'Button remains disabled');
-        await startButton.click({ force: true });
-      }
-
-      await takeScreenshot(page, '19-after-start');
-    });
-
-    // ----- Screen 6: Template Selection (Spec 2.3.4) -----
-    await test.step('3.12 Navigate to Template Selection (Spec 2.3.4)', async () => {
-      logStep('Navigate to template selection screen');
-
-      const currentUrl = page.url();
-      if (currentUrl.includes('select-template') || currentUrl.includes('template')) {
-        log('✓ On template selection screen');
-      } else {
-        await page.waitForURL('**/select-template**', { timeout: 10000 }).catch(() => {
-          log('⚠ URL did not match expected pattern');
-        });
-      }
-
-      await waitForPageLoad(page);
-      await takeScreenshot(page, '20-template-selection');
-    });
-
-    await test.step('3.13 Verify Template Selection UI (Spec 2.3.4)', async () => {
-      logStep('Verify template selection screen elements per spec 2.3.4');
-
-      // Step indicator (Крок 4 з 4)
-      const stepIndicator = await page.getByText(/Крок 4 з 4/i).isVisible({ timeout: 5000 }).catch(() => false);
-      if (stepIndicator) {
-        log('✓ Step indicator "Крок 4 з 4" visible');
-      }
-
-      // Context info (Patient PIB)
-      const contextInfo = await page.getByText(/Пацієнт:/i).isVisible({ timeout: 5000 }).catch(() => false);
-      if (contextInfo) {
-        log('✓ Context info visible (Patient PIB)');
-      }
-
-      // Template cards grid
-      const templateCards = await page.locator('[class*="cursor-pointer"], [class*="template-card"], [class*="card"]').count();
-      if (templateCards > 0) {
-        log(`✓ Template cards visible (${templateCards} cards found)`);
-      } else {
-        const emptyState = await page.getByText(/Немає доступних шаблонів/i).isVisible({ timeout: 3000 }).catch(() => false);
-        if (emptyState) {
-          reportBug('Critical', 'Template filtering returns 0 results', 'Templates should be filtered by patient/order data', 'Empty state displayed - no templates available');
+        // Product-type fallback is a manual decision (decision #449).
+        const card = routeGroup.locator('label').filter({ hasText: 'TP-UL-01' }).first();
+        if (await card.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await card.click();
+          log('✓ TP-UL-01 route selected');
+        } else {
+          await routeGroup.locator('label').first().click();
+          log('✓ First offered route selected');
         }
       }
 
-      await takeScreenshot(page, '21-template-selection-ui');
+      await expect(startButton).toBeEnabled({ timeout: 15000 });
+      await startButton.click();
+      log('✓ "Старт" clicked');
+      await takeScreenshot(page, '19-after-start');
     });
 
-    await test.step('3.14 Select template and create process (Spec 2.3.4)', async () => {
-      logStep('Select template to create process instance');
+    // ----- Process creation (no separate template screen, #449/#453) -----
+    await test.step('3.12 Verify process creation from review (Spec 2.3.4)', async () => {
+      logStep('Verify the process opened and the retired template screen is gone');
 
-      // Find and click a template card
-      const templateCard = page.locator('[class*="cursor-pointer"]').filter({ hasText: /TP-UL|TP-LL|Шаблон/i }).first();
-      const cardVisible = await templateCard.isVisible({ timeout: 5000 }).catch(() => false);
-
-      if (cardVisible) {
-        await templateCard.click();
-        log('✓ Template card selected');
-      }
-
-      // Click "Обрати" button to create process (shows «Обрано» once the card is selected)
-      const selectButton = page.getByRole('button', { name: /Обрати|Обрано/i }).first();
-      const buttonVisible = await selectButton.isVisible({ timeout: 5000 }).catch(() => false);
-
-      if (buttonVisible) {
-        await selectButton.click();
-        log('✓ "Обрати" button clicked - process instance created');
-      } else {
-        reportBug('Major', '"Обрати" button not found', 'Button should be visible after template selection', 'Button not found');
-      }
-
-      // The process instance opens after «Обрати» — wait for the wizard URL
-      // instead of a double sleep (tolerant: the fallback in step 4.1 handles
-      // the case where navigation did not happen).
       await page.waitForURL('**/prosthetics/process/**', { timeout: 15000 }).catch(() => {});
-      await takeScreenshot(page, '22-after-template-selection');
+      expect(page.url()).not.toContain('select-template');
+      log(`✓ Process URL: ${page.url()}`);
+
+      await waitForPageLoad(page);
+      await takeScreenshot(page, '20-process-created');
     });
 
     // ============== PHASE 4: PROCESS EXECUTION (Screens 7-8) ==============

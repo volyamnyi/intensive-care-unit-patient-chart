@@ -340,116 +340,61 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       await takeScreenshot(page, '08-order-selection');
     });
 
-    await test.step('3.2 Select Order — Auto-navigate to Template Selection (Implementation behavior)', async () => {
-      logStep('Select order — clicking "Обрати" auto-navigates to template selection');
-      
-      // In the actual implementation, clicking "Обрати" routes through the order review screen
+    await test.step('3.2 Select Order — open the order review (3-step setup)', async () => {
+      logStep('Select order — the MIS document provisions the local order and opens review');
+
       await setupWizardPage.selectOrder('b0000001-0000-0000-0000-000000000001');
       log('✓ Order selected');
-      
-      // Order review screen (added after the spec was written) — confirm and continue
-      await page.waitForURL('**/prosthetics/new/review-order', { timeout: 10000 });
+
+      // Step 3 of 3: the technology route and the process start live here.
+      await page.waitForURL('**/prosthetics/new/review-order', { timeout: 15000 });
       log('✓ Navigated to order review');
-      const startProcessBtn = page.getByRole('button', { name: /Старт/ });
-      await expect(startProcessBtn).toBeEnabled({ timeout: 15000 });
-      await startProcessBtn.click();
-      
-      // Verify auto-navigation to template selection
-      await page.waitForURL('**/prosthetics/new/select-template', { timeout: 10000 });
-      await takeScreenshot(page, '09-template-selection-screen');
-      log('✓ Auto-navigated to template selection after order selection');
+      await takeScreenshot(page, '09-order-review');
     });
 
-    // ============== PHASE 4: TEMPLATE SELECTION ==============
-    currentPhase = 'PHASE 4: TEMPLATE SELECTION';
+    // ============== PHASE 4: TECHNOLOGY ROUTE ==============
+    currentPhase = 'PHASE 4: TECHNOLOGY ROUTE SELECTION';
     log(`\n--- ${currentPhase} ---`);
-    
-    await test.step('4.1 Verify Template Selection UI (Spec 2.3.4)', async () => {
-      logStep('Verify template selection screen elements');
-      
-      // Context summary — shows "Пацієнт" with patient ID (tolerant wait below)
-      const contextCard = page.getByText(/Пацієнт/);
-      if (await contextCard.first().isVisible({ timeout: 5000 }).catch(() => false)) {
-        log('✓ Context summary visible');
-      } else {
-        log('⚠ Context summary not found — checking for patient ID in draft');
-      }
-      
-      // Template cards — the auto-waiting assertion below covers the render
-      const templateHeading = page.getByText(/Вибір технологічного маршруту/);
-      await expect(templateHeading).toBeVisible({ timeout: 10000 });
-      log('✓ Template selection heading visible');
-      
-      // Check for template cards or empty state
-      const cardCount = await page.locator('[class*="cursor-pointer"]').count();
-      const emptyState = await page.getByText(/Немає доступних шаблонів/).isVisible({ timeout: 3000 }).catch(() => false);
-      log(`✓ Template cards: ${cardCount}, empty state: ${emptyState}`);
-      
-      if (cardCount === 0 && emptyState) {
-        // BUG: Template filtering uses wrong enum values
-        // Frontend sends productType: 'протез' but backend expects 'UPPER_LIMB'/'LOWER_LIMB'
-        reportBug(
-          'Critical',
-          'Template filtering returns 0 results due to wrong filter values',
-          'TemplateSelectPage should send correct productType values (UPPER_LIMB/LOWER_LIMB) to API, not generic "протез"',
-          'Frontend sends productType: "протез", amputationLevel: "both", limbSide: "both" which returns 0 templates from backend',
-          await takeScreenshot(page, 'bug-template-filter-mismatch')
-        );
-      } else if (cardCount === 0 && !emptyState) {
-        reportBug(
-          'Major',
-          'No template cards or empty state displayed',
-          'System should show relevant templates or an empty state message',
-          'Neither templates nor empty state visible',
-          await takeScreenshot(page, 'bug-no-templates')
-        );
+
+    await test.step('4.1 Verify the route card on review (Spec 2.3.4)', async () => {
+      logStep('The order review screen carries the technology route selection');
+
+      await expect(page.getByRole('heading', { name: 'Перевірка замовлення' })).toBeVisible({
+        timeout: 15000,
+      });
+      await expect(page.getByText(/Крок 3 з 3/)).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText('Технологічний маршрут')).toBeVisible({ timeout: 15000 });
+      log('✓ Review screen with the technology route card visible');
+
+      const routeCount = await setupWizardPage.getRouteCount();
+      log(`✓ Route candidates: ${routeCount}`);
+
+      // A provisioned MIS order carries no amputation level, so the list is a
+      // product-type fallback that must be picked manually (decision #449).
+      const fallbackVisible = await setupWizardPage.routeFallbackNotice
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
+      if (fallbackVisible) {
+        log('✓ Product-type fallback notice visible');
+        await expect(page.getByRole('button', { name: /Оберіть маршрут/ })).toBeDisabled();
+        log('✓ Start stays blocked until a route is picked');
       }
     });
 
-    await test.step('4.2 Select Template and Create Process (Spec 2.3.4)', async () => {
-      logStep('Select template card, then click "Обрати" to create process');
-      
-      // Find and click the template card to select it (auto-waiting isVisible below)
-      const clickableCard = page.locator('[class*="cursor-pointer"]').filter({ hasText: 'TP-UL-01' }).first();
-      const cardVisible = await clickableCard.isVisible({ timeout: 10000 }).catch(() => false);
-      
-      if (cardVisible) {
-        await clickableCard.click();
-        log('✓ Template card clicked (selected)');
-      } else {
-        // Fallback: try clicking any available template card
-        const anyCard = page.locator('[class*="cursor-pointer"]').first();
-        if (await anyCard.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await anyCard.click();
-          log('✓ First available template card clicked');
-        } else {
-          throw new Error('No template cards found to select');
-        }
-      }
-      
-      // Now click the "Обрати" button (enabled only for selected template)
-      const selectButton = page.getByRole('button', { name: 'Обрати' }).first();
-      await selectButton.waitFor({ state: 'visible', timeout: 10000 });
-      await selectButton.click();
-      log('✓ "Обрати" button clicked');
-      
-      // Wait for process creation — the process page URL is the signal
-      // (tolerant: the implementation may redirect back to setup).
-      await page.waitForURL('**/prosthetics/process/**', { timeout: 15000 }).catch(() => {});
-      await takeScreenshot(page, '10-after-template-select');
-      
-      const currentUrl = page.url();
-      log(`URL after process creation: ${currentUrl}`);
-      
-      // Check if we're on a process page
-      if (currentUrl.includes('/prosthetics/process/')) {
-        log('✓ Process created — on process view');
-      } else {
-        // The app may have redirected back to setup — this is a known issue
-        log('⚠ Not on process page — process creation may have redirected to setup');
-        // Try to find the process in the dashboard or navigate to it
-        // For now, we'll document this and continue
-      }
+    await test.step('4.2 Pick the route and create the process (Spec 2.3.4)', async () => {
+      logStep('Select the route, then click "Старт" to create the process');
+
+      await setupWizardPage.selectRoute('TP-UL-01');
+      log('✓ TP-UL-01 route selected');
+
+      const startButton = page.getByRole('button', { name: 'Старт' });
+      await expect(startButton).toBeEnabled({ timeout: 15000 });
+      await startButton.click();
+      log('✓ "Старт" clicked');
+
+      await page.waitForURL('**/prosthetics/process/**', { timeout: 15000 });
+      await takeScreenshot(page, '10-after-route-selection');
+      log('✓ Process created — on process view');
     });
 
     // ============== PHASE 5: WIZARD EXECUTION (Screen 8) ==============
@@ -775,19 +720,12 @@ test.describe('Prosthetist Technical Chart — Complete Specification Verificati
       await page.waitForURL('**/prosthetics/new/select-order', { timeout: 10000 });
       
       await setupWizardPage.selectOrder('b0000001-0000-0000-0000-000000000001');
-      // Current implementation routes through the order review screen
-      await page.waitForURL('**/prosthetics/new/review-order', { timeout: 10000 });
-      const startProcessBtn = page.getByRole('button', { name: /Старт/ });
+      // Step 3 of 3: pick the technology route, then start the process.
+      await page.waitForURL('**/prosthetics/new/review-order', { timeout: 15000 });
+      await setupWizardPage.selectRoute('TP-UL-01');
+      const startProcessBtn = page.getByRole('button', { name: 'Старт' });
       await expect(startProcessBtn).toBeEnabled({ timeout: 15000 });
       await startProcessBtn.click();
-      await page.waitForURL('**/prosthetics/new/select-template', { timeout: 10000 });
-      
-      // Select template
-      const templateCard = page.getByText('TP-UL-01').first();
-      await templateCard.click();
-      // The click below auto-waits for the button to become enabled.
-      const selectButton = page.getByRole('button', { name: 'Обрати' }).first();
-      await selectButton.click();
       await page.waitForURL('**/prosthetics/process/**', { timeout: 15000 });
       
       // Navigate to wizard

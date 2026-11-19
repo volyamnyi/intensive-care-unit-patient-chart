@@ -1,12 +1,15 @@
 import { Page, Locator, expect } from '@playwright/test';
 
 /**
- * Page Object for the Setup Wizard (Screens 3-6)
+ * Page Object for the Setup Wizard (Screens 3-5)
  * Spec ref: Section 2.3 — New Process Creation
- * 
+ *
  * NOTE: Actual implementation differs from spec in some details:
  * - Patient search: NO search button — automatic with 300ms debounce
  * - Patient table: only renders when results exist (empty state shows text)
+ * - Setup is 3 steps (patient → MIS order → review): the technology route is
+ *   picked inside the review screen, there is no separate template screen
+ *   (decision #449/#453).
  */
 export class SetupWizardPage {
   readonly page: Page;
@@ -30,19 +33,18 @@ export class SetupWizardPage {
   readonly orderDetailsTab: Locator;
   readonly recipeTab: Locator;
   readonly materialsTab: Locator;
-  
-  // Screen 6: Template Selection
-  readonly templateCards: Locator;
-  readonly templateGrid: Locator;
-  readonly contextSummary: Locator;
-  
+
+  // Technology route selection (inside Order Review)
+  readonly routeGroup: Locator;
+  readonly routeFallbackNotice: Locator;
+  readonly routeEmptyState: Locator;
+
   // Common
   readonly nextButton: Locator;
   readonly backButton: Locator;
   readonly cancelButton: Locator;
   readonly stepIndicator: Locator;
   readonly heading: Locator;
-  readonly stepFourHeading: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -67,18 +69,17 @@ export class SetupWizardPage {
     this.recipeTab = page.getByRole('tab', { name: /Замовлення на протез|Документація/ });
     this.materialsTab = page.getByRole('tab', { name: /Матеріали/ });
     
-    // Screen 6: Template Selection
-    this.templateCards = page.locator('[class*="template-card"], [class*="cursor-pointer"]');
-    this.templateGrid = page.locator('[class*="grid"]').first();
-    this.contextSummary = page.getByText(/Пацієнт:/);
-    
+    // Screen 6: technology route selection (inside Order Review)
+    this.routeGroup = page.getByRole('radiogroup', { name: 'Технологічні маршрути' });
+    this.routeFallbackNotice = page.getByText(/Точного збігу за рівнем ампутації немає/);
+    this.routeEmptyState = page.getByText(/Для цього замовлення немає активного шаблону/);
+
     // Common
     this.nextButton = page.getByRole('button', { name: /Далі/ });
     this.backButton = page.getByRole('button', { name: /Назад/ });
     this.cancelButton = page.getByRole('button', { name: /Скасувати|До головного меню/ });
-    this.stepIndicator = page.getByText(/Крок \d з 4/);
+    this.stepIndicator = page.getByText(/Крок \d з 3/);
     this.heading = page.getByRole('heading', { level: 1 });
-    this.stepFourHeading = page.getByRole('heading', { name: /Вибір технологічного маршруту/ });
   }
 
   // ==================== SCREEN 3: PATIENT SELECTION ====================
@@ -224,32 +225,25 @@ export class SetupWizardPage {
     expect(hasMaterials || hasPlaceholder).toBeTruthy();
   }
 
-  // ==================== SCREEN 6: TEMPLATE SELECTION ====================
-  
-  async selectTemplate(templateName: string) {
-    // Template cards load asynchronously — wait for the named card (no pre-sleep).
-    const card = this.page.getByText(templateName).first();
-    await expect(card).toBeVisible({ timeout: 10000 }).catch(() => {});
-    if (await card.isVisible().catch(() => false)) {
-      await card.click();
-    }
+  // ==================== SCREEN 6: TECHNOLOGY ROUTE (REVIEW) ====================
 
-    // Selecting a card enables «Обрати» — wait for that state instead of a fixed delay.
-    const selectButton = this.page.getByRole('button', { name: /Обрати|Обрано/ }).first();
-    await expect(selectButton).toBeEnabled({ timeout: 10000 });
-    await selectButton.click();
+  /**
+   * Picks a technology route from the review screen. The radio input is
+   * visually hidden (`sr-only`), so the click lands on the label card — the
+   * native label activation toggles the radio exactly once.
+   */
+  async selectRoute(templateName: string) {
+    await expect(this.routeGroup).toBeVisible({ timeout: 15000 });
+    const card = this.routeGroup.locator('label').filter({ hasText: templateName }).first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await card.click();
+    await expect(card.getByRole('radio')).toBeChecked();
   }
 
-  async selectFirstTemplate() {
-    const selectButton = this.page.getByRole('button', { name: /Обрати|Обрано/ }).first();
-    await selectButton.waitFor({ state: 'visible', timeout: 10000 });
-    await selectButton.click();
-  }
-
-  async verifyContextSummaryVisible() {
-    // Context summary shows "Пацієнт" label with patient ID (no colon in actual UI)
-    const contextCard = this.page.getByText(/Пацієнт/);
-    await expect(contextCard.first()).toBeVisible({ timeout: 10000 });
+  /** Waits for the route list (or its empty state) and returns the candidate count. */
+  async getRouteCount(): Promise<number> {
+    await expect(this.routeGroup.or(this.routeEmptyState).first()).toBeVisible({ timeout: 15000 });
+    return this.routeGroup.getByRole('radio').count();
   }
 
   // ==================== COMMON NAVIGATION ====================

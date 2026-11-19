@@ -41,7 +41,7 @@ type RouteMode = 'auto' | 'exact' | 'fallback' | 'none';
 
 export default function OrderReviewPage() {
   const navigate = useNavigate();
-  const { draft, setDraftField, resetDraft } = useProsthetics();
+  const { draft, setDraftField } = useProsthetics();
   const [order, setOrder] = useState<OrderWithPatient | null>(null);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [docTemplateName, setDocTemplateName] = useState<string | null>(null);
@@ -198,7 +198,12 @@ export default function OrderReviewPage() {
         orderId: draft.orderId,
         templateId: selectedTemplateId,
       });
-      resetDraft();
+      // The setup draft is deliberately NOT cleared here: emptying orderId
+      // re-runs the guard effect above, which pushes the user to step 2 and
+      // races the navigation to the created process (and leaves the process
+      // unreachable). The draft is overwritten on the next setup run instead —
+      // selecting a patient already clears orderId, selecting an order clears
+      // templateId.
       navigate(`/prosthetics/process/${created.data.id}`);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;

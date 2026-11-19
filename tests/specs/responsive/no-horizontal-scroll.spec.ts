@@ -166,7 +166,7 @@ for (const viewport of VIEWPORTS) {
         );
         await assertNoHorizontalScroll(page, '/prosthetics/new/select-order');
       });
-      test('prosthetist: /prosthetics/new/select-template (with order draft)', async ({ page }) => {
+      test('prosthetist: retired /prosthetics/new/select-template redirects to review', async ({ page }) => {
         await page.addInitScript(
           ([patientId, orderId]) => {
             window.localStorage.setItem(
@@ -181,7 +181,9 @@ for (const viewport of VIEWPORTS) {
           },
           [SEED_PATIENT_ID, SEED_ORDER_ID],
         );
+        // The 4th step was removed (#449/#453): the route is picked on review.
         await assertNoHorizontalScroll(page, '/prosthetics/new/select-template');
+        await expect(page).toHaveURL(/\/prosthetics\/new\/review-order$/);
       });
     });
 

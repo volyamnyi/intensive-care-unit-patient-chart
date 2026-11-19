@@ -42,40 +42,60 @@ const initialDraft: ProstheticsDraft = {
   instanceId: null,
 };
 
+/**
+ * Reads the persisted draft synchronously. sessionStorage first (survives F5),
+ * then localStorage (survives a tab close).
+ *
+ * Synchronous hydration is deliberate: the setup route guards (review → order,
+ * order → patient) run in effects on the very first render. Restoring the
+ * draft in a mount effect left that first render empty, so a cold load of
+ * `/prosthetics/new/review-order` bounced the user back to step 2 even though
+ * the draft was persisted (#454).
+ */
+function readStoredDraft(): ProstheticsDraft | null {
+  const tryParse = (raw: string | null): ProstheticsDraft | null => {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as ProstheticsDraft;
+    } catch {
+      return null;
+    }
+  };
+  try {
+    const fromSession = tryParse(sessionStorage.getItem(STORAGE_KEY));
+    const fromLocal = tryParse(localStorage.getItem(STORAGE_KEY));
+    return fromSession ?? fromLocal;
+  } catch {
+    // Storage can be unavailable (privacy mode, blocked third-party storage).
+    return null;
+  }
+}
+
 export function ProstheticsProvider({ children }: { children: ReactNode }) {
-  const [draft, setDraft] = useState<ProstheticsDraft>(initialDraft);
+  const [draft, setDraft] = useState<ProstheticsDraft>(
+    () => readStoredDraft() ?? initialDraft,
+  );
   const [patient, setPatient] = useState<ProstheticsPatient | null>(null);
   const [orders, setOrders] = useState<ProstheticsOrder[]>([]);
   const [templates, setTemplates] = useState<FlowTemplate[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
-  useEffect(() => {
-    // Try sessionStorage first (survives F5), then localStorage (survives tab close), then initial
-    const tryParse = (raw: string | null) => {
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw) as ProstheticsDraft;
-      } catch {
-        return null;
-      }
-    };
-    const fromSession = tryParse(sessionStorage.getItem(STORAGE_KEY));
-    const fromLocal = tryParse(localStorage.getItem(STORAGE_KEY));
-    const restored = fromSession ?? fromLocal;
-    if (restored) {
-      setDraft(restored);
-      // Ensure both storages are in sync
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
-    }
-  }, []);
-
   const persist = (updated: ProstheticsDraft) => {
     const raw = JSON.stringify(updated);
     sessionStorage.setItem(STORAGE_KEY, raw);
     localStorage.setItem(STORAGE_KEY, raw);
   };
+
+  useEffect(() => {
+    // Make sure both storages hold the same value after a restore (a stale
+    // localStorage copy must not resurrect an older draft later).
+    const restored = readStoredDraft();
+    if (restored) {
+      persist(restored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setDraftField = useCallback(
     (field: keyof ProstheticsDraft, value: string | null) => {

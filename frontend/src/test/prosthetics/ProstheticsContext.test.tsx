@@ -36,10 +36,12 @@ function TestComponent() {
 describe('ProstheticsContext', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
   });
 
   afterEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
   });
 
   it('initializes with empty draft', () => {
@@ -123,6 +125,53 @@ describe('ProstheticsContext', () => {
     expect(getByTestId('patient-id').textContent).toBe('existing-patient');
     expect(getByTestId('order-id').textContent).toBe('existing-order');
     expect(getByTestId('template-id').textContent).toBe('null');
+  });
+
+  it('restores the persisted draft on the very first render (no empty-draft flash)', () => {
+    // Regression (#454): hydration used to happen in a mount effect, so the
+    // route guards of the first render saw an empty draft and bounced
+    // /prosthetics/new/review-order back to step 2 on a cold load.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      patientId: 'cold-patient',
+      orderId: 'cold-order',
+      templateId: null,
+    }));
+
+    const firstRenderedOrderIds: Array<string | null> = [];
+    function RecordFirstRender() {
+      const ctx = useProsthetics();
+      if (firstRenderedOrderIds.length === 0) {
+        firstRenderedOrderIds.push(ctx.draft.orderId);
+      }
+      return null;
+    }
+
+    render(
+      <ProstheticsProvider>
+        <RecordFirstRender />
+      </ProstheticsProvider>
+    );
+
+    expect(firstRenderedOrderIds[0]).toBe('cold-order');
+  });
+
+  it('falls back to localStorage when sessionStorage is empty', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      patientId: 'local-patient',
+      orderId: 'local-order',
+      templateId: null,
+    }));
+
+    const { getByTestId } = render(
+      <ProstheticsProvider>
+        <TestComponent />
+      </ProstheticsProvider>
+    );
+
+    expect(getByTestId('patient-id').textContent).toBe('local-patient');
+    expect(getByTestId('order-id').textContent).toBe('local-order');
+    // The restore is mirrored back into both storages.
+    expect(JSON.parse(sessionStorage.getItem(STORAGE_KEY)!).orderId).toBe('local-order');
   });
 
   it('throws when used outside provider', () => {

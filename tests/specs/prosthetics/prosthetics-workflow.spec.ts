@@ -157,40 +157,51 @@ test.describe('Prosthetics Workflow Verification', () => {
       } else {
         reportBug('Critical', 'No orders found', 'Should find orders for patient', 'Zero results', await screenshot(page, 'bug-no-orders'));
       }
-      // Current implementation routes through the order review screen — confirm with «Старт»
-      await page.waitForURL('**/review-order**', { timeout: 10000 }).catch(() => {});
-      const startBtn = page.getByRole('button', { name: /Старт/i });
-      if (await startBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await startBtn.click();
-        log('✓ Order review confirmed («Старт»)');
-      }
+      // Step 3 of 3: the MIS document provisions the order and opens review.
+      await page.waitForURL('**/review-order**', { timeout: 15000 }).catch(() => {});
     });
 
-    // ===== PHASE 4: TEMPLATE SELECTION (Screen 6) =====
-    currentPhase = 'TEMPLATE SELECTION';
+    // ===== PHASE 4: TECHNOLOGY ROUTE (review screen) =====
+    currentPhase = 'TECHNOLOGY ROUTE';
     log(`\n--- ${currentPhase} ---`);
 
-    await test.step('Select template (Spec 2.3.4)', async () => {
-      logStep('Select template');
-      await page.waitForURL('**/select-template**', { timeout: 10000 }).catch(() => {});
-      
-      // Click template card (the tolerant isVisible checks below are the
-      // condition-based waits — no sleep needed after navigation).
-      const card = page.locator('[class*="cursor-pointer"]').filter({ hasText: /TP-UL|TP-LL|Шаблон/i }).first();
+    await test.step('Pick the route and start the process (Spec 2.3.3/2.3.4)', async () => {
+      logStep('Pick the route on review, then start');
+
+      const routeGroup = page.getByRole('radiogroup', { name: 'Технологічні маршрути' });
+      const emptyState = page.getByText(/Для цього замовлення немає активного шаблону/);
+      await expect(routeGroup.or(emptyState).first()).toBeVisible({ timeout: 15000 }).catch(() => {});
+
+      const routeCount = await routeGroup.getByRole('radio').count();
+      log(`  Found ${routeCount} route candidates`);
+
+      if (routeCount === 0) {
+        reportBug(
+          'Critical',
+          'No technology route offered on review',
+          'Review should list the compatible active routes for the order',
+          'Route list is empty',
+          await screenshot(page, 'bug-no-routes'),
+        );
+        return;
+      }
+
+      const card = routeGroup.locator('label').filter({ hasText: 'TP-UL-01' }).first();
       if (await card.isVisible({ timeout: 5000 }).catch(() => false)) {
         await card.click();
-        log('✓ Template card clicked');
-      }
-      
-      // Click Обрати
-      const selectBtn = page.getByRole('button', { name: /Обрати/i }).first();
-      if (await selectBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await selectBtn.click();
-        log('✓ Обрати clicked - process created');
+        log('✓ TP-UL-01 route selected');
       } else {
-        reportBug('Major', 'No Обрати button found', 'Should have Обрати button', 'Button not found');
+        // Fallback: pick the first offered route (self-reporting spec).
+        await routeGroup.locator('label').first().click();
+        log('✓ Fallback: first offered route selected');
       }
-      // The process wizard opens on «Обрати» — wait for the URL, not time.
+
+      const startBtn = page.getByRole('button', { name: 'Старт' });
+      await expect(startBtn).toBeEnabled({ timeout: 15000 });
+      await startBtn.click();
+      log('✓ «Старт» clicked — process creation requested');
+
+      // The process overview opens after the instance is created.
       await page.waitForURL('**/process/**', { timeout: 15000 }).catch(() => {});
     });
 
