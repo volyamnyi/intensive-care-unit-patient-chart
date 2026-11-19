@@ -47,3 +47,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/036-lower-limb-side-checkboxes.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/037-default-templates.sql

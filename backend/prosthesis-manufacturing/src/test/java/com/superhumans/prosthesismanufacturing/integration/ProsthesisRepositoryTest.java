@@ -112,7 +112,7 @@ class ProsthesisRepositoryTest {
     @Test
     void shouldPersistAndReadFullTemplateTree() {
         FlowTemplate template = FlowTemplate.builder()
-                .name("TP-UL-01")
+                .name("TP-UL-01-REPO-TREE")
                 .templateVersion(1)
                 .productType(ProductType.UPPER_LIMB)
                 .amputationLevel("передпліччя")
@@ -180,8 +180,39 @@ class ProsthesisRepositoryTest {
         assertThat(foundElement.getOptions()).isEqualTo("{\"units\":[\"см\"]}");
         assertThat(foundElement.getValidationRules()).isEqualTo("{\"required\":true}");
 
-        boolean exists = templateRepository.existsByNameAndTemplateVersion("TP-UL-01", 1);
+        boolean exists = templateRepository.existsByNameAndTemplateVersion("TP-UL-01-REPO-TREE", 1);
         assertThat(exists).isTrue();
+    }
+
+    @Test
+    void shouldProvisionDefaultActiveTemplatesWithoutSeedData() {
+        // Reference data comes from Liquibase (prosth/037), not from data-prosth.sql:
+        // production runs with app.seed-data.enabled=false, so the migration must
+        // provide the ACTIVE technology routes the setup screen lists.
+        FlowTemplate upper = templateRepository
+                .findById(UUID.fromString("c0000001-0000-0000-0000-000000000001"))
+                .orElseThrow();
+        assertThat(upper.getName()).isEqualTo("TP-UL-01");
+        assertThat(upper.getProductType()).isEqualTo(ProductType.UPPER_LIMB);
+        assertThat(upper.getStatus()).isEqualTo(TemplateStatus.ACTIVE);
+
+        FlowTemplate lower = templateRepository
+                .findById(UUID.fromString("c0000003-0000-0000-0000-000000000003"))
+                .orElseThrow();
+        assertThat(lower.getName()).isEqualTo("TP-LL-02");
+        assertThat(lower.getProductType()).isEqualTo(ProductType.LOWER_LIMB);
+        assertThat(lower.getAmputationLevel()).isEqualTo("generic_lower_limb");
+        assertThat(lower.getStatus()).isEqualTo(TemplateStatus.ACTIVE);
+
+        List<TemplateStage> stages = stageRepository.findByTemplateIdOrderByOrderIndex(lower.getId());
+        assertThat(stages).hasSize(10);
+
+        List<TemplateElement> measurementElements = elementRepository
+                .findByStepIdOrderByOrderIndex(UUID.fromString("e0000020-0000-0000-0000-000000000020"));
+        assertThat(measurementElements)
+                .filteredOn(e -> "Стегно, R".equals(e.getLabel()) || "Стегно, L".equals(e.getLabel()))
+                .hasSize(2)
+                .allSatisfy(e -> assertThat(e.getElementType()).isEqualTo(ElementType.CHECKBOX));
     }
 
     @Test
@@ -306,7 +337,7 @@ class ProsthesisRepositoryTest {
         em.persistAndFlush(order);
 
         FlowTemplate template = FlowTemplate.builder()
-                .name("TP-UL-01")
+                .name("TP-UL-01-REPO-UNIQUE")
                 .templateVersion(1)
                 .productType(ProductType.UPPER_LIMB)
                 .status(TemplateStatus.ACTIVE)

@@ -67,7 +67,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional("prosthTransactionManager")
 class CrossFeatureRegressionIntegrationTest {
 
-    private static final UUID TEMPLATE_ID = UUID.fromString("c0000009-0000-0000-0000-000000000009");
+    private static final UUID TEMPLATE_ID = UUID.fromString("c0000003-0000-0000-0000-000000000003");
 
     private static final UUID STAGE_D12 = UUID.fromString("d0000012-0000-0000-0000-000000000012");
     private static final UUID STAGE_D17 = UUID.fromString("d0000017-0000-0000-0000-000000000017");
@@ -562,10 +562,14 @@ class CrossFeatureRegressionIntegrationTest {
             var step = st.getSteps().stream().filter(s -> s.getId().equals(STEP_E0030)).findFirst().orElseThrow();
             e0030Values = singleCheckboxValues(step);
         }
-        var afterE0030 = instanceService.completeStep(branchId, e0030Exec.getId(),
+        instanceService.completeStep(branchId, e0030Exec.getId(),
                 new StepCompleteRequest(e0030Values, null), PROSTHETIST);
-        assertThat(afterE0030.getCurrentStageId()).isEqualTo(STAGE_D20);
-        assertThat(afterE0030.getCurrentStepId()).isEqualTo(STEP_E0032);
+        // The real TP-LL-02 has stage d0000019 (e0000031) between the socket stage
+        // and the permanent-prosthesis fitting, so advance through it.
+        advanceBranchToStep(branchId, STEP_E0032);
+        var atPermanentFitting = instanceService.get(branchId, PROSTHETIST, false);
+        assertThat(atPermanentFitting.getCurrentStageId()).isEqualTo(STAGE_D20);
+        assertThat(atPermanentFitting.getCurrentStepId()).isEqualTo(STEP_E0032);
 
         // --- note: instanceService.updateNote on current execution with 2000-char boundary ---
         var currentExecForNote = executionRepository.findByInstanceId(branchId).stream()
