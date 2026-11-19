@@ -1,14 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  computeProgress,
-  fmt,
-  validateElementValues,
-  validateLowerLimbSides,
-  LOWER_LIMB_SIDE_ERROR,
-  LOWER_LIMB_SIDE_ERROR_KEY,
-  LOWER_LIMB_SIDE_L_ID,
-  LOWER_LIMB_SIDE_R_ID,
-} from '@/prosthetics/validation';
+import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
 import type { SnapshotElement } from '@/prosthetics/types';
 
 function el(overrides: Partial<SnapshotElement> & Pick<SnapshotElement, 'id' | 'elementType' | 'label'>): SnapshotElement {
@@ -178,59 +169,4 @@ describe('validateElementValues', () => {
   });
 });
 
-describe('validateLowerLimbSides', () => {
-  const checkboxEls = [
-    { id: LOWER_LIMB_SIDE_R_ID, elementType: 'CHECKBOX' },
-    { id: LOWER_LIMB_SIDE_L_ID, elementType: 'CHECKBOX' },
-  ];
 
-  it('requires at least one side for CHECKBOX snapshots', () => {
-    expect(validateLowerLimbSides(checkboxEls, {})).toEqual({
-      [LOWER_LIMB_SIDE_ERROR_KEY]: LOWER_LIMB_SIDE_ERROR,
-    });
-    expect(
-      validateLowerLimbSides(checkboxEls, {
-        [LOWER_LIMB_SIDE_R_ID]: false,
-        [LOWER_LIMB_SIDE_L_ID]: false,
-      }),
-    ).toEqual({ [LOWER_LIMB_SIDE_ERROR_KEY]: LOWER_LIMB_SIDE_ERROR });
-  });
-
-  it('accepts R, L or both sides', () => {
-    expect(validateLowerLimbSides(checkboxEls, { [LOWER_LIMB_SIDE_R_ID]: true })).toEqual({});
-    expect(validateLowerLimbSides(checkboxEls, { [LOWER_LIMB_SIDE_L_ID]: true })).toEqual({});
-    expect(
-      validateLowerLimbSides(checkboxEls, {
-        [LOWER_LIMB_SIDE_R_ID]: true,
-        [LOWER_LIMB_SIDE_L_ID]: true,
-      }),
-    ).toEqual({});
-  });
-
-  it('skips legacy NUMERIC_INPUT snapshots and keeps their values untouched', () => {
-    const legacy = [
-      { id: LOWER_LIMB_SIDE_R_ID, elementType: 'NUMERIC_INPUT' },
-      { id: LOWER_LIMB_SIDE_L_ID, elementType: 'NUMERIC_INPUT' },
-    ];
-    expect(validateLowerLimbSides(legacy, {})).toEqual({});
-    expect(
-      validateLowerLimbSides(legacy, {
-        [LOWER_LIMB_SIDE_R_ID]: '100',
-        [LOWER_LIMB_SIDE_L_ID]: '100',
-      }),
-    ).toEqual({});
-  });
-
-  it('skips mixed or incomplete snapshots', () => {
-    expect(
-      validateLowerLimbSides(
-        [
-          { id: LOWER_LIMB_SIDE_R_ID, elementType: 'CHECKBOX' },
-          { id: LOWER_LIMB_SIDE_L_ID, elementType: 'NUMERIC_INPUT' },
-        ],
-        {},
-      ),
-    ).toEqual({});
-    expect(validateLowerLimbSides([], {})).toEqual({});
-  });
-});

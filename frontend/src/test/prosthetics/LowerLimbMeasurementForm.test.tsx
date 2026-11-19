@@ -9,7 +9,6 @@ import {
   countFilledLowerLimbAll,
 } from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
 import { LOWER_LIMB_MOBILITY_OPTIONS } from '@/prosthetics/lowerLimbPrefill';
-import { LOWER_LIMB_SIDE_ERROR_KEY } from '@/prosthetics/validation';
 
 const SIDE_CHECKBOX_TYPES = {
   [LOWER_LIMB_ELEMENT_IDS.a_r]: 'CHECKBOX',
@@ -107,19 +106,6 @@ describe('LowerLimbMeasurementForm', () => {
     );
   });
 
-  it('marks both side checkboxes when the side-selection rule fails', () => {
-    render(
-      <LowerLimbMeasurementForm
-        values={{}}
-        onChange={vi.fn()}
-        errors={{ [LOWER_LIMB_SIDE_ERROR_KEY]: 'Позначте бік кукси' }}
-        elementTypes={SIDE_CHECKBOX_TYPES}
-      />,
-    );
-    expect(screen.getByRole('checkbox', { name: 'Стегно, R' })).toHaveClass('border-destructive');
-    expect(screen.getByRole('checkbox', { name: 'Стегно, L' })).toHaveClass('border-destructive');
-  });
-
   it('keeps numeric R/L fields for legacy NUMERIC_INPUT snapshots', () => {
     const onChange = vi.fn();
     render(
@@ -140,7 +126,7 @@ describe('LowerLimbMeasurementForm', () => {
   it('updates the diagram hint for the checkbox model', () => {
     render(<LowerLimbMeasurementForm values={{}} onChange={vi.fn()} />);
     expect(
-      screen.getByText(/Позначте бік кукси \(Стегно, R \/ L — R, L або обидва\)/),
+      screen.getByText(/Позначте бік кукси \(R, L або обидва — все необов'язково\)/),
     ).toBeInTheDocument();
     expect(screen.getByText(/Кожне інше поле на схемі — числове значення заміру/)).toBeInTheDocument();
   });

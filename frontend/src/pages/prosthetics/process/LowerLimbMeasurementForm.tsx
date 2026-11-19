@@ -8,8 +8,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { LOWER_LIMB_MOBILITY_OPTIONS } from '@/prosthetics/lowerLimbPrefill';
-import { LOWER_LIMB_SIDE_ERROR_KEY, LOWER_LIMB_SIDE_L_ID, LOWER_LIMB_SIDE_R_ID } from '@/prosthetics/validation';
-
 /**
  * Lower-limb measurement form — pixel-perfect adaptation of measurement-master
  * (http://localhost:8080, C:\projects\intensive-care-unit-patient-chart\measurement-master-main)
@@ -30,6 +28,12 @@ import { LOWER_LIMB_SIDE_ERROR_KEY, LOWER_LIMB_SIDE_L_ID, LOWER_LIMB_SIDE_R_ID }
  */
 
 export const LOWER_LIMB_STEP_ID = 'e0000020-0000-0000-0000-000000000020';
+
+// Side checkboxes «Стегно, R» / «Стегно, L» — same UUIDs as the backend
+// template elements f0000312/f0000313 (CHECKBOX, optional per issue #456:
+// the pair-rule validation was removed).
+const LOWER_LIMB_SIDE_R_ID = 'f0000312-0000-0000-0000-000000000312';
+const LOWER_LIMB_SIDE_L_ID = 'f0000313-0000-0000-0000-000000000313';
 
 // Header / form field element IDs (mirroring data-prosth.sql)
 export const LOWER_LIMB_ELEMENT_IDS = {
@@ -246,7 +250,6 @@ export function LowerLimbMeasurementForm({
   const getVal = (id: string) => (values[id] as string) ?? '';
   const setVal = (id: string, v: string) => onChange(id, v);
   const isSideCheckbox = (id: string) => elementTypes[id] === 'CHECKBOX';
-  const hasSideSelectionError = !!errors[LOWER_LIMB_SIDE_ERROR_KEY];
 
   const numericFilter = (v: string) => v.replace(/[^\d.,]/g, '');
 
@@ -425,7 +428,7 @@ export function LowerLimbMeasurementForm({
               draggable={false}
             />
             {BOXES.map((b) => {
-              const hasError = !!errors[b.elementId] || (isSideCheckbox(b.elementId) && hasSideSelectionError);
+              const hasError = !!errors[b.elementId];
               const boxStyle = {
                 left: pct(b.x, IMG_W),
                 top: pct(b.y, IMG_H),
@@ -468,7 +471,7 @@ export function LowerLimbMeasurementForm({
           </div>
         </div>
         <p className="mt-3 px-2 text-xs text-muted-foreground sm:px-0">
-          Позначте бік кукси (Стегно, R / L — R, L або обидва). Кожне інше поле на схемі — числове значення заміру в сантиметрах.
+          Позначте бік кукси (R, L або обидва — все необов'язково). Кожне інше поле на схемі — числове значення заміру в сантиметрах.
         </p>
       </section>
 

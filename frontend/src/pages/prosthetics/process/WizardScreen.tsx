@@ -41,13 +41,7 @@ import { flowInstanceApi, prostheticsOrderApi, prostheticsPatientApi } from '@/a
 import { getErrorMessage } from '@/utils/errorMessage';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
-import {
-  computeProgress,
-  fmt,
-  validateElementValues,
-  validateLowerLimbSides,
-  LOWER_LIMB_SIDE_ERROR_KEY,
-} from '@/prosthetics/validation';
+import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
 import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
 import {
   LowerLimbMeasurementForm,
@@ -96,9 +90,9 @@ const PPE_MEASUREMENT_GLOVES_KEY = 'ppe-measurement-non-sterile-gloves';
 const PPE_MEASUREMENT_GLOVES_LABEL = 'Нестерильні оглядові нітрилові рукавички';
 
 // Lower-limb measurement (TP-LL-02, stage 1 step 1) — adapted from
-// measurement-master (reference at :8080). No PPE and no minimum-measurement
-// rule: the step can advance to the next one with any (including zero)
-// filled values, like all other optional fields on it.
+// measurement-master (reference at :8080). The step is fully optional
+// (issue #456): no PPE and no minimum-measurement rule — the step can advance
+// with any (including zero) filled values; the «Стегно R/L» pair rule is gone.
 const LOWER_LIMB_MEASUREMENT_STEP_ID = LOWER_LIMB_STEP_ID;
 
 const STEP_TYPE_LABEL: Record<string, string> = {
@@ -1658,10 +1652,6 @@ export default function WizardScreen() {
         base[NOT_REQUIRED_SOFT_LINER_KEY] = SOFT_LINER_ERROR;
       }
     }
-    // The lower-limb measurement step (LOWER_LIMB_MEASUREMENT_STEP_ID) has no
-    // minimum-measurement rule, but for new snapshots the R/L side checkboxes
-    // require at least one selected side. Legacy numeric snapshots are skipped.
-    Object.assign(base, validateLowerLimbSides(step?.elements ?? [], values));
     return base;
   }, [step, values]);
 
@@ -1673,11 +1663,9 @@ export default function WizardScreen() {
       step?.elements.find((e) => e.id === id)?.label ??
       (id === PPE_MEASUREMENT_GLOVES_KEY
         ? PPE_MEASUREMENT_GLOVES_LABEL
-        : id === LOWER_LIMB_SIDE_ERROR_KEY
-          ? 'Бік кукси (Стегно, R / L)'
-          : id === 'lower-limb-diagram'
-            ? 'Обʼємний розмір та довжина кукси (схема)'
-            : 'Поле кроку'),
+        : id === 'lower-limb-diagram'
+          ? 'Обʼємний розмір та довжина кукси (схема)'
+          : 'Поле кроку'),
     msg,
   }));
 

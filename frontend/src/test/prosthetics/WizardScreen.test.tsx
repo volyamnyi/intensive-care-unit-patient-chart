@@ -177,9 +177,7 @@ describe('WizardScreen', () => {
     });
   });
 
-  it('blocks the lower-limb measurement step until a side is selected (#450/#452)', async () => {
-    const sideR = 'f0000312-0000-0000-0000-000000000312';
-    const sideL = 'f0000313-0000-0000-0000-000000000313';
+  it('completes the lower-limb measurement step with empty values (#456)', async () => {
     flowInstanceApiMock.getById.mockResolvedValue({
       data: inProgressInstance({ currentStepId: 'e0000020-0000-0000-0000-000000000020' }),
     });
@@ -203,8 +201,8 @@ describe('WizardScreen', () => {
                 autoStartTimer: true,
                 normDurationMin: 20,
                 elements: [
-                  { id: sideR, elementType: 'CHECKBOX', label: 'Стегно, R', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
-                  { id: sideL, elementType: 'CHECKBOX', label: 'Стегно, L', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                  { id: 'f0000312-0000-0000-0000-000000000312', elementType: 'CHECKBOX', label: 'Стегно, R', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                  { id: 'f0000313-0000-0000-0000-000000000313', elementType: 'CHECKBOX', label: 'Стегно, L', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
                   { id: 'f0000322-0000-0000-0000-000000000322', elementType: 'NUMERIC_INPUT', label: 'Обхват гомілки', required: false, unit: 'см', minValue: 0, maxValue: 200, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
                 ],
               },
@@ -218,19 +216,19 @@ describe('WizardScreen', () => {
       expect(screen.getByText('Бланк замірів №')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Завершити процес/ }));
+    // All step fields are optional (issue #456): no pair-rule error, CTA enabled.
+    const cta = screen.getByRole('button', { name: /Завершити процес/ });
     await waitFor(() => {
-      expect(screen.getByText(/Позначте бік кукси: R, L або обидва/)).toBeInTheDocument();
+      expect(cta).toBeEnabled();
     });
-    expect(flowInstanceApiMock.completeStep).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Позначте бік кукси: R, L або обидва/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Стегно, R' }));
-    fireEvent.click(screen.getByRole('button', { name: /Завершити процес/ }));
+    fireEvent.click(cta);
     await waitFor(() => {
       expect(flowInstanceApiMock.completeStep).toHaveBeenCalled();
     });
     const payload = flowInstanceApiMock.completeStep.mock.calls[0][2] as { values: string };
-    expect(JSON.parse(payload.values)).toEqual({ [sideR]: true });
+    expect(JSON.parse(payload.values)).toEqual({});
   });
 
   it('calls completeStep with values after valid fill (resources panel removed)', async () => {

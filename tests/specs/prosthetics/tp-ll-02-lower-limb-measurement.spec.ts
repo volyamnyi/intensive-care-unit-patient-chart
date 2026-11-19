@@ -71,7 +71,7 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await expect(page.getByLabel('Комплектуючі')).toBeVisible();
 
     await expect(
-      page.getByText(/Позначте бік кукси \(Стегно, R \/ L — R, L або обидва\)/),
+      page.getByText(/Позначте бік кукси \(R, L або обидва — все необов'язково\)/),
     ).toBeVisible();
     await expect(
       page.getByText(/Кожне інше поле на схемі — числове значення заміру в сантиметрах/),
@@ -229,31 +229,64 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await terminateInstance(request, headers, instanceId);
   });
 
-  test('blocks the step until a side is selected, then advances', async ({ page, request }) => {
+  test('saves the measurement step with empty values, then advances', async ({ page, request }) => {
     const { id: instanceId } = await createAndStartLowerInstance(request);
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
     await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
 
     const cta = page.getByRole('button', { name: /Готово/ }).first();
     await expect(cta).toBeEnabled();
-    // Click with no side selected — the pair rule blocks the step.
-    await cta.click();
-    await expect(page.getByText('Позначте бік кукси: R, L або обидва')).toBeVisible({
-      timeout: 5000,
-    });
-    await expect(cta).toBeDisabled();
-    await expect(page.getByText('Бланк замірів №')).toBeVisible();
+    // The step is fully optional (issue #456): saving without selecting a side is allowed.
+    await expect(page.getByText('Позначте бік кукси: R, L або обидва')).toBeHidden();
 
-    // Select one side and advance — measurements themselves stay optional.
-    await page.getByRole('checkbox', { name: 'Стегно, L' }).check();
+    // Deterministic hand-off: wait for the completion request itself, then for the UI to
+    // render the NEXT step's content (the stage title is always in the header, so it
+    // cannot prove the advance has landed - that race failed once).
+    const completeResponse = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'POST' &&
+        res.url().includes(`/instances/${instanceId}/steps/`) &&
+        res.url().endsWith('/complete'),
+      { timeout: 15000 },
+    );
     await cta.click();
-    await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
-    // The measurement form is no longer on screen.
-    await expect(page.getByText('Бланк замірів №')).toBeHidden({ timeout: 3000 });
+    const completeRes = await completeResponse;
+    expect(completeRes.ok(), `complete failed: ${completeRes.status()}`).toBeTruthy();
+    await expect(page.getByText('Гіпсовий негатив виготовлено')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Бланк замірів №')).toBeHidden({ timeout: 15000 });
+
+    // The completed execution persisted without any synthetic placeholder for the
+    // fields the prosthetist left untouched (issue #456). The header fields MAY be
+    // prefilled from the MIS order on purpose (#283) - so the assertion is: no `0`,
+    // `'0'` or `''` was substituted anywhere, and the next step opened.
+    await expect
+      .poll(
+        async () => {
+          const list = (await (
+            await request.get(`${PROSTH}/instances/${instanceId}/step-executions`, {
+              headers: headersFor(prosthetistToken),
+            })
+          ).json()) as Array<any>;
+          const completed = list.find(
+            (e: any) =>
+              e.stepId === 'e0000020-0000-0000-0000-000000000020' && e.status === 'COMPLETED',
+          );
+          if (!completed) return null;
+          const stored = JSON.parse(completed.values as string) as Record<string, unknown>;
+          return {
+            status: completed.status,
+            synthetic: Object.entries(stored)
+              .filter(([, v]) => v === 0 || v === '0' || v === '')
+              .map(([k]) => k),
+          };
+        },
+        { timeout: 15000 },
+      )
+      .toEqual({ status: 'COMPLETED', synthetic: [] });
 
     await request.post(`${PROSTH}/instances/${instanceId}/fail`, {
       headers: headersFor(prosthetistToken),
-      data: { category: 'defect', description: 'E2E side-rule cleanup' },
+      data: { category: 'defect', description: 'E2E lower limb empty save cleanup' },
     });
   });
 
