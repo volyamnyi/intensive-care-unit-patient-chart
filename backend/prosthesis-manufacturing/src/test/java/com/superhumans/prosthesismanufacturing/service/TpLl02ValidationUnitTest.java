@@ -16,7 +16,9 @@ import org.junit.jupiter.api.Test;
  * Фаза 2 — Business Rules & State Machine (без Quality Gate).
  * Unit-перевірка валідації TP-LL-02: умовний 7.1, numeric range, backward target.
  * The lower-limb measurement step (e0000020) skips the ≥3-values MEASUREMENT
- * threshold — it can advance with any (including zero) filled values.
+ * threshold — it can advance with any (including zero) filled values, and the
+ * «Стегно, R»/«Стегно, L» side-selection pair rule is removed (#456), so the
+ * step completes even with an empty values map.
  */
 class TpLl02ValidationUnitTest {
 
@@ -128,18 +130,22 @@ class TpLl02ValidationUnitTest {
         assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
     }
 
-    // #450/#452: side checkboxes — at least one of R/L must be selected
+    // #450/#452 + #456: side checkboxes — бік (R/L) на крої не обов'язковий
     @Test
-    void sideCheckboxes_noSideSelectedDenied() {
+    void sideCheckboxes_noSideSelectedAllowed() {
         SnapshotStep step = measurementStepWithSideCheckboxes();
-        assertThatThrownBy(() -> service.validateValues("{}", step))
-                .isInstanceOf(com.superhumans.exception.BadRequestException.class)
-                .hasMessageContaining("Позначте бік кукси");
-        assertThatThrownBy(() -> service.validateValues(
+        assertThatCode(() -> service.validateValues("{}", step)).doesNotThrowAnyException();
+        assertThatCode(() -> service.validateValues(
                 "{\"f0000312-0000-0000-0000-000000000312\": false, "
                         + "\"f0000313-0000-0000-0000-000000000313\": false}", step))
-                .isInstanceOf(com.superhumans.exception.BadRequestException.class)
-                .hasMessageContaining("Позначте бік кукси");
+                .doesNotThrowAnyException();
+    }
+
+    // #456: вільний порожній крок — валідація не блокує збереження
+    @Test
+    void measurementStep_emptyValuesAllowed() {
+        assertThatCode(() -> service.validateValues("{}", measurementStepWithSideCheckboxes()))
+                .doesNotThrowAnyException();
     }
 
     @Test

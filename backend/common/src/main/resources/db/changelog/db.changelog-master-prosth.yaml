@@ -50,3 +50,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/037-default-templates.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/038-ll-step1-optional.sql

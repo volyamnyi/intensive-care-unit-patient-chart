@@ -81,20 +81,13 @@ public class FlowInstanceService {
     private static final int MIN_MEASUREMENT_VALUES = 3;
 
     /**
-     * The lower-limb measurement step (TP-LL-02, stage 1) intentionally allows
-     * advancing to the next step without filling any measurement values, so the
-     * {@link #MIN_MEASUREMENT_VALUES} threshold does not apply to it.
+     * The lower-limb measurement step (TP-LL-02, stage 1) is fully optional
+     * (issue #456): it intentionally allows advancing to the next step without
+     * filling any measurement values, so the {@link #MIN_MEASUREMENT_VALUES}
+     * threshold does not apply to it, and the «Стегно, R»/«Стегно, L»
+     * side-selection pair rule is not enforced for it either.
      */
     private static final UUID LOWER_LIMB_MEASUREMENT_STEP_ID = UUID.fromString("e0000020-0000-0000-0000-000000000020");
-
-    /**
-     * Lower-limb side selection (TP-LL-02, stage 1): a checked box means that
-     * side is the amputated/prosthetic side. At least one side must be selected.
-     * The rule applies only to snapshots where both elements are CHECKBOX -
-     * older snapshots keep the numeric fields and their stored numeric values.
-     */
-    private static final String LOWER_LIMB_SIDE_R_KEY = "f0000312-0000-0000-0000-000000000312";
-    private static final String LOWER_LIMB_SIDE_L_KEY = "f0000313-0000-0000-0000-000000000313";
 
     // TP-LL-02 stage 7 step 1 — soft liner: exclusive transition rule (Phase 3)
     private static final UUID SOFT_LINER_STEP_ID = UUID.fromString("e0000029-0000-0000-0000-000000000029");
@@ -956,7 +949,6 @@ public class FlowInstanceService {
                     throw new BadRequestException("Поле «" + element.getLabel() + "» обов'язкове");
                 }
             }
-            validateLowerLimbSideSelection(values, step);
             // The ЗІЗ confirmation on the «Зняття мірок» step is a hardcoded
             // wizard field (not a DB element): the step cannot advance without it.
             if (UUID.fromString("e0000002-0000-0000-0000-000000000002").equals(step.getId())
@@ -1017,35 +1009,6 @@ public class FlowInstanceService {
                 }
             }
         }
-    }
-
-    /**
-     * Lower-limb side selection rule: for snapshots where both «Стегно, R» and
-     * «Стегно, L» are CHECKBOX elements, at least one side must be checked
-     * (R, L or both). Legacy snapshots that still declare these elements as
-     * NUMERIC_INPUT are not affected - their numeric values stay untouched.
-     */
-    private void validateLowerLimbSideSelection(Map<String, Object> values, SnapshotStep step) {
-        SnapshotElement sideR = null;
-        SnapshotElement sideL = null;
-        for (SnapshotElement element : step.getElements()) {
-            String id = element.getId().toString();
-            if (LOWER_LIMB_SIDE_R_KEY.equals(id)) {
-                sideR = element;
-            } else if (LOWER_LIMB_SIDE_L_KEY.equals(id)) {
-                sideL = element;
-            }
-        }
-        if (sideR == null || sideL == null
-                || !"CHECKBOX".equals(sideR.getElementType())
-                || !"CHECKBOX".equals(sideL.getElementType())) {
-            return;
-        }
-        if (Boolean.TRUE.equals(values.get(LOWER_LIMB_SIDE_R_KEY))
-                || Boolean.TRUE.equals(values.get(LOWER_LIMB_SIDE_L_KEY))) {
-            return;
-        }
-        throw new BadRequestException("Позначте бік кукси: R, L або обидва");
     }
 
     private boolean isBlank(Object value) {
