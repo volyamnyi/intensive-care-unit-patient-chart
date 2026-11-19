@@ -44,3 +44,6 @@ databaseChangeLog:
   - include:
       relativeToChangelogFile: true
       file: prosth/035-brak-notification-processing-lease.sql
+  - include:
+      relativeToChangelogFile: true
+      file: prosth/036-lower-limb-side-checkboxes.sql

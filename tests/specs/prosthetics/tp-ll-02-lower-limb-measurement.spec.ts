@@ -53,24 +53,29 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     // diagram header
     await expect(page.getByText(/Об.*ємний розмір/)).toBeVisible();
     await expect(page.getByAltText('Схема замірів кукси та нижніх кінцівок')).toBeVisible();
-    // diagram boxes – sample
-    await expect(page.getByLabel('Стегно, R')).toBeVisible();
-    await expect(page.getByLabel('Стегно, L')).toBeVisible();
+    // diagram boxes – sample; R/L are side checkboxes (#450/#452)
+    await expect(page.getByRole('checkbox', { name: 'Стегно, R' })).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Стегно, L' })).toBeVisible();
     await expect(page.getByLabel('Обхват гомілки')).toBeVisible();
     await expect(page.getByLabel('Обхват щиколотки')).toBeVisible();
     await expect(page.getByLabel('Коліно, R')).toBeVisible();
     await expect(page.getByLabel('Таз R, рівень 15')).toBeVisible();
     await expect(page.getByLabel('Таз L, рівень 15')).toBeVisible();
-    // ensure 30 diagram inputs rendered
+    // the remaining 28 diagram fields stay numeric inputs
     const diagramInputs = page.locator('input.diagram-input');
-    await expect(diagramInputs).toHaveCount(30, { timeout: 5000 });
+    await expect(diagramInputs).toHaveCount(28, { timeout: 5000 });
 
     // bottom section
     await expect(page.getByLabel('Висота каблука')).toBeVisible();
     await expect(page.getByLabel('Розмір стопи')).toBeVisible();
     await expect(page.getByLabel('Комплектуючі')).toBeVisible();
 
-    await expect(page.getByText('Кожне поле на схемі — числове значення заміру в сантиметрах.')).toBeVisible();
+    await expect(
+      page.getByText(/Позначте бік кукси \(Стегно, R \/ L — R, L або обидва\)/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Кожне інше поле на схемі — числове значення заміру в сантиметрах/),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Друк' })).toBeVisible();
     await expect(page.getByText(/можна переходити далі/)).toBeVisible();
 
@@ -81,17 +86,20 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     });
   });
 
-  test('completes the measurement step with zero filled values', async ({ page, request }) => {
+  test('completes the measurement step with only a side selected', async ({ page, request }) => {
     const { id: instanceId } = await createAndStartLowerInstance(request);
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
     await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
 
     const cta = page.getByRole('button', { name: /Готово/ }).first();
     await expect(cta).toBeVisible();
-    // No diagram values are required — the CTA is enabled from the start.
+    // Measurements are optional, but a side must be selected.
     await expect(cta).toBeEnabled();
+    const sideR = page.getByRole('checkbox', { name: 'Стегно, R' });
+    await sideR.check();
+    await expect(sideR).toHaveAttribute('aria-checked', 'true');
 
-    // Click with the entire diagram empty — the step completes and advances.
+    // Click with the rest of the diagram empty — the step completes and advances.
     await cta.click();
     await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Гіпсовий негатив виготовлено')).toBeVisible({ timeout: 5000 });
@@ -111,20 +119,19 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
     await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
 
-    // Fill valid header to isolate diagram error
-    await page.getByLabel('Стегно, R').fill('300'); // >200
-    await page.getByLabel('Стегно, L').fill('13');
-    await page.getByLabel('Обхват гомілки').fill('14');
+    // Fill header to isolate diagram error; the side must satisfy the pair rule.
+    await page.getByRole('checkbox', { name: 'Стегно, R' }).check();
+    await page.getByLabel('Обхват гомілки').fill('300'); // >200
 
     const cta = page.getByRole('button', { name: /Готово/ }).first();
     await cta.click();
     // Expect validation error for out-of-range (frontend shows "Максимум 200 см")
     await expect(page.getByText(/Максимум.*200/)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByLabel('Стегно, R')).toHaveClass(/border-destructive|!border-destructive/);
+    await expect(page.getByLabel('Обхват гомілки')).toHaveClass(/border-destructive/);
     await expect(cta).toBeDisabled();
 
     // Fix the value
-    await page.getByLabel('Стегно, R').fill('22');
+    await page.getByLabel('Обхват гомілки').fill('22');
     await expect(page.getByText(/Максимум.*200/)).toBeHidden({ timeout: 3000 });
     await expect(cta).toBeEnabled({ timeout: 3000 });
 
@@ -183,9 +190,9 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await page.getByLabel('П.І.Б').fill('Тест Пацієнт');
     await page.getByLabel('Стать').selectOption('Чоловіча');
     await page.getByLabel('Вік').fill('30');
-    // Fill 3 diagram values
-    await page.getByLabel('Стегно, R').fill('22');
-    await page.getByLabel('Стегно, L').fill('23');
+    // Fill 3 diagram values; R/L are side checkboxes (both sides selected)
+    await page.getByRole('checkbox', { name: 'Стегно, R' }).check();
+    await page.getByRole('checkbox', { name: 'Стегно, L' }).check();
     await page.getByLabel('Обхват гомілки').fill('34');
     await page.getByLabel('Обхват щиколотки').fill('25');
     await page.getByLabel('Висота каблука').fill('3');
@@ -203,39 +210,50 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     const execs = (await (await request.get(`${PROSTH}/instances/${instanceId}/step-executions`, { headers })).json()) as Array<any>;
     const firstExec = execs.find((e: any) => e.status === 'COMPLETED');
     expect(firstExec).toBeTruthy();
-    const vals = JSON.parse(firstExec.values as string) as Record<string, string>;
+    const vals = JSON.parse(firstExec.values as string) as Record<string, unknown>;
     // Check a few diagram values persisted under their UUIDs
     // Find one of the diagram UUIDs by looking up via snapshot
     const snapshot = await (await request.get(`${PROSTH}/instances/${instanceId}/snapshot`, { headers })).json();
     const measureStep = snapshot.stages[0].steps.find((s: any) => s.id === 'e0000020-0000-0000-0000-000000000020');
     expect(measureStep).toBeTruthy();
     const rId = measureStep.elements.find((e: any) => e.label === 'Стегно, R')?.id;
+    const lId = measureStep.elements.find((e: any) => e.label === 'Стегно, L')?.id;
     expect(rId).toBeTruthy();
-    expect(vals[rId]).toBe('22');
+    expect(lId).toBeTruthy();
+    // Sides are persisted as booleans (JSONB), never as legacy numbers.
+    expect(vals[rId]).toBe(true);
+    expect(vals[lId]).toBe(true);
     expect(vals[measureStep.elements.find((e: any) => e.label === 'П.І.Б')?.id]).toBe('Тест Пацієнт');
 
     // Cleanup – drive to terminal
     await terminateInstance(request, headers, instanceId);
   });
 
-  test('advances past the measurement step with an empty diagram', async ({ page, request }) => {
+  test('blocks the step until a side is selected, then advances', async ({ page, request }) => {
     const { id: instanceId } = await createAndStartLowerInstance(request);
     await page.goto(`/prosthetics/process/${instanceId}/wizard`);
     await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
 
     const cta = page.getByRole('button', { name: /Готово/ }).first();
     await expect(cta).toBeEnabled();
-    // Click with a completely empty diagram — the step must advance, not block.
+    // Click with no side selected — the pair rule blocks the step.
+    await cta.click();
+    await expect(page.getByText('Позначте бік кукси: R, L або обидва')).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(cta).toBeDisabled();
+    await expect(page.getByText('Бланк замірів №')).toBeVisible();
+
+    // Select one side and advance — measurements themselves stay optional.
+    await page.getByRole('checkbox', { name: 'Стегно, L' }).check();
     await cta.click();
     await expect(page.getByText('Виготовлення гіпсового негатива').first()).toBeVisible({ timeout: 10000 });
     // The measurement form is no longer on screen.
     await expect(page.getByText('Бланк замірів №')).toBeHidden({ timeout: 3000 });
-    // No hard-block error anywhere.
-    await expect(page.getByText(/Заповніть щонайменше/)).toBeHidden();
 
     await request.post(`${PROSTH}/instances/${instanceId}/fail`, {
       headers: headersFor(prosthetistToken),
-      data: { category: 'defect', description: 'E2E empty-diagram advance cleanup' },
+      data: { category: 'defect', description: 'E2E side-rule cleanup' },
     });
   });
 
@@ -278,8 +296,8 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
     await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
 
     await page.getByLabel('П.І.Б').fill('Збережений Пацієнт');
-    await page.getByLabel('Стегно, R').fill('24');
-    await page.getByLabel('Стегно, L').fill('25');
+    await page.getByRole('checkbox', { name: 'Стегно, R' }).check();
+    await page.getByRole('checkbox', { name: 'Стегно, L' }).check();
     await page.getByLabel('Обхват гомілки').fill('33');
 
     // Complete the step
@@ -295,11 +313,11 @@ test.describe('TP-LL-02 — Lower Limb Measurement Form (КРОК 1)', () => {
       await expect(page.getByText('Бланк замірів №')).toBeVisible({ timeout: 10000 });
       // The wizard creates a fresh execution on backward, so values start empty – verify the form is still functional
       await expect(page.getByLabel('П.І.Б')).toBeEditable();
-      await expect(page.getByLabel('Стегно, R')).toBeEditable();
+      await expect(page.getByRole('checkbox', { name: 'Стегно, R' })).toBeVisible();
       // Fill again and complete to prove editability
       await page.getByLabel('П.І.Б').fill('Збережений Пацієнт 2');
-      await page.getByLabel('Стегно, R').fill('26');
-      await page.getByLabel('Стегно, L').fill('27');
+      await page.getByRole('checkbox', { name: 'Стегно, R' }).check();
+      await page.getByRole('checkbox', { name: 'Стегно, L' }).check();
       await page.getByLabel('Обхват гомілки').fill('34');
       const cta2 = page.getByRole('button', { name: /Готово/ }).first();
       await expect(cta2).toBeEnabled({ timeout: 5000 });

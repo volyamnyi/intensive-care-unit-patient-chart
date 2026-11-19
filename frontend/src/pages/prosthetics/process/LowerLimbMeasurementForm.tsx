@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -7,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { LOWER_LIMB_MOBILITY_OPTIONS } from '@/prosthetics/lowerLimbPrefill';
+import { LOWER_LIMB_SIDE_ERROR_KEY, LOWER_LIMB_SIDE_L_ID, LOWER_LIMB_SIDE_R_ID } from '@/prosthetics/validation';
 
 /**
  * Lower-limb measurement form — pixel-perfect adaptation of measurement-master
@@ -16,7 +18,9 @@ import { LOWER_LIMB_MOBILITY_OPTIONS } from '@/prosthetics/lowerLimbPrefill';
  * Structure mirrors the reference:
  *  - header "Бланк замірів №" + numbered input
  *  - section grid of patient/product fields
- *  - diagram "Об''ємний розмір та довжина кукси" with 30 positioned numeric inputs
+ *  - diagram "Об''ємний розмір та довжина кукси" with 30 positioned fields:
+ *    «Стегно, R/L» are side checkboxes for new snapshots (CHECKBOX) and
+ *    numeric inputs for legacy snapshots (NUMERIC_INPUT); the other 28 are numeric
  *  - bottom grid (heel height, foot size, components)
  *  - print footer
  *
@@ -42,8 +46,8 @@ export const LOWER_LIMB_ELEMENT_IDS = {
   weight: 'f0000310-0000-0000-0000-000000000310',
   notes: 'f0000311-0000-0000-0000-000000000311',
   // diagram 30
-  a_r: 'f0000312-0000-0000-0000-000000000312',
-  a_l: 'f0000313-0000-0000-0000-000000000313',
+  a_r: LOWER_LIMB_SIDE_R_ID,
+  a_l: LOWER_LIMB_SIDE_L_ID,
   a_left_1: 'f0000314-0000-0000-0000-000000000314',
   a_left_2: 'f0000315-0000-0000-0000-000000000315',
   a_left_3: 'f0000316-0000-0000-0000-000000000316',
@@ -204,18 +208,20 @@ function Field({
   );
 }
 
+function isFilledValue(value: unknown): boolean {
+  // A checkbox marks a side: only `true` counts, `false` is an empty value.
+  if (typeof value === 'boolean') return value;
+  return typeof value === 'string'
+    ? value.trim() !== ''
+    : value !== undefined && value !== null && String(value).trim() !== '';
+}
+
 export function countFilledLowerLimbDiagram(values: Record<string, unknown>): number {
-  return LOWER_LIMB_DIAGRAM_IDS.filter((id) => {
-    const v = values[id];
-    return typeof v === 'string' ? v.trim() !== '' : v !== undefined && v !== null && String(v).trim() !== '';
-  }).length;
+  return LOWER_LIMB_DIAGRAM_IDS.filter((id) => isFilledValue(values[id])).length;
 }
 
 export function countFilledLowerLimbAll(values: Record<string, unknown>): number {
-  return ALL_LOWER_LIMB_IDS.filter((id) => {
-    const v = values[id];
-    return typeof v === 'string' ? v.trim() !== '' : v !== undefined && v !== null && String(v).trim() !== '';
-  }).length;
+  return ALL_LOWER_LIMB_IDS.filter((id) => isFilledValue(values[id])).length;
 }
 
 export function LowerLimbMeasurementForm({
@@ -223,14 +229,24 @@ export function LowerLimbMeasurementForm({
   onChange,
   errors = {},
   disabled = false,
+  elementTypes = {},
 }: {
   values: Record<string, unknown>;
   onChange: (id: string, value: unknown) => void;
   errors?: Record<string, string>;
   disabled?: boolean;
+  /**
+   * Snapshot element types keyed by element UUID. «Стегно, R/L» render as
+   * side checkboxes only when the instance snapshot declares CHECKBOX; older
+   * snapshots keep NUMERIC_INPUT and render numeric fields (legacy values are
+   * never converted).
+   */
+  elementTypes?: Record<string, string>;
 }) {
   const getVal = (id: string) => (values[id] as string) ?? '';
   const setVal = (id: string, v: string) => onChange(id, v);
+  const isSideCheckbox = (id: string) => elementTypes[id] === 'CHECKBOX';
+  const hasSideSelectionError = !!errors[LOWER_LIMB_SIDE_ERROR_KEY];
 
   const numericFilter = (v: string) => v.replace(/[^\d.,]/g, '');
 
@@ -409,7 +425,31 @@ export function LowerLimbMeasurementForm({
               draggable={false}
             />
             {BOXES.map((b) => {
-              const hasError = !!errors[b.elementId];
+              const hasError = !!errors[b.elementId] || (isSideCheckbox(b.elementId) && hasSideSelectionError);
+              const boxStyle = {
+                left: pct(b.x, IMG_W),
+                top: pct(b.y, IMG_H),
+                width: pct(b.w, IMG_W),
+                height: pct(b.h, IMG_H),
+              };
+              if (isSideCheckbox(b.elementId)) {
+                return (
+                  <div
+                    key={b.id}
+                    className="absolute flex items-center justify-center"
+                    style={boxStyle}
+                  >
+                    <Checkbox
+                      aria-label={b.label}
+                      title={b.label}
+                      checked={values[b.elementId] === true}
+                      disabled={disabled}
+                      onCheckedChange={(checked) => onChange(b.elementId, checked === true)}
+                      className={hasError ? 'border-destructive ring-1 ring-destructive' : undefined}
+                    />
+                  </div>
+                );
+              }
               return (
                 <input
                   key={b.id}
@@ -421,18 +461,15 @@ export function LowerLimbMeasurementForm({
                   disabled={disabled}
                   onChange={(e) => setVal(b.elementId, numericFilter(e.target.value))}
                   className={`diagram-input ${hasError ? '!border-destructive !ring-1 !ring-destructive' : ''}`}
-                  style={{
-                    left: pct(b.x, IMG_W),
-                    top: pct(b.y, IMG_H),
-                    width: pct(b.w, IMG_W),
-                    height: pct(b.h, IMG_H),
-                  }}
+                  style={boxStyle}
                 />
               );
             })}
           </div>
         </div>
-        <p className="mt-3 px-2 text-xs text-muted-foreground sm:px-0">Кожне поле на схемі — числове значення заміру в сантиметрах.</p>
+        <p className="mt-3 px-2 text-xs text-muted-foreground sm:px-0">
+          Позначте бік кукси (Стегно, R / L — R, L або обидва). Кожне інше поле на схемі — числове значення заміру в сантиметрах.
+        </p>
       </section>
 
       <section className="grid grid-cols-1 gap-4 border-t border-border px-4 py-6 sm:grid-cols-3 sm:px-8">

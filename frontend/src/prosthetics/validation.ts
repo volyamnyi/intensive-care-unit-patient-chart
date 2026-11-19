@@ -1,5 +1,28 @@
 import type { SnapshotElement } from './types';
 
+/**
+ * Lower-limb side selection (TP-LL-02, stage 1, step e0000020). A checked box
+ * means that side is the amputated/prosthetic side; at least one side must be
+ * selected (R, L or both). Older template snapshots declare these same IDs as
+ * NUMERIC_INPUT — they keep rendering numeric fields and are not validated by
+ * this rule.
+ */
+export const LOWER_LIMB_SIDE_R_ID = 'f0000312-0000-0000-0000-000000000312';
+export const LOWER_LIMB_SIDE_L_ID = 'f0000313-0000-0000-0000-000000000313';
+export const LOWER_LIMB_SIDE_ERROR_KEY = 'lower-limb-sides';
+export const LOWER_LIMB_SIDE_ERROR = 'Позначте бік кукси: R, L або обидва';
+
+export function validateLowerLimbSides(
+  elements: Pick<SnapshotElement, 'id' | 'elementType'>[],
+  values: Record<string, unknown>,
+): Record<string, string> {
+  const sideR = elements.find((e) => e.id === LOWER_LIMB_SIDE_R_ID);
+  const sideL = elements.find((e) => e.id === LOWER_LIMB_SIDE_L_ID);
+  if (sideR?.elementType !== 'CHECKBOX' || sideL?.elementType !== 'CHECKBOX') return {};
+  if (values[LOWER_LIMB_SIDE_R_ID] === true || values[LOWER_LIMB_SIDE_L_ID] === true) return {};
+  return { [LOWER_LIMB_SIDE_ERROR_KEY]: LOWER_LIMB_SIDE_ERROR };
+}
+
 export function fmt(sec: number): string {
   const h = String(Math.floor(sec / 3600)).padStart(2, '0');
   const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');

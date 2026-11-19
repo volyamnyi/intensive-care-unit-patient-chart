@@ -41,7 +41,13 @@ import { flowInstanceApi, prostheticsOrderApi, prostheticsPatientApi } from '@/a
 import { getErrorMessage } from '@/utils/errorMessage';
 import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/components/prosthetics/StatusBadge';
-import { computeProgress, fmt, validateElementValues } from '@/prosthetics/validation';
+import {
+  computeProgress,
+  fmt,
+  validateElementValues,
+  validateLowerLimbSides,
+  LOWER_LIMB_SIDE_ERROR_KEY,
+} from '@/prosthetics/validation';
 import { MeasurementForms } from '@/pages/prosthetics/process/MeasurementForms';
 import {
   LowerLimbMeasurementForm,
@@ -329,6 +335,7 @@ function renderElements(
         values={values}
         onChange={onChange}
         errors={errors}
+        elementTypes={Object.fromEntries(els.map((el) => [el.id, el.elementType]))}
       />,
     );
     return out;
@@ -1652,7 +1659,9 @@ export default function WizardScreen() {
       }
     }
     // The lower-limb measurement step (LOWER_LIMB_MEASUREMENT_STEP_ID) has no
-    // minimum-measurement rule: every field is optional, so it can advance empty.
+    // minimum-measurement rule, but for new snapshots the R/L side checkboxes
+    // require at least one selected side. Legacy numeric snapshots are skipped.
+    Object.assign(base, validateLowerLimbSides(step?.elements ?? [], values));
     return base;
   }, [step, values]);
 
@@ -1664,9 +1673,11 @@ export default function WizardScreen() {
       step?.elements.find((e) => e.id === id)?.label ??
       (id === PPE_MEASUREMENT_GLOVES_KEY
         ? PPE_MEASUREMENT_GLOVES_LABEL
-        : id === 'lower-limb-diagram'
-          ? 'Обʼємний розмір та довжина кукси (схема)'
-          : 'Поле кроку'),
+        : id === LOWER_LIMB_SIDE_ERROR_KEY
+          ? 'Бік кукси (Стегно, R / L)'
+          : id === 'lower-limb-diagram'
+            ? 'Обʼємний розмір та довжина кукси (схема)'
+            : 'Поле кроку'),
     msg,
   }));
 

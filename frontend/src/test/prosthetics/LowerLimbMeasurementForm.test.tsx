@@ -9,6 +9,12 @@ import {
   countFilledLowerLimbAll,
 } from '@/pages/prosthetics/process/LowerLimbMeasurementForm';
 import { LOWER_LIMB_MOBILITY_OPTIONS } from '@/prosthetics/lowerLimbPrefill';
+import { LOWER_LIMB_SIDE_ERROR_KEY } from '@/prosthetics/validation';
+
+const SIDE_CHECKBOX_TYPES = {
+  [LOWER_LIMB_ELEMENT_IDS.a_r]: 'CHECKBOX',
+  [LOWER_LIMB_ELEMENT_IDS.a_l]: 'CHECKBOX',
+};
 
 describe('LowerLimbMeasurementForm', () => {
   it('renders header fields and diagram section', () => {
@@ -41,6 +47,102 @@ describe('LowerLimbMeasurementForm', () => {
     expect(screen.getByLabelText('Розмір стопи')).toBeInTheDocument();
     expect(screen.getByLabelText('Комплектуючі')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Друк' })).toBeInTheDocument();
+  });
+
+  it('renders R/L as side checkboxes when the snapshot declares CHECKBOX (#450/#452)', () => {
+    render(
+      <LowerLimbMeasurementForm
+        values={{}}
+        onChange={vi.fn()}
+        elementTypes={SIDE_CHECKBOX_TYPES}
+      />,
+    );
+    const sideR = screen.getByRole('checkbox', { name: 'Стегно, R' });
+    const sideL = screen.getByRole('checkbox', { name: 'Стегно, L' });
+    expect(sideR).toHaveAttribute('aria-checked', 'false');
+    expect(sideL).toHaveAttribute('aria-checked', 'false');
+    // The remaining 28 diagram fields stay numeric inputs.
+    expect(document.querySelectorAll('input.diagram-input')).toHaveLength(28);
+    expect(screen.getByLabelText('Обхват гомілки')).toHaveAttribute('inputmode', 'decimal');
+  });
+
+  it('toggles a side checkbox and reports a boolean value', () => {
+    const onChange = vi.fn();
+    render(
+      <LowerLimbMeasurementForm
+        values={{}}
+        onChange={onChange}
+        elementTypes={SIDE_CHECKBOX_TYPES}
+      />,
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Стегно, R' }));
+    expect(onChange).toHaveBeenCalledWith(LOWER_LIMB_ELEMENT_IDS.a_r, true);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders checked side checkboxes from stored booleans and respects disabled', () => {
+    render(
+      <LowerLimbMeasurementForm
+        values={{
+          [LOWER_LIMB_ELEMENT_IDS.a_r]: true,
+          [LOWER_LIMB_ELEMENT_IDS.a_l]: false,
+        }}
+        onChange={vi.fn()}
+        elementTypes={SIDE_CHECKBOX_TYPES}
+        disabled
+      />,
+    );
+    expect(screen.getByRole('checkbox', { name: 'Стегно, R' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByRole('checkbox', { name: 'Стегно, L' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    // Base UI renders a non-native span with role="checkbox": disabled is exposed as aria-disabled.
+    expect(screen.getByRole('checkbox', { name: 'Стегно, R' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('marks both side checkboxes when the side-selection rule fails', () => {
+    render(
+      <LowerLimbMeasurementForm
+        values={{}}
+        onChange={vi.fn()}
+        errors={{ [LOWER_LIMB_SIDE_ERROR_KEY]: 'Позначте бік кукси' }}
+        elementTypes={SIDE_CHECKBOX_TYPES}
+      />,
+    );
+    expect(screen.getByRole('checkbox', { name: 'Стегно, R' })).toHaveClass('border-destructive');
+    expect(screen.getByRole('checkbox', { name: 'Стегно, L' })).toHaveClass('border-destructive');
+  });
+
+  it('keeps numeric R/L fields for legacy NUMERIC_INPUT snapshots', () => {
+    const onChange = vi.fn();
+    render(
+      <LowerLimbMeasurementForm
+        values={{ [LOWER_LIMB_ELEMENT_IDS.a_r]: '100' }}
+        onChange={onChange}
+        elementTypes={{
+          [LOWER_LIMB_ELEMENT_IDS.a_r]: 'NUMERIC_INPUT',
+          [LOWER_LIMB_ELEMENT_IDS.a_l]: 'NUMERIC_INPUT',
+        }}
+      />,
+    );
+    expect(screen.queryByRole('checkbox', { name: 'Стегно, R' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Стегно, R')).toHaveValue('100');
+    expect(document.querySelectorAll('input.diagram-input')).toHaveLength(30);
+  });
+
+  it('updates the diagram hint for the checkbox model', () => {
+    render(<LowerLimbMeasurementForm values={{}} onChange={vi.fn()} />);
+    expect(
+      screen.getByText(/Позначте бік кукси \(Стегно, R \/ L — R, L або обидва\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Кожне інше поле на схемі — числове значення заміру/)).toBeInTheDocument();
   });
 
   it('binds values and calls onChange with UUID keys', () => {
@@ -194,6 +296,21 @@ describe('LowerLimbMeasurementForm', () => {
         [LOWER_LIMB_ELEMENT_IDS.age]: '45',
       }),
     ).toBe(0);
+  });
+
+  it('counts only checked side checkboxes, not unchecked ones', () => {
+    expect(
+      countFilledLowerLimbDiagram({
+        [LOWER_LIMB_ELEMENT_IDS.a_r]: true,
+        [LOWER_LIMB_ELEMENT_IDS.a_l]: false,
+      }),
+    ).toBe(1);
+    expect(
+      countFilledLowerLimbAll({
+        [LOWER_LIMB_ELEMENT_IDS.a_r]: true,
+        [LOWER_LIMB_ELEMENT_IDS.a_l]: false,
+      }),
+    ).toBe(1);
   });
 
   it('counts all filled values', () => {

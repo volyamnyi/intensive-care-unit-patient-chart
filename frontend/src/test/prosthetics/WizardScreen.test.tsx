@@ -177,6 +177,62 @@ describe('WizardScreen', () => {
     });
   });
 
+  it('blocks the lower-limb measurement step until a side is selected (#450/#452)', async () => {
+    const sideR = 'f0000312-0000-0000-0000-000000000312';
+    const sideL = 'f0000313-0000-0000-0000-000000000313';
+    flowInstanceApiMock.getById.mockResolvedValue({
+      data: inProgressInstance({ currentStepId: 'e0000020-0000-0000-0000-000000000020' }),
+    });
+    flowInstanceApiMock.getSnapshot.mockResolvedValue({
+      data: {
+        ...baseSnapshot(),
+        stages: [
+          {
+            id: 'stage-1',
+            name: 'Виготовлення гіпсового негатива',
+            stageType: 'TECHNICAL',
+            canSkip: false,
+            requiresApproval: false,
+            steps: [
+              {
+                id: 'e0000020-0000-0000-0000-000000000020',
+                name: "Зняття та внесення об'ємних розмірів",
+                stepType: 'MEASUREMENT',
+                mandatory: true,
+                allowBackward: true,
+                autoStartTimer: true,
+                normDurationMin: 20,
+                elements: [
+                  { id: sideR, elementType: 'CHECKBOX', label: 'Стегно, R', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                  { id: sideL, elementType: 'CHECKBOX', label: 'Стегно, L', required: false, unit: null, minValue: null, maxValue: null, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                  { id: 'f0000322-0000-0000-0000-000000000322', elementType: 'NUMERIC_INPUT', label: 'Обхват гомілки', required: false, unit: 'см', minValue: 0, maxValue: 200, minCount: null, maxCount: null, regexPattern: null, options: null, mimeTypes: null, maxSizeMb: null },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    renderWizard();
+    await waitFor(() => {
+      expect(screen.getByText('Бланк замірів №')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Завершити процес/ }));
+    await waitFor(() => {
+      expect(screen.getByText(/Позначте бік кукси: R, L або обидва/)).toBeInTheDocument();
+    });
+    expect(flowInstanceApiMock.completeStep).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Стегно, R' }));
+    fireEvent.click(screen.getByRole('button', { name: /Завершити процес/ }));
+    await waitFor(() => {
+      expect(flowInstanceApiMock.completeStep).toHaveBeenCalled();
+    });
+    const payload = flowInstanceApiMock.completeStep.mock.calls[0][2] as { values: string };
+    expect(JSON.parse(payload.values)).toEqual({ [sideR]: true });
+  });
+
   it('calls completeStep with values after valid fill (resources panel removed)', async () => {
     flowInstanceApiMock.completeStep.mockResolvedValue({
       data: { ...inProgressInstance(), currentStepId: 'step-2' },

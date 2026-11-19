@@ -83,6 +83,16 @@ class TpLl02SeedValidationTest {
         assertThat(sql).contains("'П.І.Б'");
         assertThat(sql).contains("'Стегно, R'");
         assertThat(sql).contains("'Стегно, L'");
+        // R/L are side checkboxes since #450/#452: same UUIDs, no numeric range/unit
+        assertThat(sql).contains(
+                "'f0000312-0000-0000-0000-000000000312', 'e0000020-0000-0000-0000-000000000020', 16, 'CHECKBOX', 'Стегно, R', NULL, false, NULL, NULL, NULL, NULL, NULL");
+        assertThat(sql).contains(
+                "'f0000313-0000-0000-0000-000000000313', 'e0000020-0000-0000-0000-000000000020', 17, 'CHECKBOX', 'Стегно, L', NULL, false, NULL, NULL, NULL, NULL, NULL");
+        assertThat(sql).doesNotContain("'NUMERIC_INPUT', 'Стегно, R'");
+        assertThat(sql).doesNotContain("'NUMERIC_INPUT', 'Стегно, L'");
+        // The remaining diagram measurement fields stay numeric
+        assertThat(sql).contains("'NUMERIC_INPUT', 'Обхват гомілки'");
+        assertThat(sql).contains("'NUMERIC_INPUT', 'Коліно, R'");
         assertThat(sql).contains("'Обхват гомілки'");
         assertThat(sql).contains("'Обхват щиколотки'");
         assertThat(sql).contains("'Коліно, R'");

@@ -72,6 +72,37 @@ class TpLl02ValidationUnitTest {
                 .build();
     }
 
+    private SnapshotStep measurementStepWithSideCheckboxes() {
+        return SnapshotStep.builder()
+                .id(UUID.fromString("e0000020-0000-0000-0000-000000000020"))
+                .name("Зняття та внесення об'ємних розмірів")
+                .stepType("MEASUREMENT")
+                .mandatory(true)
+                .allowBackward(true)
+                .autoStartTimer(true)
+                .normDurationMin(20)
+                .elements(List.of(
+                        SnapshotElement.builder().id(UUID.fromString("f0000312-0000-0000-0000-000000000312")).label("Стегно, R").elementType("CHECKBOX").required(false).build(),
+                        SnapshotElement.builder().id(UUID.fromString("f0000313-0000-0000-0000-000000000313")).label("Стегно, L").elementType("CHECKBOX").required(false).build(),
+                        SnapshotElement.builder().id(UUID.fromString("f0000322-0000-0000-0000-000000000322")).label("Обхват гомілки").elementType("NUMERIC_INPUT").required(false).unit("см").minValue(new BigDecimal("0")).maxValue(new BigDecimal("200")).build()))
+                .build();
+    }
+
+    private SnapshotStep measurementStepWithLegacySideNumbers() {
+        return SnapshotStep.builder()
+                .id(UUID.fromString("e0000020-0000-0000-0000-000000000020"))
+                .name("Зняття та внесення об'ємних розмірів")
+                .stepType("MEASUREMENT")
+                .mandatory(true)
+                .allowBackward(true)
+                .autoStartTimer(true)
+                .normDurationMin(20)
+                .elements(List.of(
+                        SnapshotElement.builder().id(UUID.fromString("f0000312-0000-0000-0000-000000000312")).label("Стегно, R").elementType("NUMERIC_INPUT").required(false).unit("см").minValue(new BigDecimal("0")).maxValue(new BigDecimal("200")).build(),
+                        SnapshotElement.builder().id(UUID.fromString("f0000313-0000-0000-0000-000000000313")).label("Стегно, L").elementType("NUMERIC_INPUT").required(false).unit("см").minValue(new BigDecimal("0")).maxValue(new BigDecimal("200")).build()))
+                .build();
+    }
+
     @Test
     void lowerLimbMeasurementStep_insufficientValuesPasses() {
         // The lower-limb measurement step (e0000020) intentionally allows advancing
@@ -95,6 +126,46 @@ class TpLl02ValidationUnitTest {
                  "f0000204-0000-0000-0000-000000000204": true}
                 """;
         assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
+    }
+
+    // #450/#452: side checkboxes — at least one of R/L must be selected
+    @Test
+    void sideCheckboxes_noSideSelectedDenied() {
+        SnapshotStep step = measurementStepWithSideCheckboxes();
+        assertThatThrownBy(() -> service.validateValues("{}", step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class)
+                .hasMessageContaining("Позначте бік кукси");
+        assertThatThrownBy(() -> service.validateValues(
+                "{\"f0000312-0000-0000-0000-000000000312\": false, "
+                        + "\"f0000313-0000-0000-0000-000000000313\": false}", step))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class)
+                .hasMessageContaining("Позначте бік кукси");
+    }
+
+    @Test
+    void sideCheckboxes_singleSideOrBothSidesAllowed() {
+        SnapshotStep step = measurementStepWithSideCheckboxes();
+        assertThatCode(() -> service.validateValues(
+                "{\"f0000312-0000-0000-0000-000000000312\": true}", step))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> service.validateValues(
+                "{\"f0000313-0000-0000-0000-000000000313\": true}", step))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> service.validateValues(
+                "{\"f0000312-0000-0000-0000-000000000312\": true, "
+                        + "\"f0000313-0000-0000-0000-000000000313\": true}", step))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void sideCheckboxes_legacyNumericSnapshotKeepsNumericValues() {
+        SnapshotStep step = measurementStepWithLegacySideNumbers();
+        String values = """
+                {"f0000312-0000-0000-0000-000000000312": "100",
+                 "f0000313-0000-0000-0000-000000000313": "100"}
+                """;
+        assertThatCode(() -> service.validateValues(values, step)).doesNotThrowAnyException();
+        assertThatCode(() -> service.validateValues("{}", step)).doesNotThrowAnyException();
     }
 
     // Phase 3: exclusive soft-liner rule — 8 combos (ALLOW = (v&&t&&!n) || (n&&!v&&!t))

@@ -32,9 +32,11 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -50,6 +52,12 @@ public class ProstheticsPdfService {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+
+    /** Lower-limb side checkboxes: both are always printed explicitly (Так/Ні). */
+    private static final String LOWER_LIMB_SIDE_R_KEY = "f0000312-0000-0000-0000-000000000312";
+    private static final String LOWER_LIMB_SIDE_L_KEY = "f0000313-0000-0000-0000-000000000313";
+    private static final List<String> LOWER_LIMB_SIDE_KEYS =
+            List.of(LOWER_LIMB_SIDE_R_KEY, LOWER_LIMB_SIDE_L_KEY);
 
     public byte[] generateFinalReport(FlowInstance instance, ProstheticsOrder order,
                                       SnapshotTemplate snapshot, List<StepExecution> executions,
@@ -185,17 +193,42 @@ public class ProstheticsPdfService {
             return Map.of("Значення", execution.getValues());
         }
         SnapshotStep step = stepsById.get(execution.getStepId());
-        Map<String, String> labels = new LinkedHashMap<>();
+        Map<String, SnapshotElement> elementsById = new LinkedHashMap<>();
         if (step != null && step.getElements() != null) {
             for (SnapshotElement element : step.getElements()) {
-                labels.put(element.getId().toString(), element.getLabel());
+                elementsById.put(element.getId().toString(), element);
+            }
+        }
+        // Side checkboxes are printed explicitly for both sides: R — Так/Ні, L — Так/Ні.
+        Set<String> consumedKeys = new HashSet<>();
+        for (String sideKey : LOWER_LIMB_SIDE_KEYS) {
+            SnapshotElement element = elementsById.get(sideKey);
+            if (element != null && "CHECKBOX".equals(element.getElementType())) {
+                result.put(element.getLabel(),
+                        Boolean.TRUE.equals(values.get(sideKey)) ? "Так" : "Ні");
+                consumedKeys.add(sideKey);
             }
         }
         for (Map.Entry<String, Object> entry : values.entrySet()) {
-            result.put(labels.getOrDefault(entry.getKey(), entry.getKey()),
-                    String.valueOf(entry.getValue()));
+            if (consumedKeys.contains(entry.getKey())) {
+                continue;
+            }
+            SnapshotElement element = elementsById.get(entry.getKey());
+            result.put(element == null ? entry.getKey() : element.getLabel(),
+                    formatSummaryValue(element, entry.getValue()));
         }
         return result;
+    }
+
+    private String formatSummaryValue(SnapshotElement element, Object value) {
+        if (value instanceof Boolean bool) {
+            return bool ? "Так" : "Ні";
+        }
+        if (element != null && LOWER_LIMB_SIDE_KEYS.contains(element.getId().toString())
+                && element.getUnit() != null && !element.getUnit().isBlank()) {
+            return value + " " + element.getUnit();
+        }
+        return String.valueOf(value);
     }
 
     private String fmtDateTime(java.time.LocalDateTime dateTime) {
