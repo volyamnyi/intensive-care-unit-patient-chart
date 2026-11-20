@@ -48,5 +48,7 @@ pixel-perfect-studio-main/
 # без цього toHaveScreenshot падає «snapshot doesn't exist» на кожному прогоні.
 # Трекаються лише linux-бейзлайни (CI); win32-актуали лишаються локальними.
 !tests/specs/*/*.spec.ts-snapshots/*-linux.png
+# Anonymous 003-4/о time-grid references (no original PDF or patient header).
+!tests/pdf/003-4-o/grid/example*-p*.png
 # Local-only production run cheat-sheet (operator machine, not for CI/repo)
 docs/Production-Run-Commands.md
