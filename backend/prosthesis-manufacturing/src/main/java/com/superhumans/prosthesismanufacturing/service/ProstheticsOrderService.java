@@ -139,6 +139,7 @@ public class ProstheticsOrderService {
                     + request.getPatientId());
         }
         String orderNumber = "MIS-" + request.getPatientId() + "-" + request.getDocumentId();
+        lockProvisionCreate(request.getPatientId(), orderNumber);
         UUID rootId = UUID.randomUUID();
         try (var ignored = auditEmitter.beginOperation(rootId)) {
             ProstheticsOrderResponse response = orderRepository.findByOrderNumber(orderNumber)
@@ -170,6 +171,22 @@ public class ProstheticsOrderService {
                     .build());
             return response;
         }
+    }
+
+    /**
+     * #458: serializes the find-or-create section of {@link #provisionFromMis}
+     * on the two confirmed unique keys — the patient id and the
+     * {@code MIS-{patientId}-{documentId}} order number — acquired in a fixed
+     * order so two concurrent provisions of the same document cannot deadlock.
+     * Without the lock, both pass the check-then-act window together and the
+     * loser of the unique-index race fails the whole transaction with the
+     * generic 409 "Data integrity violation"; holding the locks until commit
+     * lets the loser re-read the winner's row by order number and return the
+     * same order id — no duplicates, no 409.
+     */
+    private void lockProvisionCreate(String patientId, String orderNumber) {
+        orderRepository.lockAdvisory("prosthetics.provision.patient:" + patientId);
+        orderRepository.lockAdvisory("prosthetics.provision.order:" + orderNumber);
     }
 
     private ProstheticsPatient ensureLocalPatient(

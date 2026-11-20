@@ -20,6 +20,16 @@ public interface ProstheticsOrderRepository extends JpaRepository<ProstheticsOrd
     Optional<ProstheticsOrder> findByOrderNumber(String orderNumber);
 
     /**
+     * Advisory lock for issue #458's provision race: serializes the
+     * find-or-create section of {@code provisionFromMis} on the two confirmed
+     * unique keys, acquired in a fixed order so concurrent provisions cannot
+     * deadlock. PostgreSQL only; the lock is xact-scoped — released at
+     * commit/rollback.
+     */
+    @Query(value = "SELECT pg_advisory_xact_lock(hashtextextended(?1, 0))", nativeQuery = true)
+    List<Object> lockAdvisory(String key);
+
+    /**
      * Batch order load with patients for the production read-model — a single
      * query, no per-row lazy patient fetch (N+1 guard).
      */
