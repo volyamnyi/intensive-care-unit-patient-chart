@@ -2,7 +2,7 @@
 
 <!-- GENERATED FILE - do not edit by hand. Source of truth: `SecurityConfig`, `ClinicalSecurityRules` and the controller mappings. `AccessMatrixArtifactTest` fails when it goes stale. -->
 
-Endpoint count (code): **152**
+Endpoint count (code): **153**
 
 ## URL rules (first match wins)
 
@@ -21,41 +21,42 @@ Endpoint count (code): **152**
 | 11 | `HttpMethod.GET, "/api/users/me/**"` | `authenticated()` |
 | 12 | `HttpMethod.GET, "/api/users/**"` | `spEl(USERS_READ_SPEL)` |
 | 13 | `HttpMethod.GET, "/api/prescriptions/**"` | `spEl(MEDICATION_READ_SPEL)` |
-| 14 | `HttpMethod.GET, "/api/vital-signs/**"` | `spEl(MEDICATION_READ_SPEL)` |
-| 15 | `HttpMethod.GET, "/api/department/**"` | `spEl(ICU_READ_SPEL)` |
-| 16 | `HttpMethod.GET, "/api/settings/**"` | `spEl(USERS_READ_SPEL)` |
-| 17 | `HttpMethod.POST, "/api/episodes"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 18 | `"/api/episodes/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 19 | `HttpMethod.POST, "/api/clinical-days"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 20 | `HttpMethod.POST, "/api/clinical-days/*/sign/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 21 | `HttpMethod.POST, "/api/clinical-days/*/orders"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 22 | `"/api/clinical-days/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 23 | `"/api/notes/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 24 | `"/api/scales/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 25 | `"/api/hourly-records/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 26 | `HttpMethod.POST, "/api/orders/*/execute/finish"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 27 | `HttpMethod.POST, "/api/orders/*/execute"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 28 | `HttpMethod.PUT, "/api/orders/*/plan/finish"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 29 | `HttpMethod.PUT, "/api/orders/*/plan"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 30 | `HttpMethod.PUT, "/api/orders/*/cancel"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 31 | `HttpMethod.POST, "/api/orders/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 32 | `"/api/orders/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 33 | `HttpMethod.PATCH, "/api/executions/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 34 | `"/api/audit/**"` | `spEl( "hasAnyRole('ADMINISTRATOR', 'AUDITOR') or @permissionService.has('AUDIT_ACCESS')")` |
-| 35 | `"/api/patients/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 36 | `"/api/users/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 37 | `HttpMethod.POST, "/api/prescriptions"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 38 | `HttpMethod.POST, "/api/prescriptions/*/items"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 39 | `HttpMethod.PUT, "/api/prescriptions/day-parts/*/plan"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 40 | `HttpMethod.PUT, "/api/prescriptions/day-parts/*/complete"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 41 | `HttpMethod.POST, "/api/prescriptions/day-parts/*/execute"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 42 | `HttpMethod.POST, "/api/prescriptions/*/close"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 43 | `HttpMethod.DELETE, "/api/prescriptions/items/*"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 44 | `HttpMethod.DELETE, "/api/prescriptions/*"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 45 | `"/api/prescriptions/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 46 | `"/api/vital-signs/**"` | `hasAnyRole(CLINICAL_ROLES)` |
-| 47 | `"/api/admin/**"` | `hasAnyRole("ADMINISTRATOR")` |
-| 48 | `"/api/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 14 | `HttpMethod.POST, "/api/prescriptions/*/pdf/**"` | `spEl(MEDICATION_READ_SPEL)` |
+| 15 | `HttpMethod.GET, "/api/vital-signs/**"` | `spEl(MEDICATION_READ_SPEL)` |
+| 16 | `HttpMethod.GET, "/api/department/**"` | `spEl(ICU_READ_SPEL)` |
+| 17 | `HttpMethod.GET, "/api/settings/**"` | `spEl(USERS_READ_SPEL)` |
+| 18 | `HttpMethod.POST, "/api/episodes"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 19 | `"/api/episodes/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 20 | `HttpMethod.POST, "/api/clinical-days"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 21 | `HttpMethod.POST, "/api/clinical-days/*/sign/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 22 | `HttpMethod.POST, "/api/clinical-days/*/orders"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 23 | `"/api/clinical-days/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 24 | `"/api/notes/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 25 | `"/api/scales/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 26 | `"/api/hourly-records/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 27 | `HttpMethod.POST, "/api/orders/*/execute/finish"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 28 | `HttpMethod.POST, "/api/orders/*/execute"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 29 | `HttpMethod.PUT, "/api/orders/*/plan/finish"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 30 | `HttpMethod.PUT, "/api/orders/*/plan"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 31 | `HttpMethod.PUT, "/api/orders/*/cancel"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 32 | `HttpMethod.POST, "/api/orders/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 33 | `"/api/orders/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 34 | `HttpMethod.PATCH, "/api/executions/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 35 | `"/api/audit/**"` | `spEl( "hasAnyRole('ADMINISTRATOR', 'AUDITOR') or @permissionService.has('AUDIT_ACCESS')")` |
+| 36 | `"/api/patients/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 37 | `"/api/users/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 38 | `HttpMethod.POST, "/api/prescriptions"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 39 | `HttpMethod.POST, "/api/prescriptions/*/items"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 40 | `HttpMethod.PUT, "/api/prescriptions/day-parts/*/plan"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 41 | `HttpMethod.PUT, "/api/prescriptions/day-parts/*/complete"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 42 | `HttpMethod.POST, "/api/prescriptions/day-parts/*/execute"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 43 | `HttpMethod.POST, "/api/prescriptions/*/close"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 44 | `HttpMethod.DELETE, "/api/prescriptions/items/*"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 45 | `HttpMethod.DELETE, "/api/prescriptions/*"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 46 | `"/api/prescriptions/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 47 | `"/api/vital-signs/**"` | `hasAnyRole(CLINICAL_ROLES)` |
+| 48 | `"/api/admin/**"` | `hasAnyRole("ADMINISTRATOR")` |
+| 49 | `"/api/**"` | `hasAnyRole(CLINICAL_ROLES)` |
 
 ## Endpoints by module
 
@@ -63,7 +64,7 @@ Endpoint count (code): **152**
 |---|---|---|
 | `common` | 177 | 24 |
 | `icu-chart` | 84 | 54 |
-| `medication-sheet` | 70 | 31 |
+| `medication-sheet` | 71 | 32 |
 | `prosthesis-manufacturing` | 101 | 43 |
 
 ## Endpoint matrix
@@ -160,9 +161,10 @@ Endpoint count (code): **152**
 | `medication-sheet` | `PrescriptionController` | DELETE | `/api/prescriptions/{id}` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
 | `medication-sheet` | `PrescriptionController` | GET | `/api/prescriptions/{id}` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('PATIENT_VIEW')` | - |
 | `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/{id}/close` | `hasAnyRole(CLINICAL_ROLES)` | `(class-level)` | - |
-| `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/{id}/pdf/file` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PATIENT_VIEW')` | - |
+| `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/{id}/pdf/document` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('PATIENT_VIEW')` | - |
+| `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/{id}/pdf/file` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('PATIENT_VIEW')` | - |
 | `medication-sheet` | `PrescriptionController` | GET | `/api/prescriptions/{id}/pdf/info` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('PATIENT_VIEW')` | - |
-| `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/{id}/pdf/pages/{pageIndex}` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PATIENT_VIEW')` | - |
+| `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/{id}/pdf/pages/{pageIndex}` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('PATIENT_VIEW')` | - |
 | `medication-sheet` | `DrugInteractionController` | GET | `/api/prescriptions/{listId}/interactions` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('PATIENT_VIEW')` | - |
 | `medication-sheet` | `PrescriptionController` | GET | `/api/prescriptions/{listId}/items` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('PATIENT_VIEW')` | - |
 | `medication-sheet` | `PrescriptionController` | POST | `/api/prescriptions/{listId}/items` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('PRESCRIPTION_CREATE')` | - |
@@ -225,4 +227,4 @@ Endpoint count (code): **152**
 | `medication-sheet` | `VitalSignController` | GET | `/api/vital-signs/grid` | `spEl(MEDICATION_READ_SPEL)` | `@permissionService.has('VITALS_ENTER')` | - |
 | `medication-sheet` | `VitalSignController` | POST | `/api/vital-signs/grid` | `hasAnyRole(CLINICAL_ROLES)` | `@permissionService.has('VITALS_ENTER')` | - |
 
-Endpoints: **152** (with an ownership check: **17**).
+Endpoints: **153** (with an ownership check: **17**).
