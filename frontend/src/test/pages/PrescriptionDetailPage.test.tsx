@@ -14,9 +14,8 @@ const mockRestoreToPlanned = vi.fn();
 const mockCancelAssignment = vi.fn();
 const mockGetInteractions = vi.fn().mockResolvedValue({ data: { warnings: [], missingAtc: null } });
 const mockRemoveItem = vi.fn();
-const mockGetPdfZip = vi.fn();
-const mockGetPdfInfo = vi.fn();
-const mockGetPdfPage = vi.fn();
+const mockPdfDocument = vi.fn();
+const mockToastInfo = vi.fn();
 const mockPrintPdfBlob = vi.fn();
 const mockUpdateActualTime = vi.fn();
 const mockToastSuccess = vi.fn();
@@ -47,9 +46,7 @@ vi.mock('../../api/medication', () => ({
     getByPatient: vi.fn(),
     getInteractions: (...a: unknown[]) => mockGetInteractions(...a),
     getMedicineCatalog: () => Promise.resolve({ data: [] }),
-    generatePdfZip: (...a: unknown[]) => mockGetPdfZip(...a),
-    getPdfInfo: (...a: unknown[]) => mockGetPdfInfo(...a),
-    generatePdfPage: (...a: unknown[]) => mockGetPdfPage(...a),
+    generatePdfDocument: (...a: unknown[]) => mockPdfDocument(...a),
   },
   vitalSignApi: {
     getGrid: (...a: unknown[]) => mockGetGrid(...a),
@@ -88,7 +85,7 @@ vi.mock('sonner', () => ({
   toast: {
     success: (...a: unknown[]) => mockToastSuccess(...a),
     error: (...a: unknown[]) => mockToastError(...a),
-    info: vi.fn(),
+    info: (...a: unknown[]) => mockToastInfo(...a),
     warning: vi.fn(),
   },
 }));
@@ -296,40 +293,62 @@ describe('PrescriptionDetailPage — per-item day actions', () => {
 
 describe('PrescriptionDetailPage — Form 003-4/о PDF actions', () => {
   beforeEach(() => {
-    mockGetPdfZip.mockReset().mockResolvedValue({ data: new Blob(['PK'], { type: 'application/zip' }) });
-    mockGetPdfInfo.mockReset().mockResolvedValue({ data: { pages: 2, fileName: 'prescription-list-1.zip' } });
-    mockGetPdfPage.mockReset().mockResolvedValue({ data: new Blob(['%PDF'], { type: 'application/pdf' }) });
+    mockPdfDocument.mockReset().mockResolvedValue({ status: 200, data: new Blob(['%PDF'], { type: 'application/pdf' }) });
+    mockToastInfo.mockClear();
     mockPrintPdfBlob.mockReset().mockResolvedValue(undefined);
     mockToastSuccess.mockClear();
     mockToastError.mockClear();
   });
 
-  it('«Завантажити PDF» downloads the backend ZIP batch', async () => {
-    const createObjectURL = vi.fn(() => 'blob:mock-zip');
+  it('downloads a single PDF named for the list', async () => {
+    const createObjectURL = vi.fn(() => 'blob:document');
     const revokeObjectURL = vi.fn();
+    let fileName = '';
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { fileName = this.download; });
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
     renderPage(() => doctorAuth);
 
     await userEvent.click(await screen.findByRole('button', { name: /Завантажити PDF/ }));
 
-    await waitFor(() => expect(mockGetPdfZip).toHaveBeenCalledWith('list-1'));
+    await waitFor(() => expect(mockPdfDocument).toHaveBeenCalledExactlyOnceWith('list-1'));
     expect(createObjectURL).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-zip');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:document');
+    expect(fileName).toBe('prescription-list-1.pdf');
     await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('PDF завантажено'));
     vi.unstubAllGlobals();
+    click.mockRestore();
   });
 
-  it('«Друкувати PDF» prints every backend sheet from PDF bytes', async () => {
-    renderPage(() => doctorAuth);
+  it.each([doctorAuth, nurseAuth])('prints the entire response once for $user.role', async (auth) => {
+    renderPage(() => auth);
 
     await userEvent.click(await screen.findByRole('button', { name: /Друкувати PDF/ }));
 
-    await waitFor(() => expect(mockGetPdfInfo).toHaveBeenCalledWith('list-1'));
-    await waitFor(() => expect(mockGetPdfPage).toHaveBeenCalledTimes(2));
-    expect(mockGetPdfPage).toHaveBeenNthCalledWith(1, 'list-1', 0);
-    expect(mockGetPdfPage).toHaveBeenNthCalledWith(2, 'list-1', 1);
-    expect(mockPrintPdfBlob).toHaveBeenCalledTimes(2);
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith('PDF надіслано на друк (2 стор.)'));
+    await waitFor(() => expect(mockPdfDocument).toHaveBeenCalledExactlyOnceWith('list-1'));
+    expect(mockPrintPdfBlob).toHaveBeenCalledExactlyOnceWith((await mockPdfDocument.mock.results[0].value).data);
+    expect(mockToastSuccess).toHaveBeenCalledWith('PDF надіслано на друк');
+  });
+
+  it.each(['Друкувати PDF', 'Завантажити PDF'])('handles 204 before creating a URL for %s', async (name) => {
+    mockPdfDocument.mockResolvedValueOnce({ status: 204 });
+    const createObjectURL = vi.fn();
+    vi.stubGlobal('URL', { createObjectURL });
+    renderPage(() => doctorAuth);
+    await userEvent.click(await screen.findByRole('button', { name }));
+    expect(mockToastInfo).toHaveBeenCalledWith('Немає призначень для друку');
+    expect(createObjectURL).not.toHaveBeenCalled();
+    expect(mockPrintPdfBlob).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('re-enables printing after a failed render', async () => {
+    mockPdfDocument.mockRejectedValueOnce(new Error('render failed'));
+    renderPage(() => nurseAuth);
+    const button = await screen.findByRole('button', { name: 'Друкувати PDF' });
+    await userEvent.click(button);
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    await userEvent.click(button);
+    expect(mockPrintPdfBlob).toHaveBeenCalledTimes(1);
   });
 
   it('PDF buttons are visible for the nurse view too', async () => {

@@ -45,6 +45,9 @@ public interface PrescriptionItemMapper {
                 }
                 if (day.getDayParts() != null) {
                     for (PrescriptionDayPart part : day.getDayParts()) {
+                        if (Boolean.TRUE.equals(part.getDeleted())) {
+                            continue;
+                        }
                         PrescriptionExecution execution = part.getId() == null
                                 ? null
                                 : executionsByDayPartId.get(part.getId());

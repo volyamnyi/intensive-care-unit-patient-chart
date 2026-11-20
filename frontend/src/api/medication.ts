@@ -54,6 +54,8 @@ export const prescriptionApi = {
     client.get<PrescriptionInteractionsResponse>(`/prescriptions/${listId}/interactions`),
   getPdfInfo: (id: string) =>
     client.get<PrescriptionPdfInfo>(`/prescriptions/${id}/pdf/info`),
+  generatePdfDocument: (id: string, range?: { from: string; to: string }) =>
+    client.post<Blob>(`/prescriptions/${id}/pdf/document`, undefined, { responseType: 'blob', params: range }),
   generatePdfZip: (id: string) =>
     client.post<Blob>(`/prescriptions/${id}/pdf/file`, undefined, { responseType: 'blob' }),
   generatePdfPage: (id: string, pageIndex: number) =>

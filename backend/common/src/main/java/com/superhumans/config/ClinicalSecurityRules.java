@@ -85,6 +85,7 @@ public class ClinicalSecurityRules implements SecurityRuleContributor, Applicati
                 .requestMatchers(HttpMethod.GET, "/api/users/me/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/users/**").access(spEl(USERS_READ_SPEL))
                 .requestMatchers(HttpMethod.GET, "/api/prescriptions/**").access(spEl(MEDICATION_READ_SPEL))
+                .requestMatchers(HttpMethod.POST, "/api/prescriptions/*/pdf/**").access(spEl(MEDICATION_READ_SPEL))
                 // #365: vital signs live in the medication module - the ICU SpEL here made a
                 // MODULE_MEDICATION_ACCESS-only role unable to read its own vitals grid
                 // while a MODULE_ICU_ACCESS-only role could. Now the same read rule as

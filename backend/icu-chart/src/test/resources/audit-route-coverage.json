@@ -47,6 +47,7 @@
     { "method": "POST", "path": "/api/prescriptions", "actions": ["medication.list.create"] },
     { "method": "DELETE", "path": "/api/prescriptions/{id}", "actions": ["medication.list.delete"] },
     { "method": "POST", "path": "/api/prescriptions/{id}/close", "actions": ["medication.list.close"] },
+    { "method": "POST", "path": "/api/prescriptions/{id}/pdf/document", "actions": ["medication.pdf.generate"] },
     { "method": "POST", "path": "/api/prescriptions/{id}/pdf/file", "actions": ["medication.pdf.generate", "medication.pdf.download"] },
     { "method": "POST", "path": "/api/prescriptions/{id}/pdf/pages/{pageIndex}", "actions": ["medication.pdf.download"] },
     { "method": "POST", "path": "/api/prescriptions/{listId}/items", "actions": ["medication.item.add"] },

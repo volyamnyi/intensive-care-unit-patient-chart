@@ -330,7 +330,6 @@ The complete development loop:
 | Frontend build | `npm run build` (in `frontend/`) | Production build breaks |
 
 ### Phase 1 — Implement
-- Scope changes to the GitHub issue; do not touch unrelated files (medication-sheet module is off-limits except clinical scales).
 - Fix defects in a NEW commit on failure — never amend or force-push.
 
 ### Phase 2 — Stage & commit

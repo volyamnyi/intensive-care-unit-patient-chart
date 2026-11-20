@@ -1,262 +1,237 @@
 package com.superhumans.medicationsheet.pdf;
 
-import com.itextpdf.io.font.PdfEncodings;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.borders.SolidBorder;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.UnitValue;
-import com.itextpdf.layout.properties.VerticalAlignment;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfPagePlan.Block;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.time.LocalDate;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
-/**
- * Draws exactly one full Form №003-4/о sheet from one
- * {@link PrescriptionPdfPagePlan}. Geometry follows
- * {@code form_003-4-o.html}: A4 landscape, 13 physical columns
- * (Призначення + Викон. + дата-label + 10 date columns), 21 physical rows.
- * Receives resolved strings only — no user lookups here.
- */
+import static com.superhumans.medicationsheet.pdf.PrescriptionPdfLayout.*;
+
+/** Exactly one physical canvas per plan, shared by direct PDF, ZIP and single-sheet export. */
 @Service
 public class PrescriptionPdfRenderer {
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.yy");
 
-    static final DateTimeFormatter DATE_LABEL = DateTimeFormatter.ofPattern("dd.MM");
-
-    static final float FONT_TITLE = 11f;
-    static final float FONT_CELL = 6f;
-    static final float ROW_MIN_HEIGHT = 12f;
-
-    public PrescriptionPdfRenderer() {
-    }
-
-    /** Renders one page plan into exactly one PDF page. */
-    public byte[] render(PrescriptionPdfPagePlan plan) {
-        // iText fonts bind to the PdfDocument that first uses them, so every
-        // render mints fresh PdfFont instances from the cached programs.
-        PdfFont font = newFont();
-        PdfFont boldFont = newBoldFont(font);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+    public byte[] render(List<PrescriptionPdfPagePlan> pages) {
+        if (pages.isEmpty()) {
+            throw new IllegalArgumentException("Empty PDF render plan");
+        }
         try {
-            PdfWriter writer = new PdfWriter(out);
-            PdfDocument pdf = new PdfDocument(writer);
-            Document document = new Document(pdf, PageSize.A4.rotate());
-            document.setMargins(28f, 34f, 28f, 34f);
-
-            document.add(headerTable(plan, font, boldFont));
-            document.add(titleParagraph(boldFont));
-            document.add(patientTable(plan, font));
-            document.add(mainTable(plan, font, boldFont));
-
-            document.close();
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to render prescription PDF page " + plan.pageIndex(), e);
-        }
-        return out.toByteArray();
-    }
-
-    private Table headerTable(PrescriptionPdfPagePlan plan, PdfFont font, PdfFont boldFont) {
-        Table table = new Table(new float[]{36f, 28f, 36f});
-        table.setWidth(UnitValue.createPercentValue(100));
-        String left = "Міністерство охорони здоров'я України\n"
-                + plan.institutionName() + "\nЄДРПОУ " + plan.edrpou();
-        String right = "МЕДИЧНА ДОКУМЕНТАЦІЯ\nФОРМА № 003-4/о\n"
-                + "Затверджено наказом МОЗ України\n29.05.2013р. №435";
-        table.addCell(bordered(left, font, 8f));
-        table.addCell(bordered("", font, 8f));
-        Cell rightCell = bordered(right, font, 8f);
-        rightCell.setTextAlignment(TextAlignment.CENTER);
-        table.addCell(rightCell);
-        return table;
-    }
-
-    private Paragraph titleParagraph(PdfFont boldFont) {
-        return new Paragraph("ЛИСТОК ЛІКАРСЬКИХ ПРИЗНАЧЕНЬ")
-                .setFont(boldFont).setFontSize(FONT_TITLE)
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginTop(2f).setMarginBottom(2f);
-    }
-
-    private Table patientTable(PrescriptionPdfPagePlan plan, PdfFont font) {
-        Table table = new Table(new float[]{30f, 50f, 20f});
-        table.setWidth(UnitValue.createPercentValue(100));
-        table.addCell(bordered(
-                "Номер медичної карти стаціонарного хворого " + plan.cardNumber(), font, 8f));
-        table.addCell(bordered(
-                "Прізвище, ім'я, по батькові хворого " + plan.patientFullName(), font, 8f));
-        table.addCell(bordered("Номер палати " + plan.room(), font, 8f));
-        return table;
-    }
-
-    private Table mainTable(PrescriptionPdfPagePlan plan, PdfFont font, PdfFont boldFont) {
-        float[] widths = new float[13];
-        widths[0] = 15f;
-        widths[1] = 6f;
-        widths[2] = 4f;
-        for (int i = 3; i < 13; i++) {
-            widths[i] = 7.5f;
-        }
-        Table table = new Table(widths);
-        table.setWidth(UnitValue.createPercentValue(100));
-
-        Cell assign = bordered("Призначення", boldFont, 7f, 2, 1);
-        table.addCell(assign);
-        Cell exec = bordered("Викон.", boldFont, 7f, 2, 1);
-        table.addCell(exec);
-        Cell marks = bordered("Відмітки про призначення та виконання", boldFont, 7f, 1, 11);
-        marks.setTextAlignment(TextAlignment.CENTER);
-        table.addCell(marks);
-
-        table.addCell(centered("дата", boldFont, FONT_CELL));
-        for (LocalDate date : plan.dates()) {
-            table.addCell(centered(date.format(DATE_LABEL), boldFont, FONT_CELL));
-        }
-        for (int i = plan.dates().size(); i < PrescriptionPdfPagePlanner.MAX_DATES_PER_PAGE; i++) {
-            table.addCell(centered("", font, FONT_CELL));
-        }
-
-        addStaticRow(table, "Режим", "стаціонарний", font, boldFont);
-
-        for (PrescriptionPdfPagePlan.ItemPage item : plan.items()) {
-            addItemBlock(table, item, font, boldFont);
-        }
-        for (int i = plan.items().size();
-                i < PrescriptionPdfPagePlanner.MAX_ITEMS_PER_PAGE; i++) {
-            addEmptyBlock(table, font, boldFont);
-        }
-
-        addSignatureBlock(table, plan, font, boldFont);
-        return table;
-    }
-
-    private void addStaticRow(
-            Table table, String assignText, String execText, PdfFont font, PdfFont boldFont) {
-        table.addCell(withMinHeight(bordered(assignText, boldFont, FONT_CELL)));
-        table.addCell(withMinHeight(bordered(execText, font, FONT_CELL)));
-        table.addCell(withMinHeight(bordered("", font, FONT_CELL)));
-        for (int i = 0; i < PrescriptionPdfPagePlanner.MAX_DATES_PER_PAGE; i++) {
-            table.addCell(withMinHeight(bordered("", font, FONT_CELL)));
+            if (pages.size() >= 32) {
+                Path spool = Files.createTempFile("prescription-", ".tmp");
+                try {
+                    try (OutputStream out = Files.newOutputStream(spool)) {
+                        write(out, pages);
+                    }
+                    try (PdfDocument checked = new PdfDocument(new PdfReader(spool.toString()))) {
+                        checkCount(checked, pages.size());
+                    }
+                    return Files.readAllBytes(spool);
+                } finally {
+                    Files.deleteIfExists(spool);
+                }
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            write(out, pages);
+            byte[] content = out.toByteArray();
+            try (PdfDocument checked = new PdfDocument(new PdfReader(new ByteArrayInputStream(content)))) {
+                checkCount(checked, pages.size());
+            }
+            return content;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to render prescription PDF", e);
         }
     }
 
-    private void addItemBlock(
-            Table table, PrescriptionPdfPagePlan.ItemPage item, PdfFont font, PdfFont boldFont) {
-        List<String> title = new ArrayList<>();
-        if (item.medicineName() != null && !item.medicineName().isBlank()) {
-            title.add(item.medicineName());
-        }
-        if (item.medicineMethod() != null && !item.medicineMethod().isBlank()) {
-            title.add(item.medicineMethod());
-        }
-        if (item.regime() != null && !item.regime().isBlank()) {
-            title.add(item.regime());
-        }
-        Cell assignCell = withMinHeight(bordered(String.join("\n", title), boldFont, FONT_CELL, 2, 1));
-        table.addCell(assignCell);
-
-        addSubRow(table, "Лікар", font, boldFont, item.columns().stream()
-                .map(column -> cellLines(column.doctorLine(), column.plannedLines()))
-                .toList());
-        addSubRow(table, "Сестра", font, boldFont, item.columns().stream()
-                .map(column -> cellLines(column.nurseLine(), column.executedLines()))
-                .toList());
-    }
-
-    private void addEmptyBlock(Table table, PdfFont font, PdfFont boldFont) {
-        Cell assignCell = withMinHeight(bordered("", font, FONT_CELL, 2, 1));
-        table.addCell(assignCell);
-        List<String> blanks = new ArrayList<>();
-        for (int i = 0; i < PrescriptionPdfPagePlanner.MAX_DATES_PER_PAGE; i++) {
-            blanks.add("");
-        }
-        addSubRow(table, "Лікар", font, boldFont, blanks);
-        addSubRow(table, "Сестра", font, boldFont, blanks);
-    }
-
-    private void addSubRow(
-            Table table, String execLabel, PdfFont font, PdfFont boldFont, List<String> dateCells) {
-        table.addCell(withMinHeight(bordered(execLabel, boldFont, FONT_CELL)));
-        table.addCell(withMinHeight(bordered("", font, FONT_CELL)));
-        for (String text : dateCells) {
-            table.addCell(withMinHeight(bordered(text, font, FONT_CELL)));
-        }
-        for (int i = dateCells.size(); i < PrescriptionPdfPagePlanner.MAX_DATES_PER_PAGE; i++) {
-            table.addCell(withMinHeight(bordered("", font, FONT_CELL)));
+    private static void checkCount(PdfDocument doc, int expected) {
+        if (expected != doc.getNumberOfPages()) {
+            throw new IllegalStateException("Prescription PDF physical page count mismatch");
         }
     }
 
-    private void addSignatureBlock(
-            Table table, PrescriptionPdfPagePlan plan, PdfFont font, PdfFont boldFont) {
-        Cell assignCell = withMinHeight(bordered("Підпис", boldFont, FONT_CELL, 2, 1));
-        table.addCell(assignCell);
-
-        List<String> doctorCells = new ArrayList<>();
-        List<String> nurseCells = new ArrayList<>();
-        for (LocalDate date : plan.dates()) {
-            doctorCells.add(plan.doctorSignatureUsername());
-            List<String> nurses = plan.nursesByDate().getOrDefault(date, List.of());
-            nurseCells.add(String.join(", ", nurses));
-        }
-        addSubRow(table, "Лікар", font, boldFont, doctorCells);
-        addSubRow(table, "Сестра", font, boldFont, nurseCells);
-    }
-
-    private static String cellLines(String firstLine, List<String> lines) {
-        List<String> all = new ArrayList<>();
-        if (firstLine != null && !firstLine.isBlank()) {
-            all.add(firstLine);
-        }
-        for (String line : lines) {
-            if (line != null && !line.isBlank()) {
-                all.add(line);
+    private void write(OutputStream out, List<PrescriptionPdfPagePlan> pages) {
+        try (PdfDocument doc = new PdfDocument(new PdfWriter(out))) {
+            var metrics = new PrescriptionPdfLayout(); // document-local font instance
+            for (var plan : pages) {
+                var page = doc.addNewPage(new PageSize(PAGE_W, PAGE_H));
+                var canvas = new PdfCanvas(page);
+                new Sheet(canvas, metrics).draw(plan);
+                canvas.release();
+                page.flush();
             }
         }
-        return String.join("\n", all);
     }
 
-    private static Cell withMinHeight(Cell cell) {
-        cell.setMinHeight(ROW_MIN_HEIGHT);
-        return cell;
-    }
+    private record Sheet(PdfCanvas canvas, PrescriptionPdfLayout layout) {
+        void draw(PrescriptionPdfPagePlan plan) {
+            canvas.setLineWidth(0.5f);
+            header(plan);
+            float y = plan.geometry().bodyTop();
+            for (var placed : plan.rows()) {
+                pair(placed.top(), placed.pairHeight(), placed.block());
+                details(placed.block().details(), placed.top() + placed.pairHeight());
+                y = placed.top() + placed.height();
+            }
+            details(plan.footerNotes(), y);
+            y += textHeight(plan.footerNotes());
+            float bottom = plan.geometry().footerTop();
+            if (y > bottom + 0.01f) {
+                throw overflow();
+            }
+            for (int n = plan.rows().size(); n < PAIRS && y + PAIR <= bottom + 0.001f; n++) {
+                pair(y, PAIR, null);
+                y += PAIR;
+            }
+            if (bottom - y > 0.01f) {
+                box(LEFT, y, WIDTH, bottom - y);
+            }
+            roleGrid(bottom, 40 * U, "Підписи", Map.of(), plan.signatures());
+        }
 
-    private Cell bordered(String text, PdfFont typeface, float size) {
-        return bordered(text, typeface, size, 1, 1);
-    }
+        private void header(PrescriptionPdfPagePlan p) {
+            var h = p.header();
+            var g = p.geometry();
+            float top = g.top(), w = 730 * U, center = LEFT + w, right = LEFT + 1080 * U;
+            float band = g.authorityHeight() + g.institutionHeight() + 40 * U;
+            wrappedCell(LEFT, top, w, g.authorityHeight(), h.authority());
+            wrappedCell(LEFT, top + g.authorityHeight(), w, g.institutionHeight(), institution(h));
+            float codeTop = top + band - 40 * U;
+            box(LEFT, codeTop, w, 40 * U);
+            String code = clean(h.edrpou());
+            if (!code.isEmpty() && !code.matches("[0-9]{8}")) {
+                // An unverified code must never be truncated or padded into an official identifier.
+                throw new IllegalStateException("Invalid institution EDRPOU for printing");
+            }
+            one(LEFT, codeTop, w - 128, 40 * U, "Ідентифікаційний код ЄДРПОУ", FONT);
+            for (int i = 0; i < 8; i++) {
+                cell(center - 128 + 16 * i, codeTop + 4, 16, 40 * U - 8, code.isEmpty() ? "" : code.substring(i, i + 1), FONT);
+            }
+            box(center, top, 350 * U, band);
+            if (h.logo()) {
+                var logo = PrescriptionPdfRenderer.class.getResource("/pdf/Superhumans_logo_black.png");
+                if (logo == null) {
+                    throw new IllegalStateException("Missing configured prescription print logo");
+                }
+                canvas.addImageFittedIntoRectangle(ImageDataFactory.create(logo), new Rectangle(
+                        center + (350 * U - 150.4f) / 2, PAGE_H - top - (band + 23.6f) / 2, 150.4f, 23.6f), false);
+            }
+            cell(right, top, RIGHT - right, 40 * U, "МЕДИЧНА ДОКУМЕНТАЦІЯ", FONT);
+            wrappedCell(right, top + 40 * U, RIGHT - right, 50 * U, "Форма первинної облікової документації\n№ 003-4/о");
+            wrappedCell(right, top + 90 * U, RIGHT - right, band - 90 * U, "ЗАТВЕРДЖЕНО\nНаказ МОЗ України\n29.05.2013 № 435");
+            float y = top + band;
+            wrappedCell(LEFT, y, 390 * U, g.patientHeight(), "Номер медичної картки\nстаціонарного хворого");
+            wrappedCell(LEFT + 390 * U, y, 880 * U, g.patientHeight(), patient(h));
+            wrappedCell(LEFT + 1270 * U, y, 350 * U, g.patientHeight(), room(h));
+            y += g.patientHeight();
+            cell(LEFT, y, WIDTH, 30 * U, "Відмітка про призначення та виконання", FONT);
+            y += 30 * U;
+            for (int c = 0; c < 3; c++) {
+                cell(column(c), y, column(c + 1) - column(c), 45 * U,
+                        List.of("Призначення", "Виконання", "Дата").get(c), c == 1 ? 5.3f : FONT);
+            }
+            for (int s = 0; s < SLOTS; s++) {
+                String date = DATE.format(p.week().plusDays(s / 4));
+                float dateSize = Math.min(5.52f, (SLOT - 1) / layout.font.getWidth(date, 1));
+                cell(column(s + 3), y, SLOT, 20 * U, date, dateSize);
+                cell(column(s + 3), y + 20 * U, SLOT, 25 * U, PrescriptionPdfPeriod.LABELS.get(s % 4), 5.52f);
+            }
+            for (int c = 0; c < SLOTS + 3; c++) {
+                cell(column(c), y + 45 * U, column(c + 1) - column(c), 20 * U, c == 0 ? "Режим" : "", FONT);
+            }
+        }
 
-    private Cell bordered(String text, PdfFont typeface, float size, int rowspan, int colspan) {
-        Cell cell = new Cell(rowspan, colspan).add(new Paragraph(text == null ? "" : text)
-                .setFont(typeface).setFontSize(size));
-        cell.setBorder(new SolidBorder(0.5f));
-        cell.setPadding(1.5f);
-        cell.setVerticalAlignment(VerticalAlignment.MIDDLE);
-        return cell;
-    }
+        private void pair(float y, float height, Block b) {
+            roleGrid(y, height, "", b == null ? Map.of() : b.owners(), null);
+            if (b != null) {
+                lines(LEFT, y, NAME, height, b.label(), false);
+            }
+        }
 
-    private Cell centered(String text, PdfFont typeface, float size) {
-        Cell cell = bordered(text, typeface, size);
-        cell.setTextAlignment(TextAlignment.CENTER);
-        return cell;
-    }
+        private void roleGrid(float y, float height, String title, Map<Integer, PrescriptionPdfPrintModel.Cell> owners,
+                              List<String> footer) {
+            cell(LEFT, y, NAME, height, title, FONT);
+            float half = height / 2;
+            for (int c = 1; c < SLOTS + 3; c++) {
+                var owner = owners.get(c - 3);
+                String up = c == 1 ? "Лікар" : (owner == null ? "" : owner.plan());
+                String down = c == 1 ? "Сестра" : (owner != null && owner.done() ? "+" : "");
+                if (footer != null && c >= 3) {
+                    down = footer.get(c - 3);
+                }
+                float x = column(c), w = column(c + 1) - x;
+                cell(x, y, w, half, up, FONT);
+                cell(x, y + half, w, half, down, footer != null && c >= 3 ? SIGN : FONT);
+            }
+        }
 
-    // Single bundled-font source (#427 item 6, #412 item 1): the old
-    // per-renderer fallback chains (OS paths, Helvetica) are gone — a missing
-    // bundle fails fast instead of rendering blank Ukrainian text.
-    private static PdfFont newFont() {
-        return com.superhumans.util.PdfFonts.regular();
-    }
+        private void details(List<String> lines, float y) {
+            if (!lines.isEmpty()) {
+                float h = textHeight(lines);
+                box(LEFT, y, WIDTH, h);
+                lines(LEFT, y, WIDTH, h, lines, false);
+            }
+        }
 
-    private static PdfFont newBoldFont(PdfFont regular) {
-        return com.superhumans.util.PdfFonts.bold();
+        private void wrappedCell(float x, float y, float w, float h, String text) {
+            box(x, y, w, h);
+            lines(x, y, w, h, layout.wrap(text, w - 2 * PAD), true);
+        }
+
+        private void lines(float x, float y, float w, float h, List<String> lines, boolean center) {
+            if (textHeight(lines) > h + 0.01f) {
+                throw overflow();
+            }
+            float top = y + (h - lines.size() * LEADING) / 2;
+            for (String line : lines) {
+                text(x, top, w, LEADING, line, FONT, center);
+                top += LEADING;
+            }
+        }
+
+        private void box(float x, float y, float w, float h) {
+            if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > PAGE_W || y + h > PAGE_H) {
+                throw overflow();
+            }
+            canvas.rectangle(x, PAGE_H - y - h, w, h).stroke();
+        }
+
+        private void cell(float x, float y, float w, float h, String value, float size) {
+            box(x, y, w, h);
+            one(x, y, w, h, value, size);
+        }
+
+        private void one(float x, float y, float w, float h, String value, float size) {
+            text(x, y, w, h, value, size, true);
+        }
+
+        private void text(float x, float y, float w, float h, String value, float size, boolean center) {
+            if (value.isEmpty()) {
+                return;
+            }
+            var font = layout.font;
+            float width = font.getWidth(value, size);
+            float ascent = font.getAscent(value, size), descent = font.getDescent(value, size);
+            if (width > w - (center ? 0.5f : 2 * PAD) + 0.02f || ascent - descent > h + 0.01f
+                    || !value.codePoints().allMatch(font::containsGlyph)) {
+                throw overflow();
+            }
+            float baseline = PAGE_H - y - h / 2 - (ascent + descent) / 2;
+            canvas.beginText().setFontAndSize(font, size).moveText(x + (center ? (w - width) / 2 : PAD), baseline)
+                    .showText(value).endText();
+        }
     }
 }

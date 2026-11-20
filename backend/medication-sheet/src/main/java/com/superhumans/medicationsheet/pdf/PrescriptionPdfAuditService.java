@@ -67,4 +67,20 @@ public class PrescriptionPdfAuditService {
                 .source(AuditEvent.AuditSource.API)
                 .build());
     }
+
+    @Transactional("medTransactionManager")
+    public void recordFailure(UUID listId, ActionType type) {
+        String action = switch (type) {
+            case PDF_INFO -> "medication.pdf.info";
+            case DOWNLOAD -> "medication.pdf.download";
+            default -> "medication.pdf.generate";
+        };
+        auditEmitter.emit("medication", () -> AuditEvent.builder()
+                .actor(AuditActorResolver.fromCurrentContext())
+                .eventClass(type == ActionType.GENERATE ? EventClass.BUSINESS : EventClass.USER_ACTIVITY)
+                .module("medication").functionalArea("pdf").action(action).actionType(type)
+                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
+                .outcome(AuditEvent.AuditOutcome.FAILURE).errorCode("MEDICATION_PDF_RENDER_FAILED")
+                .source(AuditEvent.AuditSource.API).build());
+    }
 }

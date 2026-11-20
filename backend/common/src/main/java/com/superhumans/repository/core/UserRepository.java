@@ -14,6 +14,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByLogin(String login);
     List<User> findAllByOrderByIdAsc();
 
+    @Query("select u.login from User u")
+    List<String> findAllLogins();
+
     /**
      * #362: active users of a role only. Every caller wants live people -
      * sign-off pickers, department counts, brak-notification recipients, and the

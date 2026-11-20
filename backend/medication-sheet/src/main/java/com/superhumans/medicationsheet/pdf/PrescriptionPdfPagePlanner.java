@@ -1,295 +1,135 @@
 package com.superhumans.medicationsheet.pdf;
 
+import com.superhumans.exception.BadRequestException;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfPagePlan.Block;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfPagePlan.Geometry;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfPagePlan.Header;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfPagePlan.Placed;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfSnapshot.Execution;
 import java.time.LocalDate;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
-/**
- * Pure deterministic planner for Phase 17: from a
- * {@link PrescriptionPdfSnapshot} computes the actual active dates and the
- * list of {@link PrescriptionPdfPagePlan} (one plan = one PDF file = one
- * form sheet). No iText, no repositories, no clock.
- */
+import static com.superhumans.medicationsheet.pdf.PrescriptionPdfLayout.*;
+
 @Service
-@RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public final class PrescriptionPdfPagePlanner {
+    private record Footer(List<String> signatures, List<String> notes) { }
 
-    /** Physical date-data columns of the reference form. */
-    public static final int MAX_DATES_PER_PAGE = 10;
-
-    /**
-     * Prescription blocks per page: 1 Режим row + N × 2 sub-rows
-     * (Лікар/Сестра) + 2 Підпис rows = 21 physical rows, hence N = 9.
-     */
-    public static final int MAX_ITEMS_PER_PAGE = 9;
-
-    private final PrescriptionPdfUsernameResolver usernameResolver;
-
-    /**
-     * Single status rule for one day part (priority: finished execution,
-     * execution, cancellation, planned). The caller must only pass relevant
-     * parts (see {@link #isRelevant}); a relevant part without flags still
-     * renders as {@code PLANNED} so its data is never lost.
-     */
-    public static PeriodPrintState classify(
-            PrescriptionPdfSnapshot.Part part, List<PrescriptionPdfSnapshot.Execution> executions) {
-        if (part.completedFinished()) {
-            return PeriodPrintState.COMPLETED_FINISHED;
+    public List<PrescriptionPdfPagePlan> plan(PrescriptionPdfSnapshot snapshot, Header header,
+            Map<UUID, String> logins, LocalDate from, LocalDate to) {
+        if ((from == null) != (to == null) || (from != null && from.isAfter(to))) {
+            throw new BadRequestException("Передайте обидві межі періоду в календарному порядку.");
         }
-        if (part.completed() || !executions.isEmpty()) {
-            return PeriodPrintState.COMPLETED;
+        var weeks = PrescriptionPdfPrintModel.weeks(snapshot, from, to);
+        if (weeks.isEmpty()) {
+            return List.of();
         }
-        if (part.plannedFinished()) {
-            return PeriodPrintState.CANCELLED;
-        }
-        return PeriodPrintState.PLANNED;
-    }
-
-    /**
-     * A period is print-relevant when it carries domain-significant data.
-     * Raw {@code doctorName}/{@code nurseName} content counts only as a
-     * presence signal — it must never be printed (UUID strings, see the
-     * Phase 17 signature rule).
-     */
-    public static boolean isRelevant(
-            PrescriptionPdfSnapshot.Part part, List<PrescriptionPdfSnapshot.Execution> executions) {
-        if (part.planned() || part.plannedFinished() || part.completed() || part.completedFinished()) {
-            return true;
-        }
-        if (!executions.isEmpty()) {
-            return true;
-        }
-        return notBlank(part.dose()) || notBlank(part.doctorName()) || notBlank(part.nurseName());
-    }
-
-    /** Sorted active dates of the whole list (union over items, no gaps filled). */
-    public static Set<LocalDate> activeDates(PrescriptionPdfSnapshot snapshot) {
-        Set<LocalDate> dates = new TreeSet<>();
-        for (PrescriptionPdfSnapshot.Item item : snapshot.items()) {
-            for (PrescriptionPdfSnapshot.Day day : item.days()) {
-                if (isDayRelevant(day, snapshot)) {
-                    dates.add(day.dayDate());
-                }
-            }
-        }
-        return dates;
-    }
-
-    /** Number of relevant periods of one date across the whole list. */
-    public static int filledPeriodCount(LocalDate date, PrescriptionPdfSnapshot snapshot) {
-        int count = 0;
-        for (PrescriptionPdfSnapshot.Item item : snapshot.items()) {
-            for (PrescriptionPdfSnapshot.Day day : item.days()) {
-                if (!date.equals(day.dayDate())) {
-                    continue;
-                }
-                for (PrescriptionPdfSnapshot.Part part : day.parts()) {
-                    if (isRelevant(part, snapshot.executionsFor(part.partId()))) {
-                        count++;
-                    }
-                }
-            }
-        }
-        return count;
-    }
-
-    /** Total relevant periods of the whole list (diagnostics, no PII). */
-    public static int totalFilledPeriodCount(PrescriptionPdfSnapshot snapshot) {
-        int total = 0;
-        for (LocalDate date : activeDates(snapshot)) {
-            total += filledPeriodCount(date, snapshot);
-        }
-        return total;
-    }
-
-    /**
-     * Builds the deterministic page list: horizontal date chunks of
-     * {@link #MAX_DATES_PER_PAGE} × vertical item chunks of
-     * {@link #MAX_ITEMS_PER_PAGE}, cartesian product (dates-major order).
-     * Empty trailing columns/rows stay empty — no fictitious dates.
-     */
-    public List<PrescriptionPdfPagePlan> plan(
-            PrescriptionPdfSnapshot snapshot,
-            HeaderData header,
-            Map<java.util.UUID, String> loginIndex,
-            String doctorUsername) {
-        List<PrescriptionPdfSnapshot.Item> items = new ArrayList<>(snapshot.items());
-        items.sort(Comparator.comparingInt(PrescriptionPdfSnapshot.Item::sortOrder));
-
-        List<LocalDate> dates = new ArrayList<>(activeDates(snapshot));
-        List<List<LocalDate>> dateChunks = chunk(dates, MAX_DATES_PER_PAGE);
-        List<List<PrescriptionPdfSnapshot.Item>> itemChunks = chunk(items, MAX_ITEMS_PER_PAGE);
-        if (dateChunks.isEmpty()) {
-            dateChunks = List.of(List.of());
-        }
-        if (itemChunks.isEmpty()) {
-            itemChunks = List.of(List.of());
-        }
-
+        PrescriptionPdfLayout metrics = new PrescriptionPdfLayout();
         List<PrescriptionPdfPagePlan> pages = new ArrayList<>();
-        int pageIndex = 0;
-        int totalPages = dateChunks.size() * itemChunks.size();
-        for (List<LocalDate> dateChunk : dateChunks) {
-            for (List<PrescriptionPdfSnapshot.Item> itemChunk : itemChunks) {
-                boolean continuation = pageIndex > 0;
-                List<PrescriptionPdfPagePlan.ItemPage> blocks = new ArrayList<>();
-                Map<LocalDate, LinkedHashSet<String>> nursesByDate = new LinkedHashMap<>();
-                for (LocalDate date : dateChunk) {
-                    nursesByDate.put(date, new LinkedHashSet<>());
+        weeks.forEach((week, orders) -> {
+            Deque<Block> queue = new ArrayDeque<>();
+            int[] number = {0};
+            orders.forEach((order, cells) -> queue.add(metrics.measure(PrescriptionPdfPrintModel.group(
+                    order, ++number[0], week, cells, logins))));
+            while (!queue.isEmpty()) {
+                pages.add(nextPage(queue, pages.size(), week, header, logins, metrics));
+            }
+        });
+        return List.copyOf(pages);
+    }
+
+    private PrescriptionPdfPagePlan nextPage(Deque<Block> queue, int index, LocalDate week, Header header,
+            Map<UUID, String> logins, PrescriptionPdfLayout metrics) {
+        Geometry g = metrics.geometry(header, index);
+        float budget = g.footerTop() - g.bodyTop();
+        float used = 0;
+        List<Block> accepted = new ArrayList<>();
+        Footer acceptedFooter = null;
+        while (!queue.isEmpty() && accepted.size() < PAIRS) {
+            Block b = queue.peek();
+            accepted.add(b);
+            Footer footer = footer(accepted, index, week, logins, metrics);
+            if (used + height(b) + textHeight(footer.notes()) <= budget + 0.001f) {
+                used += height(b);
+                queue.remove();
+                acceptedFooter = footer;
+            } else {
+                accepted.removeLast();
+                if (accepted.isEmpty()) {
+                    queue.remove();
+                    accepted.add(split(b, budget, footer.notes(), queue, metrics));
+                    acceptedFooter = new Footer(footer.signatures(), List.of());
                 }
-                for (PrescriptionPdfSnapshot.Item item : itemChunk) {
-                    blocks.add(buildBlock(item, dateChunk, snapshot, loginIndex, doctorUsername, nursesByDate));
-                }
-                LinkedHashSet<String> pageNurses = new LinkedHashSet<>();
-                for (LinkedHashSet<String> names : nursesByDate.values()) {
-                    pageNurses.addAll(names);
-                }
-                Map<LocalDate, List<String>> nursesByDateOut = new LinkedHashMap<>();
-                for (Map.Entry<LocalDate, LinkedHashSet<String>> entry : nursesByDate.entrySet()) {
-                    nursesByDateOut.put(entry.getKey(), List.copyOf(entry.getValue()));
-                }
-                pages.add(new PrescriptionPdfPagePlan(
-                        header.institutionName(),
-                        header.edrpou(),
-                        header.cardNumber(),
-                        header.patientFullName(),
-                        header.room(),
-                        List.copyOf(dateChunk),
-                        blocks,
-                        doctorUsername,
-                        List.copyOf(pageNurses),
-                        nursesByDateOut,
-                        pageIndex,
-                        totalPages,
-                        continuation));
-                pageIndex++;
+                break;
             }
         }
-        return pages;
+        List<Placed> placed = new ArrayList<>();
+        float y = g.bodyTop();
+        for (Block b : accepted) {
+            placed.add(new Placed(b, y, pairHeight(b), height(b)));
+            y += height(b);
+        }
+        return new PrescriptionPdfPagePlan(index, week, header, g, List.copyOf(placed),
+                acceptedFooter.signatures(), acceptedFooter.notes());
     }
 
-    private PrescriptionPdfPagePlan.ItemPage buildBlock(
-            PrescriptionPdfSnapshot.Item item,
-            List<LocalDate> pageDates,
-            PrescriptionPdfSnapshot snapshot,
-            Map<java.util.UUID, String> loginIndex,
-            String doctorUsername,
-            Map<LocalDate, LinkedHashSet<String>> nursesByDate) {
-        Map<LocalDate, Map<String, PrescriptionPdfSnapshot.Part>> partsByDate = new TreeMap<>();
-        for (PrescriptionPdfSnapshot.Day day : item.days()) {
-            Map<String, PrescriptionPdfSnapshot.Part> byPeriod = partsByDate.computeIfAbsent(
-                    day.dayDate(), key -> new LinkedHashMap<>());
-            for (PrescriptionPdfSnapshot.Part part : day.parts()) {
-                byPeriod.putIfAbsent(part.period(), part);
-            }
+    /** Only the first fragment owns marks/signatures. Each tail consumes new, already measured lines. */
+    private Block split(Block b, float budget, List<String> notes, Deque<Block> queue, PrescriptionPdfLayout metrics) {
+        List<String> lines = new ArrayList<>();
+        List<String> label = b.label();
+        String key = "Позиція №" + b.number();
+        if (pairHeight(b) + LEADING + 2 * PAD > budget) {
+            lines.addAll(label);
+            label = List.of(key);
+        } else if (!b.owners().isEmpty()) {
+            // Keep a printed key on both halves even when two orders have the same name.
+            lines.addAll(label);
+            label = List.of(key);
         }
-        List<PrescriptionPdfPagePlan.DayCells> columns = new ArrayList<>();
-        for (LocalDate date : pageDates) {
-            Map<String, PrescriptionPdfSnapshot.Part> byPeriod =
-                    partsByDate.getOrDefault(date, Map.of());
-            List<String> plannedLines = new ArrayList<>();
-            List<String> executedLines = new ArrayList<>();
-            LinkedHashSet<String> columnNurses = new LinkedHashSet<>();
-            for (String period : PrescriptionPdfPeriod.ORDER) {
-                PrescriptionPdfSnapshot.Part part = byPeriod.get(period);
-                if (part == null) {
-                    continue;
+        lines.addAll(b.details());
+        lines.addAll(notes);
+        int fit = (int) Math.floor((budget - Math.max(PAIR, textHeight(label)) - 2 * PAD) / LEADING);
+        if (fit < 1 || lines.isEmpty()) {
+            throw overflow();
+        }
+        int cut = Math.min(fit, lines.size());
+        if (cut < lines.size()) {
+            queue.addFirst(new Block(b.itemId(), b.number(), metrics.wrap(key + " (продовження)", NAME - 2 * PAD),
+                    List.copyOf(lines.subList(cut, lines.size())), Map.of()));
+        }
+        return new Block(b.itemId(), b.number(), label, List.copyOf(lines.subList(0, cut)), b.owners());
+    }
+
+    private Footer footer(List<Block> blocks, int page, LocalDate week, Map<UUID, String> logins, PrescriptionPdfLayout metrics) {
+        List<String> signatures = new ArrayList<>(SLOTS);
+        List<String> notes = new ArrayList<>();
+        for (int slot = 0; slot < SLOTS; slot++) {
+            List<Execution> events = new ArrayList<>();
+            for (Block b : blocks) {
+                var cell = b.owners().get(slot);
+                if (cell != null) {
+                    events.addAll(cell.events());
                 }
-                List<PrescriptionPdfSnapshot.Execution> executions =
-                        snapshot.executionsFor(part.partId());
-                if (!isRelevant(part, executions)) {
-                    continue;
-                }
-                plannedLines.add(PrescriptionPdfPeriod.shortLabel(period) + ": " + plannedText(part));
-                String executed = executedText(executions, part);
-                List<String> resolved = usernameResolver.resolveExecutionLogins(executions, loginIndex);
-                columnNurses.addAll(resolved);
-                if (executed != null) {
-                    executedLines.add(PrescriptionPdfPeriod.shortLabel(period) + ": " + executed);
-                }
             }
-            nursesByDate.get(date).addAll(columnNurses);
-            columns.add(new PrescriptionPdfPagePlan.DayCells(
-                    date,
-                    doctorUsername,
-                    plannedLines,
-                    String.join(", ", columnNurses),
-                    executedLines));
-        }
-        return new PrescriptionPdfPagePlan.ItemPage(
-                item.itemId(), item.medicineName(), item.medicineMethod(), item.regime(), columns);
-    }
-
-    /** Header data resolved before planning (usernames already resolved). */
-    public record HeaderData(
-            String institutionName,
-            String edrpou,
-            String cardNumber,
-            String patientFullName,
-            String room) {
-    }
-
-    static String plannedText(PrescriptionPdfSnapshot.Part part) {
-        PeriodPrintState state = classify(part, List.of());
-        String dose = notBlank(part.dose()) ? part.dose().strip() : null;
-        return switch (state) {
-            case COMPLETED_FINISHED -> dose != null ? "Виконано (заверш.): " + dose : "Виконано (заверш.)";
-            case COMPLETED -> dose != null ? dose : "Виконано";
-            case CANCELLED -> dose != null ? "Відмінено: " + dose : "Відмінено";
-            case PLANNED -> dose != null ? dose : "+";
-            case EMPTY -> "";
-        };
-    }
-
-    static String executedText(
-            List<PrescriptionPdfSnapshot.Execution> executions, PrescriptionPdfSnapshot.Part part) {
-        if (executions.isEmpty()) {
-            return null;
-        }
-        List<PrescriptionPdfSnapshot.Execution> ordered = new ArrayList<>(executions);
-        ordered.sort(Comparator.comparing(
-                PrescriptionPdfSnapshot.Execution::executedAt,
-                Comparator.nullsLast(Comparator.naturalOrder())));
-        PrescriptionPdfSnapshot.Execution latest = ordered.get(ordered.size() - 1);
-        String dose = notBlank(latest.actualDose()) ? latest.actualDose().strip()
-                : (notBlank(part.dose()) ? part.dose().strip() : "Виконано");
-        if (notBlank(latest.comment())) {
-            return dose + " (" + latest.comment().strip() + ")";
-        }
-        return dose;
-    }
-
-    private static boolean isDayRelevant(
-            PrescriptionPdfSnapshot.Day day, PrescriptionPdfSnapshot snapshot) {
-        for (PrescriptionPdfSnapshot.Part part : day.parts()) {
-            if (isRelevant(part, snapshot.executionsFor(part.partId()))) {
-                return true;
+            String names = String.join(", ", events.stream().filter(Execution::confirmed).sorted(Execution.CHRONOLOGY)
+                    .filter(e -> e.executedBy() != null).map(e -> logins.get(e.executedBy()))
+                    .filter(PrescriptionPdfSnapshot::present).distinct().toList());
+            if (metrics.font.getWidth(names, SIGN) > SLOT - 2 * PAD) {
+                String ref = "С" + (slot + 1);
+                String context = "Підписи " + ref + " (арк. " + (page + 1) + ", "
+                        + PrescriptionPdfPrintModel.DAY.format(week.plusDays(slot / 4)) + " / "
+                        + PrescriptionPdfPeriod.LABELS.get(slot % 4) + "): ";
+                notes.addAll(metrics.wrap(context + names, WIDTH - 2 * PAD));
+                names = ref;
             }
+            signatures.add(names);
         }
-        return false;
-    }
-
-    private static <T> List<List<T>> chunk(List<T> values, int size) {
-        List<List<T>> chunks = new ArrayList<>();
-        for (int from = 0; from < values.size(); from += size) {
-            chunks.add(List.copyOf(values.subList(from, Math.min(from + size, values.size()))));
-        }
-        return chunks;
-    }
-
-    static boolean notBlank(String value) {
-        return value != null && !value.isBlank();
+        return new Footer(List.copyOf(signatures), List.copyOf(notes));
     }
 }

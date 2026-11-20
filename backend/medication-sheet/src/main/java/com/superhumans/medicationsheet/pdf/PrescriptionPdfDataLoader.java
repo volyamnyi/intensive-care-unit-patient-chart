@@ -1,211 +1,143 @@
 package com.superhumans.medicationsheet.pdf;
 
 import com.superhumans.exception.NotFoundException;
-import com.superhumans.medicationsheet.entity.PrescriptionExecution;
-import com.superhumans.medicationsheet.entity.PrescriptionItem;
-import com.superhumans.medicationsheet.entity.PrescriptionItemDay;
-import com.superhumans.medicationsheet.entity.PrescriptionList;
-import com.superhumans.medicationsheet.repository.PrescriptionExecutionRepository;
-import com.superhumans.medicationsheet.repository.PrescriptionItemRepository;
-import com.superhumans.medicationsheet.repository.PrescriptionListRepository;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfSnapshot.Execution;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfSnapshot.Order;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfSnapshot.Part;
+import com.superhumans.medicationsheet.pdf.PrescriptionPdfSnapshot.Row;
 import com.superhumans.mis.MisService;
 import com.superhumans.mis.dto.PatientDTO;
 import com.superhumans.repository.core.SystemSettingsRepository;
+import com.superhumans.repository.core.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/**
- * Loads one consistent snapshot for Phase 17 PDF generation: the list with
- * all non-deleted items/days/parts plus executions, the MIS patient, and the
- * institution settings.
- *
- * <h2>Transaction shape (#383)</h2>
- *
- * The snapshot spans two databases (medication data + core institution
- * settings) and one external system (MIS). A single {@code @Transactional}
- * method bound to the {@code @Primary} chained manager would hold one
- * connection in <em>every</em> pool for the whole call — including the
- * seconds-long MIS HTTP round trip — which is how a slow MIS exhausts
- * {@code APP_DATASOURCE_POOL_MAX} and cascades timeouts to unrelated
- * requests. Instead each database is opened only for the time its own query
- * runs, and the MIS call happens with no transaction open at all:
- *
- * <ol>
- *   <li>{@code medTransactionManager} — list/items/days/parts/executions
- *       (lazy collections must be initialized here)</li>
- *   <li>{@code coreTransactionManager} — the two institution settings</li>
- *   <li>no transaction — {@code misService.getPatient}</li>
- * </ol>
- */
 @Service
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionPdfDataLoader {
+    // One PostgreSQL statement = one MVCC snapshot, including the anchor of the empty day scaffolding.
+    // Count sibling parts BEFORE joining events: keep even a blank contributor to a key collision.
+    private static final String CLINICAL = """
+            WITH days AS (
+                SELECT d.id, d.day_date, d.item_id
+                FROM prescription_item_days d JOIN prescription_items i ON i.id = d.item_id
+                WHERE i.list_id = ? AND i.is_deleted IS NOT TRUE AND d.is_deleted IS NOT TRUE
+            ), parts AS (
+                SELECT d.item_id, d.day_date, p.*,
+                       count(*) OVER (PARTITION BY d.item_id, d.day_date, lower(trim(p.period))) AS siblings
+                FROM days d JOIN prescription_day_parts p ON p.day_id = d.id AND p.is_deleted IS NOT TRUE
+            ), facts AS (
+                SELECT p.*, e.id AS event_id, e.day_part_id AS event_part_id, e.status AS event_status,
+                       e.actual_dose, e.executed_by, e.executed_at, e.administered_at, e.dispensed_at,
+                       e.administered_at_manual, e.comment
+                FROM parts p LEFT JOIN prescription_executions e ON e.day_part_id = p.id AND e.is_deleted IS NOT TRUE
+                WHERE p.siblings > 1 OR p.is_planned OR p.is_planned_finished OR p.is_completed OR p.is_completed_finished
+                   OR e.id IS NOT NULL OR nullif(trim(p.dose), '') IS NOT NULL
+                   OR nullif(trim(p.doctor_name), '') IS NOT NULL OR nullif(trim(p.nurse_name), '') IS NOT NULL
+                   OR coalesce(lower(trim(p.period)), '') NOT IN ('morning','day','evening','night')
+            )
+            SELECT l.patient_id, (SELECT min(day_date) FROM days) AS first_day,
+                   i.medicine_name, i.medicine_method, i.regime, i.sort_order, f.*
+            FROM prescription_lists l LEFT JOIN facts f ON l.patient_id IS NOT NULL LEFT JOIN prescription_items i ON i.id = f.item_id
+            WHERE l.id = ? AND l.is_deleted IS NOT TRUE
+            """;
+    private static final List<String> SETTINGS = List.of("institution_name", "institution_edrpou",
+            "institution_authority", "institution_address", "prescription_print_profile");
+    private final EntityManager med;
+    private final TransactionTemplate medRead;
+    private final TransactionTemplate coreRead;
+    private final SystemSettingsRepository settings;
+    private final UserRepository users;
+    private final MisService mis;
 
-    PrescriptionListRepository listRepository;
-    PrescriptionItemRepository itemRepository;
-    PrescriptionExecutionRepository executionRepository;
-    MisService misService;
-    SystemSettingsRepository systemSettingsRepository;
-    TransactionTemplate medTransactionTemplate;
-    TransactionTemplate coreTransactionTemplate;
-
-    public PrescriptionPdfDataLoader(
-            PrescriptionListRepository listRepository,
-            PrescriptionItemRepository itemRepository,
-            PrescriptionExecutionRepository executionRepository,
-            MisService misService,
-            SystemSettingsRepository systemSettingsRepository,
-            @Qualifier("medTransactionManager") PlatformTransactionManager medTransactionManager,
-            @Qualifier("coreTransactionManager") PlatformTransactionManager coreTransactionManager) {
-        this.listRepository = listRepository;
-        this.itemRepository = itemRepository;
-        this.executionRepository = executionRepository;
-        this.misService = misService;
-        this.systemSettingsRepository = systemSettingsRepository;
-        this.medTransactionTemplate = new TransactionTemplate(medTransactionManager);
-        this.medTransactionTemplate.setReadOnly(true);
-        this.coreTransactionTemplate = new TransactionTemplate(coreTransactionManager);
-        this.coreTransactionTemplate.setReadOnly(true);
+    public PrescriptionPdfDataLoader(@Qualifier("medEntityManagerFactory") EntityManagerFactory emf,
+            @Qualifier("medTransactionManager") PlatformTransactionManager medTx,
+            @Qualifier("coreTransactionManager") PlatformTransactionManager coreTx,
+            SystemSettingsRepository settings, UserRepository users, MisService mis) {
+        med = SharedEntityManagerCreator.createSharedEntityManager(emf);
+        medRead = readOnly(medTx);
+        coreRead = readOnly(coreTx);
+        this.settings = settings;
+        this.users = users;
+        this.mis = mis;
     }
 
-    /** Snapshot rows plus the patient id the MIS lookup needs. */
-    private record PrescriptionData(PrescriptionPdfSnapshot snapshot, Long patientId) {
+    private static TransactionTemplate readOnly(PlatformTransactionManager tx) {
+        TransactionTemplate result = new TransactionTemplate(tx);
+        result.setReadOnly(true);
+        return result;
     }
 
-    /** The two core-database settings, both fail-soft to an empty string. */
-    private record InstitutionSettings(String name, String edrpou) {
-    }
+    public record LoadedSnapshot(PrescriptionPdfSnapshot snapshot, PrescriptionPdfPagePlan.Header header,
+                                 Map<UUID, String> logins) { }
+    private record Clinical(long patientId, PrescriptionPdfSnapshot snapshot) { }
+    private record Core(Map<String, String> settings, Map<UUID, String> logins) { }
 
     public LoadedSnapshot load(UUID listId) {
-        PrescriptionData data = medTransactionTemplate.execute(
-                status -> readPrescriptionData(listId));
-
-        InstitutionSettings settings = coreTransactionTemplate.execute(
-                status -> new InstitutionSettings(loadSetting("institution_name"),
-                        loadSetting("institution_edrpou")));
-
-        // External call, deliberately outside every transaction (#383).
-        Optional<PatientDTO> patient = data.patientId() == null
-                ? Optional.empty()
-                : misService.getPatient(data.patientId());
-
-        return new LoadedSnapshot(data.snapshot(), patient, settings.name(), settings.edrpou());
-    }
-
-    /** Runs inside the medication-database transaction; see {@link #load}. */
-    private PrescriptionData readPrescriptionData(UUID listId) {
-        PrescriptionList list = listRepository.findById(listId)
-                .filter(row -> !Boolean.TRUE.equals(row.getDeleted()))
-                .orElseThrow(() -> new NotFoundException("Prescription list not found: " + listId));
-
-        List<PrescriptionItem> items =
-                itemRepository.findByListIdAndDeletedFalseOrderBySortOrderAscIdAsc(listId);
-
-        List<UUID> partIds = new ArrayList<>();
-        List<PrescriptionPdfSnapshot.Item> snapItems = new ArrayList<>();
-        for (PrescriptionItem item : items) {
-            List<PrescriptionPdfSnapshot.Day> days = new ArrayList<>();
-            if (item.getDays() != null) {
-                List<PrescriptionItemDay> ordered = item.getDays().stream()
-                        .filter(day -> !Boolean.TRUE.equals(day.getDeleted()))
-                        .sorted(Comparator.comparing(PrescriptionItemDay::getDayDate))
-                        .toList();
-                for (PrescriptionItemDay day : ordered) {
-                    List<PrescriptionPdfSnapshot.Part> parts = new ArrayList<>();
-                    if (day.getDayParts() != null) {
-                        List<PrescriptionPdfSnapshot.Part> orderedParts = day.getDayParts().stream()
-                                .filter(part -> !Boolean.TRUE.equals(part.getDeleted()))
-                                .sorted(Comparator.comparingInt(part -> PrescriptionPdfPeriod.ORDER
-                                        .indexOf(part.getPeriod())))
-                                .map(part -> {
-                                    partIds.add(part.getId());
-                                    return new PrescriptionPdfSnapshot.Part(
-                                            part.getId(),
-                                            part.getPeriod(),
-                                            part.getDose(),
-                                            Boolean.TRUE.equals(part.getIsPlanned()),
-                                            Boolean.TRUE.equals(part.getIsPlannedFinished()),
-                                            Boolean.TRUE.equals(part.getIsCompleted()),
-                                            Boolean.TRUE.equals(part.getIsCompletedFinished()),
-                                            part.getDoctorName(),
-                                            part.getNurseName());
-                                })
-                                .toList();
-                        parts.addAll(orderedParts);
-                    }
-                    days.add(new PrescriptionPdfSnapshot.Day(day.getId(), day.getDayDate(), parts));
+        Clinical clinical = medRead.execute(tx -> med.unwrap(Session.class).doReturningWork(connection -> {
+            try (var query = connection.prepareStatement(CLINICAL)) {
+                query.setObject(1, listId);
+                query.setObject(2, listId);
+                query.setFetchSize(512);
+                try (var rows = query.executeQuery()) {
+                    return read(rows, listId);
                 }
             }
-            snapItems.add(new PrescriptionPdfSnapshot.Item(
-                    item.getId(),
-                    item.getMedicineName(),
-                    item.getMedicineMethod(),
-                    item.getRegime(),
-                    item.getSortOrder() == null ? 0 : item.getSortOrder(),
-                    days));
-        }
+        }));
+        Core core = coreRead.execute(tx -> {
+            Map<String, String> values = new HashMap<>();
+            settings.findByKeyIn(SETTINGS).forEach(setting -> values.put(setting.getKey(), setting.getValue()));
+            return new Core(values, PrescriptionPdfUsernameResolver.index(users.findAllLogins()));
+        });
+        // No database transaction spans the external lookup or rendering (#383).
+        Optional<PatientDTO> patient = mis.getPatient(clinical.patientId());
+        Map<String, String> s = core.settings();
+        var header = new PrescriptionPdfPagePlan.Header(s.get("institution_name"), s.get("institution_edrpou"),
+                s.get("institution_authority"), s.get("institution_address"), "superhumans".equals(s.get("prescription_print_profile")),
+                patient.map(PatientDTO::getFullName).orElse(""), patient.map(PatientDTO::getRoom).orElse(""));
+        return new LoadedSnapshot(clinical.snapshot(), header, core.logins());
+    }
 
-        Map<UUID, List<PrescriptionPdfSnapshot.Execution>> executions = new LinkedHashMap<>();
-        if (!partIds.isEmpty()) {
-            Map<UUID, List<PrescriptionExecution>> grouped = executionRepository
-                    .findByDayPartIdIn(partIds).stream()
-                    .filter(exec -> !Boolean.TRUE.equals(exec.getDeleted()))
-                    .collect(Collectors.groupingBy(
-                            exec -> exec.getDayPart().getId(), LinkedHashMap::new, Collectors.toList()));
-            for (Map.Entry<UUID, List<PrescriptionExecution>> entry : grouped.entrySet()) {
-                List<PrescriptionPdfSnapshot.Execution> converted = entry.getValue().stream()
-                        .map(exec -> new PrescriptionPdfSnapshot.Execution(
-                                exec.getExecutedBy(),
-                                exec.getExecutedAt(),
-                                exec.getActualDose(),
-                                exec.getStatus(),
-                                exec.getSecondPersonId(),
-                                exec.getComment()))
-                        .toList();
-                executions.put(entry.getKey(), converted);
+    private Clinical read(ResultSet rs, UUID id) throws SQLException {
+        if (!rs.next()) {
+            throw new NotFoundException("Prescription list not found: " + id);
+        }
+        long patient = rs.getLong("patient_id");
+        LocalDate anchor = rs.getObject("first_day", LocalDate.class);
+        List<Row> rows = new ArrayList<>();
+        do {
+            UUID partId = rs.getObject("id", UUID.class);
+            if (partId == null) {
+                continue; // Existing list without printable facts.
             }
-        }
-
-        PrescriptionPdfSnapshot snapshot = new PrescriptionPdfSnapshot(
-                list.getId(),
-                list.getPatientId(),
-                list.getHospitalizationId(),
-                list.getDepartmentId(),
-                list.getDocumentName(),
-                list.getStatus(),
-                snapItems,
-                executions);
-
-        return new PrescriptionData(snapshot, list.getPatientId());
-    }
-
-    private String loadSetting(String key) {
-        try {
-            return systemSettingsRepository.findByKey(key)
-                    .map(setting -> setting.getValue())
-                    .orElse("");
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    /** Snapshot plus read-only external data needed for the header. */
-    public record LoadedSnapshot(
-            PrescriptionPdfSnapshot snapshot,
-            Optional<PatientDTO> patient,
-            String institutionName,
-            String edrpou) {
+            Order order = new Order(rs.getObject("item_id", UUID.class), rs.getInt("sort_order"),
+                    rs.getString("medicine_name"), rs.getString("medicine_method"), rs.getString("regime"));
+            Part part = new Part(partId, rs.getObject("day_id", UUID.class), rs.getString("period"), rs.getString("dose"),
+                    rs.getBoolean("is_planned"), rs.getBoolean("is_planned_finished"), rs.getBoolean("is_completed"),
+                    rs.getBoolean("is_completed_finished"), PrescriptionPdfSnapshot.present(rs.getString("doctor_name"))
+                    || PrescriptionPdfSnapshot.present(rs.getString("nurse_name")));
+            UUID event = rs.getObject("event_id", UUID.class);
+            rows.add(new Row(order, rs.getObject("day_date", LocalDate.class), part, event == null ? null
+                    : new Execution(event, rs.getObject("event_part_id", UUID.class), rs.getObject("executed_by", UUID.class),
+                    rs.getString("event_status"), rs.getString("actual_dose"), rs.getObject("administered_at", LocalDateTime.class),
+                    rs.getObject("dispensed_at", LocalDateTime.class), rs.getBoolean("administered_at_manual"),
+                    rs.getObject("executed_at", LocalDateTime.class), rs.getString("comment"))));
+        } while (rs.next());
+        return new Clinical(patient, new PrescriptionPdfSnapshot(anchor, rows));
     }
 }

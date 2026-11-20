@@ -288,7 +288,7 @@ public class PrescriptionExecutionService {
             return Map.of();
         }
         List<PrescriptionExecution> executions = new ArrayList<>(
-                executionRepository.findByDayPartIdIn(dayPartIds));
+                executionRepository.findLiveByDayPartIds(dayPartIds));
         executions.sort(Comparator
                 .comparing(PrescriptionExecution::getCreatedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
                 .thenComparing(PrescriptionExecution::getId, Comparator.nullsFirst(Comparator.naturalOrder())));

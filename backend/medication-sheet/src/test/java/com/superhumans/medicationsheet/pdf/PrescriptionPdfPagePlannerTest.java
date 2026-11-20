@@ -1,270 +1,159 @@
 package com.superhumans.medicationsheet.pdf;
 
+import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PrescriptionPdfPagePlannerTest {
 
-    private static final PrescriptionPdfUsernameResolver RESOLVER = new PrescriptionPdfUsernameResolver();
-    private static final PrescriptionPdfPagePlanner PLANNER = new PrescriptionPdfPagePlanner(RESOLVER);
+    private static final PrescriptionPdfPagePlanner PLANNER = new PrescriptionPdfPagePlanner();
 
-    private static PrescriptionPdfSnapshot.Part part(String period) {
-        return new PrescriptionPdfSnapshot.Part(
-                UUID.randomUUID(), period, null, false, false, false, false, null, null);
+    private static UUID id(String value) {
+        return UUID.nameUUIDFromBytes(value.getBytes(Charset.defaultCharset()));
     }
 
-    private static PrescriptionPdfSnapshot.Part plannedPart(String period, String dose) {
-        return new PrescriptionPdfSnapshot.Part(
-                UUID.randomUUID(), period, dose, true, false, false, false, null, null);
+    private static PrescriptionPdfSnapshot.Part part(String period, boolean planned, boolean cancelled,
+            boolean completed, boolean finished, String dose, UUID dayId) {
+        return new PrescriptionPdfSnapshot.Part(id(period + dayId + dose), dayId, period, dose,
+                planned, cancelled, completed, finished, false);
     }
 
-    private static PrescriptionPdfSnapshot.Day day(LocalDate date, PrescriptionPdfSnapshot.Part... parts) {
-        return new PrescriptionPdfSnapshot.Day(UUID.randomUUID(), date, List.of(parts));
+    private static PrescriptionPdfSnapshot.Execution event(UUID partId, String login, String status) {
+        return new PrescriptionPdfSnapshot.Execution(id("event" + partId + login), partId,
+                UUID.nameUUIDFromBytes(login.getBytes(Charset.defaultCharset())), status, "5", null, null, false, null, null);
     }
 
-    private static PrescriptionPdfSnapshot.Item item(
-            int sortOrder, PrescriptionPdfSnapshot.Day... days) {
-        return new PrescriptionPdfSnapshot.Item(
-                UUID.randomUUID(), "Med" + sortOrder, "oral", "daily", sortOrder, List.of(days));
+    private static PrescriptionPdfSnapshot snapshot(List<PrescriptionPdfSnapshot.Row> rows, LocalDate anchor) {
+        return new PrescriptionPdfSnapshot(anchor, rows);
     }
 
-    private static PrescriptionPdfSnapshot snapshot(
-            PrescriptionPdfSnapshot.Item... items) {
-        return new PrescriptionPdfSnapshot(
-                UUID.randomUUID(), 1001L, null, 19L, "List", "Saved",
-                List.of(items), Map.of());
+    private static PrescriptionPdfSnapshot.Order order(int number) {
+        return new PrescriptionPdfSnapshot.Order(id("order" + number), number, "Препарат " + number, null, null);
     }
 
-    private static PrescriptionPdfPagePlanner.HeaderData header() {
-        return new PrescriptionPdfPagePlanner.HeaderData("Hosp", "123", "", "Patient", "");
-    }
-
-    private static List<PrescriptionPdfPagePlan> plan(PrescriptionPdfSnapshot snapshot) {
-        return PLANNER.plan(snapshot, header(), Map.of(), "doctor1");
+    private static List<PrescriptionPdfPagePlan> plan(PrescriptionPdfSnapshot snap, Map<UUID, String> logins) {
+        return PLANNER.plan(snap, new PrescriptionPdfPagePlan.Header("Тестовий заклад", "00123456",
+                null, null, false, "Синтетичний пацієнт", ""), logins, null, null);
     }
 
     @Test
-    void oneDayOnePeriodProducesOnePdf() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot snap = snapshot(item(0,
-                day(date, plannedPart("morning", "40 мг"))));
+    void calendarWeeksSelectOnlyTheirOrders() {
+        var a = order(1);
+        var b = order(2);
+        var start = LocalDate.of(2026, 10, 16);
+        List<PrescriptionPdfSnapshot.Row> rows = List.of(
+                row(a, start, "morning", true),
+                row(b, start.plusDays(8), "morning", true));
 
-        List<PrescriptionPdfPagePlan> pages = plan(snap);
-
-        assertThat(pages).hasSize(1);
-        assertThat(pages.get(0).dates()).containsExactly(date);
-        assertThat(pages.get(0).totalPages()).isEqualTo(1);
-        assertThat(pages.get(0).continuation()).isFalse();
-    }
-
-    @Test
-    void oneDayFourPeriodsProducesOnePdf() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot snap = snapshot(item(0, day(date,
-                plannedPart("morning", "10"), plannedPart("day", "10"),
-                plannedPart("evening", "10"), plannedPart("night", "10"))));
-
-        List<PrescriptionPdfPagePlan> pages = plan(snap);
-
-        assertThat(pages).hasSize(1);
-        assertThat(PrescriptionPdfPagePlanner.totalFilledPeriodCount(snap)).isEqualTo(4);
-    }
-
-    @Test
-    void tenActiveDaysProduceOnePdf() {
-        List<PrescriptionPdfSnapshot.Day> days = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            days.add(day(LocalDate.of(2026, 7, 1).plusDays(i), plannedPart("morning", "10")));
-        }
-        PrescriptionPdfSnapshot snap = snapshot(item(0, days.toArray(new PrescriptionPdfSnapshot.Day[0])));
-
-        assertThat(plan(snap)).hasSize(1);
-    }
-
-    @Test
-    void elevenActiveDaysProduceTwoPdfs() {
-        List<PrescriptionPdfSnapshot.Day> days = new ArrayList<>();
-        for (int i = 0; i < 11; i++) {
-            days.add(day(LocalDate.of(2026, 7, 1).plusDays(i), plannedPart("morning", "10")));
-        }
-        PrescriptionPdfSnapshot snap = snapshot(item(0, days.toArray(new PrescriptionPdfSnapshot.Day[0])));
-
-        List<PrescriptionPdfPagePlan> pages = plan(snap);
+        List<PrescriptionPdfPagePlan> pages = plan(snapshot(rows, start), Map.of());
 
         assertThat(pages).hasSize(2);
-        assertThat(pages.get(0).dates()).hasSize(10);
-        assertThat(pages.get(1).dates()).hasSize(1);
-        assertThat(pages.get(1).continuation()).isTrue();
-        assertThat(pages.get(0).totalPages()).isEqualTo(2);
+        assertThat(pages.get(0).week()).isEqualTo(start);
+        assertThat(pages.get(0).rows()).singleElement().satisfies(r -> assertThat(r.block().number()).isEqualTo(1));
+        assertThat(pages.get(1).week()).isEqualTo(LocalDate.of(2026, 10, 26));
+        assertThat(pages.get(1).pageIndex()).isEqualTo(1);
     }
 
     @Test
-    void twentyActiveDaysProduceTwoPdfsAndTwentyOneProduceThree() {
-        List<PrescriptionPdfSnapshot.Day> twenty = new ArrayList<>();
-        for (int i = 0; i < 20; i++) {
-            twenty.add(day(LocalDate.of(2026, 7, 1).plusDays(i), plannedPart("morning", "10")));
-        }
-        assertThat(plan(snapshot(item(0, twenty.toArray(new PrescriptionPdfSnapshot.Day[0]))))).hasSize(2);
+    void emptyListHasNoPagesAndBlankDaysHaveNoClinicalRows() {
+        assertThat(plan(snapshot(List.of(), LocalDate.of(2026, 10, 16)), Map.of())).isEmpty();
 
-        List<PrescriptionPdfSnapshot.Day> twentyOne = new ArrayList<>(twenty);
-        twentyOne.add(day(LocalDate.of(2026, 7, 21), plannedPart("morning", "10")));
-        assertThat(plan(snapshot(item(0, twentyOne.toArray(new PrescriptionPdfSnapshot.Day[0]))))).hasSize(3);
+        var a = order(1);
+        var blankDay = id("blank");
+        List<PrescriptionPdfSnapshot.Row> rows = List.of(row(a, LocalDate.of(2026, 10, 16), "morning",
+                false, false, false, false, null, blankDay));
+        assertThat(plan(snapshot(rows, LocalDate.of(2026, 10, 16)), Map.of())).isEmpty();
     }
 
     @Test
-    void nineItemsFitOnePageTenItemsNeedContinuation() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        List<PrescriptionPdfSnapshot.Item> nine = new ArrayList<>();
-        for (int i = 0; i < 9; i++) {
-            nine.add(item(i, day(date, plannedPart("morning", "10"))));
+    void twelvePairsOnePageThirteenTwoPages() {
+        var start = LocalDate.of(2026, 10, 16);
+        List<PrescriptionPdfSnapshot.Row> rows = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            rows.add(row(order(i + 1), start, "morning", true));
         }
-        assertThat(plan(snapshot(nine.toArray(new PrescriptionPdfSnapshot.Item[0])))).hasSize(1);
+        assertThat(plan(snapshot(rows, start), Map.of())).hasSize(1);
 
-        List<PrescriptionPdfSnapshot.Item> ten = new ArrayList<>(nine);
-        ten.add(item(9, day(date, plannedPart("morning", "10"))));
-        List<PrescriptionPdfPagePlan> pages = plan(snapshot(ten.toArray(new PrescriptionPdfSnapshot.Item[0])));
-
+        rows.add(row(order(13), start, "morning", true));
+        var pages = plan(snapshot(rows, start), Map.of());
         assertThat(pages).hasSize(2);
-        assertThat(pages.get(0).items()).hasSize(9);
-        assertThat(pages.get(1).items()).hasSize(1);
-        // Same date set on both pages (dates-major cartesian order).
-        assertThat(pages.get(1).dates()).containsExactly(date);
+        assertThat(pages.get(0).rows()).hasSize(12);
+        assertThat(pages.get(1).rows()).singleElement().satisfies(r -> assertThat(r.block().number()).isEqualTo(13));
     }
 
     @Test
-    void nightOnlyCountsAsActive() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot snap = snapshot(item(0, day(date, plannedPart("night", "10"))));
+    void independentPlanAndFactDoNotInventEachOther() {
+        var o = order(1);
+        var day = id("day");
+        var p = part("morning", false, false, true, false, "5", day);
+        var rows = List.of(new PrescriptionPdfSnapshot.Row(o, LocalDate.of(2026, 10, 16), p, null));
 
-        assertThat(PrescriptionPdfPagePlanner.activeDates(snap)).containsExactly(date);
-        assertThat(PrescriptionPdfPagePlanner.filledPeriodCount(date, snap)).isEqualTo(1);
+        var page = plan(snapshot(rows, LocalDate.of(2026, 10, 16)), Map.of()).getFirst();
+
+        var cell = page.rows().getFirst().block().owners().get(0);
+        assertThat(cell).isNotNull();
+        assertThat(cell.plan()).isEmpty();
+        assertThat(cell.done()).isTrue();
     }
 
     @Test
-    void emptyPartsWithoutDataAreNotActive() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot snap = snapshot(item(0, day(date, part("morning"), part("night"))));
+    void cancelledPlanWithCompletedFactKeepsBothMarks() {
+        var o = order(1);
+        var day = id("day");
+        var p = part("night", true, true, true, false, "5", day);
+        var rows = List.of(new PrescriptionPdfSnapshot.Row(o, LocalDate.of(2026, 10, 16), p, null));
 
-        assertThat(PrescriptionPdfPagePlanner.activeDates(snap)).isEmpty();
+        var cell = plan(snapshot(rows, LocalDate.of(2026, 10, 16)), Map.of()).getFirst()
+                .rows().getFirst().block().owners().get(24);
+
+        assertThat(cell.plan()).isEqualTo("×");
+        assertThat(cell.done()).isTrue();
     }
 
     @Test
-    void completedOnlyCountsAsActive() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot.Part completed = new PrescriptionPdfSnapshot.Part(
-                UUID.randomUUID(), "evening", "5", false, false, true, false, null, null);
-        PrescriptionPdfSnapshot snap = snapshot(item(0, day(date, completed)));
+    void executorComesOnlyFromCompletedPrimaryExecutor() {
+        var o = order(1);
+        var day = id("day");
+        var partId = id("part");
+        var p = part("morning", false, false, false, false, null, day);
+        var login = "nurse1";
+        var key = UUID.nameUUIDFromBytes(login.getBytes(Charset.defaultCharset()));
+        var rows = List.of(new PrescriptionPdfSnapshot.Row(o, LocalDate.of(2026, 10, 16), p,
+                event(partId, login, "Completed")));
 
-        assertThat(PrescriptionPdfPagePlanner.activeDates(snap)).containsExactly(date);
-        assertThat(PrescriptionPdfPagePlanner.filledPeriodCount(date, snap)).isEqualTo(1);
+        var pages = plan(snapshot(rows, LocalDate.of(2026, 10, 16)), Map.of(key, login));
+
+        assertThat(pages.getFirst().signatures().get(0)).isEqualTo(login);
+        assertThat(pages.getFirst().footerNotes()).anyMatch(note -> note.contains("введено"));
     }
 
     @Test
-    void cancelledCountsAsActiveButResetCellDoesNot() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot.Part cancelled = new PrescriptionPdfSnapshot.Part(
-                UUID.randomUUID(), "morning", "10", true, true, false, false, null, null);
-        PrescriptionPdfSnapshot snap = snapshot(item(0, day(date, cancelled, part("day"))));
-
-        assertThat(PrescriptionPdfPagePlanner.filledPeriodCount(date, snap)).isEqualTo(1);
-        assertThat(PrescriptionPdfPagePlanner.activeDates(snap)).containsExactly(date);
+    void reversedOrPartialRangeIsRejected() {
+        var o = order(1);
+        var start = LocalDate.of(2026, 10, 16);
+        var snap = snapshot(List.of(row(o, start, "morning", true)), start);
+        var header = new PrescriptionPdfPagePlan.Header("X", "00123456", null, null, false, "", "");
+        assertThatThrownBy(() -> PLANNER.plan(snap, header, Map.of(), null, start))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
+        assertThatThrownBy(() -> PLANNER.plan(snap, header, Map.of(), start.plusDays(1), start))
+                .isInstanceOf(com.superhumans.exception.BadRequestException.class);
     }
 
-    @Test
-    void totallyEmptyDayIsNotActive() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot snap = snapshot(item(0, day(date, part("morning"), part("day"))));
-
-        assertThat(PrescriptionPdfPagePlanner.activeDates(snap)).isEmpty();
-        assertThat(plan(snap)).hasSize(1);
-        assertThat(plan(snap).get(0).dates()).isEmpty();
+    private static PrescriptionPdfSnapshot.Row row(PrescriptionPdfSnapshot.Order order, LocalDate date, String period,
+            boolean planned) {
+        return row(order, date, period, planned, false, false, false, null, id(date.toString() + period));
     }
 
-    @Test
-    void dateGapsAreKeptAsIsWithoutFilling() {
-        LocalDate first = LocalDate.of(2026, 7, 1);
-        LocalDate third = LocalDate.of(2026, 7, 3);
-        PrescriptionPdfSnapshot snap = snapshot(item(0,
-                day(first, plannedPart("morning", "10")),
-                day(third, plannedPart("morning", "10"))));
-
-        Set<LocalDate> active = PrescriptionPdfPagePlanner.activeDates(snap);
-
-        assertThat(active).containsExactly(first, third);
-        List<PrescriptionPdfPagePlan> pages = plan(snap);
-        assertThat(pages).hasSize(1);
-        assertThat(pages.get(0).dates()).containsExactly(first, third);
-    }
-
-    @Test
-    void laterDatesOfOtherItemsAreNotLost() {
-        PrescriptionPdfSnapshot snap = snapshot(
-                item(0, day(LocalDate.of(2026, 7, 1), plannedPart("morning", "10"))),
-                item(1, day(LocalDate.of(2026, 7, 15), plannedPart("morning", "10"))));
-
-        assertThat(PrescriptionPdfPagePlanner.activeDates(snap))
-                .containsExactly(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 15));
-    }
-
-    @Test
-    void doctorUsernameReachesEveryColumn() {
-        LocalDate date = LocalDate.of(2026, 7, 25);
-        PrescriptionPdfSnapshot snap = snapshot(item(0, day(date, plannedPart("morning", "10"))));
-
-        List<PrescriptionPdfPagePlan> pages = PLANNER.plan(snap, header(), Map.of(), "likar1");
-
-        assertThat(pages.get(0).doctorSignatureUsername()).isEqualTo("likar1");
-        assertThat(pages.get(0).items().get(0).columns().get(0).doctorLine()).isEqualTo("likar1");
-    }
-
-    @Test
-    void classifyPriorityFinishedOverCompletedOverCancelledOverPlanned() {
-        UUID id = UUID.randomUUID();
-        assertThat(PrescriptionPdfPagePlanner.classify(
-                        new PrescriptionPdfSnapshot.Part(
-                                id, "morning", "10", true, true, true, true, null, null),
-                        List.of()))
-                .isEqualTo(PeriodPrintState.COMPLETED_FINISHED);
-        assertThat(PrescriptionPdfPagePlanner.classify(
-                        new PrescriptionPdfSnapshot.Part(
-                                id, "morning", "10", true, true, true, false, null, null),
-                        List.of()))
-                .isEqualTo(PeriodPrintState.COMPLETED);
-        assertThat(PrescriptionPdfPagePlanner.classify(
-                        new PrescriptionPdfSnapshot.Part(
-                                id, "morning", "10", true, true, false, false, null, null),
-                        List.of()))
-                .isEqualTo(PeriodPrintState.CANCELLED);
-        assertThat(PrescriptionPdfPagePlanner.classify(
-                        new PrescriptionPdfSnapshot.Part(
-                                id, "morning", "10", true, false, false, false, null, null),
-                        List.of()))
-                .isEqualTo(PeriodPrintState.PLANNED);
-    }
-
-    @Test
-    void executionsAloneMakePeriodCompleted() {
-        PrescriptionPdfSnapshot.Part part = part("morning");
-        Map<UUID, List<PrescriptionPdfSnapshot.Execution>> execs = new HashMap<>();
-        execs.put(part.partId(), List.of(new PrescriptionPdfSnapshot.Execution(
-                UUID.randomUUID(), null, "5", "Completed", null, null)));
-        PrescriptionPdfSnapshot snap = new PrescriptionPdfSnapshot(
-                UUID.randomUUID(), 1001L, null, 19L, "L", "Saved",
-                List.of(item(0, new PrescriptionPdfSnapshot.Day(
-                        UUID.randomUUID(), LocalDate.of(2026, 7, 25), List.of(part)))),
-                execs);
-
-        assertThat(PrescriptionPdfPagePlanner.classify(part, execs.get(part.partId())))
-                .isEqualTo(PeriodPrintState.COMPLETED);
-        assertThat(PrescriptionPdfPagePlanner.filledPeriodCount(LocalDate.of(2026, 7, 25), snap))
-                .isEqualTo(1);
+    private static PrescriptionPdfSnapshot.Row row(PrescriptionPdfSnapshot.Order order, LocalDate date, String period,
+            boolean planned, boolean cancelled, boolean completed, boolean finished, String dose, UUID day) {
+        var p = part(period, planned, cancelled, completed, finished, dose, day);
+        return new PrescriptionPdfSnapshot.Row(order, date, p, null);
     }
 }

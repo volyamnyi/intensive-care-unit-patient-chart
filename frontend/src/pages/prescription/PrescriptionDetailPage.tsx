@@ -222,42 +222,34 @@ export default function PrescriptionDetailPage() {
     }
   }
 
-  // Form №003-4/о PDF batch (Phase 17): backend returns every sheet at once
-  // (ZIP, one PDF per form page); printing goes page by page from PDF bytes,
-  // never from the HTML grid.
-  const handleDownloadPdf = async () => {
+  const handlePdf = async (action: 'download' | 'print') => {
     if (!id || pdfBusy) return
     setPdfBusy(true)
     try {
-      const res = await prescriptionApi.generatePdfZip(id)
-      const url = window.URL.createObjectURL(res.data)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `prescription-${id}.zip`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
-      toast.success('PDF завантажено')
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Не вдалося завантажити PDF'))
-    } finally {
-      setPdfBusy(false)
-    }
-  }
-
-  const handlePrintPdf = async () => {
-    if (!id || pdfBusy) return
-    setPdfBusy(true)
-    try {
-      const info = await prescriptionApi.getPdfInfo(id)
-      for (let i = 0; i < info.data.pages; i++) {
-        const res = await prescriptionApi.generatePdfPage(id, i)
-        await printPdfBlob(res.data)
+      const res = await prescriptionApi.generatePdfDocument(id)
+      if (res.status === 204) {
+        toast.info('Немає призначень для друку')
+        return
       }
-      toast.success(`PDF надіслано на друк (${info.data.pages} стор.)`)
+      if (action === 'print') {
+        await printPdfBlob(res.data)
+        toast.success('PDF надіслано на друк')
+      } else {
+        const url = window.URL.createObjectURL(res.data)
+        const a = document.createElement('a')
+        try {
+          a.href = url
+          a.download = `prescription-${id}.pdf`
+          document.body.appendChild(a)
+          a.click()
+        } finally {
+          a.remove()
+          window.URL.revokeObjectURL(url)
+        }
+        toast.success('PDF завантажено')
+      }
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Не вдалося надрукувати PDF'))
+      toast.error(getErrorMessage(err, action === 'print' ? 'Не вдалося надрукувати PDF' : 'Не вдалося завантажити PDF'))
     } finally {
       setPdfBusy(false)
     }
@@ -278,11 +270,11 @@ export default function PrescriptionDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={pdfBusy}>
+          <Button variant="outline" size="sm" onClick={() => handlePdf('download')} disabled={pdfBusy}>
             <Download />
             Завантажити PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={handlePrintPdf} disabled={pdfBusy}>
+          <Button variant="outline" size="sm" onClick={() => handlePdf('print')} disabled={pdfBusy}>
             <Printer />
             Друкувати PDF
           </Button>

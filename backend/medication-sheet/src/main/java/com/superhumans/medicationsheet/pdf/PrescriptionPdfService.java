@@ -1,147 +1,109 @@
 package com.superhumans.medicationsheet.pdf;
 
-import com.superhumans.entity.core.User;
+import com.superhumans.audit.AuditActionDefinition.ActionType;
 import com.superhumans.exception.NotFoundException;
-import com.superhumans.mis.dto.PatientDTO;
-import com.superhumans.repository.core.UserRepository;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * Orchestrates Phase 17 PDF generation for one {@code PrescriptionList}:
- * consistent snapshot → resolved usernames → deterministic page plans →
- * one iText page per plan → ZIP batch (one PDF file per form sheet).
- * Stateless: nothing is persisted, nothing is sent to MIS.
- */
-@Slf4j
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class PrescriptionPdfService {
+    private final PrescriptionPdfDataLoader loader;
+    private final PrescriptionPdfPagePlanner planner;
+    private final PrescriptionPdfRenderer renderer;
+    private final PrescriptionPdfAuditService audit;
 
-    PrescriptionPdfDataLoader dataLoader;
-    PrescriptionPdfUsernameResolver usernameResolver;
-    PrescriptionPdfPagePlanner pagePlanner;
-    PrescriptionPdfRenderer renderer;
-    UserRepository userRepository;
-    PrescriptionPdfAuditService pdfAuditService;
+    public record PdfBatchInfo(int pages, String fileName) { }
+    public record PdfBatchDownload(PdfBatchInfo info, byte[] content) { }
 
-    /** Batch metadata for the API/frontend contract (no PII). */
-    public record PdfBatchInfo(int pages, String fileName) {
+    public PdfBatchInfo info(UUID id) {
+        return audited(id, ActionType.PDF_INFO, () -> {
+            var pages = plan(id, null, null);
+            audit.recordInfo(id, pages.size());
+            return new PdfBatchInfo(pages.size(), zipFileName(id));
+        });
     }
 
-    /** One rendered PDF page with its deterministic file name (no PII). */
-    public record PdfPageFile(String fileName, byte[] content) {
+    public PdfBatchDownload document(UUID id, Long userId, LocalDate from, LocalDate to) {
+        return audited(id, ActionType.GENERATE, () -> {
+            var pages = plan(id, from, to);
+            byte[] pdf = pages.isEmpty() ? new byte[0] : renderer.render(pages);
+            audit.recordGenerate(id, userId, pages.size());
+            return new PdfBatchDownload(new PdfBatchInfo(pages.size(), "prescription-" + id + ".pdf"), pdf);
+        });
     }
 
-    /** Download metadata and bytes derived from the same immutable render plan. */
-    public record PdfBatchDownload(PdfBatchInfo info, byte[] content) {
+    public byte[] generateZip(UUID id, Long userId) {
+        return generateZipBatch(id, userId).content();
     }
 
-    public PdfBatchInfo info(UUID listId) {
-        List<PrescriptionPdfPagePlan> pages = plan(listId);
-        PdfBatchInfo info = new PdfBatchInfo(pages.size(), zipFileName(listId));
-        pdfAuditService.recordInfo(listId, info.pages());
-        return info;
-    }
-
-    public byte[] generateZip(UUID listId, Long userId) {
-        return generateZipBatch(listId, userId).content();
-    }
-
-    public PdfBatchDownload generateZipBatch(UUID listId, Long userId) {
-        List<PdfPageFile> files = renderAll(listId);
-        PdfBatchInfo info = new PdfBatchInfo(files.size(), zipFileName(listId));
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        // STORED (uncompressed) entries with upfront sizes: PDFs are already
-        // compressed, and explicit headers keep the archive readable by
-        // minimal parsers (no data descriptors).
-        try (ZipOutputStream zip = new ZipOutputStream(out)) {
-            for (PdfPageFile file : files) {
-                ZipEntry entry = new ZipEntry(file.fileName());
-                entry.setMethod(ZipEntry.STORED);
-                entry.setSize(file.content().length);
-                entry.setCompressedSize(file.content().length);
-                entry.setCrc(crc32(file.content()));
-                zip.putNextEntry(entry);
-                zip.write(file.content());
-                zip.closeEntry();
+    public PdfBatchDownload generateZipBatch(UUID id, Long userId) {
+        return audited(id, ActionType.GENERATE, () -> {
+            var pages = plan(id, null, null);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (ZipOutputStream zip = new ZipOutputStream(out)) {
+                for (var page : pages) {
+                    byte[] bytes = renderer.render(List.of(page));
+                    ZipEntry entry = new ZipEntry(pageFileName(id, page.pageIndex()));
+                    CRC32 crc = new CRC32();
+                    crc.update(bytes);
+                    entry.setMethod(ZipEntry.STORED);
+                    entry.setSize(bytes.length);
+                    entry.setCompressedSize(bytes.length);
+                    entry.setCrc(crc.getValue());
+                    zip.putNextEntry(entry);
+                    zip.write(bytes);
+                    zip.closeEntry();
+                }
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to generate prescription ZIP", e);
             }
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to build prescription PDF batch for " + listId, e);
+            audit.recordGenerate(id, userId, pages.size());
+            return new PdfBatchDownload(new PdfBatchInfo(pages.size(), zipFileName(id)), out.toByteArray());
+        });
+    }
+
+    public byte[] generatePage(UUID id, int index, Long userId) {
+        return audited(id, ActionType.DOWNLOAD, () -> {
+            var pages = plan(id, null, null);
+            if (index < 0 || index >= pages.size()) {
+                throw new NotFoundException("Сторінку PDF не знайдено: " + index);
+            }
+            byte[] pdf = renderer.render(List.of(pages.get(index)));
+            audit.recordPageDownload(id, userId);
+            return pdf;
+        });
+    }
+
+    private List<PrescriptionPdfPagePlan> plan(UUID id, LocalDate from, LocalDate to) {
+        var data = loader.load(id);
+        return planner.plan(data.snapshot(), data.header(), data.logins(), from, to);
+    }
+
+    private <T> T audited(UUID id, ActionType type, Supplier<T> work) {
+        try {
+            return work.get();
+        } catch (RuntimeException failure) {
+            audit.recordFailure(id, type);
+            throw failure;
         }
-        final int pageCount = files.size();
-        pdfAuditService.recordGenerate(listId, userId, pageCount);
-        log.info("Prescription PDF batch generated: listId={}, pages={}", listId, files.size());
-        return new PdfBatchDownload(info, out.toByteArray());
     }
 
-    private static long crc32(byte[] content) {
-        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
-        crc.update(content);
-        return crc.getValue();
+    private static String zipFileName(UUID id) {
+        return "prescription-" + id + ".zip";
     }
 
-    public byte[] generatePage(UUID listId, int pageIndex, Long userId) {
-        List<PrescriptionPdfPagePlan> pages = plan(listId);
-        if (pageIndex < 0 || pageIndex >= pages.size()) {
-            throw new NotFoundException("Сторінку PDF не знайдено: " + pageIndex);
-        }
-        byte[] content = renderer.render(pages.get(pageIndex));
-        pdfAuditService.recordPageDownload(listId, userId);
-        return content;
-    }
-
-    private List<PdfPageFile> renderAll(UUID listId) {
-        List<PrescriptionPdfPagePlan> pages = plan(listId);
-        List<PdfPageFile> files = new ArrayList<>();
-        for (PrescriptionPdfPagePlan page : pages) {
-            files.add(new PdfPageFile(pageFileName(listId, page.pageIndex()), renderer.render(page)));
-        }
-        return files;
-    }
-
-    private List<PrescriptionPdfPagePlan> plan(UUID listId) {
-        PrescriptionPdfDataLoader.LoadedSnapshot loaded = dataLoader.load(listId);
-        PrescriptionPdfSnapshot snapshot = loaded.snapshot();
-
-        List<User> users = userRepository.findAll();
-        Map<UUID, String> loginIndex = usernameResolver.buildLoginIndex(users);
-        String doctorUsername = usernameResolver.resolveAttendingDoctor(users);
-
-        String cardNumber = snapshot.hospitalizationId() == null ? "" : snapshot.hospitalizationId().toString();
-        String patientName = loaded.patient().map(PatientDTO::getFullName).orElse("");
-        String room = loaded.patient().map(PatientDTO::getRoom).orElse("");
-        PrescriptionPdfPagePlanner.HeaderData header = new PrescriptionPdfPagePlanner.HeaderData(
-                loaded.institutionName() == null ? "" : loaded.institutionName(),
-                loaded.edrpou() == null ? "" : loaded.edrpou(),
-                cardNumber,
-                patientName == null ? "" : patientName,
-                room == null ? "" : room);
-
-        List<PrescriptionPdfPagePlan> pages = pagePlanner.plan(snapshot, header, loginIndex, doctorUsername);
-        if (pages.isEmpty()) {
-            throw new IllegalStateException("PDF planning produced no pages for " + listId);
-        }
-        return pages;
-    }
-
-    static String zipFileName(UUID listId) {
-        return "prescription-" + listId + ".zip";
-    }
-
-    static String pageFileName(UUID listId, int pageIndex) {
-        return "prescription-" + listId + "-p" + String.format("%02d", pageIndex + 1) + ".pdf";
+    public static String pageFileName(UUID id, int index) {
+        return String.format(Locale.ROOT, "prescription-%s-p%02d.pdf", id, index + 1);
     }
 }

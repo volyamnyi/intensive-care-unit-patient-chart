@@ -37,6 +37,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import com.superhumans.exception.BadRequestException;
 
 @Slf4j
 @RestController
@@ -136,11 +139,11 @@ public class PrescriptionController {
                 continue;
             }
             for (PrescriptionItemDay day : item.getDays()) {
-                if (day.getDayParts() == null) {
+                if (Boolean.TRUE.equals(day.getDeleted()) || day.getDayParts() == null) {
                     continue;
                 }
                 for (PrescriptionDayPart part : day.getDayParts()) {
-                    if (part.getId() != null) {
+                    if (!Boolean.TRUE.equals(part.getDeleted()) && part.getId() != null) {
                         partIds.add(part.getId());
                     }
                 }
@@ -386,6 +389,40 @@ public class PrescriptionController {
         return new PrescriptionPdfInfoResponse(info.pages(), info.fileName());
     }
 
+    @PostMapping(value = "/{id}/pdf/document", produces = MediaType.APPLICATION_PDF_VALUE)
+    @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
+    @Operation(summary = "Generate one weekly Form 003-4/о PDF; 204 when there are no printable orders")
+    public ResponseEntity<byte[]> pdfDocument(@PathVariable UUID id, @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        LocalDate start = printDate(from), end = printDate(to);
+        if ((start == null) != (end == null) || (start != null && start.isAfter(end))) {
+            throw new BadRequestException("Передайте обидві межі періоду в календарному порядку.");
+        }
+        Long actor = (Long) SecurityContextHolder.getContext().getAuthentication().getCredentials();
+        var document = prescriptionPdfService.document(id, actor, start, end);
+        if (document.info().pages() == 0) {
+            return ResponseEntity.noContent().header("X-Total-Pages", "0").header("Cache-Control", "no-store").build();
+        }
+        return ResponseEntity.ok().header("Cache-Control", "no-store").header("X-Content-Type-Options", "nosniff")
+                .header("X-Total-Pages", String.valueOf(document.info().pages()))
+                .header("Content-Disposition", "attachment; filename=\"" + document.info().fileName() + "\"")
+                .contentType(MediaType.APPLICATION_PDF).contentLength(document.content().length).body(document.content());
+    }
+
+    private static LocalDate printDate(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) {
+            try {
+                return LocalDate.parse(value);
+            } catch (DateTimeParseException ignored) {
+                // Invalid calendar date, including leap days.
+            }
+        }
+        throw new BadRequestException("Дата має бути у форматі yyyy-MM-dd.");
+    }
+
     @PostMapping(value = "/{id}/pdf/file", produces = "application/zip")
     @PreAuthorize("@permissionService.has('PATIENT_VIEW')")
     @Operation(summary = "Download prescription PDF batch (Form 003-4/о)",
@@ -398,13 +435,7 @@ public class PrescriptionController {
     public ResponseEntity<byte[]> pdfFile(@PathVariable UUID id) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId = (Long) auth.getCredentials();
-        final PrescriptionPdfService.PdfBatchDownload batch;
-        try {
-            batch = prescriptionPdfService.generateZipBatch(id, currentUserId);
-        } catch (IllegalStateException renderFailure) {
-            emitPdfFailure(id, "medication.pdf.generate");
-            throw renderFailure;
-        }
+        var batch = prescriptionPdfService.generateZipBatch(id, currentUserId);
         PrescriptionPdfService.PdfBatchInfo info = batch.info();
         byte[] zip = batch.content();
         return ResponseEntity.ok()
@@ -429,36 +460,15 @@ public class PrescriptionController {
     public ResponseEntity<byte[]> pdfPage(@PathVariable UUID id, @PathVariable int pageIndex) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         Long currentUserId = (Long) auth.getCredentials();
-        final byte[] pdf;
-        try {
-            pdf = prescriptionPdfService.generatePage(id, pageIndex, currentUserId);
-        } catch (IllegalStateException renderFailure) {
-            emitPdfFailure(id, "medication.pdf.download");
-            throw renderFailure;
-        }
+        byte[] pdf = prescriptionPdfService.generatePage(id, pageIndex, currentUserId);
         return ResponseEntity.ok()
                 .header("Cache-Control", "no-store")
                 .header("X-Content-Type-Options", "nosniff")
                 .header("Content-Disposition",
-                        "attachment; filename=\"prescription-" + id + "-p"
-                                + String.format("%02d", pageIndex + 1) + ".pdf\"")
+                        "attachment; filename=\"" + PrescriptionPdfService.pageFileName(id, pageIndex) + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(pdf.length)
                 .body(pdf);
     }
 
-    private void emitPdfFailure(UUID listId, String action) {
-        auditEmitter.emit("medication", () -> AuditEvent.builder()
-                .actor(AuditActorResolver.fromCurrentContext())
-                .eventClass(EventClass.BUSINESS)
-                .module("medication")
-                .functionalArea("pdf")
-                .action(action)
-                .actionType(ActionType.GENERATE)
-                .target(new AuditEvent.AuditTarget("PrescriptionList", listId.toString(), null))
-                .outcome(AuditEvent.AuditOutcome.FAILURE)
-                .errorCode("MEDICATION_PDF_RENDER_FAILED")
-                .source(AuditEvent.AuditSource.API)
-                .build());
-    }
 }

@@ -332,6 +332,13 @@ describe('prescriptionApi', () => {
     expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/list-1/pdf/file', undefined, { responseType: 'blob' });
   });
 
+  it('generates one PDF with inclusive calendar bounds', () => {
+    const range = { from: '2026-10-20', to: '2026-11-23' };
+    prescriptionApi.generatePdfDocument('list-1', range);
+    expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/list-1/pdf/document', undefined,
+      { responseType: 'blob', params: range });
+  });
+
   it('generatePdfPage POSTs one sheet render action as blob', () => {
     prescriptionApi.generatePdfPage('list-1', 2);
     expect(mockClient.post).toHaveBeenCalledWith('/prescriptions/list-1/pdf/pages/2', undefined, { responseType: 'blob' });
