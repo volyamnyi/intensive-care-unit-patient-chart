@@ -192,7 +192,7 @@ public class PrescriptionPdfRenderer {
         }
 
         private void lines(float x, float y, float w, float h, List<String> lines, boolean center) {
-            if (textHeight(lines) > h + 0.01f) {
+            if (lineHeight(lines.size()) > h + 0.01f) {
                 throw overflow();
             }
             float top = y + (h - lines.size() * LEADING) / 2;

@@ -65,12 +65,17 @@ final class PrescriptionPdfLayout {
                 List.copyOf(details), group.slots());
     }
 
-    static float textHeight(List<String> lines) {
-        return lines.isEmpty() ? 0 : lines.size() * LEADING + 2 * PAD;
+    static float lineHeight(int lines) {
+        return lines * LEADING;
     }
 
+    static float textHeight(List<String> lines) {
+        return lines.isEmpty() ? 0 : lineHeight(lines.size()) + 2 * PAD;
+    }
+
+    /** The name occupies the pair rectangle itself; box padding is not part of the glyph fit. */
     static float pairHeight(Block b) {
-        return Math.max(PAIR, textHeight(b.label()));
+        return Math.max(PAIR, lineHeight(b.label().size()));
     }
 
     static float height(Block b) {

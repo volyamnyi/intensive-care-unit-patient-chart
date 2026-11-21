@@ -38,6 +38,15 @@ async function doctorToken(request: any): Promise<string> {
   return (await res.json()).token as string;
 }
 
+async function createList(request: any, token: string, patientId: number): Promise<string> {
+  const res = await request.post(`${API}/prescriptions`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { patientId: String(patientId) },
+  });
+  expect(res.ok(), `list creation failed: ${res.status()} ${await res.text()}`).toBeTruthy();
+  return (await res.json()).id as string;
+}
+
 async function planFirstFreeDose(request: any, token: string, listId: string): Promise<void> {
   const itemsRes = await request.get(`${API}/prescriptions/${listId}/items`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -97,6 +106,82 @@ test.describe.serial('Prescription PDF batch (Form 003-4/о)', () => {
     expect((await request.get(`${API}/prescriptions/${listId}/pdf/file`, {
       headers: { Authorization: `Bearer ${token}` },
     })).status()).toBe(405);
+  });
+
+  test('document endpoint returns one PDF for the whole list and 204 when empty', async ({ request }) => {
+    const token = await doctorToken(request);
+    const patient = await firstMedicationPatient(request, token);
+    const listId = await ensureMedicationList(request, token, patient.id);
+    await ensureMedicationItem(request, token, listId, 'Paracetamol 003-4o document');
+    await planFirstFreeDose(request, token, listId);
+    const headers = { Authorization: `Bearer ${token}` };
+
+    const info = await (await request.get(`${API}/prescriptions/${listId}/pdf/info`, { headers })).json();
+    expect(info.pages).toBeGreaterThanOrEqual(1);
+
+    const documentRes = await request.post(`${API}/prescriptions/${listId}/pdf/document`, { headers });
+    expect(documentRes.status()).toBe(200);
+    expect(documentRes.headers()['content-type']).toContain('application/pdf');
+    expect(documentRes.headers()['x-total-pages']).toBe(String(info.pages));
+    expect(documentRes.headers()['content-disposition'] ?? '').toContain(`prescription-${listId}.pdf`);
+    expect(documentRes.headers()['cache-control'] ?? '').toContain('no-store');
+    const documentBody = Buffer.from(await documentRes.body());
+    expect(documentBody.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    expect(documentBody.toString('latin1').trimEnd().endsWith('%%EOF')).toBe(true);
+    expect(documentBody.subarray(0, 2).toString('ascii')).not.toBe('PK');
+    expect((await request.get(`${API}/prescriptions/${listId}/pdf/document`, { headers })).status()).toBe(405);
+
+    // An inclusive single-day window yields exactly one physical week sheet.
+    const items = await (await request.get(`${API}/prescriptions/${listId}/items`, { headers })).json();
+    const planned = (Array.isArray(items) ? items : [])
+      .flatMap((item: any) => item?.dayParts ?? [])
+      .find((part: any) => part?.isPlanned && part?.dayDate);
+    expect(planned?.dayDate).toBeTruthy();
+    const oneWeek = await request.post(
+      `${API}/prescriptions/${listId}/pdf/document?from=${planned.dayDate}&to=${planned.dayDate}`,
+      { headers },
+    );
+    expect(oneWeek.status()).toBe(200);
+    expect(oneWeek.headers()['x-total-pages']).toBe('1');
+    expect(Buffer.from(await oneWeek.body()).subarray(0, 5).toString('ascii')).toBe('%PDF-');
+
+    // The window is a mandatory pair in yyyy-MM-dd calendar order.
+    expect((await request.post(
+      `${API}/prescriptions/${listId}/pdf/document?from=${planned.dayDate}`, { headers },
+    )).status()).toBe(400);
+    expect((await request.post(
+      `${API}/prescriptions/${listId}/pdf/document?from=${planned.dayDate}&to=2000-01-01`, { headers },
+    )).status()).toBe(400);
+    expect((await request.post(
+      `${API}/prescriptions/${listId}/pdf/document?from=16.10.2026&to=2026-10-22`, { headers },
+    )).status()).toBe(400);
+
+    const nurseCreds = testUser(3);
+    const nurseLogin = await request.post(`${API}/auth/login`, {
+      data: { login: nurseCreds.login, password: nurseCreds.password },
+    });
+    expect(nurseLogin.ok()).toBeTruthy();
+    const nurseToken = (await nurseLogin.json()).token as string;
+    const nurseDocument = await request.post(`${API}/prescriptions/${listId}/pdf/document`, {
+      headers: { Authorization: `Bearer ${nurseToken}` },
+    });
+    expect(nurseDocument.status()).toBe(200);
+    expect(Buffer.from(await nurseDocument.body()).subarray(0, 5).toString('ascii')).toBe('%PDF-');
+
+    // A list without printable orders is an explicit empty document, not a blank sheet.
+    const emptyId = await createList(request, token, patient.id);
+    try {
+      const empty = await request.post(`${API}/prescriptions/${emptyId}/pdf/document`, { headers });
+      expect(empty.status()).toBe(204);
+      expect(empty.headers()['x-total-pages']).toBe('0');
+      expect((await empty.body()).length).toBe(0);
+      const emptyInfo = await request.get(`${API}/prescriptions/${emptyId}/pdf/info`, { headers });
+      expect(emptyInfo.ok()).toBeTruthy();
+      expect((await emptyInfo.json()).pages).toBe(0);
+    } finally {
+      await request.post(`${API}/prescriptions/${emptyId}/close`, { headers });
+      await request.delete(`${API}/prescriptions/${emptyId}`, { headers });
+    }
   });
 
   test('single sheet endpoint returns one printable PDF', async ({ request }) => {

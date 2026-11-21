@@ -2,6 +2,7 @@ package com.superhumans.medicationsheet.pdf;
 
 import java.nio.charset.Charset;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class PrescriptionPdfPagePlannerTest {
 
     private static final PrescriptionPdfPagePlanner PLANNER = new PrescriptionPdfPagePlanner();
+    private static final PrescriptionPdfPagePlan.Header HEADER = new PrescriptionPdfPagePlan.Header(
+            "Тестовий заклад", "00123456", null, null, false, "Синтетичний пацієнт", "");
 
     private static UUID id(String value) {
         return UUID.nameUUIDFromBytes(value.getBytes(Charset.defaultCharset()));
@@ -21,13 +24,13 @@ class PrescriptionPdfPagePlannerTest {
 
     private static PrescriptionPdfSnapshot.Part part(String period, boolean planned, boolean cancelled,
             boolean completed, boolean finished, String dose, UUID dayId) {
-        return new PrescriptionPdfSnapshot.Part(id(period + dayId + dose), dayId, period, dose,
+        return new PrescriptionPdfSnapshot.Part(id(dayId + ":" + period), dayId, period, dose,
                 planned, cancelled, completed, finished, false);
     }
 
-    private static PrescriptionPdfSnapshot.Execution event(UUID partId, String login, String status) {
+    private static PrescriptionPdfSnapshot.Execution event(UUID partId, String login, String status, LocalDateTime administeredAt) {
         return new PrescriptionPdfSnapshot.Execution(id("event" + partId + login), partId,
-                UUID.nameUUIDFromBytes(login.getBytes(Charset.defaultCharset())), status, "5", null, null, false, null, null);
+                id(login), status, null, administeredAt, null, false, null, null);
     }
 
     private static PrescriptionPdfSnapshot snapshot(List<PrescriptionPdfSnapshot.Row> rows, LocalDate anchor) {
@@ -39,8 +42,7 @@ class PrescriptionPdfPagePlannerTest {
     }
 
     private static List<PrescriptionPdfPagePlan> plan(PrescriptionPdfSnapshot snap, Map<UUID, String> logins) {
-        return PLANNER.plan(snap, new PrescriptionPdfPagePlan.Header("Тестовий заклад", "00123456",
-                null, null, false, "Синтетичний пацієнт", ""), logins, null, null);
+        return PLANNER.plan(snap, HEADER, logins, null, null);
     }
 
     @Test
@@ -49,16 +51,37 @@ class PrescriptionPdfPagePlannerTest {
         var b = order(2);
         var start = LocalDate.of(2026, 10, 16);
         List<PrescriptionPdfSnapshot.Row> rows = List.of(
-                row(a, start, "morning", true),
+                row(a, start.plusDays(6), "night", true),
                 row(b, start.plusDays(8), "morning", true));
 
         List<PrescriptionPdfPagePlan> pages = plan(snapshot(rows, start), Map.of());
 
         assertThat(pages).hasSize(2);
         assertThat(pages.get(0).week()).isEqualTo(start);
-        assertThat(pages.get(0).rows()).singleElement().satisfies(r -> assertThat(r.block().number()).isEqualTo(1));
-        assertThat(pages.get(1).week()).isEqualTo(LocalDate.of(2026, 10, 26));
-        assertThat(pages.get(1).pageIndex()).isEqualTo(1);
+        assertThat(pages.get(0).rows()).singleElement().satisfies(r -> {
+            assertThat(r.block().itemId()).isEqualTo(a.id());
+            assertThat(r.block().owners()).containsOnlyKeys(27);
+        });
+        assertThat(pages.get(1).week()).isEqualTo(LocalDate.of(2026, 10, 23));
+        assertThat(pages.get(1).rows()).singleElement().satisfies(r -> {
+            assertThat(r.block().itemId()).isEqualTo(b.id());
+            assertThat(r.block().owners()).containsOnlyKeys(4);
+        });
+    }
+
+    @Test
+    void explicitRangeAnchorsAtFromAndIncludesBothBounds() {
+        var a = order(1);
+        var start = LocalDate.of(2026, 10, 20);
+        var end = start.plusDays(7);
+        var snap = snapshot(List.of(row(a, start.minusDays(1), "morning", true),
+                row(a, start, "day", true), row(a, end, "night", true),
+                row(a, end.plusDays(1), "evening", true)), start.minusDays(1));
+
+        var pages = PLANNER.plan(snap, HEADER, Map.of(), start, end);
+        assertThat(pages).extracting(PrescriptionPdfPagePlan::week).containsExactly(start, end);
+        assertThat(pages.getFirst().rows().getFirst().block().owners()).containsOnlyKeys(1);
+        assertThat(pages.getLast().rows().getFirst().block().owners()).containsOnlyKeys(3);
     }
 
     @Test
@@ -101,6 +124,7 @@ class PrescriptionPdfPagePlannerTest {
         assertThat(cell).isNotNull();
         assertThat(cell.plan()).isEmpty();
         assertThat(cell.done()).isTrue();
+        assertThat(page.signatures()).hasSize(28).containsOnly("");
     }
 
     @Test
@@ -111,7 +135,7 @@ class PrescriptionPdfPagePlannerTest {
         var rows = List.of(new PrescriptionPdfSnapshot.Row(o, LocalDate.of(2026, 10, 16), p, null));
 
         var cell = plan(snapshot(rows, LocalDate.of(2026, 10, 16)), Map.of()).getFirst()
-                .rows().getFirst().block().owners().get(24);
+                .rows().getFirst().block().owners().get(3);
 
         assertThat(cell.plan()).isEqualTo("×");
         assertThat(cell.done()).isTrue();
@@ -121,17 +145,24 @@ class PrescriptionPdfPagePlannerTest {
     void executorComesOnlyFromCompletedPrimaryExecutor() {
         var o = order(1);
         var day = id("day");
-        var partId = id("part");
-        var p = part("morning", false, false, false, false, null, day);
+        var p = part("night", false, false, false, false, null, day);
         var login = "nurse1";
-        var key = UUID.nameUUIDFromBytes(login.getBytes(Charset.defaultCharset()));
-        var rows = List.of(new PrescriptionPdfSnapshot.Row(o, LocalDate.of(2026, 10, 16), p,
-                event(partId, login, "Completed")));
+        var date = LocalDate.of(2026, 10, 16);
+        var afterMidnight = date.plusDays(1).atTime(0, 5, 30);
+        var rows = List.of(new PrescriptionPdfSnapshot.Row(o, date, p, event(p.id(), login, "Completed", afterMidnight)),
+                new PrescriptionPdfSnapshot.Row(o, date, p, event(p.id(), "other", "Pending", null)));
 
-        var pages = plan(snapshot(rows, LocalDate.of(2026, 10, 16)), Map.of(key, login));
+        var page = plan(snapshot(rows, date), Map.of(id(login), login, id("other"), "other")).getFirst();
 
-        assertThat(pages.getFirst().signatures().get(0)).isEqualTo(login);
-        assertThat(pages.getFirst().footerNotes()).anyMatch(note -> note.contains("введено"));
+        assertThat(page.signatures()).hasSize(28);
+        assertThat(page.signatures().get(3)).isEqualTo(login);
+        assertThat(page.signatures()).filteredOn(s -> !s.isEmpty()).containsExactly(login);
+        var block = page.rows().getFirst().block();
+        assertThat(block.owners()).containsOnlyKeys(3);
+        assertThat(block.owners().get(3).plan()).isEmpty();
+        assertThat(block.owners().get(3).done()).isTrue();
+        assertThat(block.details()).anySatisfy(s -> assertThat(s)
+                .contains("16.10.2026 / Ніч", "введено 17.10.2026 00:05:30"));
     }
 
     @Test
@@ -148,7 +179,7 @@ class PrescriptionPdfPagePlannerTest {
 
     private static PrescriptionPdfSnapshot.Row row(PrescriptionPdfSnapshot.Order order, LocalDate date, String period,
             boolean planned) {
-        return row(order, date, period, planned, false, false, false, null, id(date.toString() + period));
+        return row(order, date, period, planned, false, false, false, null, id(order.id() + ":" + date));
     }
 
     private static PrescriptionPdfSnapshot.Row row(PrescriptionPdfSnapshot.Order order, LocalDate date, String period,
