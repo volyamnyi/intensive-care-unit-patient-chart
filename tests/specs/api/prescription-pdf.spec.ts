@@ -169,7 +169,9 @@ test.describe.serial('Prescription PDF batch (Form 003-4/о)', () => {
     expect(Buffer.from(await nurseDocument.body()).subarray(0, 5).toString('ascii')).toBe('%PDF-');
 
     // A list without printable orders is an explicit empty document, not a blank sheet.
-    const emptyId = await createList(request, token, patient.id);
+    // Dedicated MIS-stub patient: avoid a second open list for the active
+    // patient used above (the API correctly rejects that with 422).
+    const emptyId = await createList(request, token, 10501);
     try {
       const empty = await request.post(`${API}/prescriptions/${emptyId}/pdf/document`, { headers });
       expect(empty.status()).toBe(204);
